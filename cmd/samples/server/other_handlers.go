@@ -64,3 +64,18 @@ func buildHandlers() {
 		w.Write([]byte("goroutine!"))
 	}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 }
+
+//dd:span foo:bar type:potato
+func MyFunc(ctx context.Context, name string) {
+	fmt.Println(name)
+}
+
+//dd:span foo2:bar2 type:request
+func MyFunc2(name string, req *http.Request) {
+	fmt.Println(name)
+}
+
+//dd:span foo3:bar3 type:request
+func MyFunc3(name string) {
+	fmt.Println(name)
+}

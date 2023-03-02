@@ -63,8 +63,7 @@ func ScanFile(name string, content io.Reader) (io.Reader, error) {
 
 	// server support stage 1: find handlers in top-level functions (functions and methods!)
 	for _, decl := range f.Decls {
-		switch decl := decl.(type) {
-		case *dst.FuncDecl:
+		if decl, ok := decl.(*dst.FuncDecl); ok {
 			// check the parameters, see if they match
 			inputParams := decl.Type.Params.List
 			if len(inputParams) == 2 &&
@@ -72,24 +71,162 @@ func ScanFile(name string, content io.Reader) (io.Reader, error) {
 				IsPointerType(inputParams[1].Type, "net/http", "Request") {
 				decl = addCodeToHandler(decl)
 			}
+			// support stage 3: find magic comments on functions
+			for _, v := range decl.Decorations().Start.All() {
+				if strings.HasPrefix(v, "//dd:span") {
+					decl = addSpanCodeToFunction(v, decl)
+					break
+				}
+			}
+			// scan body for request creation or handlers as function literals
+			// client support stage 1: find http clients in functions
+			// server support stage 2: find closures in functions to instrument too
+			decl.Body.List = addInFunctionCode(decl.Body.List)
 		}
 	}
-
-	// client support stage 1: find http clients in functions
-	// server support stage 2: find closures in functions to instrument too
-	for _, decl := range f.Decls {
-		if funcDecl, ok := decl.(*dst.FuncDecl); ok {
-			// scan body for request creation
-			funcDecl.Body.List = addInFunctionCode(funcDecl.Body.List)
-		}
-	}
-
-	// support stage 3: find magic comments on functions
 
 	res := decorator.NewRestorerWithImports(name, guess.New())
 	var out bytes.Buffer
 	err = res.Fprint(&out, f)
 	return &out, err
+}
+
+func addSpanCodeToFunction(comment string, decl *dst.FuncDecl) *dst.FuncDecl {
+	//check if magic comment is attached to first line
+	if len(decl.Body.List) > 0 {
+		decs := decl.Body.List[0].Decorations().Start
+		for _, v := range decs.All() {
+			if strings.HasPrefix(v, "//dd:startinstrument") {
+				log.Println("already instrumented")
+				return decl
+			}
+		}
+	}
+
+	start := len("//dd:span")
+	// get the tags from the magic comment
+	parts := strings.Split(comment[start:], " ")
+	if parts[0] == "" {
+		parts = parts[1:]
+	}
+
+	// get function name
+	funcName := decl.Name.String()
+	// get context parameter
+	var ci contextInfo
+	if len(decl.Type.Params.List) > 0 {
+		// first see if the 1st parameter of the function is a context. If so, use it
+		firstField := decl.Type.Params.List[0]
+		if IsType(firstField.Type, "context", "Context") {
+			ci = contextInfo{contextType: ident, name: firstField.Names[0].Name, path: firstField.Names[0].Path}
+		} else {
+			// if not, see if there's an *http.Request parameter. If so, use r.Context()
+			for _, v := range decl.Type.Params.List {
+				if IsPointerType(v.Type, "net/http", "Request") {
+					ci = contextInfo{contextType: call, name: v.Names[0].Name, path: v.Names[0].Path}
+					break
+				}
+			}
+		}
+	}
+	// if no context, cannot use the span comment
+	if ci.contextType == 0 {
+		log.Println("no context in function parameters, cannot instrument")
+		return decl
+	}
+	newLines := buildSpanInstrumentation(ci,
+		parts,
+		funcName)
+	decl.Body.List = append(newLines, decl.Body.List...)
+	return decl
+}
+
+type contextType int
+
+const (
+	_ contextType = iota
+	ident
+	call
+)
+
+type contextInfo struct {
+	contextType contextType
+	name        string
+	path        string
+}
+
+func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name string) []dst.Stmt {
+	/*
+		lines to insert:
+			//dd:startinstrument
+			Report(contextExpr, EventStart, "name", "doThing", parts...)
+			defer Report(contextExpr, EventEnd, "name", "doThing", parts...)
+			//dd:endinstrument
+	*/
+	newLines := []dst.Stmt{
+		&dst.ExprStmt{
+			X: &dst.CallExpr{
+				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+				Args: buildArgs(contextExpr, EventStart, name, parts),
+			},
+			Decs: dst.ExprStmtDecorations{NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				Start:  dst.Decorations{"//dd:startinstrument"},
+				After:  dst.NewLine,
+			}},
+		},
+		&dst.DeferStmt{
+			Call: &dst.CallExpr{
+				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+				Args: buildArgs(contextExpr, EventEnd, name, parts),
+			},
+			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
+				After: dst.NewLine,
+				End:   dst.Decorations{"\n", "//dd:endinstrument"},
+			}},
+		},
+	}
+	return newLines
+}
+
+func buildArgs(contextExpr contextInfo, event Event, name string, parts []string) []dst.Expr {
+	out := make([]dst.Expr, 0, len(parts)*2+4)
+	out = append(out,
+		dupCtxExprForSpan(contextExpr),
+		&dst.Ident{Name: event.String(), Path: "github.com/datadog/orchestrion"},
+		&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
+		&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, name)},
+	)
+	out = append(out, buildExprsFromParts(parts)...)
+
+	return out
+}
+
+func dupCtxExprForSpan(in contextInfo) dst.Expr {
+	// only expecting r.Context() or ctx
+	switch in.contextType {
+	case call:
+		return &dst.CallExpr{
+			Fun: &dst.SelectorExpr{
+				X:   &dst.Ident{Name: in.name, Path: in.path},
+				Sel: &dst.Ident{Name: "Context"},
+			},
+		}
+	case ident:
+		return &dst.Ident{Name: in.name, Path: in.path}
+	}
+	panic(fmt.Sprintf("unexpected contextInfo %#v", in))
+	return nil
+}
+
+func buildExprsFromParts(parts []string) []dst.Expr {
+	out := make([]dst.Expr, 0, len(parts)*2)
+	for _, v := range parts {
+		key, val, _ := strings.Cut(v, ":")
+		out = append(out, &dst.BasicLit{Kind: token.STRING, Value: `"` + key + `"`})
+		out = append(out, &dst.BasicLit{Kind: token.STRING, Value: `"` + val + `"`})
+	}
+	return out
 }
 
 func addInFunctionCode(list []dst.Stmt) []dst.Stmt {

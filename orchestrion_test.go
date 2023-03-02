@@ -13,5 +13,5 @@ func TestScanPackageDST(t *testing.T) {
 		txt, _ := io.ReadAll(out)
 		fmt.Println(string(txt))
 	}
-	ScanPackage("./cmd", process)
+	ScanPackage("./cmd/samples", process)
 }
