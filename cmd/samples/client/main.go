@@ -17,7 +17,9 @@ func main() {
 	client := &http.Client{
 		Timeout: time.Second,
 	}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "localhost:8080", strings.NewReader(os.Args[1]))
+	req, err := http.NewRequestWithContext(context.Background(),
+		http.MethodPost, "http://localhost:8080",
+		strings.NewReader(os.Args[1]))
 	if err != nil {
 		panic(err)
 	}
