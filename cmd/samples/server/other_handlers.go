@@ -24,7 +24,8 @@ func buildHandlers() {
 	v := func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("another one!"))
 	}
-	v = v
+
+	fmt.Printf("%T\n", v)
 
 	type holder struct {
 		f http.HandlerFunc
@@ -36,7 +37,8 @@ func buildHandlers() {
 		},
 	}
 
-	x = x
+	fmt.Println(x)
+
 	// silly legal things
 	func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{

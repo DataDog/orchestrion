@@ -216,7 +216,6 @@ func dupCtxExprForSpan(in contextInfo) dst.Expr {
 		return &dst.Ident{Name: in.name, Path: in.path}
 	}
 	panic(fmt.Sprintf("unexpected contextInfo %#v", in))
-	return nil
 }
 
 func buildExprsFromParts(parts []string) []dst.Expr {
