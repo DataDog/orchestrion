@@ -3,11 +3,12 @@ package orchestrion
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"net/http"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // if a function meets the handlerfunc type, insert code to:
@@ -69,7 +70,7 @@ Will need to properly capture the name of req from the return values of the NewR
 Once we have this working for these simple cases, can work on harder ones!
 */
 
-func InsertHeader(r *http.Request) *http.Request {
+func insertHeader(r *http.Request) *http.Request {
 	ctx := r.Context()
 	traceID := GetTraceID(ctx)
 	if traceID == "" {
@@ -81,7 +82,7 @@ func InsertHeader(r *http.Request) *http.Request {
 	return r
 }
 
-func HandleHeader(r *http.Request) *http.Request {
+func handleHeader(r *http.Request) *http.Request {
 	traceID := r.Header.Get("x-trace-id")
 	if traceID == "" {
 		traceID = uuid.NewString()
@@ -174,4 +175,20 @@ func Report(ctx context.Context, e Event, metadata ...any) {
 	}
 	s.WriteString("}")
 	fmt.Println(s.String())
+}
+
+func ReportHTTPServe(w http.ResponseWriter, r *http.Request, e Event, metadata ...any) {
+	// This will likely require some factorization with Report
+	r = handleHeader(r)
+	Report(r.Context(), e, metadata...)
+
+	// Now we can pass the http request and response writer to dd-trace-go.
+}
+
+func ReportHTTPCall(r *http.Request, e Event, metadata ...any) {
+	// This will likely require some factorization with Report
+	r = insertHeader(r)
+	Report(r.Context(), e, metadata...)
+
+	// Now we can pass the http request to dd-trace-go.
 }

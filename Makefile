@@ -2,7 +2,9 @@
 
 .PHONY: build generate vet test clean fmt
 
-build: generate test
+build: generate test build-only
+
+build-only:
 	go build ./cmd/orchestrion
 
 build-linux-x64: generate test
