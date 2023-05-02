@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/datadog/orchestrion"
 )
 
 type Foo struct{}
@@ -80,4 +82,26 @@ func MyFunc2(name string, req *http.Request) {
 //dd:span foo3:bar3 type:request
 func MyFunc3(name string) {
 	fmt.Println(name)
+}
+
+func registerHandlers() {
+	handler := http.HandlerFunc(myHandler)
+	//dd:startinstrument
+	http.Handle("/handle-1", orchestrion.WrapHandler(handler))
+	//dd:endinstrument
+	//dd:startinstrument
+	http.Handle("/hundle-2", orchestrion.WrapHandler(http.HandlerFunc(myHandler)))
+	//dd:endinstrument
+	//dd:startinstrument
+	http.Handle("/hundle-3", orchestrion.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
+	//dd:endinstrument
+	//dd:startinstrument
+	http.HandleFunc("/handlefunc-1", orchestrion.WrapHandlerFunc(handler))
+	//dd:endinstrument
+	//dd:startinstrument
+	http.HandleFunc("/handlefunc-2", orchestrion.WrapHandlerFunc(http.HandlerFunc(myHandler)))
+	//dd:endinstrument
+	//dd:startinstrument
+	http.HandleFunc("/handlefunc-3", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	//dd:endinstrument
 }

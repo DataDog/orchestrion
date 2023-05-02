@@ -3,16 +3,17 @@ package orchestrion
 import (
 	"bytes"
 	"fmt"
-	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
-	"github.com/dave/dst/decorator/resolver/goast"
-	"github.com/dave/dst/decorator/resolver/guess"
 	"go/token"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/dave/dst"
+	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/goast"
+	"github.com/dave/dst/decorator/resolver/guess"
 )
 
 func ScanPackage(name string, process func(string, io.Reader)) error {
@@ -236,7 +237,7 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 		case *dst.AssignStmt:
 			// what we actually care about
 			// see if it already has a dd:instrumented
-			if hasInstrumentedLabel(stmt) {
+			if hasInstrumentedLabel(stmt.Decs.Start.All()) {
 				break
 			}
 			if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
@@ -272,6 +273,13 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 				}
 			}
 		case *dst.ExprStmt:
+			if hasInstrumentedLabel(stmt.Decs.Start.All()) {
+				break
+			}
+			if wrapped := wrapHandler(stmt); wrapped {
+				break
+			}
+
 			// might be something we have to recurse on if it's a closure?
 			if call, ok := stmt.X.(*dst.CallExpr); ok {
 				// check if this is a handler func
@@ -362,10 +370,10 @@ func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit) bool {
 		IsPointerType(inputParams[1].Type, "net/http", "Request")
 }
 
-func hasInstrumentedLabel(stmt *dst.AssignStmt) bool {
+func hasInstrumentedLabel(decs []string) bool {
 	isLabeled := false
-	for _, v := range stmt.Decs.Start.All() {
-		if strings.HasPrefix(v, "//dd:instrumented") {
+	for _, v := range decs {
+		if strings.HasPrefix(v, "//dd:instrumented") || strings.HasPrefix(v, "//dd:startinstrument") {
 			log.Println("already instrumented")
 			isLabeled = true
 			break
@@ -392,6 +400,30 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func wrapHandler(stmt *dst.ExprStmt) bool {
+	if fun, ok := stmt.X.(*dst.CallExpr); ok && len(fun.Args) == 2 {
+		if iden, ok := fun.Fun.(*dst.Ident); ok && iden.Path == "net/http" {
+			var wrapper string
+			switch iden.Name {
+			case "Handle":
+				wrapper = "WrapHandler"
+			case "HandleFunc":
+				wrapper = "WrapHandlerFunc"
+			default:
+				return false
+			}
+			fun.Decorations().Start.Append("//dd:startinstrument")
+			fun.Decorations().End.Append("\n", "//dd:endinstrument")
+			fun.Args[1] = &dst.CallExpr{
+				Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion"},
+				Args: []dst.Expr{fun.Args[1]},
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func buildRequestClientCode(requestName string) dst.Stmt {
