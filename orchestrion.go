@@ -181,6 +181,21 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 	return ctx
 }
 
-func WrapHandler(handler http.Handler) http.Handler { /*noop*/ return handler }
+func WrapHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = HandleHeader(r)
+		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
+		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
+		handler.ServeHTTP(w, r)
+	})
+}
 
-func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc { /*noop*/ return handlerFunc }
+func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r = HandleHeader(r)
+		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
+		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
+		handlerFunc(w, r)
+	}
+
+}
