@@ -271,7 +271,7 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 				}
 			}
 		case *dst.ExprStmt:
-			if hasInstrumentedLabel(stmt.Decs.Start.All()) {
+			if hasInstrumentedLabel(stmt.Decs.Start.All()) || hasStartInstrumentLabel(stmt.Decs.Start.All()) {
 				break
 			}
 			if wrapped := wrapHandler(stmt); wrapped {
@@ -371,13 +371,23 @@ func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit) bool {
 func hasInstrumentedLabel(decs []string) bool {
 	isLabeled := false
 	for _, v := range decs {
-		if strings.HasPrefix(v, "//dd:instrumented") || strings.HasPrefix(v, "//dd:startinstrument") {
+		if strings.HasPrefix(v, "//dd:instrumented") {
 			log.Println("already instrumented")
 			isLabeled = true
 			break
 		}
 	}
 	return isLabeled
+}
+
+func hasStartInstrumentLabel(decs []string) bool {
+	for _, v := range decs {
+		if strings.HasPrefix(v, "//dd:startinstrument") {
+			log.Println("already instrumented 1")
+			return true
+		}
+	}
+	return false
 }
 
 func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
