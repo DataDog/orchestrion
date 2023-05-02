@@ -3,11 +3,12 @@ package orchestrion
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"net/http"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // if a function meets the handlerfunc type, insert code to:
@@ -175,3 +176,7 @@ func Report(ctx context.Context, e Event, metadata ...any) {
 	s.WriteString("}")
 	fmt.Println(s.String())
 }
+
+func WrapHandler(handler http.Handler) http.Handler { /*noop*/ return handler }
+
+func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc { /*noop*/ return handlerFunc }
