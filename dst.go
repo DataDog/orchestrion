@@ -150,8 +150,8 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 	/*
 		lines to insert:
 			//dd:startinstrument
-			Report(contextExpr, EventStart, "name", "doThing", parts...)
-			defer Report(contextExpr, EventEnd, "name", "doThing", parts...)
+			contextIdent = Report(contextIdent, EventStart, "name", "doThing", parts...)
+			defer Report(contextIdent, EventEnd, "name", "doThing", parts...)
 			//dd:endinstrument
 	*/
 	if contextExpr.contextType != ident {
@@ -428,8 +428,8 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	/*
 		//dd:startinstrument
 		if req != nil {
-			req = InsertHeader(req)
-			Report(req.Context(), EventCall, "url", req.URL, "method", req.Method)
+			InsertHeader(req)
+			req = req.WithContext(Report(req.Context(), EventCall, "url", req.URL, "method", req.Method))
 			defer Report(req.Context(), EventReturn, "url", req.URL, "method", req.Method)
 		}
 		//dd:endinstrument
@@ -542,7 +542,7 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 		lines to insert:
 			//dd:startinstrument
 			r = HandleHeader(r)
-			Report(r.Context(), EventStart, "name", "doThing", "verb", r.Method)
+			r = r.WithContext(Report(r.Context(), EventStart, "name", "doThing", "verb", r.Method))
 			defer Report(r.Context(), EventEnd, "name", "doThing", "verb", r.Method)
 			//dd:endinstrument
 	*/
