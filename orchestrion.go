@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 // if a function meets the handlerfunc type, insert code to:
@@ -134,13 +134,49 @@ func StackTrace(trace []uintptr) *runtime.Frames {
 	return runtime.CallersFrames(trace)
 }
 
+func getOpName(metadata ...any) string {
+	rank := map[string]int{
+		"verb":          1,
+		"function-name": 2,
+	}
+
+	var (
+		opname string
+		oprank int = 10_000 // just a higher number than any key in the rank map.
+	)
+	for i := 0; i < len(metadata); i += 2 {
+		if i+1 >= len(metadata) {
+			break
+		}
+		if k, ok := metadata[i].(string); ok {
+			if r, ok := rank[k]; ok && r < oprank {
+				if on, ok := metadata[i+1].(string); ok {
+					opname = on
+					continue
+				}
+			}
+		}
+	}
+	return opname
+}
+
 func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 	var reportID string
 	if e == EventStart || e == EventCall {
-		reportID = uuid.NewString()
-		ctx = AddReportID(ctx, reportID)
-	} else {
-		reportID = GetReportID(ctx)
+		var opts []tracer.StartSpanOption
+		for i := 0; i < len(metadata); i += 2 {
+			if i+1 >= len(metadata) {
+				break
+			}
+			if k, ok := metadata[i].(string); ok {
+				opts = append(opts, tracer.Tag(k, metadata[i+1]))
+			}
+		}
+		_, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
+	} else if e == EventEnd || e == EventReturn {
+		if span, ok := tracer.SpanFromContext(ctx); ok {
+			span.Finish()
+		}
 	}
 
 	frames := StackTrace(buildStackTrace())
@@ -198,4 +234,9 @@ func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		handlerFunc(w, r)
 	}
 
+}
+
+func Init() func() {
+	tracer.Start()
+	return tracer.Stop
 }
