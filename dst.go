@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/dave/dst"
@@ -20,9 +21,9 @@ func ScanPackage(name string, process func(string, io.Reader)) error {
 	fileSystem := os.DirFS(name)
 	return fs.WalkDir(fileSystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("couldn't walk path: %w", err)
 		}
-		if d.IsDir() {
+		if d.IsDir() || filepath.Ext(path) != ".go" {
 			return nil
 		}
 		fullFileName := name + string(os.PathSeparator) + path
@@ -50,17 +51,6 @@ func ScanFile(name string, content io.Reader) (io.Reader, error) {
 	}
 
 	// see if this file should be modified (see if it imports net/http)
-	hasHTTP := false
-	for _, imp := range f.Imports {
-		if imp.Path.Value == `"net/http"` {
-			hasHTTP = true
-			break
-		}
-	}
-	if !hasHTTP {
-		log.Println("doesn't use net/http; skipping")
-		return nil, nil
-	}
 
 	// server support stage 1: find handlers in top-level functions (functions and methods!)
 	for _, decl := range f.Decls {
@@ -164,13 +154,21 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 			defer Report(contextExpr, EventEnd, "name", "doThing", parts...)
 			//dd:endinstrument
 	*/
+	if contextExpr.contextType != ident {
+		return nil
+	}
+
 	newLines := []dst.Stmt{
-		&dst.ExprStmt{
-			X: &dst.CallExpr{
-				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
-				Args: buildArgs(contextExpr, EventStart, name, parts),
+		&dst.AssignStmt{
+			Lhs: []dst.Expr{&dst.Ident{Name: contextExpr.name}},
+			Tok: token.ASSIGN,
+			Rhs: []dst.Expr{
+				&dst.CallExpr{
+					Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+					Args: buildArgs(contextExpr, EventStart, name, parts),
+				},
 			},
-			Decs: dst.ExprStmtDecorations{NodeDecs: dst.NodeDecs{
+			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
 				Before: dst.NewLine,
 				Start:  dst.Decorations{"//dd:startinstrument"},
 				After:  dst.NewLine,
@@ -195,7 +193,7 @@ func buildArgs(contextExpr contextInfo, event Event, name string, parts []string
 	out = append(out,
 		dupCtxExprForSpan(contextExpr),
 		&dst.Ident{Name: event.String(), Path: "github.com/datadog/orchestrion"},
-		&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
+		&dst.BasicLit{Kind: token.STRING, Value: `"function-name"`},
 		&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, name)},
 	)
 	out = append(out, buildExprsFromParts(parts)...)
@@ -445,32 +443,42 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
+				&dst.ExprStmt{
+					X: &dst.CallExpr{
+						Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
+						Args: []dst.Expr{&dst.Ident{Name: requestName}},
+					},
+				},
 				&dst.AssignStmt{
 					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
 					Tok: token.ASSIGN,
-					Rhs: []dst.Expr{&dst.CallExpr{
-						Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
-						Args: []dst.Expr{&dst.Ident{Name: requestName}},
-					}},
-				},
-				&dst.ExprStmt{
-					X: &dst.CallExpr{
-						Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
-						Args: []dst.Expr{
-							&dst.CallExpr{Fun: &dst.SelectorExpr{
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun: &dst.SelectorExpr{
 								X:   &dst.Ident{Name: requestName},
-								Sel: &dst.Ident{Name: "Context"},
-							}},
-							&dst.Ident{Name: "EventCall", Path: "github.com/datadog/orchestrion"},
-							&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
-							&dst.SelectorExpr{
-								X:   &dst.Ident{Name: requestName},
-								Sel: &dst.Ident{Name: "URL"},
+								Sel: &dst.Ident{Name: "WithContext"},
 							},
-							&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
-							&dst.SelectorExpr{
-								X:   &dst.Ident{Name: requestName},
-								Sel: &dst.Ident{Name: "Method"},
+							Args: []dst.Expr{
+								&dst.CallExpr{
+									Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+									Args: []dst.Expr{
+										&dst.CallExpr{Fun: &dst.SelectorExpr{
+											X:   &dst.Ident{Name: requestName},
+											Sel: &dst.Ident{Name: "Context"},
+										}},
+										&dst.Ident{Name: "EventCall", Path: "github.com/datadog/orchestrion"},
+										&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
+										&dst.SelectorExpr{
+											X:   &dst.Ident{Name: requestName},
+											Sel: &dst.Ident{Name: "URL"},
+										},
+										&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
+										&dst.SelectorExpr{
+											X:   &dst.Ident{Name: requestName},
+											Sel: &dst.Ident{Name: "Method"},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -555,21 +563,33 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 				After:  dst.NewLine,
 			}},
 		},
-		&dst.ExprStmt{
-			X: &dst.CallExpr{
-				Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
-				Args: []dst.Expr{
-					&dst.CallExpr{Fun: &dst.SelectorExpr{
+		&dst.AssignStmt{
+			Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
+			Tok: token.ASSIGN,
+			Rhs: []dst.Expr{
+				&dst.CallExpr{
+					Fun: &dst.SelectorExpr{
 						X:   &dst.Ident{Name: requestName},
-						Sel: &dst.Ident{Name: "Context"},
-					}},
-					&dst.Ident{Name: "EventStart", Path: "github.com/datadog/orchestrion"},
-					&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
-					dup(funcName),
-					&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
-					&dst.SelectorExpr{
-						X:   &dst.Ident{Name: requestName},
-						Sel: &dst.Ident{Name: "Method"},
+						Sel: &dst.Ident{Name: "WithContext"},
+					},
+					Args: []dst.Expr{
+						&dst.CallExpr{
+							Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+							Args: []dst.Expr{
+								&dst.CallExpr{Fun: &dst.SelectorExpr{
+									X:   &dst.Ident{Name: requestName},
+									Sel: &dst.Ident{Name: "Context"},
+								}},
+								&dst.Ident{Name: "EventStart", Path: "github.com/datadog/orchestrion"},
+								&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
+								dup(funcName),
+								&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
+								&dst.SelectorExpr{
+									X:   &dst.Ident{Name: requestName},
+									Sel: &dst.Ident{Name: "Method"},
+								},
+							},
+						},
 					},
 				},
 			},
