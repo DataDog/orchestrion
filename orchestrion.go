@@ -195,6 +195,7 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 
 func WrapHandler(handler http.Handler) http.Handler {
 	return httptrace.WrapHandler(handler, "", "")
+	// We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
 	//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	//		r = HandleHeader(r)
 	//		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
@@ -207,6 +208,7 @@ func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		httptrace.TraceAndServe(handlerFunc, w, r, &httptrace.ServeConfig{})
 	})
+	// We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
 	//	return func(w http.ResponseWriter, r *http.Request) {
 	//		r = HandleHeader(r)
 	//		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
