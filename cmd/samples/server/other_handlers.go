@@ -86,6 +86,23 @@ func MyFunc3(name string) {
 
 func registerHandlers() {
 	handler := http.HandlerFunc(myHandler)
+	http.Handle("/handle-1", handler)
+	http.Handle("/hundle-2", http.HandlerFunc(myHandler))
+	http.Handle("/hundle-3", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	http.HandleFunc("/handlefunc-1", handler)
+	http.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
+	http.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {})
+	s := http.NewServeMux()
+	s.Handle("/handle-mux", handler)
+	s.Handle("/handle-mux", http.HandlerFunc(myHandler))
+	s.Handle("/handle-mux", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	s.HandleFunc("/handlefunc-1", handler)
+	s.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
+	s.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {})
+}
+
+func instrumentedRegisterHandlers() {
+	handler := http.HandlerFunc(myHandler)
 	//dd:startinstrument
 	http.Handle("/handle-1", orchestrion.WrapHandler(handler))
 	//dd:endinstrument
@@ -103,5 +120,24 @@ func registerHandlers() {
 	//dd:endinstrument
 	//dd:startinstrument
 	http.HandleFunc("/handlefunc-3", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	//dd:endinstrument
+	s := http.NewServeMux()
+	//dd:startinstrument
+	s.Handle("/handle-mux", orchestrion.WrapHandler(handler))
+	//dd:endinstrument
+	//dd:startinstrument
+	s.Handle("/handle-mux", orchestrion.WrapHandler(http.HandlerFunc(myHandler)))
+	//dd:endinstrument
+	//dd:startinstrument
+	s.Handle("/handle-mux", orchestrion.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
+	//dd:endinstrument
+	//dd:startinstrument
+	s.HandleFunc("/handlefunc-1", orchestrion.WrapHandlerFunc(handler))
+	//dd:endinstrument
+	//dd:startinstrument
+	s.HandleFunc("/handlefunc-2", orchestrion.WrapHandlerFunc(http.HandlerFunc(myHandler)))
+	//dd:endinstrument
+	//dd:startinstrument
+	s.HandleFunc("/handlefunc-3", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	//dd:endinstrument
 }

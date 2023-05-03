@@ -403,24 +403,32 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 }
 
 func wrapHandler(stmt *dst.ExprStmt) bool {
+	wrap := func(fun *dst.CallExpr, name string) bool {
+		var wrapper string
+		switch name {
+		case "Handle":
+			wrapper = "WrapHandler"
+		case "HandleFunc":
+			wrapper = "WrapHandlerFunc"
+		default:
+			return false
+		}
+		fun.Decorations().Start.Append("//dd:startinstrument")
+		fun.Decorations().End.Append("\n", "//dd:endinstrument")
+		fun.Args[1] = &dst.CallExpr{
+			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion"},
+			Args: []dst.Expr{fun.Args[1]},
+		}
+		return true
+	}
 	if fun, ok := stmt.X.(*dst.CallExpr); ok && len(fun.Args) == 2 {
-		if iden, ok := fun.Fun.(*dst.Ident); ok && iden.Path == "net/http" {
-			var wrapper string
-			switch iden.Name {
-			case "Handle":
-				wrapper = "WrapHandler"
-			case "HandleFunc":
-				wrapper = "WrapHandlerFunc"
-			default:
-				return false
+		switch f := fun.Fun.(type) {
+		case *dst.SelectorExpr:
+			return wrap(fun, f.Sel.Name)
+		case *dst.Ident:
+			if f.Path == "net/http" {
+				return wrap(fun, f.Name)
 			}
-			fun.Decorations().Start.Append("//dd:startinstrument")
-			fun.Decorations().End.Append("\n", "//dd:endinstrument")
-			fun.Args[1] = &dst.CallExpr{
-				Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion"},
-				Args: []dst.Expr{fun.Args[1]},
-			}
-			return true
 		}
 	}
 	return false
