@@ -4,8 +4,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-
-	"github.com/datadog/orchestrion"
 )
 
 func main() {
@@ -32,11 +30,6 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
-	//dd:startinstrument
-	r = orchestrion.HandleHeader(r)
-	orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "instrumentedHandler", "verb", r.Method)
-	defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "instrumentedHandler", "verb", r.Method)
-	//dd:endinstrument
 	b, err := io.ReadAll(r.Body)
 	// test comment in function
 	if err != nil {

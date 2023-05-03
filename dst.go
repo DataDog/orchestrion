@@ -69,6 +69,10 @@ func ScanFile(name string, content io.Reader) (io.Reader, error) {
 					break
 				}
 			}
+			// add init to main
+			if decl.Name.Name == "main" {
+				decl = addInit(decl)
+			}
 			// scan body for request creation or handlers as function literals
 			// client support stage 1: find http clients in functions
 			// server support stage 2: find closures in functions to instrument too
@@ -446,7 +450,7 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	/*
 		//dd:startinstrument
 		if req != nil {
-			InsertHeader(req)
+			req = InsertHeader(req)
 			req = req.WithContext(Report(req.Context(), EventCall, "url", req.URL, "method", req.Method))
 			defer Report(req.Context(), EventReturn, "url", req.URL, "method", req.Method)
 		}
@@ -461,10 +465,14 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
-				&dst.ExprStmt{
-					X: &dst.CallExpr{
-						Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
-						Args: []dst.Expr{&dst.Ident{Name: requestName}},
+				&dst.AssignStmt{
+					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
+					Tok: token.ASSIGN,
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
+							Args: []dst.Expr{&dst.Ident{Name: requestName}},
+						},
 					},
 				},
 				&dst.AssignStmt{
@@ -535,6 +543,36 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	}
 }
 
+func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
+	//check if magic comment is attached to first line
+	if len(decl.Body.List) > 0 {
+		decs := decl.Body.List[0].Decorations().Start
+		for _, v := range decs.All() {
+			if strings.HasPrefix(v, "//dd:startinstrument") {
+				log.Println("already instrumented")
+				return decl
+			}
+		}
+	}
+
+	newLines := []dst.Stmt{
+		&dst.DeferStmt{
+			Call: &dst.CallExpr{
+				Fun: &dst.CallExpr{
+					Fun: &dst.Ident{Path: "github.com/datadog/orchestrion", Name: "Init"},
+				},
+			},
+			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
+				Start: dst.Decorations{"\n", "//dd:startinstrument"},
+				End:   dst.Decorations{"\n", "//dd:endinstrument"},
+			}},
+		},
+	}
+
+	decl.Body.List = append(newLines, decl.Body.List...)
+	return decl
+}
+
 func addCodeToHandler(decl *dst.FuncDecl) *dst.FuncDecl {
 	//check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
@@ -559,7 +597,6 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 	/*
 		lines to insert:
 			//dd:startinstrument
-			r = HandleHeader(r)
 			r = r.WithContext(Report(r.Context(), EventStart, "name", "doThing", "verb", r.Method))
 			defer Report(r.Context(), EventEnd, "name", "doThing", "verb", r.Method)
 			//dd:endinstrument
@@ -568,19 +605,6 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 		funcName = &dst.BasicLit{Kind: token.STRING, Value: `"anon"`}
 	}
 	newLines := []dst.Stmt{
-		&dst.AssignStmt{
-			Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
-			Tok: token.ASSIGN,
-			Rhs: []dst.Expr{&dst.CallExpr{
-				Fun:  &dst.Ident{Name: "HandleHeader", Path: "github.com/datadog/orchestrion"},
-				Args: []dst.Expr{&dst.Ident{Name: requestName}},
-			}},
-			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
-				Before: dst.NewLine,
-				Start:  dst.Decorations{"//dd:startinstrument"},
-				After:  dst.NewLine,
-			}},
-		},
 		&dst.AssignStmt{
 			Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
 			Tok: token.ASSIGN,
@@ -611,24 +635,30 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 					},
 				},
 			},
+			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				Start:  dst.Decorations{"//dd:startinstrument"},
+				After:  dst.NewLine,
+			}},
 		},
-		&dst.DeferStmt{Call: &dst.CallExpr{
-			Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
-			Args: []dst.Expr{
-				&dst.CallExpr{Fun: &dst.SelectorExpr{
-					X:   &dst.Ident{Name: requestName},
-					Sel: &dst.Ident{Name: "Context"},
-				}},
-				&dst.Ident{Name: "EventEnd", Path: "github.com/datadog/orchestrion"},
-				&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
-				dup(funcName),
-				&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
-				&dst.SelectorExpr{
-					X:   &dst.Ident{Name: requestName},
-					Sel: &dst.Ident{Name: "Method"},
+		&dst.DeferStmt{
+			Call: &dst.CallExpr{
+				Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+				Args: []dst.Expr{
+					&dst.CallExpr{Fun: &dst.SelectorExpr{
+						X:   &dst.Ident{Name: requestName},
+						Sel: &dst.Ident{Name: "Context"},
+					}},
+					&dst.Ident{Name: "EventEnd", Path: "github.com/datadog/orchestrion"},
+					&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
+					dup(funcName),
+					&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
+					&dst.SelectorExpr{
+						X:   &dst.Ident{Name: requestName},
+						Sel: &dst.Ident{Name: "Method"},
+					},
 				},
 			},
-		},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
 				After: dst.NewLine,
 				End:   dst.Decorations{"\n", "//dd:endinstrument"},

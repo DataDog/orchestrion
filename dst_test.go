@@ -103,3 +103,29 @@ func MyFunc(somectx context.Context) {
 	require.NoError(t, err)
 	assert.Equal(t, want, string(got))
 }
+
+func TestMainInstrumentation(t *testing.T) {
+	var code = `package main
+
+func main() {
+	whatever.code
+}
+`
+	var want = `package main
+
+import "github.com/datadog/orchestrion"
+
+func main() {
+	//dd:startinstrument
+	defer orchestrion.Init()()
+	//dd:endinstrument
+	whatever.code
+}
+`
+
+	reader, err := ScanFile("test", strings.NewReader(code))
+	require.NoError(t, err)
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.Equal(t, want, string(got))
+}
