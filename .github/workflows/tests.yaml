@@ -1,0 +1,29 @@
+name: Tests
+on: [ push ]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.19"
+          cache: true
+      - uses: actions/checkout@v3
+        with:
+          repository: 'DataDog/orchestrion'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: 'DataDog/orchestrion'
+      - name: Checkout Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.19"
+      - name: Run unit tests
+        run: make test

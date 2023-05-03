@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/datadog/orchestrion"
 	"io"
 	"os"
+
+	"github.com/datadog/orchestrion"
 )
 
 func main() {

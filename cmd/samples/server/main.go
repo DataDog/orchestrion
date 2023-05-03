@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/datadog/orchestrion"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/datadog/orchestrion"
 )
 
 func main() {
