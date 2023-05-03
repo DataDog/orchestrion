@@ -450,7 +450,7 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	/*
 		//dd:startinstrument
 		if req != nil {
-			InsertHeader(req)
+			req = InsertHeader(req)
 			req = req.WithContext(Report(req.Context(), EventCall, "url", req.URL, "method", req.Method))
 			defer Report(req.Context(), EventReturn, "url", req.URL, "method", req.Method)
 		}
@@ -465,10 +465,14 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
-				&dst.ExprStmt{
-					X: &dst.CallExpr{
-						Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
-						Args: []dst.Expr{&dst.Ident{Name: requestName}},
+				&dst.AssignStmt{
+					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
+					Tok: token.ASSIGN,
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
+							Args: []dst.Expr{&dst.Ident{Name: requestName}},
+						},
 					},
 				},
 				&dst.AssignStmt{
@@ -593,7 +597,6 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 	/*
 		lines to insert:
 			//dd:startinstrument
-			r = HandleHeader(r)
 			r = r.WithContext(Report(r.Context(), EventStart, "name", "doThing", "verb", r.Method))
 			defer Report(r.Context(), EventEnd, "name", "doThing", "verb", r.Method)
 			//dd:endinstrument
@@ -602,19 +605,6 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 		funcName = &dst.BasicLit{Kind: token.STRING, Value: `"anon"`}
 	}
 	newLines := []dst.Stmt{
-		&dst.AssignStmt{
-			Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
-			Tok: token.ASSIGN,
-			Rhs: []dst.Expr{&dst.CallExpr{
-				Fun:  &dst.Ident{Name: "HandleHeader", Path: "github.com/datadog/orchestrion"},
-				Args: []dst.Expr{&dst.Ident{Name: requestName}},
-			}},
-			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
-				Before: dst.NewLine,
-				Start:  dst.Decorations{"//dd:startinstrument"},
-				After:  dst.NewLine,
-			}},
-		},
 		&dst.AssignStmt{
 			Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
 			Tok: token.ASSIGN,
@@ -645,6 +635,11 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 					},
 				},
 			},
+			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
+				Before: dst.NewLine,
+				Start:  dst.Decorations{"//dd:startinstrument"},
+				After:  dst.NewLine,
+			}},
 		},
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{

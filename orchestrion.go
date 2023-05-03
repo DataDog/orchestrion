@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
-	"strings"
-	"time"
 
+	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -70,44 +69,14 @@ Will need to properly capture the name of req from the return values of the NewR
 Once we have this working for these simple cases, can work on harder ones!
 */
 
-func InsertHeader(r *http.Request) {
-	ctx := r.Context()
-	reportID := GetReportID(ctx)
-	if reportID != "" {
-		r.Header.Set("x-trace-id", reportID)
-	}
-}
-
-func HandleHeader(r *http.Request) *http.Request {
-	reportID := r.Header.Get("x-trace-id")
-	if reportID == "" {
+func InsertHeader(r *http.Request) *http.Request {
+	span, ok := tracer.SpanFromContext(r.Context())
+	if !ok {
 		return r
 	}
-	ctx := r.Context()
-	if GetReportID(ctx) == "" {
-		ctx = AddReportID(ctx, reportID)
-		r = r.WithContext(ctx)
-	}
+	r = r.Clone(r.Context())
+	tracer.Inject(span.Context(), tracer.HTTPHeadersCarrier(r.Header))
 	return r
-}
-
-type reportIDType int
-
-const (
-	_ reportIDType = iota
-	reportKey
-)
-
-func AddReportID(ctx context.Context, reportID string) context.Context {
-	return context.WithValue(ctx, reportKey, reportID)
-}
-
-func GetReportID(ctx context.Context) string {
-	val, ok := ctx.Value(reportKey).(string)
-	if !ok {
-		return ""
-	}
-	return val
 }
 
 //go:generate stringer -type=Event
@@ -152,6 +121,7 @@ func getOpName(metadata ...any) string {
 			if r, ok := rank[k]; ok && r < oprank {
 				if on, ok := metadata[i+1].(string); ok {
 					opname = on
+					oprank = r
 					continue
 				}
 			}
@@ -161,7 +131,7 @@ func getOpName(metadata ...any) string {
 }
 
 func Report(ctx context.Context, e Event, metadata ...any) context.Context {
-	var reportID string
+	var span tracer.Span
 	if e == EventStart || e == EventCall {
 		var opts []tracer.StartSpanOption
 		for i := 0; i < len(metadata); i += 2 {
@@ -172,22 +142,26 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 				opts = append(opts, tracer.Tag(k, metadata[i+1]))
 			}
 		}
-		_, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
+		span, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
 	} else if e == EventEnd || e == EventReturn {
-		if span, ok := tracer.SpanFromContext(ctx); ok {
-			span.Finish()
+		var ok bool
+		span, ok = tracer.SpanFromContext(ctx)
+		if !ok {
+			fmt.Printf("Error: Received end/return event but have no corresponding span in the context.\n")
+			return ctx
 		}
+		span.Finish()
 	}
 
-	frames := StackTrace(buildStackTrace())
-	frame, _ := frames.Next()
-	file := ""
-	line := 0
-	funcName := ""
-	if frame.Func != nil {
-		file, line = frame.Func.FileLine(frame.PC)
-		funcName = frame.Func.Name()
-	}
+	// 	frames := StackTrace(buildStackTrace())
+	// 	frame, _ := frames.Next()
+	// 	file := ""
+	// 	line := 0
+	// 	funcName := ""
+	// 	if frame.Func != nil {
+	// 		file, line = frame.Func.FileLine(frame.PC)
+	// 		funcName = frame.Func.Name()
+	// 	}
 
 	// in case we end up needing to walk further up, here's code to do that
 	//for {
@@ -202,38 +176,43 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 	//	}
 	//}
 
-	var s strings.Builder
-	s.WriteString(fmt.Sprintf(`{"time":"%s", "reportID":"%s", "event":"%s"`,
-		time.Now(), reportID, e))
-	s.WriteString(fmt.Sprintf(`, "function":"%s", "file":"%s", "line":%d`, funcName, file, line))
-	if len(metadata)%2 != 0 {
-		metadata = append(metadata, "")
-	}
-	for i := 0; i < len(metadata); i += 2 {
-		s.WriteString(fmt.Sprintf(`, "%s":"%s"`, metadata[i], metadata[i+1]))
-	}
-	s.WriteString("}")
-	fmt.Println(s.String())
+	// 	var s strings.Builder
+	// 	s.WriteString(fmt.Sprintf(`{"time":"%s", "reportID":"%s", "event":"%s"`,
+	// 		time.Now(), reportID, e))
+	// 	s.WriteString(fmt.Sprintf(`, "function":"%s", "file":"%s", "line":%d`, funcName, file, line))
+	// 	if len(metadata)%2 != 0 {
+	// 		metadata = append(metadata, "")
+	// 	}
+	// 	for i := 0; i < len(metadata); i += 2 {
+	// 		s.WriteString(fmt.Sprintf(`, "%s":"%s"`, metadata[i], metadata[i+1]))
+	// 	}
+	// 	s.WriteString("}")
+	// 	fmt.Println(s.String())
+
+	fmt.Printf("%v: %v\n", e, span)
 	return ctx
 }
 
 func WrapHandler(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r = HandleHeader(r)
-		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
-		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
-		handler.ServeHTTP(w, r)
-	})
+	return httptrace.WrapHandler(handler, "", "")
+	//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//		r = HandleHeader(r)
+	//		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
+	//		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
+	//		handler.ServeHTTP(w, r)
+	//	})
 }
 
 func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		r = HandleHeader(r)
-		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
-		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
-		handlerFunc(w, r)
-	}
-
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		httptrace.TraceAndServe(handlerFunc, w, r, &httptrace.ServeConfig{})
+	})
+	//	return func(w http.ResponseWriter, r *http.Request) {
+	//		r = HandleHeader(r)
+	//		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
+	//		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
+	//		handlerFunc(w, r)
+	//	}
 }
 
 func Init() func() {
