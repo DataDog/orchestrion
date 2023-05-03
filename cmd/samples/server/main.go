@@ -9,6 +9,9 @@ import (
 )
 
 func main() {
+	//dd:startinstrument
+	defer orchestrion.Init()()
+	//dd:endinstrument
 	s := &http.Server{
 		Addr:    ":8080",
 		Handler: http.HandlerFunc(myHandler),
@@ -19,6 +22,10 @@ func main() {
 
 // myHandler comment on function
 func myHandler(w http.ResponseWriter, r *http.Request) {
+	//dd:startinstrument
+	r = r.WithContext(orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "myHandler", "verb", r.Method))
+	defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "myHandler", "verb", r.Method)
+	//dd:endinstrument
 	b, err := io.ReadAll(r.Body)
 	// test comment in function
 	if err != nil {
@@ -33,8 +40,7 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 
 func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 	//dd:startinstrument
-	r = orchestrion.HandleHeader(r)
-	orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "instrumentedHandler", "verb", r.Method)
+	r = r.WithContext(orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "instrumentedHandler", "verb", r.Method))
 	defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "instrumentedHandler", "verb", r.Method)
 	//dd:endinstrument
 	b, err := io.ReadAll(r.Body)
