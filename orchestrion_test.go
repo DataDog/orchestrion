@@ -9,10 +9,10 @@ import (
 )
 
 func TestScanPackageDST(t *testing.T) {
-	process := func(fullName string, out io.Reader) {
+	output := func(fullName string, out io.Reader) {
 		io.ReadAll(out)
 	}
-	ScanPackage("./cmd/samples", process)
+	ProcessPackage("./cmd/samples", InstrumentFile, output)
 }
 
 func TestReport(t *testing.T) {

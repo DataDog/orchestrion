@@ -17,7 +17,117 @@ import (
 	"github.com/dave/dst/decorator/resolver/guess"
 )
 
-func ScanPackage(name string, process func(string, io.Reader)) error {
+func removeDecl(prefix string, ds dst.Decorations) []string {
+	var rds []string
+	for i := range ds {
+		if strings.HasPrefix(ds[i], prefix) {
+			continue
+		}
+		rds = append(rds, ds[i])
+	}
+	return rds
+}
+
+func removeDecoration(deco string, s dst.Stmt) {
+	s.Decorations().Start.Replace(removeDecl(deco, s.Decorations().Start)...)
+	s.Decorations().End.Replace(removeDecl(deco, s.Decorations().End)...)
+}
+
+func UninstrumentFile(name string, r io.Reader) (io.Reader, error) {
+	fset := token.NewFileSet()
+	d := decorator.NewDecoratorWithImports(fset, name, goast.New())
+	f, err := d.Parse(r)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing content in %s: %w", name, err)
+	}
+
+	for _, decl := range f.Decls {
+		if decl, ok := decl.(*dst.FuncDecl); ok {
+			decl.Body.List = removeStartEndWrap(decl.Body.List)
+			decl.Body.List = removeStartEndInstrument(decl.Body.List)
+		}
+	}
+
+	res := decorator.NewRestorerWithImports(name, guess.New())
+	var out bytes.Buffer
+	err = res.Fprint(&out, f)
+	return &out, err
+}
+
+func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
+	var start, end int
+	var found bool
+	for i, stmt := range list {
+		if hasStartWrapLabel(stmt.Decorations().Start.All()) {
+			start = i
+			if hasEndWrapLabel(stmt.Decorations().End.All()) {
+				end = i
+				found = true
+				break
+			}
+		} else if hasEndWrapLabel(stmt.Decorations().Start.All()) {
+			end = i
+			found = true
+			break
+		}
+	}
+	if !found {
+		// Never found a start/end pair.
+		return list
+	}
+	removeDecoration("//dd:endwrap", list[end])
+	removeDecoration("//dd:startwrap", list[start])
+	for _, s := range list {
+		es, ok := s.(*dst.ExprStmt)
+		if !ok {
+			continue
+		}
+		f, ok := es.X.(*dst.CallExpr)
+		if !ok {
+			continue
+		}
+		if len(f.Args) > 0 {
+			if ce, ok := f.Args[1].(*dst.CallExpr); ok {
+				if cei, ok := ce.Fun.(*dst.Ident); ok {
+					if cei.Path == "github.com/datadog/orchestrion" &&
+						strings.HasPrefix(cei.Name, "WrapHandler") {
+						f.Args[1] = ce.Args[0]
+					}
+				}
+			}
+		}
+	}
+	return list
+}
+
+func removeStartEndInstrument(list []dst.Stmt) []dst.Stmt {
+	var start, end int
+	for i, stmt := range list {
+		if hasStartInstrumentLabel(stmt.Decorations().Start.All()) {
+			start = i
+		}
+		if hasEndInstrumentLabel(stmt.Decorations().Start.All()) {
+			end = i
+			removeDecoration("//dd:endinstrument", list[end])
+			list = append(list[:start], list[end:]...)
+			// We found one. There may be others, so recurse.
+			// We can make this more efficient...
+			return removeStartEndInstrument(list)
+		}
+		if hasEndInstrumentLabel(stmt.Decorations().End.All()) {
+			list = list[:start]
+			// We found one. There may be others, so recurse.
+			// We can make this more efficient...
+			return removeStartEndInstrument(list)
+		}
+		if hasInstrumentedLabel(stmt.Decorations().Start.All()) {
+			removeDecoration("//dd:instrumented", stmt)
+		}
+	}
+	return list
+}
+
+func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, error), output func(string, io.Reader)) error {
 	fileSystem := os.DirFS(name)
 	return fs.WalkDir(fileSystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -31,18 +141,19 @@ func ScanPackage(name string, process func(string, io.Reader)) error {
 		if err != nil {
 			return fmt.Errorf("error opening file: %w", err)
 		}
-		out, err := ScanFile(path, file)
+		out, err := process(path, file)
 		file.Close()
 		if err != nil {
 			return fmt.Errorf("error scanning file %s: %w", path, err)
 		}
 		if out != nil {
-			process(fullFileName, out)
+			output(fullFileName, out)
 		}
 		return nil
 	})
 }
-func ScanFile(name string, content io.Reader) (io.Reader, error) {
+
+func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 	fset := token.NewFileSet()
 	d := decorator.NewDecoratorWithImports(fset, name, goast.New())
 	f, err := d.Parse(content)
@@ -394,6 +505,34 @@ func hasStartInstrumentLabel(decs []string) bool {
 	return false
 }
 
+func hasEndInstrumentLabel(decs []string) bool {
+	for _, v := range decs {
+		if strings.HasPrefix(v, "//dd:endinstrument") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasStartWrapLabel(decs []string) bool {
+	for _, v := range decs {
+		if strings.HasPrefix(v, "//dd:startwrap") {
+			log.Println("already instrumented")
+			return true
+		}
+	}
+	return false
+}
+
+func hasEndWrapLabel(decs []string) bool {
+	for _, v := range decs {
+		if strings.HasPrefix(v, "//dd:endwrap") {
+			return true
+		}
+	}
+	return false
+}
+
 func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 	// looking for
 	// 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "localhost:8080", strings.NewReader(os.Args[1]))
@@ -425,8 +564,8 @@ func wrapHandler(stmt *dst.ExprStmt) bool {
 		default:
 			return false
 		}
-		fun.Decorations().Start.Append("//dd:startinstrument")
-		fun.Decorations().End.Append("\n", "//dd:endinstrument")
+		fun.Decorations().Start.Append("//dd:startwrap")
+		fun.Decorations().End.Append("\n", "//dd:endwrap")
 		fun.Args[1] = &dst.CallExpr{
 			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion"},
 			Args: []dst.Expr{fun.Args[1]},
