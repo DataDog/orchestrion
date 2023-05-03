@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,6 +53,43 @@ func register() {
 		require.Nil(t, err)
 		got, err := io.ReadAll(reader)
 		require.Nil(t, err)
-		require.Equal(t, string(got), fmt.Sprintf(wantTpl, tc.want))
+		require.Equal(t, fmt.Sprintf(wantTpl, tc.want), string(got))
 	}
+}
+
+func TestSpanInstrumentation(t *testing.T) {
+	var code = `package main
+
+import (
+	"context"
+)
+
+//dd:span foo:bar other:tag
+func MyFunc(somectx context.Context) {
+	whatever.code
+}
+`
+	var want = `package main
+
+import (
+	"context"
+
+	"github.com/datadog/orchestrion"
+)
+
+//dd:span foo:bar other:tag
+func MyFunc(somectx context.Context) {
+	//dd:startinstrument
+	somectx = orchestrion.Report(somectx, orchestrion.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	defer orchestrion.Report(somectx, orchestrion.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	//dd:endinstrument
+	whatever.code
+}
+`
+
+	reader, err := ScanFile("test", strings.NewReader(code))
+	require.NoError(t, err)
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	assert.Equal(t, want, string(got))
 }
