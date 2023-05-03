@@ -70,44 +70,40 @@ Will need to properly capture the name of req from the return values of the NewR
 Once we have this working for these simple cases, can work on harder ones!
 */
 
-func InsertHeader(r *http.Request) *http.Request {
+func InsertHeader(r *http.Request) {
 	ctx := r.Context()
-	traceID := GetTraceID(ctx)
-	if traceID == "" {
-		traceID = uuid.NewString()
-		ctx = AddTraceID(ctx, traceID)
-		r = r.WithContext(ctx)
+	reportID := GetReportID(ctx)
+	if reportID != "" {
+		r.Header.Set("x-trace-id", reportID)
 	}
-	r.Header.Set("x-trace-id", traceID)
-	return r
 }
 
 func HandleHeader(r *http.Request) *http.Request {
-	traceID := r.Header.Get("x-trace-id")
-	if traceID == "" {
-		traceID = uuid.NewString()
+	reportID := r.Header.Get("x-trace-id")
+	if reportID == "" {
+		return r
 	}
 	ctx := r.Context()
-	if GetTraceID(ctx) == "" {
-		ctx = AddTraceID(ctx, traceID)
+	if GetReportID(ctx) == "" {
+		ctx = AddReportID(ctx, reportID)
 		r = r.WithContext(ctx)
 	}
 	return r
 }
 
-type traceIDType int
+type reportIDType int
 
 const (
-	_ traceIDType = iota
-	traceKey
+	_ reportIDType = iota
+	reportKey
 )
 
-func AddTraceID(ctx context.Context, traceID string) context.Context {
-	return context.WithValue(ctx, traceKey, traceID)
+func AddReportID(ctx context.Context, reportID string) context.Context {
+	return context.WithValue(ctx, reportKey, reportID)
 }
 
-func GetTraceID(ctx context.Context) string {
-	val, ok := ctx.Value(traceKey).(string)
+func GetReportID(ctx context.Context) string {
+	val, ok := ctx.Value(reportKey).(string)
 	if !ok {
 		return ""
 	}
@@ -138,8 +134,15 @@ func StackTrace(trace []uintptr) *runtime.Frames {
 	return runtime.CallersFrames(trace)
 }
 
-func Report(ctx context.Context, e Event, metadata ...any) {
-	traceID := GetTraceID(ctx)
+func Report(ctx context.Context, e Event, metadata ...any) context.Context {
+	var reportID string
+	if e == EventStart || e == EventCall {
+		reportID = uuid.NewString()
+		ctx = AddReportID(ctx, reportID)
+	} else {
+		reportID = GetReportID(ctx)
+	}
+
 	frames := StackTrace(buildStackTrace())
 	frame, _ := frames.Next()
 	file := ""
@@ -164,8 +167,8 @@ func Report(ctx context.Context, e Event, metadata ...any) {
 	//}
 
 	var s strings.Builder
-	s.WriteString(fmt.Sprintf(`{"time":"%s", "traceID":"%s", "event":"%s"`,
-		time.Now(), traceID, e))
+	s.WriteString(fmt.Sprintf(`{"time":"%s", "reportID":"%s", "event":"%s"`,
+		time.Now(), reportID, e))
 	s.WriteString(fmt.Sprintf(`, "function":"%s", "file":"%s", "line":%d`, funcName, file, line))
 	if len(metadata)%2 != 0 {
 		metadata = append(metadata, "")
@@ -175,8 +178,24 @@ func Report(ctx context.Context, e Event, metadata ...any) {
 	}
 	s.WriteString("}")
 	fmt.Println(s.String())
+	return ctx
 }
 
-func WrapHandler(handler http.Handler) http.Handler { /*noop*/ return handler }
+func WrapHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = HandleHeader(r)
+		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
+		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
+		handler.ServeHTTP(w, r)
+	})
+}
 
-func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc { /*noop*/ return handlerFunc }
+func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r = HandleHeader(r)
+		r = r.WithContext(Report(r.Context(), EventStart, "name", "FooHandler", "verb", r.Method))
+		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
+		handlerFunc(w, r)
+	}
+
+}

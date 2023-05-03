@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/datadog/orchestrion"
 )
@@ -29,14 +30,21 @@ func main() {
 			txt, _ := io.ReadAll(out)
 			err := os.WriteFile(fullName, txt, 0644)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Writing file %s: %v\n", fullName, err)
+
 			}
 		}
 	}
 	for _, v := range flag.Args() {
-		err := orchestrion.ScanPackage(v, process)
+		p, err := filepath.Abs(v)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Sanitizing path (%s) failed: %v\n", v, err)
+			continue
+		}
+		fmt.Printf("Scanning Package %s\n", p)
+		err = orchestrion.ScanPackage(p, process)
+		if err != nil {
+			fmt.Printf("Failed to scan: %v\n", err)
 		}
 	}
 }
