@@ -383,7 +383,7 @@ func hasInstrumentedLabel(decs []string) bool {
 func hasStartInstrumentLabel(decs []string) bool {
 	for _, v := range decs {
 		if strings.HasPrefix(v, "//dd:startinstrument") {
-			log.Println("already instrumented 1")
+			log.Println("already instrumented")
 			return true
 		}
 	}

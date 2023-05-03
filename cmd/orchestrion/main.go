@@ -36,9 +36,10 @@ func main() {
 		}
 	}
 	for _, v := range flag.Args() {
-		p, err := filepath.Abs(filepath.Clean(v))
+		p, err := filepath.Abs(v)
 		if err != nil {
 			fmt.Printf("Sanitizing path (%s) failed: %v\n", v, err)
+			continue
 		}
 		fmt.Printf("Scanning Package %s\n", p)
 		err = orchestrion.ScanPackage(p, process)
