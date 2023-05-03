@@ -69,9 +69,9 @@ func ScanFile(name string, content io.Reader) (io.Reader, error) {
 					break
 				}
 			}
-			// add tracer startup to main
+			// add init to main
 			if decl.Name.Name == "main" {
-				decl = addTracerStartup(decl)
+				decl = addInit(decl)
 			}
 			// scan body for request creation or handlers as function literals
 			// client support stage 1: find http clients in functions
@@ -543,7 +543,7 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	}
 }
 
-func addTracerStartup(decl *dst.FuncDecl) *dst.FuncDecl {
+func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
 	//check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
