@@ -12,19 +12,21 @@ import (
 
 func main() {
 	var write bool
+	var remove bool
+	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
 	flag.Parse()
 	if len(flag.Args()) == 0 {
 		return
 	}
-	process := func(fullName string, out io.Reader) {
+	output := func(fullName string, out io.Reader) {
 		fmt.Printf("%s:\n", fullName)
 		// write the output
 		txt, _ := io.ReadAll(out)
 		fmt.Println(string(txt))
 	}
 	if write {
-		process = func(fullName string, out io.Reader) {
+		output = func(fullName string, out io.Reader) {
 			fmt.Printf("overwriting %s:\n", fullName)
 			// write the output
 			txt, _ := io.ReadAll(out)
@@ -42,7 +44,12 @@ func main() {
 			continue
 		}
 		fmt.Printf("Scanning Package %s\n", p)
-		err = orchestrion.ScanPackage(p, process)
+		processor := orchestrion.InstrumentFile
+		if remove {
+			fmt.Printf("REMOVING INSTRUMENTATION!\n")
+			processor = orchestrion.UninstrumentFile
+		}
+		err = orchestrion.ProcessPackage(p, processor, output)
 		if err != nil {
 			fmt.Printf("Failed to scan: %v\n", err)
 		}
