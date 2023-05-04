@@ -58,14 +58,14 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 	var start, end int
 	var found bool
 	for i, stmt := range list {
-		if hasStartWrapLabel(stmt.Decorations().Start.All()) {
+		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
 			start = i
-			if hasEndWrapLabel(stmt.Decorations().End.All()) {
+			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
 				end = i
 				found = true
 				break
 			}
-		} else if hasEndWrapLabel(stmt.Decorations().Start.All()) {
+		} else if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
 			end = i
 			found = true
 			break
@@ -75,8 +75,8 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 		// Never found a start/end pair.
 		return list
 	}
-	removeDecoration("//dd:endwrap", list[end])
-	removeDecoration("//dd:startwrap", list[start])
+	removeDecoration(dd_endwrap, list[end])
+	removeDecoration(dd_startwrap, list[start])
 	for _, s := range list {
 		es, ok := s.(*dst.ExprStmt)
 		if !ok {
@@ -91,6 +91,7 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 				if cei, ok := ce.Fun.(*dst.Ident); ok {
 					if cei.Path == "github.com/datadog/orchestrion" &&
 						strings.HasPrefix(cei.Name, "WrapHandler") {
+						// This catches both WrapHandler *and* WrapHandlerFunc
 						f.Args[1] = ce.Args[0]
 					}
 				}
@@ -103,25 +104,25 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 func removeStartEndInstrument(list []dst.Stmt) []dst.Stmt {
 	var start, end int
 	for i, stmt := range list {
-		if hasStartInstrumentLabel(stmt.Decorations().Start.All()) {
+		if hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) {
 			start = i
 		}
-		if hasEndInstrumentLabel(stmt.Decorations().Start.All()) {
+		if hasLabel(dd_endinstrument, stmt.Decorations().Start.All()) {
 			end = i
-			removeDecoration("//dd:endinstrument", list[end])
+			removeDecoration(dd_endinstrument, list[end])
 			list = append(list[:start], list[end:]...)
 			// We found one. There may be others, so recurse.
 			// We can make this more efficient...
 			return removeStartEndInstrument(list)
 		}
-		if hasEndInstrumentLabel(stmt.Decorations().End.All()) {
+		if hasLabel(dd_endinstrument, stmt.Decorations().End.All()) {
 			list = list[:start]
 			// We found one. There may be others, so recurse.
 			// We can make this more efficient...
 			return removeStartEndInstrument(list)
 		}
-		if hasInstrumentedLabel(stmt.Decorations().Start.All()) {
-			removeDecoration("//dd:instrumented", stmt)
+		if hasLabel(dd_instrumented, stmt.Decorations().Start.All()) {
+			removeDecoration(dd_instrumented, stmt)
 		}
 	}
 	return list
@@ -175,7 +176,7 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 			}
 			// support stage 3: find magic comments on functions
 			for _, v := range decl.Decorations().Start.All() {
-				if strings.HasPrefix(v, "//dd:span") {
+				if strings.HasPrefix(v, dd_span) {
 					decl = addSpanCodeToFunction(v, decl)
 					break
 				}
@@ -202,14 +203,14 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl) *dst.FuncDecl {
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
-			if strings.HasPrefix(v, "//dd:startinstrument") {
+			if strings.HasPrefix(v, dd_startinstrument) {
 				log.Println("already instrumented")
 				return decl
 			}
 		}
 	}
 
-	start := len("//dd:span")
+	start := len(dd_span)
 	// get the tags from the magic comment
 	parts := strings.Split(comment[start:], " ")
 	if parts[0] == "" {
@@ -285,7 +286,7 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 			},
 			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
 				Before: dst.NewLine,
-				Start:  dst.Decorations{"//dd:startinstrument"},
+				Start:  dst.Decorations{dd_startinstrument},
 				After:  dst.NewLine,
 			}},
 		},
@@ -296,7 +297,7 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
 				After: dst.NewLine,
-				End:   dst.Decorations{"\n", "//dd:endinstrument"},
+				End:   dst.Decorations{"\n", dd_endinstrument},
 			}},
 		},
 	}
@@ -350,11 +351,11 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 		case *dst.AssignStmt:
 			// what we actually care about
 			// see if it already has a dd:instrumented
-			if hasInstrumentedLabel(stmt.Decs.Start.All()) {
+			if hasLabel(dd_instrumented, stmt.Decs.Start.All()) {
 				break
 			}
 			if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
-				stmt.Decorations().Start.Prepend("//dd:instrumented")
+				stmt.Decorations().Start.Prepend(dd_instrumented)
 				out = append(out, stmt)
 				appendStmt = false
 				out = append(out, buildRequestClientCode(requestName))
@@ -386,7 +387,7 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 				}
 			}
 		case *dst.ExprStmt:
-			if hasInstrumentedLabel(stmt.Decs.Start.All()) || hasStartInstrumentLabel(stmt.Decs.Start.All()) {
+			if hasLabel(dd_instrumented, stmt.Decs.Start.All()) || hasLabel(dd_startinstrument, stmt.Decs.Start.All()) {
 				break
 			}
 			if wrapped := wrapHandler(stmt); wrapped {
@@ -462,7 +463,7 @@ func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.S
 	if len(funLit.Body.List) > 0 {
 		decs := funLit.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
-			if strings.HasPrefix(v, "//dd:startinstrument") {
+			if strings.HasPrefix(v, dd_startinstrument) {
 				log.Println("already instrumented")
 				return funLit.Body.List
 			}
@@ -483,50 +484,18 @@ func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit) bool {
 		IsPointerType(inputParams[1].Type, "net/http", "Request")
 }
 
-func hasInstrumentedLabel(decs []string) bool {
-	isLabeled := false
-	for _, v := range decs {
-		if strings.HasPrefix(v, "//dd:instrumented") {
-			log.Println("already instrumented")
-			isLabeled = true
-			break
-		}
-	}
-	return isLabeled
-}
+const (
+	dd_startinstrument = "//dd:startinstrument"
+	dd_endinstrument   = "//dd:endinstrument"
+	dd_startwrap       = "//dd:startwrap"
+	dd_endwrap         = "//dd:endwrap"
+	dd_instrumented    = "//dd:instrumented"
+	dd_span            = "//dd:span"
+)
 
-func hasStartInstrumentLabel(decs []string) bool {
+func hasLabel(label string, decs []string) bool {
 	for _, v := range decs {
-		if strings.HasPrefix(v, "//dd:startinstrument") {
-			log.Println("already instrumented")
-			return true
-		}
-	}
-	return false
-}
-
-func hasEndInstrumentLabel(decs []string) bool {
-	for _, v := range decs {
-		if strings.HasPrefix(v, "//dd:endinstrument") {
-			return true
-		}
-	}
-	return false
-}
-
-func hasStartWrapLabel(decs []string) bool {
-	for _, v := range decs {
-		if strings.HasPrefix(v, "//dd:startwrap") {
-			log.Println("already instrumented")
-			return true
-		}
-	}
-	return false
-}
-
-func hasEndWrapLabel(decs []string) bool {
-	for _, v := range decs {
-		if strings.HasPrefix(v, "//dd:endwrap") {
+		if strings.HasPrefix(v, label) {
 			return true
 		}
 	}
@@ -564,8 +533,8 @@ func wrapHandler(stmt *dst.ExprStmt) bool {
 		default:
 			return false
 		}
-		fun.Decorations().Start.Append("//dd:startwrap")
-		fun.Decorations().End.Append("\n", "//dd:endwrap")
+		fun.Decorations().Start.Append(dd_startwrap)
+		fun.Decorations().End.Append("\n", dd_endwrap)
 		fun.Args[1] = &dst.CallExpr{
 			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion"},
 			Args: []dst.Expr{fun.Args[1]},
@@ -674,9 +643,9 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 		Decs: dst.IfStmtDecorations{
 			NodeDecs: dst.NodeDecs{
 				Before: dst.NewLine,
-				Start:  dst.Decorations{"//dd:startinstrument"},
+				Start:  dst.Decorations{dd_startinstrument},
 				After:  dst.NewLine,
-				End:    dst.Decorations{"\n", "//dd:endinstrument"},
+				End:    dst.Decorations{"\n", dd_endinstrument},
 			},
 		},
 	}
@@ -687,7 +656,7 @@ func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
-			if strings.HasPrefix(v, "//dd:startinstrument") {
+			if strings.HasPrefix(v, dd_startinstrument) {
 				log.Println("already instrumented")
 				return decl
 			}
@@ -702,8 +671,8 @@ func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
 				},
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
-				Start: dst.Decorations{"\n", "//dd:startinstrument"},
-				End:   dst.Decorations{"\n", "//dd:endinstrument"},
+				Start: dst.Decorations{"\n", dd_startinstrument},
+				End:   dst.Decorations{"\n", dd_endinstrument},
 			}},
 		},
 	}
@@ -717,7 +686,7 @@ func addCodeToHandler(decl *dst.FuncDecl) *dst.FuncDecl {
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
-			if strings.HasPrefix(v, "//dd:startinstrument") {
+			if strings.HasPrefix(v, dd_startinstrument) {
 				log.Println("already instrumented")
 				return decl
 			}
@@ -776,7 +745,7 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 			},
 			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
 				Before: dst.NewLine,
-				Start:  dst.Decorations{"//dd:startinstrument"},
+				Start:  dst.Decorations{dd_startinstrument},
 				After:  dst.NewLine,
 			}},
 		},
@@ -800,7 +769,7 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
 				After: dst.NewLine,
-				End:   dst.Decorations{"\n", "//dd:endinstrument"},
+				End:   dst.Decorations{"\n", dd_endinstrument},
 			}},
 		},
 	}
