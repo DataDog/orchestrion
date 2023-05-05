@@ -344,6 +344,9 @@ func buildExprsFromParts(parts []string) []dst.Expr {
 }
 
 func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
+	skip := func(stmt dst.Stmt) bool {
+		return hasLabel(dd_instrumented, stmt.Decorations().Start.All()) || hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) || hasLabel(dd_startwrap, stmt.Decorations().Start.All())
+	}
 	out := make([]dst.Stmt, 0, len(list))
 	for _, stmt := range list {
 		appendStmt := true
@@ -351,7 +354,10 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 		case *dst.AssignStmt:
 			// what we actually care about
 			// see if it already has a dd:instrumented
-			if hasLabel(dd_instrumented, stmt.Decs.Start.All()) {
+			if skip(stmt) {
+				break
+			}
+			if wrapped := wrapHandlerFromAssign(stmt); wrapped {
 				break
 			}
 			if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
@@ -387,10 +393,10 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 				}
 			}
 		case *dst.ExprStmt:
-			if hasLabel(dd_instrumented, stmt.Decs.Start.All()) || hasLabel(dd_startinstrument, stmt.Decs.Start.All()) {
+			if skip(stmt) {
 				break
 			}
-			if wrapped := wrapHandler(stmt); wrapped {
+			if wrapped := wrapHandlerFromExpr(stmt); wrapped {
 				break
 			}
 
@@ -522,7 +528,41 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 	return "", false
 }
 
-func wrapHandler(stmt *dst.ExprStmt) bool {
+func wrapHandlerFromAssign(stmt *dst.AssignStmt) bool {
+	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
+		return false
+	}
+	if uexpr, ok := stmt.Rhs[0].(*dst.UnaryExpr); ok {
+		if x, ok := uexpr.X.(*dst.CompositeLit); ok {
+			t, ok := x.Type.(*dst.Ident)
+			if !(ok && t.Path == "net/http" && t.Name == "Server") {
+				return false
+			}
+			for _, e := range x.Elts {
+				if hasLabel(dd_startwrap, e.Decorations().Start.All()) {
+					return false
+				}
+				if kve, ok := e.(*dst.KeyValueExpr); ok {
+					k, ok := kve.Key.(*dst.Ident)
+					if !(ok && k.Name == "Handler") {
+						continue
+					}
+					kve.Decorations().Start.Append(dd_startwrap)
+					kve.Decorations().End.Append("\n", dd_endwrap)
+					kve.Value = &dst.CallExpr{
+						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion"},
+						Args: []dst.Expr{kve.Value},
+					}
+					return true
+				}
+			}
+
+		}
+	}
+	return false
+}
+
+func wrapHandlerFromExpr(stmt *dst.ExprStmt) bool {
 	wrap := func(fun *dst.CallExpr, name string) bool {
 		var wrapper string
 		switch name {

@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/datadog/orchestrion"
 )
 
 type Foo struct{}
@@ -99,45 +97,8 @@ func registerHandlers() {
 	s.HandleFunc("/handlefunc-1", handler)
 	s.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
 	s.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {})
-}
-
-func instrumentedRegisterHandlers() {
-	handler := http.HandlerFunc(myHandler)
-	//dd:startinstrument
-	http.Handle("/handle-1", orchestrion.WrapHandler(handler))
-	//dd:endinstrument
-	//dd:startinstrument
-	http.Handle("/hundle-2", orchestrion.WrapHandler(http.HandlerFunc(myHandler)))
-	//dd:endinstrument
-	//dd:startinstrument
-	http.Handle("/hundle-3", orchestrion.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
-	//dd:endinstrument
-	//dd:startinstrument
-	http.HandleFunc("/handlefunc-1", orchestrion.WrapHandlerFunc(handler))
-	//dd:endinstrument
-	//dd:startinstrument
-	http.HandleFunc("/handlefunc-2", orchestrion.WrapHandlerFunc(http.HandlerFunc(myHandler)))
-	//dd:endinstrument
-	//dd:startinstrument
-	http.HandleFunc("/handlefunc-3", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	//dd:endinstrument
-	s := http.NewServeMux()
-	//dd:startinstrument
-	s.Handle("/handle-mux", orchestrion.WrapHandler(handler))
-	//dd:endinstrument
-	//dd:startinstrument
-	s.Handle("/handle-mux", orchestrion.WrapHandler(http.HandlerFunc(myHandler)))
-	//dd:endinstrument
-	//dd:startinstrument
-	s.Handle("/handle-mux", orchestrion.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
-	//dd:endinstrument
-	//dd:startinstrument
-	s.HandleFunc("/handlefunc-1", orchestrion.WrapHandlerFunc(handler))
-	//dd:endinstrument
-	//dd:startinstrument
-	s.HandleFunc("/handlefunc-2", orchestrion.WrapHandlerFunc(http.HandlerFunc(myHandler)))
-	//dd:endinstrument
-	//dd:startinstrument
-	s.HandleFunc("/handlefunc-3", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	//dd:endinstrument
+	_ = &http.Server{
+		Addr:    ":8080",
+		Handler: handler,
+	}
 }
