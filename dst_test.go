@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWrapHandler(t *testing.T) {
+func TestWrapHandlerExpr(t *testing.T) {
 	var codeTpl = `package main
 
 import "net/http"
@@ -70,6 +70,62 @@ func register() {
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			require.Equal(t, code, string(orig))
+		})
+	}
+}
+
+func TestWrapHandlerAssign(t *testing.T) {
+	var codeTpl = `package main
+
+import "net/http"
+
+var s *http.Server
+
+func register() {
+	s = &http.Server{
+		Addr:    ":8080",
+		Handler: %s,
+	}
+}
+`
+	var wantTpl = `package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion"
+)
+
+var s *http.Server
+
+func register() {
+	s = &http.Server{
+		Addr: ":8080",
+		//dd:startwrap
+		Handler: %s,
+		//dd:endwrap
+	}
+}
+`
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: `http.HandlerFunc(myHandler)`, want: `orchestrion.WrapHandler(http.HandlerFunc(myHandler))`},
+		{in: `myHandler`, want: `orchestrion.WrapHandler(myHandler)`},
+		{in: `NewHandler()`, want: `orchestrion.WrapHandler(NewHandler())`},
+		{in: `&handler{}`, want: `orchestrion.WrapHandler(&handler{})`},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code))
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, want, string(got))
 		})
 	}
 }

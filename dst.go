@@ -3,7 +3,11 @@ package orchestrion
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/importer"
+	"go/parser"
 	"go/token"
+	"go/types"
 	"io"
 	"io/fs"
 	"log"
@@ -154,13 +158,44 @@ func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, err
 	})
 }
 
+type typeChecker struct {
+	dec  *decorator.Decorator
+	info *types.Info
+}
+
+func newTypeChecker(dec *decorator.Decorator) *typeChecker {
+	return &typeChecker{
+		dec: dec,
+		info: &types.Info{
+			Defs:  make(map[*ast.Ident]types.Object),
+			Uses:  make(map[*ast.Ident]types.Object),
+			Types: make(map[ast.Expr]types.TypeAndValue),
+		},
+	}
+}
+
+func (tc typeChecker) ofType(iden *dst.Ident, t string) bool {
+	astIden := tc.dec.Ast.Nodes[iden].(*ast.Ident)
+	return tc.info.TypeOf(astIden).String() == t
+}
+
 func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 	fset := token.NewFileSet()
-	d := decorator.NewDecoratorWithImports(fset, name, goast.New())
-	f, err := d.Parse(content)
+	astFile, err := parser.ParseFile(fset, name, content, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing content in %s: %w", name, err)
 	}
+
+	dec := decorator.NewDecoratorWithImports(fset, name, goast.New())
+	f, err := dec.DecorateFile(astFile)
+	if err != nil {
+		return nil, fmt.Errorf("error decorating file %s: %w", name, err)
+	}
+
+	// Use the type checker to extract variable types
+	tc := newTypeChecker(dec)
+	conf := &types.Config{Importer: importer.Default(), Error: func(err error) { /* ignore type check errors */ }}
+	_, _ = conf.Check(name, fset, []*ast.File{astFile}, tc.info)
 
 	// see if this file should be modified (see if it imports net/http)
 
@@ -188,7 +223,7 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 			// scan body for request creation or handlers as function literals
 			// client support stage 1: find http clients in functions
 			// server support stage 2: find closures in functions to instrument too
-			decl.Body.List = addInFunctionCode(decl.Body.List)
+			decl.Body.List = addInFunctionCode(decl.Body.List, tc)
 		}
 	}
 
@@ -343,7 +378,10 @@ func buildExprsFromParts(parts []string) []dst.Expr {
 	return out
 }
 
-func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
+func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
+	skip := func(stmt dst.Stmt) bool {
+		return hasLabel(dd_instrumented, stmt.Decorations().Start.All()) || hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) || hasLabel(dd_startwrap, stmt.Decorations().Start.All())
+	}
 	out := make([]dst.Stmt, 0, len(list))
 	for _, stmt := range list {
 		appendStmt := true
@@ -351,7 +389,10 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 		case *dst.AssignStmt:
 			// what we actually care about
 			// see if it already has a dd:instrumented
-			if hasLabel(dd_instrumented, stmt.Decs.Start.All()) {
+			if skip(stmt) {
+				break
+			}
+			if wrapped := wrapHandlerFromAssign(stmt, tc); wrapped {
 				break
 			}
 			if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
@@ -370,7 +411,7 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 									// get the name from the field
 									funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
 								}
-								funLit.Body.List = addInFunctionCode(funLit.Body.List)
+								funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 							}
 						}
 					}
@@ -383,14 +424,14 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 						}
 						funLit.Body.List = buildFunctionLiteralHandlerCode(stmt.Lhs[pos], funLit)
 					}
-					funLit.Body.List = addInFunctionCode(funLit.Body.List)
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 				}
 			}
 		case *dst.ExprStmt:
-			if hasLabel(dd_instrumented, stmt.Decs.Start.All()) || hasLabel(dd_startinstrument, stmt.Decs.Start.All()) {
+			if skip(stmt) {
 				break
 			}
-			if wrapped := wrapHandler(stmt); wrapped {
+			if wrapped := wrapHandlerFromExpr(stmt); wrapped {
 				break
 			}
 
@@ -402,7 +443,7 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 					if analyzeExpressionForHandlerLiteral(funLit) {
 						funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 					}
-					funLit.Body.List = addInFunctionCode(funLit.Body.List)
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 				}
 				// check if any of the parameters is a function literal
 				var prevExpr dst.Expr
@@ -422,7 +463,7 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 				if analyzeExpressionForHandlerLiteral(funLit) {
 					funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 				}
-				funLit.Body.List = addInFunctionCode(funLit.Body.List)
+				funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 			}
 		case *dst.DeferStmt:
 			if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
@@ -430,26 +471,26 @@ func addInFunctionCode(list []dst.Stmt) []dst.Stmt {
 				if analyzeExpressionForHandlerLiteral(funLit) {
 					funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 				}
-				funLit.Body.List = addInFunctionCode(funLit.Body.List)
+				funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 			}
 		case *dst.BlockStmt:
-			stmt.List = addInFunctionCode(stmt.List)
+			stmt.List = addInFunctionCode(stmt.List, tc)
 		case *dst.CaseClause:
-			stmt.Body = addInFunctionCode(stmt.Body)
+			stmt.Body = addInFunctionCode(stmt.Body, tc)
 		case *dst.CommClause:
-			stmt.Body = addInFunctionCode(stmt.Body)
+			stmt.Body = addInFunctionCode(stmt.Body, tc)
 		case *dst.IfStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		case *dst.SwitchStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		case *dst.TypeSwitchStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		case *dst.SelectStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		case *dst.ForStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		case *dst.RangeStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		}
 		if appendStmt {
 			out = append(out, stmt)
@@ -522,7 +563,41 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 	return "", false
 }
 
-func wrapHandler(stmt *dst.ExprStmt) bool {
+func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
+		return false
+	}
+	if uexpr, ok := stmt.Rhs[0].(*dst.UnaryExpr); ok {
+		if x, ok := uexpr.X.(*dst.CompositeLit); ok {
+			t, ok := x.Type.(*dst.Ident)
+			if !(ok && t.Path == "net/http" && t.Name == "Server") {
+				return false
+			}
+			for _, e := range x.Elts {
+				if hasLabel(dd_startwrap, e.Decorations().Start.All()) {
+					return false
+				}
+				if kve, ok := e.(*dst.KeyValueExpr); ok {
+					k, ok := kve.Key.(*dst.Ident)
+					if !(ok && k.Name == "Handler" && tc.ofType(k, "net/http.Handler")) {
+						continue
+					}
+					kve.Decorations().Start.Append(dd_startwrap)
+					kve.Decorations().End.Append("\n", dd_endwrap)
+					kve.Value = &dst.CallExpr{
+						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion"},
+						Args: []dst.Expr{kve.Value},
+					}
+					return true
+				}
+			}
+
+		}
+	}
+	return false
+}
+
+func wrapHandlerFromExpr(stmt *dst.ExprStmt) bool {
 	wrap := func(fun *dst.CallExpr, name string) bool {
 		var wrapper string
 		switch name {
