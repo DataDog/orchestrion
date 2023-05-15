@@ -21,117 +21,6 @@ import (
 	"github.com/dave/dst/decorator/resolver/guess"
 )
 
-func removeDecl(prefix string, ds dst.Decorations) []string {
-	var rds []string
-	for i := range ds {
-		if strings.HasPrefix(ds[i], prefix) {
-			continue
-		}
-		rds = append(rds, ds[i])
-	}
-	return rds
-}
-
-func removeDecoration(deco string, s dst.Stmt) {
-	s.Decorations().Start.Replace(removeDecl(deco, s.Decorations().Start)...)
-	s.Decorations().End.Replace(removeDecl(deco, s.Decorations().End)...)
-}
-
-func UninstrumentFile(name string, r io.Reader) (io.Reader, error) {
-	fset := token.NewFileSet()
-	d := decorator.NewDecoratorWithImports(fset, name, goast.New())
-	f, err := d.Parse(r)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing content in %s: %w", name, err)
-	}
-
-	for _, decl := range f.Decls {
-		if decl, ok := decl.(*dst.FuncDecl); ok {
-			decl.Body.List = removeStartEndWrap(decl.Body.List)
-			decl.Body.List = removeStartEndInstrument(decl.Body.List)
-		}
-	}
-
-	res := decorator.NewRestorerWithImports(name, guess.New())
-	var out bytes.Buffer
-	err = res.Fprint(&out, f)
-	return &out, err
-}
-
-func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
-	var start, end int
-	var found bool
-	for i, stmt := range list {
-		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
-			start = i
-			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
-				end = i
-				found = true
-				break
-			}
-		} else if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
-			end = i
-			found = true
-			break
-		}
-	}
-	if !found {
-		// Never found a start/end pair.
-		return list
-	}
-	removeDecoration(dd_endwrap, list[end])
-	removeDecoration(dd_startwrap, list[start])
-	for _, s := range list {
-		es, ok := s.(*dst.ExprStmt)
-		if !ok {
-			continue
-		}
-		f, ok := es.X.(*dst.CallExpr)
-		if !ok {
-			continue
-		}
-		if len(f.Args) > 0 {
-			if ce, ok := f.Args[1].(*dst.CallExpr); ok {
-				if cei, ok := ce.Fun.(*dst.Ident); ok {
-					if cei.Path == "github.com/datadog/orchestrion" &&
-						strings.HasPrefix(cei.Name, "WrapHandler") {
-						// This catches both WrapHandler *and* WrapHandlerFunc
-						f.Args[1] = ce.Args[0]
-					}
-				}
-			}
-		}
-	}
-	return list
-}
-
-func removeStartEndInstrument(list []dst.Stmt) []dst.Stmt {
-	var start, end int
-	for i, stmt := range list {
-		if hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) {
-			start = i
-		}
-		if hasLabel(dd_endinstrument, stmt.Decorations().Start.All()) {
-			end = i
-			removeDecoration(dd_endinstrument, list[end])
-			list = append(list[:start], list[end:]...)
-			// We found one. There may be others, so recurse.
-			// We can make this more efficient...
-			return removeStartEndInstrument(list)
-		}
-		if hasLabel(dd_endinstrument, stmt.Decorations().End.All()) {
-			list = list[:start]
-			// We found one. There may be others, so recurse.
-			// We can make this more efficient...
-			return removeStartEndInstrument(list)
-		}
-		if hasLabel(dd_instrumented, stmt.Decorations().Start.All()) {
-			removeDecoration(dd_instrumented, stmt)
-		}
-	}
-	return list
-}
-
 func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, error), output func(string, io.Reader)) error {
 	fileSystem := os.DirFS(name)
 	return fs.WalkDir(fileSystem, ".", func(path string, d fs.DirEntry, err error) error {
@@ -156,27 +45,6 @@ func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, err
 		}
 		return nil
 	})
-}
-
-type typeChecker struct {
-	dec  *decorator.Decorator
-	info *types.Info
-}
-
-func newTypeChecker(dec *decorator.Decorator) *typeChecker {
-	return &typeChecker{
-		dec: dec,
-		info: &types.Info{
-			Defs:  make(map[*ast.Ident]types.Object),
-			Uses:  make(map[*ast.Ident]types.Object),
-			Types: make(map[ast.Expr]types.TypeAndValue),
-		},
-	}
-}
-
-func (tc typeChecker) ofType(iden *dst.Ident, t string) bool {
-	astIden := tc.dec.Ast.Nodes[iden].(*ast.Ident)
-	return tc.info.TypeOf(astIden).String() == t
 }
 
 func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
@@ -392,7 +260,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 			if skip(stmt) {
 				break
 			}
-			if wrapped := wrapHandlerFromAssign(stmt, tc); wrapped {
+			if wrapped := wrapFromAssign(stmt, tc); wrapped {
 				break
 			}
 			if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
@@ -563,6 +431,10 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 	return "", false
 }
 
+func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
+}
+
 func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
 		return false
@@ -595,6 +467,23 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 		}
 	}
 	return false
+}
+
+func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
+		return false
+	}
+	iden, ok := stmt.Lhs[0].(*dst.Ident)
+	if !(ok && tc.ofType(iden, "*net/http.Client")) {
+		return false
+	}
+	stmt.Decorations().Start.Append(dd_startwrap)
+	stmt.Decorations().End.Append("\n", dd_endwrap)
+	stmt.Rhs[0] = &dst.CallExpr{
+		Fun:  &dst.Ident{Name: "WrapHTTPClient", Path: "github.com/datadog/orchestrion"},
+		Args: []dst.Expr{stmt.Rhs[0]},
+	}
+	return true
 }
 
 func wrapHandlerFromExpr(stmt *dst.ExprStmt) bool {

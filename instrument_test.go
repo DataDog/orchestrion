@@ -126,6 +126,69 @@ func register() {
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
+
+			// TODO: Implement unwrapHandlerAssign to uncomment the following assertions!
+			//
+			// reader, err = UninstrumentFile("test", strings.NewReader(want))
+			// require.Nil(t, err)
+			// orig, err := io.ReadAll(reader)
+			// require.Nil(t, err)
+			// require.Equal(t, code, string(orig))
+		})
+	}
+}
+
+func TestWrapClientAssign(t *testing.T) {
+	var codeTpl = `package main
+
+import "net/http"
+
+var c *http.Client
+
+func init() {
+	c = %s
+}
+`
+	var wantTpl = `package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion"
+)
+
+var c *http.Client
+
+func init() {
+	//dd:startwrap
+	c = %s
+	//dd:endwrap
+}
+`
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: `&http.Client{Timeout: time.Second}`, want: `orchestrion.WrapHTTPClient(&http.Client{Timeout: time.Second})`},
+		{in: `MyClient()`, want: `orchestrion.WrapHTTPClient(MyClient())`},
+		{in: `http.DefaultClient`, want: `orchestrion.WrapHTTPClient(http.DefaultClient)`},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code))
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want))
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
 		})
 	}
 }
