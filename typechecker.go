@@ -2,17 +2,23 @@ package orchestrion
 
 import (
 	"go/ast"
+	"go/importer"
+	"go/token"
 	"go/types"
 
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 )
 
+// typeChecker leverages dst/decorator and go/types to infer the expression types.
+// The decorator keeps the mapping between ast.Node and dst.Node while go/types extracts the types.
+// Call check() after instanciation and before calling ofType() or typeOf().
 type typeChecker struct {
 	dec  *decorator.Decorator
 	info *types.Info
 }
 
+// newTypeChecker constructs a typeChecker.
 func newTypeChecker(dec *decorator.Decorator) *typeChecker {
 	return &typeChecker{
 		dec: dec,
@@ -24,7 +30,23 @@ func newTypeChecker(dec *decorator.Decorator) *typeChecker {
 	}
 }
 
-func (tc typeChecker) ofType(iden *dst.Ident, t string) bool {
-	astIden := tc.dec.Ast.Nodes[iden].(*ast.Ident)
-	return tc.info.TypeOf(astIden).String() == t
+// check analyses a target file and stores object types.
+// It must be called at least once before calling ofType or typeOf.
+func (tc *typeChecker) check(name string, fset *token.FileSet, file *ast.File) {
+	conf := &types.Config{
+		Importer: importer.Default(),
+		Error:    func(err error) { /* ignore type check errors */ },
+	}
+	_, _ = conf.Check(name, fset, []*ast.File{file}, tc.info)
+}
+
+// ofType checks the type of an expression.
+func (tc typeChecker) ofType(expr dst.Expr, t string) bool {
+	return tc.typeOf(expr) == t
+}
+
+// typeOf returns the type of an expression.
+func (tc typeChecker) typeOf(expr dst.Expr) string {
+	astExpr := tc.dec.Ast.Nodes[expr].(ast.Expr)
+	return tc.info.TypeOf(astExpr).String()
 }
