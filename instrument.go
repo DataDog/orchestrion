@@ -3,11 +3,8 @@ package orchestrion
 import (
 	"bytes"
 	"fmt"
-	"go/ast"
-	"go/importer"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"io"
 	"io/fs"
 	"log"
@@ -62,8 +59,7 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 
 	// Use the type checker to extract variable types
 	tc := newTypeChecker(dec)
-	conf := &types.Config{Importer: importer.Default(), Error: func(err error) { /* ignore type check errors */ }}
-	_, _ = conf.Check(name, fset, []*ast.File{astFile}, tc.info)
+	tc.check(name, fset, astFile)
 
 	// see if this file should be modified (see if it imports net/http)
 
@@ -73,14 +69,14 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 			// check the parameters, see if they match
 			inputParams := decl.Type.Params.List
 			if len(inputParams) == 2 &&
-				IsType(inputParams[0].Type, "net/http", "ResponseWriter") &&
-				IsPointerType(inputParams[1].Type, "net/http", "Request") {
+				tc.ofType(inputParams[0].Type, "net/http.ResponseWriter") &&
+				tc.ofType(inputParams[1].Type, "*net/http.Request") {
 				decl = addCodeToHandler(decl)
 			}
 			// support stage 3: find magic comments on functions
 			for _, v := range decl.Decorations().Start.All() {
 				if strings.HasPrefix(v, dd_span) {
-					decl = addSpanCodeToFunction(v, decl)
+					decl = addSpanCodeToFunction(v, decl, tc)
 					break
 				}
 			}
@@ -101,7 +97,7 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 	return &out, err
 }
 
-func addSpanCodeToFunction(comment string, decl *dst.FuncDecl) *dst.FuncDecl {
+func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typeChecker) *dst.FuncDecl {
 	//check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
@@ -127,12 +123,12 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl) *dst.FuncDecl {
 	if len(decl.Type.Params.List) > 0 {
 		// first see if the 1st parameter of the function is a context. If so, use it
 		firstField := decl.Type.Params.List[0]
-		if IsType(firstField.Type, "context", "Context") {
+		if tc.ofType(firstField.Type, "context.Context") {
 			ci = contextInfo{contextType: ident, name: firstField.Names[0].Name, path: firstField.Names[0].Path}
 		} else {
 			// if not, see if there's an *http.Request parameter. If so, use r.Context()
 			for _, v := range decl.Type.Params.List {
-				if IsPointerType(v.Type, "net/http", "Request") {
+				if tc.ofType(v.Type, "*net/http.Request") {
 					ci = contextInfo{contextType: call, name: v.Names[0].Name, path: v.Names[0].Path}
 					break
 				}
@@ -141,7 +137,7 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl) *dst.FuncDecl {
 	}
 	// if no context, cannot use the span comment
 	if ci.contextType == 0 {
-		log.Println("no context in function parameters, cannot instrument")
+		log.Println("no context in function parameters, cannot instrument", funcName)
 		return decl
 	}
 	newLines := buildSpanInstrumentation(ci,
@@ -275,7 +271,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 					for _, v := range compLit.Elts {
 						if kv, ok := v.(*dst.KeyValueExpr); ok {
 							if funLit, ok := kv.Value.(*dst.FuncLit); ok {
-								if analyzeExpressionForHandlerLiteral(funLit) {
+								if analyzeExpressionForHandlerLiteral(funLit, tc) {
 									// get the name from the field
 									funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
 								}
@@ -285,7 +281,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 					}
 				}
 				if funLit, ok := expr.(*dst.FuncLit); ok {
-					if analyzeExpressionForHandlerLiteral(funLit) {
+					if analyzeExpressionForHandlerLiteral(funLit, tc) {
 						// get the name from the lhs in the same position -- if it's not there, exit, code isn't going to compile
 						if len(stmt.Lhs) <= pos {
 							break
@@ -299,7 +295,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 			if skip(stmt) {
 				break
 			}
-			if wrapped := wrapHandlerFromExpr(stmt); wrapped {
+			if wrapped := wrapHandlerFromExpr(stmt, tc); wrapped {
 				break
 			}
 
@@ -308,7 +304,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 				// check if this is a handler func
 				switch funLit := call.Fun.(type) {
 				case *dst.FuncLit:
-					if analyzeExpressionForHandlerLiteral(funLit) {
+					if analyzeExpressionForHandlerLiteral(funLit, tc) {
 						funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 					}
 					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
@@ -318,7 +314,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 				for _, v := range call.Args {
 					if funLit, ok := v.(*dst.FuncLit); ok {
 						// check for function literal that is a handler
-						if analyzeExpressionForHandlerLiteral(funLit) {
+						if analyzeExpressionForHandlerLiteral(funLit, tc) {
 							funLit.Body.List = buildFunctionLiteralHandlerCode(prevExpr, funLit)
 						}
 					}
@@ -328,7 +324,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 		case *dst.GoStmt:
 			if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
 				// check for function literal that is a handler
-				if analyzeExpressionForHandlerLiteral(funLit) {
+				if analyzeExpressionForHandlerLiteral(funLit, tc) {
 					funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 				}
 				funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
@@ -336,7 +332,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 		case *dst.DeferStmt:
 			if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
 				// check for function literal that is a handler
-				if analyzeExpressionForHandlerLiteral(funLit) {
+				if analyzeExpressionForHandlerLiteral(funLit, tc) {
 					funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 				}
 				funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
@@ -385,12 +381,12 @@ func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.S
 	return funLit.Body.List
 }
 
-func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit) bool {
+func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit, tc *typeChecker) bool {
 	// check the parameters, see if they match
 	inputParams := funLit.Type.Params.List
 	return len(inputParams) == 2 &&
-		IsType(inputParams[0].Type, "net/http", "ResponseWriter") &&
-		IsPointerType(inputParams[1].Type, "net/http", "Request")
+		tc.ofType(inputParams[0].Type, "net/http.ResponseWriter") &&
+		tc.ofType(inputParams[1].Type, "*net/http.Request")
 }
 
 const (
@@ -436,6 +432,13 @@ func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 }
 
 func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	/*
+		s = &http.Server{
+			//dd:startwrap
+			Handler: orchestrion.WrapHandler(handler),
+			//dd:endwrap
+		}
+	*/
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
 		return false
 	}
@@ -463,13 +466,17 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 					return true
 				}
 			}
-
 		}
 	}
 	return false
 }
 
 func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	/*
+		//dd:startwrap
+		c = orchestrion.WrapHTTPClient(client)
+		//dd:endwrap
+	*/
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
 		return false
 	}
@@ -486,7 +493,24 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return true
 }
 
-func wrapHandlerFromExpr(stmt *dst.ExprStmt) bool {
+func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker) bool {
+	/*
+		//dd:startwrap
+		http.Handle("/handle", orchestrion.WrapHandler(handler))
+		//dd:endwrap
+
+		//dd:startwrap
+		http.HandleFunc("/handle", orchestrion.WrapHandlerFunc(handler))
+		//dd:endwrap
+
+		//dd:startwrap
+		s.Handle("/handle", orchestrion.WrapHandler(handler))
+		//dd:endwrap
+
+		//dd:startwrap
+		s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(handler))
+		//dd:endwrap
+	*/
 	wrap := func(fun *dst.CallExpr, name string) bool {
 		var wrapper string
 		switch name {
@@ -508,7 +532,9 @@ func wrapHandlerFromExpr(stmt *dst.ExprStmt) bool {
 	if fun, ok := stmt.X.(*dst.CallExpr); ok && len(fun.Args) == 2 {
 		switch f := fun.Fun.(type) {
 		case *dst.SelectorExpr:
-			return wrap(fun, f.Sel.Name)
+			if tc.ofType(f.X, "*net/http.ServeMux") || tc.ofType(f.X, "net/http.ServeMux") {
+				return wrap(fun, f.Sel.Name)
+			}
 		case *dst.Ident:
 			if f.Path == "net/http" {
 				return wrap(fun, f.Name)
@@ -759,20 +785,4 @@ func dup(in dst.Expr) dst.Expr {
 	default:
 		return &dst.BasicLit{Kind: token.STRING, Value: "unknown"}
 	}
-}
-
-func IsPointerType(ex dst.Expr, packageName string, typeName string) bool {
-	pointer, ok := ex.(*dst.StarExpr)
-	if !ok {
-		return false
-	}
-	return IsType(pointer.X, packageName, typeName)
-}
-
-func IsType(ex dst.Expr, packageName string, typeName string) bool {
-	selector, ok := ex.(*dst.Ident)
-	if !ok {
-		return false
-	}
-	return selector.Name == typeName && selector.Path == packageName
 }
