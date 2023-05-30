@@ -147,7 +147,7 @@ func unwrapHandlerExpr(n dst.Node) bool {
 	if !ok {
 		return true
 	}
-	if len(f.Args) > 0 {
+	if len(f.Args) > 1 {
 		if ce, ok := f.Args[1].(*dst.CallExpr); ok {
 			if cei, ok := ce.Fun.(*dst.Ident); ok {
 				if cei.Path == "github.com/datadog/orchestrion" &&
