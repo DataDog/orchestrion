@@ -261,6 +261,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				}
 				reportHandlerFromAssign(stmt, tc, conf)
 			}
+			wrapSqlOpenFromAssign(stmt, tc)
 		case *dst.ExprStmt:
 			if skip(stmt) {
 				break
@@ -309,12 +310,20 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.RangeStmt:
 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
+		case *dst.ReturnStmt:
+			stmt = instrumentReturn(stmt, tc)
+			// 		case *dst.FuncDecl:
+			// 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		}
 		if appendStmt {
 			out = append(out, stmt)
 		}
 	}
 	return out
+}
+
+func instrumentReturn(stmt *dst.ReturnStmt, tc *typeChecker) *dst.ReturnStmt {
+	return instrumentSqlReturnCall(stmt, tc)
 }
 
 func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.Stmt {
@@ -382,7 +391,9 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 }
 
 func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
-	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
+	return wrapHandlerFromAssign(stmt, tc) ||
+		wrapClientFromAssign(stmt, tc)
+
 }
 
 func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
@@ -447,6 +458,64 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return true
 }
 
+func instrumentSqlReturnCall(stmt *dst.ReturnStmt, tc *typeChecker) *dst.ReturnStmt {
+	/*
+		//dd:startwrap
+		return sql.Open("postgres", "somepath")
+		//dd:endwrap
+
+		//dd:startwrap
+		return sql.OpenDB(connector)
+		//dd:endwrap
+	*/
+	for _, expr := range stmt.Results {
+		fun, ok := expr.(*dst.CallExpr)
+		if !ok {
+			continue
+		}
+		if wrapSqlCall(fun) {
+			stmt.Decorations().Start.Append(dd_startwrap)
+			stmt.Decorations().Before = dst.NewLine
+			stmt.Decorations().End.Append("\n", dd_endwrap)
+		}
+
+	}
+	return stmt
+}
+
+func wrapSqlOpenFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	/*
+		//dd:startwrap
+		db, err = sql.Open("postgres", "somepath")
+		//dd:endwrap
+
+		//dd:startwrap
+		db = sql.OpenDB(connector)
+		//dd:endwrap
+	*/
+
+	rhs := stmt.Rhs[0]
+	fun, ok := rhs.(*dst.CallExpr)
+	if !ok {
+		return false
+	}
+	if wrapSqlCall(fun) {
+		stmt.Decorations().Start.Append(dd_startwrap)
+		stmt.Decorations().End.Append("\n", dd_endwrap)
+		return true
+	}
+	return false
+}
+
+func wrapSqlCall(call *dst.CallExpr) bool {
+	f, ok := call.Fun.(*dst.Ident)
+	if !(ok && f.Path == "database/sql" && (f.Name == "Open" || f.Name == "OpenDB")) {
+		return false
+	}
+	f.Path = "github.com/datadog/orchestrion/sql"
+	return true
+}
+
 func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker) bool {
 	/*
 		//dd:startwrap
@@ -502,8 +571,8 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	/*
 		//dd:startinstrument
 		if req != nil {
-			req = InsertHeader(req)
 			req = req.WithContext(Report(req.Context(), EventCall, "url", req.URL, "method", req.Method))
+			req = InsertHeader(req)
 			defer Report(req.Context(), EventReturn, "url", req.URL, "method", req.Method)
 		}
 		//dd:endinstrument
@@ -517,16 +586,6 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
-				&dst.AssignStmt{
-					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
-					Tok: token.ASSIGN,
-					Rhs: []dst.Expr{
-						&dst.CallExpr{
-							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
-							Args: []dst.Expr{&dst.Ident{Name: requestName}},
-						},
-					},
-				},
 				&dst.AssignStmt{
 					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
 					Tok: token.ASSIGN,
@@ -558,6 +617,16 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 									},
 								},
 							},
+						},
+					},
+				},
+				&dst.AssignStmt{
+					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
+					Tok: token.ASSIGN,
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
+							Args: []dst.Expr{&dst.Ident{Name: requestName}},
 						},
 					},
 				},
