@@ -48,5 +48,10 @@ func (tc typeChecker) ofType(expr dst.Expr, t string) bool {
 // typeOf returns the type of an expression.
 func (tc typeChecker) typeOf(expr dst.Expr) string {
 	astExpr := tc.dec.Ast.Nodes[expr].(ast.Expr)
-	return tc.info.TypeOf(astExpr).String()
+	to := tc.info.TypeOf(astExpr)
+	if to == nil {
+		// this was almost certainly an underscore "_"
+		return ""
+	}
+	return to.String()
 }
