@@ -13,8 +13,10 @@ import (
 func main() {
 	var write bool
 	var remove bool
+	var httpMode string
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
+	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
 	flag.Parse()
 	if len(flag.Args()) == 0 {
 		return
@@ -33,9 +35,13 @@ func main() {
 			err := os.WriteFile(fullName, txt, 0644)
 			if err != nil {
 				fmt.Printf("Writing file %s: %v\n", fullName, err)
-
 			}
 		}
+	}
+	conf := orchestrion.Config{HTTPMode: httpMode}
+	if err := conf.Validate(); err != nil {
+		fmt.Printf("Config error: %v\n", err)
+		os.Exit(1)
 	}
 	for _, v := range flag.Args() {
 		p, err := filepath.Abs(v)
@@ -49,9 +55,10 @@ func main() {
 			fmt.Printf("REMOVING INSTRUMENTATION!\n")
 			processor = orchestrion.UninstrumentFile
 		}
-		err = orchestrion.ProcessPackage(p, processor, output)
+		err = orchestrion.ProcessPackage(p, processor, output, conf)
 		if err != nil {
 			fmt.Printf("Failed to scan: %v\n", err)
+			os.Exit(1)
 		}
 	}
 }

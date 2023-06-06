@@ -18,7 +18,11 @@ import (
 	"github.com/dave/dst/decorator/resolver/guess"
 )
 
-func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, error), output func(string, io.Reader)) error {
+type ProcessFunc func(string, io.Reader, Config) (io.Reader, error)
+
+type OutputFunc func(string, io.Reader)
+
+func ProcessPackage(name string, process ProcessFunc, output OutputFunc, conf Config) error {
 	fileSystem := os.DirFS(name)
 	return fs.WalkDir(fileSystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -32,7 +36,7 @@ func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, err
 		if err != nil {
 			return fmt.Errorf("error opening file: %w", err)
 		}
-		out, err := process(path, file)
+		out, err := process(path, file, conf)
 		file.Close()
 		if err != nil {
 			return fmt.Errorf("error scanning file %s: %w", path, err)
@@ -44,7 +48,7 @@ func ProcessPackage(name string, process func(string, io.Reader) (io.Reader, err
 	})
 }
 
-func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
+func InstrumentFile(name string, content io.Reader, conf Config) (io.Reader, error) {
 	fset := token.NewFileSet()
 	astFile, err := parser.ParseFile(fset, name, content, parser.ParseComments)
 	if err != nil {
@@ -60,20 +64,11 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 	// Use the type checker to extract variable types
 	tc := newTypeChecker(dec)
 	tc.check(name, fset, astFile)
-
-	// see if this file should be modified (see if it imports net/http)
-
-	// server support stage 1: find handlers in top-level functions (functions and methods!)
 	for _, decl := range f.Decls {
 		if decl, ok := decl.(*dst.FuncDecl); ok {
-			// check the parameters, see if they match
-			inputParams := decl.Type.Params.List
-			if len(inputParams) == 2 &&
-				tc.ofType(inputParams[0].Type, "net/http.ResponseWriter") &&
-				tc.ofType(inputParams[1].Type, "*net/http.Request") {
-				decl = addCodeToHandler(decl)
-			}
-			// support stage 3: find magic comments on functions
+			// report handlers in top-level functions (functions and methods!)
+			decl = reportHandlerFromDecl(decl, tc, conf)
+			// find magic comments on functions
 			for _, v := range decl.Decorations().Start.All() {
 				if strings.HasPrefix(v, dd_span) {
 					decl = addSpanCodeToFunction(v, decl, tc)
@@ -84,10 +79,8 @@ func InstrumentFile(name string, content io.Reader) (io.Reader, error) {
 			if decl.Name.Name == "main" {
 				decl = addInit(decl)
 			}
-			// scan body for request creation or handlers as function literals
-			// client support stage 1: find http clients in functions
-			// server support stage 2: find closures in functions to instrument too
-			decl.Body.List = addInFunctionCode(decl.Body.List, tc)
+			// wrap or report clients and handlers
+			decl.Body.List = addInFunctionCode(decl.Body.List, tc, conf)
 		}
 	}
 
@@ -242,7 +235,7 @@ func buildExprsFromParts(parts []string) []dst.Expr {
 	return out
 }
 
-func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
+func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt {
 	skip := func(stmt dst.Stmt) bool {
 		return hasLabel(dd_instrumented, stmt.Decorations().Start.All()) || hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) || hasLabel(dd_startwrap, stmt.Decorations().Start.All())
 	}
@@ -256,105 +249,66 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker) []dst.Stmt {
 			if skip(stmt) {
 				break
 			}
-			if wrapped := wrapFromAssign(stmt, tc); wrapped {
-				break
-			}
-			if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
-				stmt.Decorations().Start.Prepend(dd_instrumented)
-				out = append(out, stmt)
-				appendStmt = false
-				out = append(out, buildRequestClientCode(requestName))
-			}
-			// check for function literal that is a handler
-			for pos, expr := range stmt.Rhs {
-				if compLit, ok := expr.(*dst.CompositeLit); ok {
-					for _, v := range compLit.Elts {
-						if kv, ok := v.(*dst.KeyValueExpr); ok {
-							if funLit, ok := kv.Value.(*dst.FuncLit); ok {
-								if analyzeExpressionForHandlerLiteral(funLit, tc) {
-									// get the name from the field
-									funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
-								}
-								funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
-							}
-						}
-					}
+			switch conf.HTTPMode {
+			case "wrap":
+				wrapFromAssign(stmt, tc)
+			case "report":
+				if requestName, ok := analyzeStmtForRequestClient(stmt); ok {
+					stmt.Decorations().Start.Prepend(dd_instrumented)
+					out = append(out, stmt)
+					appendStmt = false
+					out = append(out, buildRequestClientCode(requestName))
 				}
-				if funLit, ok := expr.(*dst.FuncLit); ok {
-					if analyzeExpressionForHandlerLiteral(funLit, tc) {
-						// get the name from the lhs in the same position -- if it's not there, exit, code isn't going to compile
-						if len(stmt.Lhs) <= pos {
-							break
-						}
-						funLit.Body.List = buildFunctionLiteralHandlerCode(stmt.Lhs[pos], funLit)
-					}
-					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
-				}
+				reportHandlerFromAssign(stmt, tc, conf)
 			}
 		case *dst.ExprStmt:
 			if skip(stmt) {
 				break
 			}
-			if wrapped := wrapHandlerFromExpr(stmt, tc); wrapped {
-				break
+			switch conf.HTTPMode {
+			case "wrap":
+				wrapHandlerFromExpr(stmt, tc)
+			case "report":
+				reportHandlerFromExpr(stmt, tc, conf)
 			}
-
-			// might be something we have to recurse on if it's a closure?
-			if call, ok := stmt.X.(*dst.CallExpr); ok {
-				// check if this is a handler func
-				switch funLit := call.Fun.(type) {
-				case *dst.FuncLit:
+		case *dst.GoStmt:
+			if conf.HTTPMode == "report" {
+				if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
+					// check for function literal that is a handler
 					if analyzeExpressionForHandlerLiteral(funLit, tc) {
 						funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 					}
-					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 				}
-				// check if any of the parameters is a function literal
-				var prevExpr dst.Expr
-				for _, v := range call.Args {
-					if funLit, ok := v.(*dst.FuncLit); ok {
-						// check for function literal that is a handler
-						if analyzeExpressionForHandlerLiteral(funLit, tc) {
-							funLit.Body.List = buildFunctionLiteralHandlerCode(prevExpr, funLit)
-						}
-					}
-					prevExpr = v
-				}
-			}
-		case *dst.GoStmt:
-			if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
-				// check for function literal that is a handler
-				if analyzeExpressionForHandlerLiteral(funLit, tc) {
-					funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
-				}
-				funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 			}
 		case *dst.DeferStmt:
-			if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
-				// check for function literal that is a handler
-				if analyzeExpressionForHandlerLiteral(funLit, tc) {
-					funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
+			if conf.HTTPMode == "report" {
+				if funLit, ok := stmt.Call.Fun.(*dst.FuncLit); ok {
+					// check for function literal that is a handler
+					if analyzeExpressionForHandlerLiteral(funLit, tc) {
+						funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
+					}
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 				}
-				funLit.Body.List = addInFunctionCode(funLit.Body.List, tc)
 			}
 		case *dst.BlockStmt:
-			stmt.List = addInFunctionCode(stmt.List, tc)
+			stmt.List = addInFunctionCode(stmt.List, tc, conf)
 		case *dst.CaseClause:
-			stmt.Body = addInFunctionCode(stmt.Body, tc)
+			stmt.Body = addInFunctionCode(stmt.Body, tc, conf)
 		case *dst.CommClause:
-			stmt.Body = addInFunctionCode(stmt.Body, tc)
+			stmt.Body = addInFunctionCode(stmt.Body, tc, conf)
 		case *dst.IfStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.SwitchStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.TypeSwitchStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.SelectStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.ForStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.RangeStmt:
-			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
+			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		}
 		if appendStmt {
 			out = append(out, stmt)
@@ -785,4 +739,72 @@ func dup(in dst.Expr) dst.Expr {
 	default:
 		return &dst.BasicLit{Kind: token.STRING, Value: "unknown"}
 	}
+}
+
+func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config) {
+	// check for function literal that is a handler
+	for pos, expr := range stmt.Rhs {
+		if compLit, ok := expr.(*dst.CompositeLit); ok {
+			for _, v := range compLit.Elts {
+				if kv, ok := v.(*dst.KeyValueExpr); ok {
+					if funLit, ok := kv.Value.(*dst.FuncLit); ok {
+						if analyzeExpressionForHandlerLiteral(funLit, tc) {
+							// get the name from the field
+							funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
+						}
+						funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+					}
+				}
+			}
+		}
+		if funLit, ok := expr.(*dst.FuncLit); ok {
+			if analyzeExpressionForHandlerLiteral(funLit, tc) {
+				// get the name from the lhs in the same position -- if it's not there, exit, code isn't going to compile
+				if len(stmt.Lhs) <= pos {
+					break
+				}
+				funLit.Body.List = buildFunctionLiteralHandlerCode(stmt.Lhs[pos], funLit)
+			}
+			funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+		}
+	}
+}
+
+func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker, conf Config) {
+	// might be something we have to recurse on if it's a closure?
+	if call, ok := stmt.X.(*dst.CallExpr); ok {
+		// check if this is a handler func
+		switch funLit := call.Fun.(type) {
+		case *dst.FuncLit:
+			if analyzeExpressionForHandlerLiteral(funLit, tc) {
+				funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
+			}
+			funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+		}
+		// check if any of the parameters is a function literal
+		var prevExpr dst.Expr
+		for _, v := range call.Args {
+			if funLit, ok := v.(*dst.FuncLit); ok {
+				// check for function literal that is a handler
+				if analyzeExpressionForHandlerLiteral(funLit, tc) {
+					funLit.Body.List = buildFunctionLiteralHandlerCode(prevExpr, funLit)
+				}
+			}
+			prevExpr = v
+		}
+	}
+}
+
+func reportHandlerFromDecl(decl *dst.FuncDecl, tc *typeChecker, conf Config) *dst.FuncDecl {
+	if conf.HTTPMode != "report" {
+		return decl
+	}
+	// check the parameters, see if they match
+	inputParams := decl.Type.Params.List
+	if len(inputParams) == 2 &&
+		tc.ofType(inputParams[0].Type, "net/http.ResponseWriter") &&
+		tc.ofType(inputParams[1].Type, "*net/http.Request") {
+		decl = addCodeToHandler(decl)
+	}
+	return decl
 }

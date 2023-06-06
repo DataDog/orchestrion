@@ -3,6 +3,7 @@ package orchestrion
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -58,14 +59,14 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code))
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want))
+			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -120,7 +121,7 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code))
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -177,14 +178,14 @@ func init() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code))
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want))
+			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -235,13 +236,13 @@ func MyFunc(somectx context.Context) {
 		t.Run("", func(t *testing.T) {
 			var code = codef(tt.in)
 			var want = wantf(tt.out)
-			reader, err := InstrumentFile("test", strings.NewReader(code))
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
 			require.NoError(t, err)
 			got, err := io.ReadAll(reader)
 			require.NoError(t, err)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want))
+			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -269,15 +270,40 @@ func main() {
 }
 `
 
-	reader, err := InstrumentFile("test", strings.NewReader(code))
+	reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
 	require.NoError(t, err)
 	got, err := io.ReadAll(reader)
 	require.NoError(t, err)
 	assert.Equal(t, want, string(got))
 
-	reader, err = UninstrumentFile("test", strings.NewReader(want))
+	reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
 	require.Nil(t, err)
 	orig, err := io.ReadAll(reader)
 	require.Nil(t, err)
 	require.Equal(t, code, string(orig))
+}
+
+func TestHTTPModeConfig(t *testing.T) {
+	for _, tc := range []struct {
+		in, out, mode string
+	}{
+		{in: "./testdata/http_in.go", out: "./testdata/http_wrapped.go", mode: "wrap"},
+		{in: "./testdata/http_in.go", out: "./testdata/http_reported.go", mode: "report"},
+	} {
+		t.Run(tc.mode, func(t *testing.T) {
+			in, err := os.Open(tc.in)
+			require.NoError(t, err)
+
+			reader, err := InstrumentFile(in.Name(), in, Config{HTTPMode: tc.mode})
+			require.NoError(t, err)
+
+			got, err := io.ReadAll(reader)
+			require.NoError(t, err)
+
+			want, err := os.ReadFile(tc.out)
+			require.NoError(t, err)
+
+			require.Equal(t, want, got)
+		})
+	}
 }
