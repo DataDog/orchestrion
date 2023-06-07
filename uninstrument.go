@@ -19,7 +19,7 @@ var unwrappers = []func(n dst.Node) bool{
 	unwrapHandlerAssign,
 }
 
-func UninstrumentFile(name string, r io.Reader) (io.Reader, error) {
+func UninstrumentFile(name string, r io.Reader, conf Config) (io.Reader, error) {
 	fset := token.NewFileSet()
 	d := decorator.NewDecoratorWithImports(fset, name, goast.New())
 	f, err := d.Parse(r)

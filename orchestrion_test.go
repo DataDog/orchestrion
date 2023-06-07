@@ -12,7 +12,7 @@ func TestScanPackageDST(t *testing.T) {
 	output := func(fullName string, out io.Reader) {
 		io.ReadAll(out)
 	}
-	ProcessPackage("./cmd/samples", InstrumentFile, output)
+	ProcessPackage("./cmd/samples", InstrumentFile, output, defaultConf)
 }
 
 func TestReport(t *testing.T) {
