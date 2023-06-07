@@ -261,6 +261,22 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				}
 				reportHandlerFromAssign(stmt, tc, conf)
 			}
+
+			for _, expr := range stmt.Rhs {
+				if compLit, ok := expr.(*dst.CompositeLit); ok {
+					for _, v := range compLit.Elts {
+						if kv, ok := v.(*dst.KeyValueExpr); ok {
+							if funLit, ok := kv.Value.(*dst.FuncLit); ok {
+								funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+							}
+						}
+					}
+				}
+				if funLit, ok := expr.(*dst.FuncLit); ok {
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+				}
+			}
+
 			wrapSqlOpenFromAssign(stmt, tc)
 		case *dst.ExprStmt:
 			if skip(stmt) {
@@ -271,6 +287,12 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				wrapHandlerFromExpr(stmt, tc)
 			case "report":
 				reportHandlerFromExpr(stmt, tc, conf)
+			}
+			if call, ok := stmt.X.(*dst.CallExpr); ok {
+				switch funLit := call.Fun.(type) {
+				case *dst.FuncLit:
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+				}
 			}
 		case *dst.GoStmt:
 			if conf.HTTPMode == "report" {
@@ -821,7 +843,7 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 							// get the name from the field
 							funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
 						}
-						funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+						//funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 					}
 				}
 			}
@@ -834,7 +856,7 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 				}
 				funLit.Body.List = buildFunctionLiteralHandlerCode(stmt.Lhs[pos], funLit)
 			}
-			funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+			//funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 		}
 	}
 }
@@ -848,7 +870,7 @@ func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker, conf Config) {
 			if analyzeExpressionForHandlerLiteral(funLit, tc) {
 				funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 			}
-			funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+			//funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 		}
 		// check if any of the parameters is a function literal
 		var prevExpr dst.Expr

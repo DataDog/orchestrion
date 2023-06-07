@@ -303,7 +303,7 @@ func TestHTTPModeConfig(t *testing.T) {
 			want, err := os.ReadFile(tc.out)
 			require.NoError(t, err)
 
-			require.Equal(t, want, got)
+			require.Equal(t, string(want), string(got))
 		})
 	}
 }
