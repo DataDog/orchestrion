@@ -124,8 +124,6 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 			}
 		}
 	}
-	return list
-
 }
 
 func removeStartEndInstrument(list []dst.Stmt) []dst.Stmt {

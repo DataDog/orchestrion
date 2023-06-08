@@ -334,8 +334,6 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.ReturnStmt:
 			stmt = instrumentReturn(stmt, tc)
-			// 		case *dst.FuncDecl:
-			// 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc)
 		}
 		if appendStmt {
 			out = append(out, stmt)

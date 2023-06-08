@@ -45,7 +45,9 @@ func openDatabase() (*sql.DB, error) {
 		log.Printf("Some error: %v", err)
 	}
 	return sql.Open("postgres", "mypath")
+}
 
+func openDatabase2() *sql.DB {
 	_ = sql.OpenDB(&testConnector{})
-	return sql.OpenDB(&testConnector{}), nil
+	return sql.OpenDB(&testConnector{})
 }
