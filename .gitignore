@@ -2,3 +2,5 @@
 .DS_Store
 *.iml
 /orchestrion
+/bin
+/errors
