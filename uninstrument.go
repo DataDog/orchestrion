@@ -90,40 +90,38 @@ func removeDecoration(deco string, s dst.Stmt) {
 }
 
 func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
-	for {
-		var start, end int
-		var found bool
-		for i, stmt := range list {
-			if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
-				stmt.Decorations().Start.Replace(
-					removeDecl(dd_endwrap, stmt.Decorations().Start)...)
-				end = i
-				found = true
-				break
-			} else if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
-				stmt.Decorations().Start.Replace(
-					removeDecl(dd_startwrap, stmt.Decorations().Start)...)
-				start = i
-				if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
-					stmt.Decorations().End.Replace(
-						removeDecl(dd_endwrap, stmt.Decorations().End)...)
-					end = i + 1
-					found = true
-					break
-				}
-			}
-		}
-		if !found {
-			// Never found a start/end pair.
-			return list
-		}
-
-		for _, s := range list[start:end] {
+	unwrap := func(l []dst.Stmt) {
+		for _, s := range l {
 			for _, unwrap := range unwrappers {
 				dst.Inspect(s, unwrap)
 			}
 		}
 	}
+
+	for i, stmt := range list {
+		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
+			stmt.Decorations().Start.Replace(
+				removeDecl(dd_startwrap, stmt.Decorations().Start)...)
+			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
+				// dd:endwrap is at the end decorations of the same line as //dd:startwrap.
+				// We only need to unwrap() this one line.
+				stmt.Decorations().End.Replace(
+					removeDecl(dd_endwrap, stmt.Decorations().End)...)
+				unwrap(list[i : i+1])
+			} else {
+				// search for dd:endwrap and then unwrap all the lines between
+				// dd:startwrap and dd:endwrap
+				for j, stmt := range list[i:] {
+					if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
+						stmt.Decorations().Start.Replace(
+							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
+						unwrap(list[i:j])
+					}
+				}
+			}
+		}
+	}
+	return list
 }
 
 func removeStartEndInstrument(list []dst.Stmt) []dst.Stmt {

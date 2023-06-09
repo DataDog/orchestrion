@@ -11,6 +11,68 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMultipleWrap(t *testing.T) {
+	var codeTpl = `package main
+
+import "net/http"
+
+var s http.ServeMux
+
+func register() {
+	%s
+}
+`
+
+	var wantTpl = `package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion"
+)
+
+var s http.ServeMux
+
+func register() {
+	%s
+}
+`
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{
+			in: `http.Handle("/handle", handler)
+	http.Handle("/other", handler2)`,
+			want: `//dd:startwrap
+	http.Handle("/handle", orchestrion.WrapHandler(handler))
+	//dd:endwrap
+	//dd:startwrap
+	http.Handle("/other", orchestrion.WrapHandler(handler2))
+	//dd:endwrap`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+
+}
+
 func TestWrapHandlerExpr(t *testing.T) {
 	var codeTpl = `package main
 
