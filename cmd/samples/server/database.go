@@ -8,6 +8,10 @@ import (
 	"log"
 )
 
+func init() {
+	sql.Register("test", &testDriver{})
+}
+
 type testDriver struct{}
 
 func (t *testDriver) Open(name string) (driver.Conn, error) {
@@ -39,12 +43,11 @@ func (t *testConnector) Driver() driver.Driver {
 }
 
 func openDatabase() (*sql.DB, error) {
-	sql.Register("postgres", &testDriver{})
-	_, err := sql.Open("postgres", "mypath")
+	_, err := sql.Open("test", "mypath")
 	if err != nil {
 		log.Printf("Some error: %v", err)
 	}
-	return sql.Open("postgres", "mypath")
+	return sql.Open("test", "mypath")
 }
 
 func openDatabase2() *sql.DB {

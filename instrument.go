@@ -261,7 +261,9 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				}
 				reportHandlerFromAssign(stmt, tc, conf)
 			}
+			wrapSqlOpenFromAssign(stmt)
 
+			// Recurse when there is a function literal on the RHS of the assignment.
 			for _, expr := range stmt.Rhs {
 				if compLit, ok := expr.(*dst.CompositeLit); ok {
 					for _, v := range compLit.Elts {
@@ -276,8 +278,6 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 				}
 			}
-
-			wrapSqlOpenFromAssign(stmt, tc)
 		case *dst.ExprStmt:
 			if skip(stmt) {
 				break
@@ -333,7 +333,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 		case *dst.RangeStmt:
 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.ReturnStmt:
-			stmt = instrumentReturn(stmt, tc)
+			stmt = instrumentReturn(stmt)
 		}
 		if appendStmt {
 			out = append(out, stmt)
@@ -342,8 +342,8 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 	return out
 }
 
-func instrumentReturn(stmt *dst.ReturnStmt, tc *typeChecker) *dst.ReturnStmt {
-	return instrumentSqlReturnCall(stmt, tc)
+func instrumentReturn(stmt *dst.ReturnStmt) *dst.ReturnStmt {
+	return wrapSqlReturnCall(stmt)
 }
 
 func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.Stmt {
@@ -411,8 +411,7 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 }
 
 func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
-	return wrapHandlerFromAssign(stmt, tc) ||
-		wrapClientFromAssign(stmt, tc)
+	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
 
 }
 
@@ -478,7 +477,7 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return true
 }
 
-func instrumentSqlReturnCall(stmt *dst.ReturnStmt, tc *typeChecker) *dst.ReturnStmt {
+func wrapSqlReturnCall(stmt *dst.ReturnStmt) *dst.ReturnStmt {
 	/*
 		//dd:startwrap
 		return sql.Open("postgres", "somepath")
@@ -503,7 +502,7 @@ func instrumentSqlReturnCall(stmt *dst.ReturnStmt, tc *typeChecker) *dst.ReturnS
 	return stmt
 }
 
-func wrapSqlOpenFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+func wrapSqlOpenFromAssign(stmt *dst.AssignStmt) bool {
 	/*
 		//dd:startwrap
 		db, err = sql.Open("postgres", "somepath")
@@ -841,7 +840,6 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 							// get the name from the field
 							funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
 						}
-						//funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 					}
 				}
 			}
@@ -854,7 +852,6 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 				}
 				funLit.Body.List = buildFunctionLiteralHandlerCode(stmt.Lhs[pos], funLit)
 			}
-			//funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 		}
 	}
 }
@@ -868,7 +865,6 @@ func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker, conf Config) {
 			if analyzeExpressionForHandlerLiteral(funLit, tc) {
 				funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 			}
-			//funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 		}
 		// check if any of the parameters is a function literal
 		var prevExpr dst.Expr
