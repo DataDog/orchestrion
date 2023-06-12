@@ -307,5 +307,5 @@ func unwrapGRPCServer(n dst.Node) bool {
 	ce.Ellipsis = false
 	ce.Args = ce.Args[:len(ce.Args)-1]
 
-	return false
+	return true
 }
