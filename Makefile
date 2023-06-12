@@ -10,7 +10,7 @@ build-only:
 build-linux-x64: generate test
 	GOOS=linux GOARCH=amd64 go build ./cmd/orchestrion
 
-test: generate fmt vet verify-licenses
+test: generate fmt vet verify-licenses verify-dd-headers
 	go test ./... -cover
 
 vet:
@@ -32,3 +32,6 @@ verify-licenses: bin/go-licenses
 bin/go-licenses:
 	mkdir -p $(PWD)/bin
 	GOBIN=$(PWD)/bin go install github.com/google/go-licenses@v1.5.0
+
+verify-dd-headers:
+	go run tools/header_check.go
