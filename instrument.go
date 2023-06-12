@@ -416,8 +416,34 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 }
 
 func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
-	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
+	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc) || wrapGRPCServer(stmt, tc)
 
+}
+
+func wrapGRPCServer(stmt *dst.AssignStmt, tc *typeChecker) bool {
+	/*
+		//dd:startwrap
+		s := grpc.NewServer(opt1, opt2, orchestrion.GRPCServerOpts()...)
+		//dd:endwrap
+	*/
+	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
+		return false
+	}
+	if fun, ok := stmt.Rhs[0].(*dst.CallExpr); ok {
+		if iden, ok := fun.Fun.(*dst.Ident); ok {
+			if !(iden.Name == "NewServer" && iden.Path == "google.golang.org/grpc") {
+				return false
+			}
+			stmt.Decorations().Start.Append(dd_startwrap)
+			stmt.Decorations().End.Append("\n", dd_endwrap)
+			fun.Args = append(fun.Args, &dst.CallExpr{
+				Fun: &dst.Ident{Name: "GRPCServerOpts", Path: "github.com/datadog/orchestrion"},
+			})
+			fun.Ellipsis = true
+			return true
+		}
+	}
+	return false
 }
 
 func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
