@@ -267,6 +267,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				reportHandlerFromAssign(stmt, tc, conf)
 			}
 			wrapSqlOpenFromAssign(stmt)
+			wrapGRPCServer(stmt)
 
 			// Recurse when there is a function literal on the RHS of the assignment.
 			for _, expr := range stmt.Rhs {
@@ -416,11 +417,11 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 }
 
 func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
-	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc) || wrapGRPCServer(stmt, tc)
+	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
 
 }
 
-func wrapGRPCServer(stmt *dst.AssignStmt, tc *typeChecker) bool {
+func wrapGRPCServer(stmt *dst.AssignStmt) bool {
 	/*
 		//dd:startwrap
 		s := grpc.NewServer(opt1, opt2, orchestrion.GRPCServerOpts()...)
