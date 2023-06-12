@@ -266,6 +266,23 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				}
 				reportHandlerFromAssign(stmt, tc, conf)
 			}
+			wrapSqlOpenFromAssign(stmt)
+
+			// Recurse when there is a function literal on the RHS of the assignment.
+			for _, expr := range stmt.Rhs {
+				if compLit, ok := expr.(*dst.CompositeLit); ok {
+					for _, v := range compLit.Elts {
+						if kv, ok := v.(*dst.KeyValueExpr); ok {
+							if funLit, ok := kv.Value.(*dst.FuncLit); ok {
+								funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+							}
+						}
+					}
+				}
+				if funLit, ok := expr.(*dst.FuncLit); ok {
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+				}
+			}
 		case *dst.ExprStmt:
 			if skip(stmt) {
 				break
@@ -275,6 +292,12 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				wrapHandlerFromExpr(stmt, tc)
 			case "report":
 				reportHandlerFromExpr(stmt, tc, conf)
+			}
+			if call, ok := stmt.X.(*dst.CallExpr); ok {
+				switch funLit := call.Fun.(type) {
+				case *dst.FuncLit:
+					funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
+				}
 			}
 		case *dst.GoStmt:
 			if conf.HTTPMode == "report" {
@@ -314,12 +337,18 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
 		case *dst.RangeStmt:
 			stmt.Body.List = addInFunctionCode(stmt.Body.List, tc, conf)
+		case *dst.ReturnStmt:
+			stmt = instrumentReturn(stmt)
 		}
 		if appendStmt {
 			out = append(out, stmt)
 		}
 	}
 	return out
+}
+
+func instrumentReturn(stmt *dst.ReturnStmt) *dst.ReturnStmt {
+	return wrapSqlReturnCall(stmt)
 }
 
 func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.Stmt {
@@ -388,6 +417,7 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 
 func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
+
 }
 
 func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
@@ -452,6 +482,64 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return true
 }
 
+func wrapSqlReturnCall(stmt *dst.ReturnStmt) *dst.ReturnStmt {
+	/*
+		//dd:startwrap
+		return sql.Open("postgres", "somepath")
+		//dd:endwrap
+
+		//dd:startwrap
+		return sql.OpenDB(connector)
+		//dd:endwrap
+	*/
+	for _, expr := range stmt.Results {
+		fun, ok := expr.(*dst.CallExpr)
+		if !ok {
+			continue
+		}
+		if wrapSqlCall(fun) {
+			stmt.Decorations().Start.Append(dd_startwrap)
+			stmt.Decorations().Before = dst.NewLine
+			stmt.Decorations().End.Append("\n", dd_endwrap)
+		}
+
+	}
+	return stmt
+}
+
+func wrapSqlOpenFromAssign(stmt *dst.AssignStmt) bool {
+	/*
+		//dd:startwrap
+		db, err = sql.Open("postgres", "somepath")
+		//dd:endwrap
+
+		//dd:startwrap
+		db = sql.OpenDB(connector)
+		//dd:endwrap
+	*/
+
+	rhs := stmt.Rhs[0]
+	fun, ok := rhs.(*dst.CallExpr)
+	if !ok {
+		return false
+	}
+	if wrapSqlCall(fun) {
+		stmt.Decorations().Start.Append(dd_startwrap)
+		stmt.Decorations().End.Append("\n", dd_endwrap)
+		return true
+	}
+	return false
+}
+
+func wrapSqlCall(call *dst.CallExpr) bool {
+	f, ok := call.Fun.(*dst.Ident)
+	if !(ok && f.Path == "database/sql" && (f.Name == "Open" || f.Name == "OpenDB")) {
+		return false
+	}
+	f.Path = "github.com/datadog/orchestrion/sql"
+	return true
+}
+
 func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker) bool {
 	/*
 		//dd:startwrap
@@ -507,8 +595,8 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 	/*
 		//dd:startinstrument
 		if req != nil {
-			req = InsertHeader(req)
 			req = req.WithContext(Report(req.Context(), EventCall, "url", req.URL, "method", req.Method))
+			req = InsertHeader(req)
 			defer Report(req.Context(), EventReturn, "url", req.URL, "method", req.Method)
 		}
 		//dd:endinstrument
@@ -522,16 +610,6 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 		},
 		Body: &dst.BlockStmt{
 			List: []dst.Stmt{
-				&dst.AssignStmt{
-					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
-					Tok: token.ASSIGN,
-					Rhs: []dst.Expr{
-						&dst.CallExpr{
-							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
-							Args: []dst.Expr{&dst.Ident{Name: requestName}},
-						},
-					},
-				},
 				&dst.AssignStmt{
 					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
 					Tok: token.ASSIGN,
@@ -563,6 +641,16 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 									},
 								},
 							},
+						},
+					},
+				},
+				&dst.AssignStmt{
+					Lhs: []dst.Expr{&dst.Ident{Name: requestName}},
+					Tok: token.ASSIGN,
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
+							Args: []dst.Expr{&dst.Ident{Name: requestName}},
 						},
 					},
 				},
@@ -757,7 +845,6 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 							// get the name from the field
 							funLit.Body.List = buildFunctionLiteralHandlerCode(kv.Key, funLit)
 						}
-						funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 					}
 				}
 			}
@@ -770,7 +857,6 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 				}
 				funLit.Body.List = buildFunctionLiteralHandlerCode(stmt.Lhs[pos], funLit)
 			}
-			funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 		}
 	}
 }
@@ -784,7 +870,6 @@ func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker, conf Config) {
 			if analyzeExpressionForHandlerLiteral(funLit, tc) {
 				funLit.Body.List = buildFunctionLiteralHandlerCode(nil, funLit)
 			}
-			funLit.Body.List = addInFunctionCode(funLit.Body.List, tc, conf)
 		}
 		// check if any of the parameters is a function literal
 		var prevExpr dst.Expr

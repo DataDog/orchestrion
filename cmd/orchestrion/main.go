@@ -57,7 +57,7 @@ func main() {
 		fmt.Printf("Scanning Package %s\n", p)
 		processor := orchestrion.InstrumentFile
 		if remove {
-			fmt.Printf("REMOVING INSTRUMENTATION!\n")
+			fmt.Printf("Removing Orchestrion instrumentation.\n")
 			processor = orchestrion.UninstrumentFile
 		}
 		err = orchestrion.ProcessPackage(p, processor, output, conf)

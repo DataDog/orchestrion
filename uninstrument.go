@@ -22,6 +22,9 @@ var unwrappers = []func(n dst.Node) bool{
 	unwrapClient,
 	unwrapHandlerExpr,
 	unwrapHandlerAssign,
+	unwrapSqlExpr,
+	unwrapSqlAssign,
+	unwrapSqlReturn,
 }
 
 func UninstrumentFile(name string, r io.Reader, conf Config) (io.Reader, error) {
@@ -36,6 +39,36 @@ func UninstrumentFile(name string, r io.Reader, conf Config) (io.Reader, error) 
 		if decl, ok := decl.(*dst.FuncDecl); ok {
 			decl.Body.List = removeStartEndWrap(decl.Body.List)
 			decl.Body.List = removeStartEndInstrument(decl.Body.List)
+			// recurse for function literals
+			for _, stmt := range decl.Body.List {
+				switch stmt := stmt.(type) {
+				case *dst.AssignStmt:
+					for _, expr := range stmt.Rhs {
+						if compLit, ok := expr.(*dst.CompositeLit); ok {
+							for _, v := range compLit.Elts {
+								if kv, ok := v.(*dst.KeyValueExpr); ok {
+									if funLit, ok := kv.Value.(*dst.FuncLit); ok {
+										funLit.Body.List = removeStartEndWrap(funLit.Body.List)
+										funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
+									}
+								}
+							}
+						}
+						if funLit, ok := expr.(*dst.FuncLit); ok {
+							funLit.Body.List = removeStartEndWrap(funLit.Body.List)
+							funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
+						}
+					}
+				case *dst.ExprStmt:
+					if call, ok := stmt.X.(*dst.CallExpr); ok {
+						switch funLit := call.Fun.(type) {
+						case *dst.FuncLit:
+							funLit.Body.List = removeStartEndWrap(funLit.Body.List)
+							funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -62,31 +95,35 @@ func removeDecoration(deco string, s dst.Stmt) {
 }
 
 func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
-	var start, end int
-	var found bool
-	for i, stmt := range list {
-		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
-			start = i
-			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
-				end = i
-				found = true
-				break
+	unwrap := func(l []dst.Stmt) {
+		for _, s := range l {
+			for _, unwrap := range unwrappers {
+				dst.Inspect(s, unwrap)
 			}
-		} else if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
-			end = i
-			found = true
-			break
 		}
 	}
-	if !found {
-		// Never found a start/end pair.
-		return list
-	}
-	removeDecoration(dd_endwrap, list[end])
-	removeDecoration(dd_startwrap, list[start])
-	for _, s := range list {
-		for _, unwrap := range unwrappers {
-			dst.Inspect(s, unwrap)
+
+	for i, stmt := range list {
+		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
+			stmt.Decorations().Start.Replace(
+				removeDecl(dd_startwrap, stmt.Decorations().Start)...)
+			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
+				// dd:endwrap is at the end decorations of the same line as //dd:startwrap.
+				// We only need to unwrap() this one line.
+				stmt.Decorations().End.Replace(
+					removeDecl(dd_endwrap, stmt.Decorations().End)...)
+				unwrap(list[i : i+1])
+			} else {
+				// search for dd:endwrap and then unwrap all the lines between
+				// dd:startwrap and dd:endwrap
+				for j, stmt := range list[i:] {
+					if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
+						stmt.Decorations().Start.Replace(
+							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
+						unwrap(list[i:j])
+					}
+				}
+			}
 		}
 	}
 	return list
@@ -172,4 +209,66 @@ func unwrapHandlerExpr(n dst.Node) bool {
 func unwrapHandlerAssign(n dst.Node) bool {
 	// TODO: Implement me
 	return false
+}
+
+func unwrapSqlExpr(n dst.Node) bool {
+	es, ok := n.(*dst.ExprStmt)
+	if !ok {
+		return true
+	}
+	f, ok := es.X.(*dst.CallExpr)
+	if !ok {
+		return true
+	}
+	id, ok := f.Fun.(*dst.Ident)
+	if !ok {
+		return true
+	}
+	if id.Path == "github.com/datadog/orchestrion/sql" &&
+		(id.Name == "Open" || id.Name == "OpenDB") {
+		id.Path = "database/sql"
+		return true
+	}
+	return true
+}
+
+func unwrapSqlAssign(n dst.Node) bool {
+	as, ok := n.(*dst.AssignStmt)
+	if !ok {
+		return true
+	}
+	f, ok := as.Rhs[0].(*dst.CallExpr)
+	if !ok {
+		return true
+	}
+	id, ok := f.Fun.(*dst.Ident)
+	if !ok {
+		return true
+	}
+	if id.Path == "github.com/datadog/orchestrion/sql" &&
+		(id.Name == "Open" || id.Name == "OpenDB") {
+		id.Path = "database/sql"
+		return true
+	}
+	return true
+}
+
+func unwrapSqlReturn(n dst.Node) bool {
+	rs, ok := n.(*dst.ReturnStmt)
+	if !ok {
+		return true
+	}
+	for _, expr := range rs.Results {
+		fun, ok := expr.(*dst.CallExpr)
+		if !ok {
+			continue
+		}
+		f, ok := fun.Fun.(*dst.Ident)
+		if !(ok && f.Path == "github.com/datadog/orchestrion/sql" &&
+			(f.Name == "Open" || f.Name == "OpenDB")) {
+			continue
+		}
+		f.Path = "database/sql"
+	}
+	return true
 }

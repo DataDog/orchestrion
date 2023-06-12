@@ -51,8 +51,8 @@ func myClient() {
 		strings.NewReader(os.Args[1]))
 	//dd:startinstrument
 	if req != nil {
-		req = orchestrion.InsertHeader(req)
 		req = req.WithContext(orchestrion.Report(req.Context(), orchestrion.EventCall, "name", req.URL, "verb", req.Method))
+		req = orchestrion.InsertHeader(req)
 		defer orchestrion.Report(req.Context(), orchestrion.EventReturn, "name", req.URL, "verb", req.Method)
 	}
 	//dd:endinstrument

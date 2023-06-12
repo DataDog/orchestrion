@@ -16,6 +16,68 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMultipleWrap(t *testing.T) {
+	var codeTpl = `package main
+
+import "net/http"
+
+var s http.ServeMux
+
+func register() {
+	%s
+}
+`
+
+	var wantTpl = `package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion"
+)
+
+var s http.ServeMux
+
+func register() {
+	%s
+}
+`
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{
+			in: `http.Handle("/handle", handler)
+	http.Handle("/other", handler2)`,
+			want: `//dd:startwrap
+	http.Handle("/handle", orchestrion.WrapHandler(handler))
+	//dd:endwrap
+	//dd:startwrap
+	http.Handle("/other", orchestrion.WrapHandler(handler2))
+	//dd:endwrap`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+
+}
+
 func TestWrapHandlerExpr(t *testing.T) {
 	var codeTpl = `package main
 
@@ -308,7 +370,94 @@ func TestHTTPModeConfig(t *testing.T) {
 			want, err := os.ReadFile(tc.out)
 			require.NoError(t, err)
 
-			require.Equal(t, want, got)
+			require.Equal(t, string(want), string(got))
+		})
+	}
+}
+
+func TestWrapSqlExpr(t *testing.T) {
+	var codeTpl = `package main
+
+import "database/sql"
+
+func register() {
+	%s
+}
+`
+	var wantTpl = `package main
+
+import "github.com/datadog/orchestrion/sql"
+
+func register() {
+	//dd:startwrap
+	%s
+	//dd:endwrap
+}
+`
+
+	var wantTpl2 = `package main
+
+import (
+	"database/sql"
+
+	sql1 "github.com/datadog/orchestrion/sql"
+)
+
+func register() {
+	%s
+}
+`
+
+	tests := []struct {
+		in   string
+		want string
+		tmpl string
+	}{
+		{in: `db, err := sql.Open("db", "mypath")`, want: `db, err := sql.Open("db", "mypath")`, tmpl: wantTpl},
+		{in: `db := sql.OpenDB(connector)`, want: `db := sql.OpenDB(connector)`, tmpl: wantTpl},
+		{in: `return sql.Open("db", "mypath")`, want: `return sql.Open("db", "mypath")`, tmpl: wantTpl},
+		{in: `return sql.OpenDB(connector)`, want: `return sql.OpenDB(connector)`, tmpl: wantTpl},
+
+		{
+			in: `func() (*sql.DB, error) {
+		return sql.Open("db", "mypath")
+	}()`,
+			want: `func() (*sql.DB, error) {
+		//dd:startwrap
+		return sql1.Open("db", "mypath")
+		//dd:endwrap
+	}()`,
+			tmpl: wantTpl2,
+		},
+
+		{
+			in: `f := func() (*sql.DB, error) {
+		return sql.Open("db", "mypath")
+	}`,
+			want: `f := func() (*sql.DB, error) {
+		//dd:startwrap
+		return sql1.Open("db", "mypath")
+		//dd:endwrap
+	}`,
+			tmpl: wantTpl2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), Config{})
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(tc.tmpl, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), Config{})
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
 		})
 	}
 }
