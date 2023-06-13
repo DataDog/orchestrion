@@ -292,20 +292,22 @@ func unwrapGRPCServer(n dst.Node) bool {
 	if !(cei.Path == "google.golang.org/grpc" && cei.Name == "NewServer") || len(ce.Args) == 0 {
 		return true
 	}
-	lastArg := ce.Args[len(ce.Args)-1]
-	lastArgExp, ok := lastArg.(*dst.CallExpr)
-	if !ok {
-		return true
+	removeLast := func(args []dst.Expr, targetFunc string) []dst.Expr {
+		lastArg := args[len(args)-1]
+		lastArgExp, ok := lastArg.(*dst.CallExpr)
+		if !ok {
+			return args
+		}
+		fun, ok := lastArgExp.Fun.(*dst.Ident)
+		if !ok {
+			return args
+		}
+		if !(fun.Path == "github.com/datadog/orchestrion" && fun.Name == targetFunc) {
+			return args
+		}
+		return args[:len(args)-1]
 	}
-	fun, ok := lastArgExp.Fun.(*dst.Ident)
-	if !ok {
-		return true
-	}
-	if !(fun.Path == "github.com/datadog/orchestrion" && fun.Name == "GRPCServerOpts" && ce.Ellipsis) {
-		return true
-	}
-	ce.Ellipsis = false
-	ce.Args = ce.Args[:len(ce.Args)-1]
-
+	ce.Args = removeLast(ce.Args, "GRPCUnaryServerInterceptor")
+	ce.Args = removeLast(ce.Args, "GRPCStreamServerInterceptor")
 	return true
 }

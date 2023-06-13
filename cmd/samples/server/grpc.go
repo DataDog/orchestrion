@@ -18,7 +18,7 @@ func grpcServer() {
 		log.Fatal(err)
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.EmptyServerOption{})
 	if err := s.Serve(ln); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

@@ -229,11 +229,12 @@ func WrapHTTPClient(client *http.Client) *http.Client {
 	return httptrace.WrapClient(client)
 }
 
-func GRPCServerOpts() []grpc.ServerOption {
-	return []grpc.ServerOption{
-		grpc.StreamInterceptor(grpctrace.StreamServerInterceptor()),
-		grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor()),
-	}
+func GRPCStreamServerInterceptor() grpc.ServerOption {
+	return grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
+}
+
+func GRPCUnaryServerInterceptor() grpc.ServerOption {
+	return grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
 }
 
 func Init() func() {

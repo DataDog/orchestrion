@@ -492,8 +492,8 @@ func init() {
 		in   string
 		want string
 	}{
-		{in: `grpc.NewServer()`, want: `grpc.NewServer(orchestrion.GRPCServerOpts()...)`},
-		{in: `grpc.NewServer(opt1, opt2)`, want: `grpc.NewServer(opt1, opt2, orchestrion.GRPCServerOpts()...)`},
+		{in: `grpc.NewServer()`, want: `grpc.NewServer(orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())`},
+		{in: `grpc.NewServer(opt1, opt2)`, want: `grpc.NewServer(opt1, opt2, orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())`},
 	}
 
 	for _, tc := range tests {

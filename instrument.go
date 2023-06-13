@@ -424,7 +424,7 @@ func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 func wrapGRPCServer(stmt *dst.AssignStmt) bool {
 	/*
 		//dd:startwrap
-		s := grpc.NewServer(opt1, opt2, orchestrion.GRPCServerOpts()...)
+		s := grpc.NewServer(opt1, opt2, orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())
 		//dd:endwrap
 	*/
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
@@ -437,10 +437,10 @@ func wrapGRPCServer(stmt *dst.AssignStmt) bool {
 			}
 			stmt.Decorations().Start.Append(dd_startwrap)
 			stmt.Decorations().End.Append("\n", dd_endwrap)
-			fun.Args = append(fun.Args, &dst.CallExpr{
-				Fun: &dst.Ident{Name: "GRPCServerOpts", Path: "github.com/datadog/orchestrion"},
-			})
-			fun.Ellipsis = true
+			fun.Args = append(fun.Args,
+				&dst.CallExpr{Fun: &dst.Ident{Name: "GRPCStreamServerInterceptor", Path: "github.com/datadog/orchestrion"}},
+				&dst.CallExpr{Fun: &dst.Ident{Name: "GRPCUnaryServerInterceptor", Path: "github.com/datadog/orchestrion"}},
+			)
 			return true
 		}
 	}
