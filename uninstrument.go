@@ -25,6 +25,7 @@ var unwrappers = []func(n dst.Node) bool{
 	unwrapSqlExpr,
 	unwrapSqlAssign,
 	unwrapSqlReturn,
+	unwrapGRPCServer,
 }
 
 func UninstrumentFile(name string, r io.Reader, conf Config) (io.Reader, error) {
@@ -120,7 +121,7 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 					if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
 						stmt.Decorations().Start.Replace(
 							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
-						unwrap(list[i:j])
+						unwrap(list[i : i+j])
 					}
 				}
 			}
@@ -270,5 +271,43 @@ func unwrapSqlReturn(n dst.Node) bool {
 		}
 		f.Path = "database/sql"
 	}
+	return true
+}
+
+// unwrapClient unwraps grpc server, to be used in dst.Inspect.
+// Returns true to continue the traversal, false to stop.
+func unwrapGRPCServer(n dst.Node) bool {
+	s, ok := n.(*dst.AssignStmt)
+	if !ok {
+		return true
+	}
+	ce, ok := s.Rhs[0].(*dst.CallExpr)
+	if !ok {
+		return true
+	}
+	cei, ok := ce.Fun.(*dst.Ident)
+	if !ok {
+		return true
+	}
+	if !(cei.Path == "google.golang.org/grpc" && cei.Name == "NewServer") || len(ce.Args) == 0 {
+		return true
+	}
+	removeLast := func(args []dst.Expr, targetFunc string) []dst.Expr {
+		lastArg := args[len(args)-1]
+		lastArgExp, ok := lastArg.(*dst.CallExpr)
+		if !ok {
+			return args
+		}
+		fun, ok := lastArgExp.Fun.(*dst.Ident)
+		if !ok {
+			return args
+		}
+		if !(fun.Path == "github.com/datadog/orchestrion" && fun.Name == targetFunc) {
+			return args
+		}
+		return args[:len(args)-1]
+	}
+	ce.Args = removeLast(ce.Args, "GRPCUnaryServerInterceptor")
+	ce.Args = removeLast(ce.Args, "GRPCStreamServerInterceptor")
 	return true
 }

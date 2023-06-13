@@ -461,3 +461,56 @@ func register() {
 		})
 	}
 }
+
+func TestWrapGRPCServer(t *testing.T) {
+	var codeTpl = `package main
+
+import "google.golang.org/grpc"
+
+var s *grpc.Server
+
+func init() {
+	s = %s
+}
+`
+	var wantTpl = `package main
+
+import (
+	"github.com/datadog/orchestrion"
+	"google.golang.org/grpc"
+)
+
+var s *grpc.Server
+
+func init() {
+	//dd:startwrap
+	s = %s
+	//dd:endwrap
+}
+`
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: `grpc.NewServer()`, want: `grpc.NewServer(orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())`},
+		{in: `grpc.NewServer(opt1, opt2)`, want: `grpc.NewServer(opt1, opt2, orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())`},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+}

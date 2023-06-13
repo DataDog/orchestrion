@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"runtime"
 
+	"google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
@@ -225,6 +227,14 @@ func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 func WrapHTTPClient(client *http.Client) *http.Client {
 	// TODO: Stop hard-coding dd-trace-go.
 	return httptrace.WrapClient(client)
+}
+
+func GRPCStreamServerInterceptor() grpc.ServerOption {
+	return grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
+}
+
+func GRPCUnaryServerInterceptor() grpc.ServerOption {
+	return grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
 }
 
 func Init() func() {

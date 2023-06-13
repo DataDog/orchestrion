@@ -267,6 +267,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt
 				reportHandlerFromAssign(stmt, tc, conf)
 			}
 			wrapSqlOpenFromAssign(stmt)
+			wrapGRPCServer(stmt)
 
 			// Recurse when there is a function literal on the RHS of the assignment.
 			for _, expr := range stmt.Rhs {
@@ -418,6 +419,32 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
 
+}
+
+func wrapGRPCServer(stmt *dst.AssignStmt) bool {
+	/*
+		//dd:startwrap
+		s := grpc.NewServer(opt1, opt2, orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())
+		//dd:endwrap
+	*/
+	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
+		return false
+	}
+	if fun, ok := stmt.Rhs[0].(*dst.CallExpr); ok {
+		if iden, ok := fun.Fun.(*dst.Ident); ok {
+			if !(iden.Name == "NewServer" && iden.Path == "google.golang.org/grpc") {
+				return false
+			}
+			stmt.Decorations().Start.Append(dd_startwrap)
+			stmt.Decorations().End.Append("\n", dd_endwrap)
+			fun.Args = append(fun.Args,
+				&dst.CallExpr{Fun: &dst.Ident{Name: "GRPCStreamServerInterceptor", Path: "github.com/datadog/orchestrion"}},
+				&dst.CallExpr{Fun: &dst.Ident{Name: "GRPCUnaryServerInterceptor", Path: "github.com/datadog/orchestrion"}},
+			)
+			return true
+		}
+	}
+	return false
 }
 
 func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
