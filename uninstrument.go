@@ -25,7 +25,7 @@ var unwrappers = []func(n dst.Node) bool{
 	unwrapSqlExpr,
 	unwrapSqlAssign,
 	unwrapSqlReturn,
-	unwrapGRPCServer,
+	unwrapGRPC,
 }
 
 func UninstrumentFile(name string, r io.Reader, conf Config) (io.Reader, error) {
@@ -274,9 +274,9 @@ func unwrapSqlReturn(n dst.Node) bool {
 	return true
 }
 
-// unwrapClient unwraps grpc server, to be used in dst.Inspect.
+// unwrapGRPC unwraps grpc server and client, to be used in dst.Inspect.
 // Returns true to continue the traversal, false to stop.
-func unwrapGRPCServer(n dst.Node) bool {
+func unwrapGRPC(n dst.Node) bool {
 	s, ok := n.(*dst.AssignStmt)
 	if !ok {
 		return true
@@ -289,10 +289,13 @@ func unwrapGRPCServer(n dst.Node) bool {
 	if !ok {
 		return true
 	}
-	if !(cei.Path == "google.golang.org/grpc" && cei.Name == "NewServer") || len(ce.Args) == 0 {
+	if cei.Path != "google.golang.org/grpc" || !(cei.Name == "Dial" || cei.Name == "NewServer") || len(ce.Args) == 0 {
 		return true
 	}
 	removeLast := func(args []dst.Expr, targetFunc string) []dst.Expr {
+		if len(args) == 0 {
+			return args
+		}
 		lastArg := args[len(args)-1]
 		lastArgExp, ok := lastArg.(*dst.CallExpr)
 		if !ok {
@@ -307,7 +310,14 @@ func unwrapGRPCServer(n dst.Node) bool {
 		}
 		return args[:len(args)-1]
 	}
-	ce.Args = removeLast(ce.Args, "GRPCUnaryServerInterceptor")
-	ce.Args = removeLast(ce.Args, "GRPCStreamServerInterceptor")
+	removable := []string{
+		"GRPCUnaryServerInterceptor",
+		"GRPCStreamServerInterceptor",
+		"GRPCUnaryClientInterceptor",
+		"GRPCStreamClientInterceptor",
+	}
+	for _, opt := range removable {
+		ce.Args = removeLast(ce.Args, opt)
+	}
 	return true
 }
