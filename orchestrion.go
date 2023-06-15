@@ -237,6 +237,14 @@ func GRPCUnaryServerInterceptor() grpc.ServerOption {
 	return grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
 }
 
+func GRPCStreamClientInterceptor() grpc.DialOption {
+	return grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
+}
+
+func GRPCUnaryClientInterceptor() grpc.DialOption {
+	return grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
+}
+
 func Init() func() {
 	tracer.Start()
 	return tracer.Stop
