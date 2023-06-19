@@ -12,7 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/internal/config"
+	"github.com/datadog/orchestrion/internal/instrument"
 )
 
 func main() {
@@ -50,7 +51,7 @@ func main() {
 			}
 		}
 	}
-	conf := orchestrion.Config{HTTPMode: httpMode}
+	conf := config.Config{HTTPMode: httpMode}
 	if err := conf.Validate(); err != nil {
 		fmt.Printf("Config error: %v\n", err)
 		os.Exit(1)
@@ -62,12 +63,12 @@ func main() {
 			continue
 		}
 		fmt.Printf("Scanning Package %s\n", p)
-		processor := orchestrion.InstrumentFile
+		processor := instrument.InstrumentFile
 		if remove {
 			fmt.Printf("Removing Orchestrion instrumentation.\n")
-			processor = orchestrion.UninstrumentFile
+			processor = instrument.UninstrumentFile
 		}
-		err = orchestrion.ProcessPackage(p, processor, output, conf)
+		err = instrument.ProcessPackage(p, processor, output, conf)
 		if err != nil {
 			fmt.Printf("Failed to scan: %v\n", err)
 			os.Exit(1)

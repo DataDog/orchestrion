@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package client
 
 import (
 	"context"
@@ -13,38 +13,15 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/datadog/orchestrion"
 )
 
 func main() {
-	//dd:startinstrument
-	defer orchestrion.Init()()
-	//dd:endinstrument
-	s := http.NewServeMux()
-	//dd:startwrap
-	s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(myHandler))
-	//dd:endwrap
-}
-
-func myHandler(w http.ResponseWriter, r *http.Request) {
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+	if len(os.Args) < 2 {
 		return
 	}
-	defer r.Body.Close()
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
-}
-
-func myClient() {
-	//dd:startwrap
-	client := orchestrion.WrapHTTPClient(&http.Client{
+	client := &http.Client{
 		Timeout: time.Second,
-	})
-	//dd:endwrap
+	}
 	req, err := http.NewRequestWithContext(context.Background(),
 		http.MethodPost, "http://localhost:8080",
 		strings.NewReader(os.Args[1]))
@@ -55,6 +32,7 @@ func myClient() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(resp.Status)
 	if resp.Body == nil {
 		return
 	}

@@ -10,6 +10,10 @@ import (
 	"io"
 	"testing"
 
+	"github.com/datadog/orchestrion/internal/config"
+	"github.com/datadog/orchestrion/internal/instrument"
+	"github.com/datadog/orchestrion/orchestrion/event"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -17,13 +21,13 @@ func TestScanPackageDST(t *testing.T) {
 	output := func(fullName string, out io.Reader) {
 		io.ReadAll(out)
 	}
-	ProcessPackage("./cmd/samples", InstrumentFile, output, defaultConf)
+	instrument.ProcessPackage("./samples", instrument.InstrumentFile, output, config.Default)
 }
 
 func TestReport(t *testing.T) {
 	t.Run("start", func(t *testing.T) {
 		ctx := context.Background()
-		ctx = Report(ctx, EventStart)
+		ctx = Report(ctx, event.EventStart)
 		if _, ok := tracer.SpanFromContext(ctx); !ok {
 			t.Errorf("Expected Report of StartEvent to generate a new ID.")
 		}
@@ -31,7 +35,7 @@ func TestReport(t *testing.T) {
 
 	t.Run("call", func(t *testing.T) {
 		ctx := context.Background()
-		ctx = Report(ctx, EventCall)
+		ctx = Report(ctx, event.EventCall)
 		if _, ok := tracer.SpanFromContext(ctx); !ok {
 			t.Errorf("Expected Report of CallEvent to generate a new ID.")
 		}
@@ -39,7 +43,7 @@ func TestReport(t *testing.T) {
 
 	t.Run("end", func(t *testing.T) {
 		ctx := context.Background()
-		ctx = Report(ctx, EventEnd)
+		ctx = Report(ctx, event.EventEnd)
 		if _, ok := tracer.SpanFromContext(ctx); ok {
 			t.Errorf("Expected Report of EndEvent not to generate a new ID.")
 		}
@@ -47,7 +51,7 @@ func TestReport(t *testing.T) {
 
 	t.Run("return", func(t *testing.T) {
 		ctx := context.Background()
-		ctx = Report(ctx, EventReturn)
+		ctx = Report(ctx, event.EventReturn)
 		if _, ok := tracer.SpanFromContext(ctx); ok {
 			t.Errorf("Expected Report of ReturnEvent not to generate a new ID.")
 		}

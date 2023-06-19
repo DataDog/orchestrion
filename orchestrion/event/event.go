@@ -3,18 +3,17 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package event
 
-import (
-	"log"
+//go:generate stringer -type=Event
+type Event int
 
-	"google.golang.org/grpc"
+const (
+	_ Event = iota
+	EventStart
+	EventEnd
+	EventCall
+	EventReturn
+	EventDBCall
+	EventDBReturn
 )
-
-func grpcClient() {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-}

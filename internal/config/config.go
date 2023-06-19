@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package config
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type Config struct {
 	HTTPMode string
 }
 
-var defaultConf = Config{HTTPMode: "wrap"}
+var Default = Config{HTTPMode: "wrap"}
 
 func (c *Config) Validate() error {
 	c.HTTPMode = strings.ToLower(c.HTTPMode)

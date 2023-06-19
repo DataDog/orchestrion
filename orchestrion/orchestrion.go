@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/datadog/orchestrion/orchestrion/event"
+
 	"google.golang.org/grpc"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
@@ -86,19 +88,6 @@ func InsertHeader(r *http.Request) *http.Request {
 	return r
 }
 
-//go:generate stringer -type=Event
-type Event int
-
-const (
-	_ Event = iota
-	EventStart
-	EventEnd
-	EventCall
-	EventReturn
-	EventDBCall
-	EventDBReturn
-)
-
 func buildStackTrace() []uintptr {
 	pc := make([]uintptr, 2)
 	n := runtime.Callers(3, pc)
@@ -137,9 +126,9 @@ func getOpName(metadata ...any) string {
 	return opname
 }
 
-func Report(ctx context.Context, e Event, metadata ...any) context.Context {
+func Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	var span tracer.Span
-	if e == EventStart || e == EventCall {
+	if e == event.EventStart || e == event.EventCall {
 		var opts []tracer.StartSpanOption
 		for i := 0; i < len(metadata); i += 2 {
 			if i+1 >= len(metadata) {
@@ -150,7 +139,7 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 			}
 		}
 		span, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
-	} else if e == EventEnd || e == EventReturn {
+	} else if e == event.EventEnd || e == event.EventReturn {
 		var ok bool
 		span, ok = tracer.SpanFromContext(ctx)
 		if !ok {

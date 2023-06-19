@@ -14,7 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion/event"
 )
 
 func main() {
@@ -27,8 +28,8 @@ func main() {
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
 	//dd:startinstrument
-	r = r.WithContext(orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "myHandler", "verb", r.Method))
-	defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "myHandler", "verb", r.Method)
+	r = r.WithContext(orchestrion.Report(r.Context(), event.EventStart, "name", "myHandler", "verb", r.Method))
+	defer orchestrion.Report(r.Context(), event.EventEnd, "name", "myHandler", "verb", r.Method)
 	//dd:endinstrument
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -51,9 +52,9 @@ func myClient() {
 		strings.NewReader(os.Args[1]))
 	//dd:startinstrument
 	if req != nil {
-		req = req.WithContext(orchestrion.Report(req.Context(), orchestrion.EventCall, "name", req.URL, "verb", req.Method))
+		req = req.WithContext(orchestrion.Report(req.Context(), event.EventCall, "name", req.URL, "verb", req.Method))
 		req = orchestrion.InsertHeader(req)
-		defer orchestrion.Report(req.Context(), orchestrion.EventReturn, "name", req.URL, "verb", req.Method)
+		defer orchestrion.Report(req.Context(), event.EventReturn, "name", req.URL, "verb", req.Method)
 	}
 	//dd:endinstrument
 	if err != nil {

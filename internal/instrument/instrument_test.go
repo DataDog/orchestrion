@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package instrument
 
 import (
 	"fmt"
@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/datadog/orchestrion/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +35,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
 )
 
 var s http.ServeMux
@@ -61,14 +63,14 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -94,7 +96,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
 )
 
 var s http.ServeMux
@@ -126,14 +128,14 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -161,7 +163,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
 )
 
 var s *http.Server
@@ -188,7 +190,7 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -222,7 +224,7 @@ func init() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
 )
 
 var c *http.Client
@@ -245,14 +247,14 @@ func init() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -280,14 +282,15 @@ func MyFunc(somectx context.Context) {%s}
 import (
 	"context"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion/event"
 )
 
 //dd:span foo:bar other:tag
 func MyFunc(somectx context.Context) {
 	//dd:startinstrument
-	somectx = orchestrion.Report(somectx, orchestrion.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
-	defer orchestrion.Report(somectx, orchestrion.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	somectx = orchestrion.Report(somectx, event.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	defer orchestrion.Report(somectx, event.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
 	//dd:endinstrument%s
 }
 `
@@ -303,13 +306,13 @@ func MyFunc(somectx context.Context) {
 		t.Run("", func(t *testing.T) {
 			var code = codef(tt.in)
 			var want = wantf(tt.out)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.NoError(t, err)
 			got, err := io.ReadAll(reader)
 			require.NoError(t, err)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -327,7 +330,7 @@ func main() {
 `
 	var want = `package main
 
-import "github.com/datadog/orchestrion"
+import "github.com/datadog/orchestrion/orchestrion"
 
 func main() {
 	//dd:startinstrument
@@ -337,13 +340,13 @@ func main() {
 }
 `
 
-	reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+	reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 	require.NoError(t, err)
 	got, err := io.ReadAll(reader)
 	require.NoError(t, err)
 	assert.Equal(t, want, string(got))
 
-	reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+	reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 	require.Nil(t, err)
 	orig, err := io.ReadAll(reader)
 	require.Nil(t, err)
@@ -361,7 +364,7 @@ func TestHTTPModeConfig(t *testing.T) {
 			in, err := os.Open(tc.in)
 			require.NoError(t, err)
 
-			reader, err := InstrumentFile(in.Name(), in, Config{HTTPMode: tc.mode})
+			reader, err := InstrumentFile(in.Name(), in, config.Config{HTTPMode: tc.mode})
 			require.NoError(t, err)
 
 			got, err := io.ReadAll(reader)
@@ -386,7 +389,7 @@ func register() {
 `
 	var wantTpl = `package main
 
-import "github.com/datadog/orchestrion/sql"
+import "github.com/datadog/orchestrion/orchestrion/sql"
 
 func register() {
 	//dd:startwrap
@@ -400,7 +403,7 @@ func register() {
 import (
 	"database/sql"
 
-	sql1 "github.com/datadog/orchestrion/sql"
+	sql1 "github.com/datadog/orchestrion/orchestrion/sql"
 )
 
 func register() {
@@ -446,14 +449,14 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), Config{})
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(tc.tmpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), Config{})
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -476,7 +479,7 @@ func init() {
 	var wantTpl = `package main
 
 import (
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
 	"google.golang.org/grpc"
 )
 
@@ -499,14 +502,14 @@ func init() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -530,7 +533,7 @@ func init() {
 	var wantTpl = `package main
 
 import (
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/orchestrion"
 	"google.golang.org/grpc"
 )
 
@@ -554,14 +557,14 @@ func init() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)

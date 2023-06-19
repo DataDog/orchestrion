@@ -13,15 +13,38 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/datadog/orchestrion/orchestrion"
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	//dd:startinstrument
+	defer orchestrion.Init()()
+	//dd:endinstrument
+	s := http.NewServeMux()
+	//dd:startwrap
+	s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(myHandler))
+	//dd:endwrap
+}
+
+func myHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
 		return
 	}
-	client := &http.Client{
+	defer r.Body.Close()
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+}
+
+func myClient() {
+	//dd:startwrap
+	client := orchestrion.WrapHTTPClient(&http.Client{
 		Timeout: time.Second,
-	}
+	})
+	//dd:endwrap
 	req, err := http.NewRequestWithContext(context.Background(),
 		http.MethodPost, "http://localhost:8080",
 		strings.NewReader(os.Args[1]))
@@ -32,7 +55,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(resp.Status)
 	if resp.Body == nil {
 		return
 	}
