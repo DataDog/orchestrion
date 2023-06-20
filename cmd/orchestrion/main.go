@@ -16,6 +16,13 @@ import (
 )
 
 func main() {
+	flag.Usage = func() {
+		w := flag.CommandLine.Output()
+		fmt.Fprint(w, "usage: orchestrion [options] [path]\n")
+		fmt.Fprint(w, "example: orchestrion -w ./\n")
+		fmt.Fprint(w, "options:\n")
+		flag.PrintDefaults()
+	}
 	var write bool
 	var remove bool
 	var httpMode string
