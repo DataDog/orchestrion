@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"runtime"
 
 	"database/sql"
 	"database/sql/driver"
@@ -92,17 +91,6 @@ func InsertHeader(r *http.Request) *http.Request {
 	return r
 }
 
-func buildStackTrace() []uintptr {
-	pc := make([]uintptr, 2)
-	n := runtime.Callers(3, pc)
-	pc = pc[:n]
-	return pc
-}
-
-func StackTrace(trace []uintptr) *runtime.Frames {
-	return runtime.CallersFrames(trace)
-}
-
 func getOpName(metadata ...any) string {
 	rank := map[string]int{
 		"verb":          1,
@@ -153,7 +141,18 @@ func Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 		span.Finish()
 	}
 
-	// 	frames := StackTrace(buildStackTrace())
+	// buildStackTrace := func() []uintptr {
+	// 	pc := make([]uintptr, 2)
+	// 	n := runtime.Callers(3, pc)
+	// 	pc = pc[:n]
+	// 	return pc
+	// }
+
+	// stackTrace := func(trace []uintptr) *runtime.Frames {
+	// 	return runtime.CallersFrames(trace)
+	// }
+
+	// frames := stackTrace(buildStackTrace())
 	// 	frame, _ := frames.Next()
 	// 	file := ""
 	// 	line := 0
