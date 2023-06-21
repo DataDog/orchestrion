@@ -3,16 +3,16 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package instrument
 
 import (
 	"context"
 	"io"
 	"testing"
 
+	"github.com/datadog/orchestrion/instrument/event"
 	"github.com/datadog/orchestrion/internal/config"
 	"github.com/datadog/orchestrion/internal/instrument"
-	"github.com/datadog/orchestrion/orchestrion/event"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )

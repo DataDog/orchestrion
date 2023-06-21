@@ -174,7 +174,7 @@ func unwrapClient(n dst.Node) bool {
 	if !ok {
 		return true
 	}
-	if cei.Path == "github.com/datadog/orchestrion/orchestrion" && strings.HasPrefix(cei.Name, "WrapHTTPClient") {
+	if cei.Path == "github.com/datadog/orchestrion/instrument" && strings.HasPrefix(cei.Name, "WrapHTTPClient") {
 		s.Rhs[0] = ce.Args[0]
 		return false
 	}
@@ -195,7 +195,7 @@ func unwrapHandlerExpr(n dst.Node) bool {
 	if len(f.Args) > 1 {
 		if ce, ok := f.Args[1].(*dst.CallExpr); ok {
 			if cei, ok := ce.Fun.(*dst.Ident); ok {
-				if cei.Path == "github.com/datadog/orchestrion/orchestrion" &&
+				if cei.Path == "github.com/datadog/orchestrion/instrument" &&
 					strings.HasPrefix(cei.Name, "WrapHandler") {
 					// This catches both WrapHandler *and* WrapHandlerFunc
 					f.Args[1] = ce.Args[0]
@@ -227,7 +227,7 @@ func unwrapSqlExpr(n dst.Node) bool {
 	if !ok {
 		return true
 	}
-	if id.Path == "github.com/datadog/orchestrion/orchestrion/sql" &&
+	if id.Path == "github.com/datadog/orchestrion/instrument" &&
 		(id.Name == "Open" || id.Name == "OpenDB") {
 		id.Path = "database/sql"
 		return true
@@ -248,7 +248,7 @@ func unwrapSqlAssign(n dst.Node) bool {
 	if !ok {
 		return true
 	}
-	if id.Path == "github.com/datadog/orchestrion/orchestrion/sql" &&
+	if id.Path == "github.com/datadog/orchestrion/instrument" &&
 		(id.Name == "Open" || id.Name == "OpenDB") {
 		id.Path = "database/sql"
 		return true
@@ -267,7 +267,7 @@ func unwrapSqlReturn(n dst.Node) bool {
 			continue
 		}
 		f, ok := fun.Fun.(*dst.Ident)
-		if !(ok && f.Path == "github.com/datadog/orchestrion/orchestrion/sql" &&
+		if !(ok && f.Path == "github.com/datadog/orchestrion/instrument" &&
 			(f.Name == "Open" || f.Name == "OpenDB")) {
 			continue
 		}
@@ -307,7 +307,7 @@ func unwrapGRPC(n dst.Node) bool {
 		if !ok {
 			return args
 		}
-		if !(fun.Path == "github.com/datadog/orchestrion/orchestrion" && fun.Name == targetFunc) {
+		if !(fun.Path == "github.com/datadog/orchestrion/instrument" && fun.Name == targetFunc) {
 			return args
 		}
 		return args[:len(args)-1]
