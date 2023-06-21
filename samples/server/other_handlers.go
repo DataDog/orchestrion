@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-type Foo struct{}
+type foo struct{}
 
-func (f Foo) FooHandler(rw http.ResponseWriter, req *http.Request) {
+func (f foo) fooHandler(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte("Foo!"))
 }
@@ -73,17 +73,17 @@ func buildHandlers() {
 }
 
 //dd:span foo:bar type:potato
-func MyFunc(ctx context.Context, name string) {
+func myFunc(ctx context.Context, name string) {
 	fmt.Println(name)
 }
 
 //dd:span foo2:bar2 type:request
-func MyFunc2(name string, req *http.Request) {
+func myFunc2(name string, req *http.Request) {
 	fmt.Println(name)
 }
 
 //dd:span foo3:bar3 type:request
-func MyFunc3(name string) {
+func myFunc3(name string) {
 	fmt.Println(name)
 }
 
