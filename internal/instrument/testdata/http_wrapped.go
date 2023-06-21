@@ -14,16 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 )
 
 func main() {
 	//dd:startinstrument
-	defer orchestrion.Init()()
+	defer instrument.Init()()
 	//dd:endinstrument
 	s := http.NewServeMux()
 	//dd:startwrap
-	s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(myHandler))
+	s.HandleFunc("/handle", instrument.WrapHandlerFunc(myHandler))
 	//dd:endwrap
 }
 
@@ -41,7 +41,7 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 
 func myClient() {
 	//dd:startwrap
-	client := orchestrion.WrapHTTPClient(&http.Client{
+	client := instrument.WrapHTTPClient(&http.Client{
 		Timeout: time.Second,
 	})
 	//dd:endwrap

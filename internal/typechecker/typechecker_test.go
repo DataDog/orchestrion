@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package typechecker
 
 import (
 	"go/parser"
@@ -54,15 +54,15 @@ func TestTypeChecker(t *testing.T) {
 	f, err := dec.DecorateFile(astFile)
 	require.NoError(t, err)
 
-	tc := newTypeChecker(dec)
-	tc.check(name, fset, astFile)
+	tc := New(dec)
+	tc.Check(name, fset, astFile)
 
 	checks := 0
 	dst.Inspect(f, func(n dst.Node) bool {
 		if ident, ok := n.(*dst.Ident); ok && expected[ident.Name] != "" {
 			checks++
-			require.Equal(t, expected[ident.Name], tc.typeOf(ident))
-			require.True(t, tc.ofType(ident, expected[ident.Name]))
+			require.Equal(t, expected[ident.Name], tc.TypeOf(ident))
+			require.True(t, tc.OfType(ident, expected[ident.Name]))
 		}
 		return true
 	})

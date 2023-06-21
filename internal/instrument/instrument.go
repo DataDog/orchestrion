@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package instrument
 
 import (
 	"bytes"
@@ -17,17 +17,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/datadog/orchestrion/instrument/event"
+	"github.com/datadog/orchestrion/internal/config"
+	"github.com/datadog/orchestrion/internal/typechecker"
+
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/goast"
 	"github.com/dave/dst/decorator/resolver/guess"
 )
 
-type ProcessFunc func(string, io.Reader, Config) (io.Reader, error)
+type ProcessFunc func(string, io.Reader, config.Config) (io.Reader, error)
 
 type OutputFunc func(string, io.Reader)
 
-func ProcessPackage(name string, process ProcessFunc, output OutputFunc, conf Config) error {
+func ProcessPackage(name string, process ProcessFunc, output OutputFunc, conf config.Config) error {
 	fileSystem := os.DirFS(name)
 	return fs.WalkDir(fileSystem, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -53,7 +57,7 @@ func ProcessPackage(name string, process ProcessFunc, output OutputFunc, conf Co
 	})
 }
 
-func InstrumentFile(name string, content io.Reader, conf Config) (io.Reader, error) {
+func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Reader, error) {
 	fset := token.NewFileSet()
 	astFile, err := parser.ParseFile(fset, name, content, parser.ParseComments)
 	if err != nil {
@@ -67,8 +71,8 @@ func InstrumentFile(name string, content io.Reader, conf Config) (io.Reader, err
 	}
 
 	// Use the type checker to extract variable types
-	tc := newTypeChecker(dec)
-	tc.check(name, fset, astFile)
+	tc := typechecker.New(dec)
+	tc.Check(name, fset, astFile)
 	for _, decl := range f.Decls {
 		if decl, ok := decl.(*dst.FuncDecl); ok {
 			// report handlers in top-level functions (functions and methods!)
@@ -95,7 +99,7 @@ func InstrumentFile(name string, content io.Reader, conf Config) (io.Reader, err
 	return &out, err
 }
 
-func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typeChecker) *dst.FuncDecl {
+func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.TypeChecker) *dst.FuncDecl {
 	//check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
@@ -121,12 +125,12 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typeChecker) 
 	if len(decl.Type.Params.List) > 0 {
 		// first see if the 1st parameter of the function is a context. If so, use it
 		firstField := decl.Type.Params.List[0]
-		if tc.ofType(firstField.Type, "context.Context") {
+		if tc.OfType(firstField.Type, "context.Context") {
 			ci = contextInfo{contextType: ident, name: firstField.Names[0].Name, path: firstField.Names[0].Path}
 		} else {
 			// if not, see if there's an *http.Request parameter. If so, use r.Context()
 			for _, v := range decl.Type.Params.List {
-				if tc.ofType(v.Type, "*net/http.Request") {
+				if tc.OfType(v.Type, "*net/http.Request") {
 					ci = contextInfo{contextType: call, name: v.Names[0].Name, path: v.Names[0].Path}
 					break
 				}
@@ -177,8 +181,8 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 			Tok: token.ASSIGN,
 			Rhs: []dst.Expr{
 				&dst.CallExpr{
-					Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
-					Args: buildArgs(contextExpr, EventStart, name, parts),
+					Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+					Args: buildArgs(contextExpr, event.EventStart, name, parts),
 				},
 			},
 			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
@@ -189,8 +193,8 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 		},
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
-				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
-				Args: buildArgs(contextExpr, EventEnd, name, parts),
+				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+				Args: buildArgs(contextExpr, event.EventEnd, name, parts),
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
 				After: dst.NewLine,
@@ -201,11 +205,11 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 	return newLines
 }
 
-func buildArgs(contextExpr contextInfo, event Event, name string, parts []string) []dst.Expr {
+func buildArgs(contextExpr contextInfo, event event.Event, name string, parts []string) []dst.Expr {
 	out := make([]dst.Expr, 0, len(parts)*2+4)
 	out = append(out,
 		dupCtxExprForSpan(contextExpr),
-		&dst.Ident{Name: event.String(), Path: "github.com/datadog/orchestrion"},
+		&dst.Ident{Name: event.String(), Path: "github.com/datadog/orchestrion/instrument/event"},
 		&dst.BasicLit{Kind: token.STRING, Value: `"function-name"`},
 		&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, name)},
 	)
@@ -240,7 +244,7 @@ func buildExprsFromParts(parts []string) []dst.Expr {
 	return out
 }
 
-func addInFunctionCode(list []dst.Stmt, tc *typeChecker, conf Config) []dst.Stmt {
+func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config.Config) []dst.Stmt {
 	skip := func(stmt dst.Stmt) bool {
 		return hasLabel(dd_instrumented, stmt.Decorations().Start.All()) || hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) || hasLabel(dd_startwrap, stmt.Decorations().Start.All())
 	}
@@ -370,12 +374,12 @@ func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.S
 	return funLit.Body.List
 }
 
-func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit, tc *typeChecker) bool {
+func analyzeExpressionForHandlerLiteral(funLit *dst.FuncLit, tc *typechecker.TypeChecker) bool {
 	// check the parameters, see if they match
 	inputParams := funLit.Type.Params.List
 	return len(inputParams) == 2 &&
-		tc.ofType(inputParams[0].Type, "net/http.ResponseWriter") &&
-		tc.ofType(inputParams[1].Type, "*net/http.Request")
+		tc.OfType(inputParams[0].Type, "net/http.ResponseWriter") &&
+		tc.OfType(inputParams[1].Type, "*net/http.Request")
 }
 
 const (
@@ -416,7 +420,7 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 	return "", false
 }
 
-func wrapFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+func wrapFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bool {
 	return wrapHandlerFromAssign(stmt, tc) || wrapClientFromAssign(stmt, tc)
 
 }
@@ -446,7 +450,7 @@ func wrapGRPC(stmt *dst.AssignStmt) {
 				stmt.Decorations().End.Append("\n", dd_endwrap)
 				for _, opt := range opts {
 					fun.Args = append(fun.Args,
-						&dst.CallExpr{Fun: &dst.Ident{Name: opt, Path: "github.com/datadog/orchestrion"}},
+						&dst.CallExpr{Fun: &dst.Ident{Name: opt, Path: "github.com/datadog/orchestrion/instrument"}},
 					)
 				}
 			}
@@ -456,7 +460,7 @@ func wrapGRPC(stmt *dst.AssignStmt) {
 	wrap("Dial", "GRPCStreamClientInterceptor", "GRPCUnaryClientInterceptor")
 }
 
-func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bool {
 	/*
 		s = &http.Server{
 			//dd:startwrap
@@ -479,13 +483,13 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 				}
 				if kve, ok := e.(*dst.KeyValueExpr); ok {
 					k, ok := kve.Key.(*dst.Ident)
-					if !(ok && k.Name == "Handler" && tc.ofType(k, "net/http.Handler")) {
+					if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
 						continue
 					}
 					kve.Decorations().Start.Append(dd_startwrap)
 					kve.Decorations().End.Append("\n", dd_endwrap)
 					kve.Value = &dst.CallExpr{
-						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion"},
+						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion/instrument"},
 						Args: []dst.Expr{kve.Value},
 					}
 					return true
@@ -496,7 +500,7 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 	return false
 }
 
-func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
+func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bool {
 	/*
 		//dd:startwrap
 		c = orchestrion.WrapHTTPClient(client)
@@ -506,13 +510,13 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typeChecker) bool {
 		return false
 	}
 	iden, ok := stmt.Lhs[0].(*dst.Ident)
-	if !(ok && tc.ofType(iden, "*net/http.Client")) {
+	if !(ok && tc.OfType(iden, "*net/http.Client")) {
 		return false
 	}
 	stmt.Decorations().Start.Append(dd_startwrap)
 	stmt.Decorations().End.Append("\n", dd_endwrap)
 	stmt.Rhs[0] = &dst.CallExpr{
-		Fun:  &dst.Ident{Name: "WrapHTTPClient", Path: "github.com/datadog/orchestrion"},
+		Fun:  &dst.Ident{Name: "WrapHTTPClient", Path: "github.com/datadog/orchestrion/instrument"},
 		Args: []dst.Expr{stmt.Rhs[0]},
 	}
 	return true
@@ -572,11 +576,11 @@ func wrapSqlCall(call *dst.CallExpr) bool {
 	if !(ok && f.Path == "database/sql" && (f.Name == "Open" || f.Name == "OpenDB")) {
 		return false
 	}
-	f.Path = "github.com/datadog/orchestrion/sql"
+	f.Path = "github.com/datadog/orchestrion/instrument"
 	return true
 }
 
-func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker) bool {
+func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typechecker.TypeChecker) bool {
 	/*
 		//dd:startwrap
 		http.Handle("/handle", orchestrion.WrapHandler(handler))
@@ -607,7 +611,7 @@ func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker) bool {
 		fun.Decorations().Start.Append(dd_startwrap)
 		fun.Decorations().End.Append("\n", dd_endwrap)
 		fun.Args[1] = &dst.CallExpr{
-			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion"},
+			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion/instrument"},
 			Args: []dst.Expr{fun.Args[1]},
 		}
 		return true
@@ -615,7 +619,7 @@ func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker) bool {
 	if fun, ok := stmt.X.(*dst.CallExpr); ok && len(fun.Args) == 2 {
 		switch f := fun.Fun.(type) {
 		case *dst.SelectorExpr:
-			if tc.ofType(f.X, "*net/http.ServeMux") || tc.ofType(f.X, "net/http.ServeMux") {
+			if tc.OfType(f.X, "*net/http.ServeMux") || tc.OfType(f.X, "net/http.ServeMux") {
 				return wrap(fun, f.Sel.Name)
 			}
 		case *dst.Ident:
@@ -657,13 +661,13 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 							},
 							Args: []dst.Expr{
 								&dst.CallExpr{
-									Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+									Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
 									Args: []dst.Expr{
 										&dst.CallExpr{Fun: &dst.SelectorExpr{
 											X:   &dst.Ident{Name: requestName},
 											Sel: &dst.Ident{Name: "Context"},
 										}},
-										&dst.Ident{Name: "EventCall", Path: "github.com/datadog/orchestrion"},
+										&dst.Ident{Name: "EventCall", Path: "github.com/datadog/orchestrion/instrument/event"},
 										&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 										&dst.SelectorExpr{
 											X:   &dst.Ident{Name: requestName},
@@ -685,19 +689,19 @@ func buildRequestClientCode(requestName string) dst.Stmt {
 					Tok: token.ASSIGN,
 					Rhs: []dst.Expr{
 						&dst.CallExpr{
-							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion"},
+							Fun:  &dst.Ident{Name: "InsertHeader", Path: "github.com/datadog/orchestrion/instrument"},
 							Args: []dst.Expr{&dst.Ident{Name: requestName}},
 						},
 					},
 				},
 				&dst.DeferStmt{Call: &dst.CallExpr{
-					Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+					Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
 					Args: []dst.Expr{
 						&dst.CallExpr{Fun: &dst.SelectorExpr{
 							X:   &dst.Ident{Name: requestName},
 							Sel: &dst.Ident{Name: "Context"},
 						}},
-						&dst.Ident{Name: "EventReturn", Path: "github.com/datadog/orchestrion"},
+						&dst.Ident{Name: "EventReturn", Path: "github.com/datadog/orchestrion/instrument/event"},
 						&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 						&dst.SelectorExpr{
 							X:   &dst.Ident{Name: requestName},
@@ -740,7 +744,7 @@ func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
 				Fun: &dst.CallExpr{
-					Fun: &dst.Ident{Path: "github.com/datadog/orchestrion", Name: "Init"},
+					Fun: &dst.Ident{Path: "github.com/datadog/orchestrion/instrument", Name: "Init"},
 				},
 			},
 			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
@@ -797,13 +801,13 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 					},
 					Args: []dst.Expr{
 						&dst.CallExpr{
-							Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+							Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
 							Args: []dst.Expr{
 								&dst.CallExpr{Fun: &dst.SelectorExpr{
 									X:   &dst.Ident{Name: requestName},
 									Sel: &dst.Ident{Name: "Context"},
 								}},
-								&dst.Ident{Name: "EventStart", Path: "github.com/datadog/orchestrion"},
+								&dst.Ident{Name: "EventStart", Path: "github.com/datadog/orchestrion/instrument/event"},
 								&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 								dup(funcName),
 								&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
@@ -824,13 +828,13 @@ func buildFunctionInstrumentation(funcName dst.Expr, requestName string) []dst.S
 		},
 		&dst.DeferStmt{
 			Call: &dst.CallExpr{
-				Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion"},
+				Fun: &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
 				Args: []dst.Expr{
 					&dst.CallExpr{Fun: &dst.SelectorExpr{
 						X:   &dst.Ident{Name: requestName},
 						Sel: &dst.Ident{Name: "Context"},
 					}},
-					&dst.Ident{Name: "EventEnd", Path: "github.com/datadog/orchestrion"},
+					&dst.Ident{Name: "EventEnd", Path: "github.com/datadog/orchestrion/instrument/event"},
 					&dst.BasicLit{Kind: token.STRING, Value: `"name"`},
 					dup(funcName),
 					&dst.BasicLit{Kind: token.STRING, Value: `"verb"`},
@@ -870,7 +874,7 @@ func dup(in dst.Expr) dst.Expr {
 	}
 }
 
-func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config) {
+func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker, conf config.Config) {
 	// check for function literal that is a handler
 	for pos, expr := range stmt.Rhs {
 		if compLit, ok := expr.(*dst.CompositeLit); ok {
@@ -897,7 +901,7 @@ func reportHandlerFromAssign(stmt *dst.AssignStmt, tc *typeChecker, conf Config)
 	}
 }
 
-func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker, conf Config) {
+func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typechecker.TypeChecker, conf config.Config) {
 	// might be something we have to recurse on if it's a closure?
 	if call, ok := stmt.X.(*dst.CallExpr); ok {
 		// check if this is a handler func
@@ -921,15 +925,15 @@ func reportHandlerFromExpr(stmt *dst.ExprStmt, tc *typeChecker, conf Config) {
 	}
 }
 
-func reportHandlerFromDecl(decl *dst.FuncDecl, tc *typeChecker, conf Config) *dst.FuncDecl {
+func reportHandlerFromDecl(decl *dst.FuncDecl, tc *typechecker.TypeChecker, conf config.Config) *dst.FuncDecl {
 	if conf.HTTPMode != "report" {
 		return decl
 	}
 	// check the parameters, see if they match
 	inputParams := decl.Type.Params.List
 	if len(inputParams) == 2 &&
-		tc.ofType(inputParams[0].Type, "net/http.ResponseWriter") &&
-		tc.ofType(inputParams[1].Type, "*net/http.Request") {
+		tc.OfType(inputParams[0].Type, "net/http.ResponseWriter") &&
+		tc.OfType(inputParams[1].Type, "*net/http.Request") {
 		decl = addCodeToHandler(decl)
 	}
 	return decl

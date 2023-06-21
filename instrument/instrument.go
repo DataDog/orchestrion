@@ -3,15 +3,20 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package instrument
 
 import (
 	"context"
 	"fmt"
 	"net/http"
-	"runtime"
+
+	"database/sql"
+	"database/sql/driver"
+
+	"github.com/datadog/orchestrion/instrument/event"
 
 	"google.golang.org/grpc"
+	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -86,30 +91,6 @@ func InsertHeader(r *http.Request) *http.Request {
 	return r
 }
 
-//go:generate stringer -type=Event
-type Event int
-
-const (
-	_ Event = iota
-	EventStart
-	EventEnd
-	EventCall
-	EventReturn
-	EventDBCall
-	EventDBReturn
-)
-
-func buildStackTrace() []uintptr {
-	pc := make([]uintptr, 2)
-	n := runtime.Callers(3, pc)
-	pc = pc[:n]
-	return pc
-}
-
-func StackTrace(trace []uintptr) *runtime.Frames {
-	return runtime.CallersFrames(trace)
-}
-
 func getOpName(metadata ...any) string {
 	rank := map[string]int{
 		"verb":          1,
@@ -137,9 +118,9 @@ func getOpName(metadata ...any) string {
 	return opname
 }
 
-func Report(ctx context.Context, e Event, metadata ...any) context.Context {
+func Report(ctx context.Context, e event.Event, metadata ...any) context.Context {
 	var span tracer.Span
-	if e == EventStart || e == EventCall {
+	if e == event.EventStart || e == event.EventCall {
 		var opts []tracer.StartSpanOption
 		for i := 0; i < len(metadata); i += 2 {
 			if i+1 >= len(metadata) {
@@ -150,7 +131,7 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 			}
 		}
 		span, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
-	} else if e == EventEnd || e == EventReturn {
+	} else if e == event.EventEnd || e == event.EventReturn {
 		var ok bool
 		span, ok = tracer.SpanFromContext(ctx)
 		if !ok {
@@ -160,7 +141,18 @@ func Report(ctx context.Context, e Event, metadata ...any) context.Context {
 		span.Finish()
 	}
 
-	// 	frames := StackTrace(buildStackTrace())
+	// buildStackTrace := func() []uintptr {
+	// 	pc := make([]uintptr, 2)
+	// 	n := runtime.Callers(3, pc)
+	// 	pc = pc[:n]
+	// 	return pc
+	// }
+
+	// stackTrace := func(trace []uintptr) *runtime.Frames {
+	// 	return runtime.CallersFrames(trace)
+	// }
+
+	// frames := stackTrace(buildStackTrace())
 	// 	frame, _ := frames.Next()
 	// 	file := ""
 	// 	line := 0
@@ -243,6 +235,14 @@ func GRPCStreamClientInterceptor() grpc.DialOption {
 
 func GRPCUnaryClientInterceptor() grpc.DialOption {
 	return grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
+}
+
+func Open(driverName, dataSourceName string) (*sql.DB, error) {
+	return sqltrace.Open(driverName, dataSourceName)
+}
+
+func OpenDB(c driver.Connector) *sql.DB {
+	return sqltrace.OpenDB(c)
 }
 
 func Init() func() {

@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package typechecker
 
 import (
 	"go/ast"
@@ -15,17 +15,17 @@ import (
 	"github.com/dave/dst/decorator"
 )
 
-// typeChecker leverages dst/decorator and go/types to infer the expression types.
+// TypeChecker leverages dst/decorator and go/types to infer the expression types.
 // The decorator keeps the mapping between ast.Node and dst.Node while go/types extracts the types.
 // Call check() after instanciation and before calling ofType() or typeOf().
-type typeChecker struct {
+type TypeChecker struct {
 	dec  *decorator.Decorator
 	info *types.Info
 }
 
 // newTypeChecker constructs a typeChecker.
-func newTypeChecker(dec *decorator.Decorator) *typeChecker {
-	return &typeChecker{
+func New(dec *decorator.Decorator) *TypeChecker {
+	return &TypeChecker{
 		dec: dec,
 		info: &types.Info{
 			Defs:  make(map[*ast.Ident]types.Object),
@@ -37,7 +37,7 @@ func newTypeChecker(dec *decorator.Decorator) *typeChecker {
 
 // check analyses a target file and stores object types.
 // It must be called at least once before calling ofType or typeOf.
-func (tc *typeChecker) check(name string, fset *token.FileSet, file *ast.File) {
+func (tc *TypeChecker) Check(name string, fset *token.FileSet, file *ast.File) {
 	conf := &types.Config{
 		Importer: importer.Default(),
 		Error:    func(err error) { /* ignore type check errors */ },
@@ -46,12 +46,12 @@ func (tc *typeChecker) check(name string, fset *token.FileSet, file *ast.File) {
 }
 
 // ofType checks the type of an expression.
-func (tc typeChecker) ofType(expr dst.Expr, t string) bool {
-	return tc.typeOf(expr) == t
+func (tc TypeChecker) OfType(expr dst.Expr, t string) bool {
+	return tc.TypeOf(expr) == t
 }
 
 // typeOf returns the type of an expression.
-func (tc typeChecker) typeOf(expr dst.Expr) string {
+func (tc TypeChecker) TypeOf(expr dst.Expr) string {
 	astExpr := tc.dec.Ast.Nodes[expr].(ast.Expr)
 	to := tc.info.TypeOf(astExpr)
 	if to == nil {

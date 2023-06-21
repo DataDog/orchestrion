@@ -5,10 +5,10 @@
 build: generate test build-only
 
 build-only:
-	go build ./cmd/orchestrion
+	go build -o ./bin/orchestrion ./
 
 build-linux-x64: generate test
-	GOOS=linux GOARCH=amd64 go build ./cmd/orchestrion
+	GOOS=linux GOARCH=amd64 go build -o ./bin/orchestrion ./
 
 test: generate fmt vet verify-licenses verify-dd-headers
 	go test ./... -cover

@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package orchestrion
+package instrument
 
 import (
 	"fmt"
@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/datadog/orchestrion/internal/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +35,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 )
 
 var s http.ServeMux
@@ -50,10 +52,10 @@ func register() {
 			in: `http.Handle("/handle", handler)
 	http.Handle("/other", handler2)`,
 			want: `//dd:startwrap
-	http.Handle("/handle", orchestrion.WrapHandler(handler))
+	http.Handle("/handle", instrument.WrapHandler(handler))
 	//dd:endwrap
 	//dd:startwrap
-	http.Handle("/other", orchestrion.WrapHandler(handler2))
+	http.Handle("/other", instrument.WrapHandler(handler2))
 	//dd:endwrap`,
 		},
 	}
@@ -61,14 +63,14 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -94,7 +96,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 )
 
 var s http.ServeMux
@@ -109,31 +111,31 @@ func register() {
 		in   string
 		want string
 	}{
-		{in: `http.Handle("/handle", handler)`, want: `http.Handle("/handle", orchestrion.WrapHandler(handler))`},
-		{in: `http.Handle("/handle", http.HandlerFunc(myHandler))`, want: `http.Handle("/handle", orchestrion.WrapHandler(http.HandlerFunc(myHandler)))`},
-		{in: `http.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, want: `http.Handle("/handle", orchestrion.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))`},
-		{in: `http.HandleFunc("/handle", handler)`, want: `http.HandleFunc("/handle", orchestrion.WrapHandlerFunc(handler))`},
-		{in: `http.HandleFunc("/handle", http.HandlerFunc(myHandler))`, want: `http.HandleFunc("/handle", orchestrion.WrapHandlerFunc(http.HandlerFunc(myHandler)))`},
-		{in: `http.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, want: `http.HandleFunc("/handle", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`},
-		{in: `s.Handle("/handle", handler)`, want: `s.Handle("/handle", orchestrion.WrapHandler(handler))`},
-		{in: `s.Handle("/handle", http.HandlerFunc(myHandler))`, want: `s.Handle("/handle", orchestrion.WrapHandler(http.HandlerFunc(myHandler)))`},
-		{in: `s.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, want: `s.Handle("/handle", orchestrion.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))`},
-		{in: `s.HandleFunc("/handle", handler)`, want: `s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(handler))`},
-		{in: `s.HandleFunc("/handle", http.HandlerFunc(myHandler))`, want: `s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(http.HandlerFunc(myHandler)))`},
-		{in: `s.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, want: `s.HandleFunc("/handle", orchestrion.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`},
+		{in: `http.Handle("/handle", handler)`, want: `http.Handle("/handle", instrument.WrapHandler(handler))`},
+		{in: `http.Handle("/handle", http.HandlerFunc(myHandler))`, want: `http.Handle("/handle", instrument.WrapHandler(http.HandlerFunc(myHandler)))`},
+		{in: `http.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, want: `http.Handle("/handle", instrument.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))`},
+		{in: `http.HandleFunc("/handle", handler)`, want: `http.HandleFunc("/handle", instrument.WrapHandlerFunc(handler))`},
+		{in: `http.HandleFunc("/handle", http.HandlerFunc(myHandler))`, want: `http.HandleFunc("/handle", instrument.WrapHandlerFunc(http.HandlerFunc(myHandler)))`},
+		{in: `http.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, want: `http.HandleFunc("/handle", instrument.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`},
+		{in: `s.Handle("/handle", handler)`, want: `s.Handle("/handle", instrument.WrapHandler(handler))`},
+		{in: `s.Handle("/handle", http.HandlerFunc(myHandler))`, want: `s.Handle("/handle", instrument.WrapHandler(http.HandlerFunc(myHandler)))`},
+		{in: `s.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, want: `s.Handle("/handle", instrument.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))`},
+		{in: `s.HandleFunc("/handle", handler)`, want: `s.HandleFunc("/handle", instrument.WrapHandlerFunc(handler))`},
+		{in: `s.HandleFunc("/handle", http.HandlerFunc(myHandler))`, want: `s.HandleFunc("/handle", instrument.WrapHandlerFunc(http.HandlerFunc(myHandler)))`},
+		{in: `s.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, want: `s.HandleFunc("/handle", instrument.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`},
 	}
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -161,7 +163,7 @@ func register() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 )
 
 var s *http.Server
@@ -179,16 +181,16 @@ func register() {
 		in   string
 		want string
 	}{
-		{in: `http.HandlerFunc(myHandler)`, want: `orchestrion.WrapHandler(http.HandlerFunc(myHandler))`},
-		{in: `myHandler`, want: `orchestrion.WrapHandler(myHandler)`},
-		{in: `NewHandler()`, want: `orchestrion.WrapHandler(NewHandler())`},
-		{in: `&handler{}`, want: `orchestrion.WrapHandler(&handler{})`},
+		{in: `http.HandlerFunc(myHandler)`, want: `instrument.WrapHandler(http.HandlerFunc(myHandler))`},
+		{in: `myHandler`, want: `instrument.WrapHandler(myHandler)`},
+		{in: `NewHandler()`, want: `instrument.WrapHandler(NewHandler())`},
+		{in: `&handler{}`, want: `instrument.WrapHandler(&handler{})`},
 	}
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -222,7 +224,7 @@ func init() {
 import (
 	"net/http"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 )
 
 var c *http.Client
@@ -237,22 +239,22 @@ func init() {
 		in   string
 		want string
 	}{
-		{in: `&http.Client{Timeout: time.Second}`, want: `orchestrion.WrapHTTPClient(&http.Client{Timeout: time.Second})`},
-		{in: `MyClient()`, want: `orchestrion.WrapHTTPClient(MyClient())`},
-		{in: `http.DefaultClient`, want: `orchestrion.WrapHTTPClient(http.DefaultClient)`},
+		{in: `&http.Client{Timeout: time.Second}`, want: `instrument.WrapHTTPClient(&http.Client{Timeout: time.Second})`},
+		{in: `MyClient()`, want: `instrument.WrapHTTPClient(MyClient())`},
+		{in: `http.DefaultClient`, want: `instrument.WrapHTTPClient(http.DefaultClient)`},
 	}
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -280,14 +282,15 @@ func MyFunc(somectx context.Context) {%s}
 import (
 	"context"
 
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
+	"github.com/datadog/orchestrion/instrument/event"
 )
 
 //dd:span foo:bar other:tag
 func MyFunc(somectx context.Context) {
 	//dd:startinstrument
-	somectx = orchestrion.Report(somectx, orchestrion.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
-	defer orchestrion.Report(somectx, orchestrion.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	somectx = instrument.Report(somectx, event.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	defer instrument.Report(somectx, event.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
 	//dd:endinstrument%s
 }
 `
@@ -303,13 +306,13 @@ func MyFunc(somectx context.Context) {
 		t.Run("", func(t *testing.T) {
 			var code = codef(tt.in)
 			var want = wantf(tt.out)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.NoError(t, err)
 			got, err := io.ReadAll(reader)
 			require.NoError(t, err)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -327,23 +330,23 @@ func main() {
 `
 	var want = `package main
 
-import "github.com/datadog/orchestrion"
+import "github.com/datadog/orchestrion/instrument"
 
 func main() {
 	//dd:startinstrument
-	defer orchestrion.Init()()
+	defer instrument.Init()()
 	//dd:endinstrument
 	whatever.code
 }
 `
 
-	reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+	reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 	require.NoError(t, err)
 	got, err := io.ReadAll(reader)
 	require.NoError(t, err)
 	assert.Equal(t, want, string(got))
 
-	reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+	reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 	require.Nil(t, err)
 	orig, err := io.ReadAll(reader)
 	require.Nil(t, err)
@@ -361,7 +364,7 @@ func TestHTTPModeConfig(t *testing.T) {
 			in, err := os.Open(tc.in)
 			require.NoError(t, err)
 
-			reader, err := InstrumentFile(in.Name(), in, Config{HTTPMode: tc.mode})
+			reader, err := InstrumentFile(in.Name(), in, config.Config{HTTPMode: tc.mode})
 			require.NoError(t, err)
 
 			got, err := io.ReadAll(reader)
@@ -386,7 +389,7 @@ func register() {
 `
 	var wantTpl = `package main
 
-import "github.com/datadog/orchestrion/sql"
+import "github.com/datadog/orchestrion/instrument"
 
 func register() {
 	//dd:startwrap
@@ -400,7 +403,7 @@ func register() {
 import (
 	"database/sql"
 
-	sql1 "github.com/datadog/orchestrion/sql"
+	"github.com/datadog/orchestrion/instrument"
 )
 
 func register() {
@@ -413,10 +416,10 @@ func register() {
 		want string
 		tmpl string
 	}{
-		{in: `db, err := sql.Open("db", "mypath")`, want: `db, err := sql.Open("db", "mypath")`, tmpl: wantTpl},
-		{in: `db := sql.OpenDB(connector)`, want: `db := sql.OpenDB(connector)`, tmpl: wantTpl},
-		{in: `return sql.Open("db", "mypath")`, want: `return sql.Open("db", "mypath")`, tmpl: wantTpl},
-		{in: `return sql.OpenDB(connector)`, want: `return sql.OpenDB(connector)`, tmpl: wantTpl},
+		{in: `db, err := sql.Open("db", "mypath")`, want: `db, err := instrument.Open("db", "mypath")`, tmpl: wantTpl},
+		{in: `db := sql.OpenDB(connector)`, want: `db := instrument.OpenDB(connector)`, tmpl: wantTpl},
+		{in: `return sql.Open("db", "mypath")`, want: `return instrument.Open("db", "mypath")`, tmpl: wantTpl},
+		{in: `return sql.OpenDB(connector)`, want: `return instrument.OpenDB(connector)`, tmpl: wantTpl},
 
 		{
 			in: `func() (*sql.DB, error) {
@@ -424,7 +427,7 @@ func register() {
 	}()`,
 			want: `func() (*sql.DB, error) {
 		//dd:startwrap
-		return sql1.Open("db", "mypath")
+		return instrument.Open("db", "mypath")
 		//dd:endwrap
 	}()`,
 			tmpl: wantTpl2,
@@ -436,7 +439,7 @@ func register() {
 	}`,
 			want: `f := func() (*sql.DB, error) {
 		//dd:startwrap
-		return sql1.Open("db", "mypath")
+		return instrument.Open("db", "mypath")
 		//dd:endwrap
 	}`,
 			tmpl: wantTpl2,
@@ -446,14 +449,14 @@ func register() {
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), Config{})
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(tc.tmpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), Config{})
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -476,7 +479,7 @@ func init() {
 	var wantTpl = `package main
 
 import (
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 	"google.golang.org/grpc"
 )
 
@@ -492,21 +495,21 @@ func init() {
 		in   string
 		want string
 	}{
-		{in: `grpc.NewServer()`, want: `grpc.NewServer(orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())`},
-		{in: `grpc.NewServer(opt1, opt2)`, want: `grpc.NewServer(opt1, opt2, orchestrion.GRPCStreamServerInterceptor(), orchestrion.GRPCUnaryServerInterceptor())`},
+		{in: `grpc.NewServer()`, want: `grpc.NewServer(instrument.GRPCStreamServerInterceptor(), instrument.GRPCUnaryServerInterceptor())`},
+		{in: `grpc.NewServer(opt1, opt2)`, want: `grpc.NewServer(opt1, opt2, instrument.GRPCStreamServerInterceptor(), instrument.GRPCUnaryServerInterceptor())`},
 	}
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
@@ -530,7 +533,7 @@ func init() {
 	var wantTpl = `package main
 
 import (
-	"github.com/datadog/orchestrion"
+	"github.com/datadog/orchestrion/instrument"
 	"google.golang.org/grpc"
 )
 
@@ -547,21 +550,21 @@ func init() {
 		in   string
 		want string
 	}{
-		{in: `grpc.Dial("localhost:8888")`, want: `grpc.Dial("localhost:8888", orchestrion.GRPCStreamClientInterceptor(), orchestrion.GRPCUnaryClientInterceptor())`},
-		{in: `grpc.Dial("localhost:8888", opt1, opt2)`, want: `grpc.Dial("localhost:8888", opt1, opt2, orchestrion.GRPCStreamClientInterceptor(), orchestrion.GRPCUnaryClientInterceptor())`},
+		{in: `grpc.Dial("localhost:8888")`, want: `grpc.Dial("localhost:8888", instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())`},
+		{in: `grpc.Dial("localhost:8888", opt1, opt2)`, want: `grpc.Dial("localhost:8888", opt1, opt2, instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())`},
 	}
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
 			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), defaultConf)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
 			require.Nil(t, err)
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			reader, err = UninstrumentFile("test", strings.NewReader(want), defaultConf)
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)
 			require.Nil(t, err)
