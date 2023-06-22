@@ -686,4 +686,34 @@ func register() {
 			require.Equal(t, code, string(got))
 		})
 	}
+
+	t.Run("func", func(t *testing.T) {
+		var code = `package main
+
+import (
+	"database/sql"
+	"net/http"
+
+	"google.golang.org/grpc"
+)
+
+var c *grpc.ClientConn
+
+//dd:ignore
+func init() {
+	var err error
+	c, err = grpc.Dial("localhost:8888")
+
+	http.Handle("/handle", handler)
+
+	db, err := sql.Open("db", "mypath")
+}
+`
+		reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
+		require.Nil(t, err)
+		got, err := io.ReadAll(reader)
+		require.Nil(t, err)
+		require.Equal(t, code, string(got))
+
+	})
 }
