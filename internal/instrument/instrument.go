@@ -300,7 +300,6 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 				}
 			}
 		case *dst.ExprStmt:
-
 			switch conf.HTTPMode {
 			case "wrap":
 				wrapHandlerFromExpr(stmt, tc)
@@ -479,18 +478,15 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 		}
 	*/
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
-		return true
+		return false
 	}
 	if uexpr, ok := stmt.Rhs[0].(*dst.UnaryExpr); ok {
 		if x, ok := uexpr.X.(*dst.CompositeLit); ok {
 			t, ok := x.Type.(*dst.Ident)
 			if !(ok && t.Path == "net/http" && t.Name == "Server") {
-				return true
+				return false
 			}
 			for _, e := range x.Elts {
-				// 				if skipInstrumentation(e.Decorations()) {
-				// 					return true
-				// 				}
 				if kve, ok := e.(*dst.KeyValueExpr); ok {
 					k, ok := kve.Key.(*dst.Ident)
 					if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
