@@ -572,3 +572,118 @@ func init() {
 		})
 	}
 }
+
+func TestIgnore(t *testing.T) {
+	var grpcClientTmpl = `package main
+
+import "google.golang.org/grpc"
+
+var c *grpc.ClientConn
+
+func init() {
+	var err error
+	//dd:ignore
+	c, err = %s
+}
+`
+
+	var grpcServerTmpl = `package main
+
+import "google.golang.org/grpc"
+
+var s *grpc.Server
+
+func init() {
+	//dd:ignore
+	s = %s
+}
+`
+
+	var sqlTmpl = `package main
+
+import "database/sql"
+
+func register() {
+	//dd:ignore
+	%s
+}
+`
+
+	var ddspanTmpl = `package main
+
+import "context"
+
+//dd:ignore
+//dd:span foo:bar other:tag
+func MyFunc(somectx context.Context) {
+	fmt.Printf("%s")
+}
+`
+
+	var handleTmpl = `package main
+
+import "net/http"
+
+var s http.ServeMux
+
+func register() {
+	//dd:ignore
+	%s
+}
+`
+
+	tests := []struct {
+		in   string
+		tmpl string
+	}{
+		{in: `grpc.Dial("localhost:8888")`, tmpl: grpcClientTmpl},
+		{in: `grpc.Dial("localhost:8888", opt1, opt2)`, tmpl: grpcClientTmpl},
+		{in: `grpc.NewServer()`, tmpl: grpcServerTmpl},
+		{in: `grpc.NewServer(opt1, opt2)`, tmpl: grpcServerTmpl},
+
+		{in: `db, err := sql.Open("db", "mypath")`, tmpl: sqlTmpl},
+		{in: `db := sql.OpenDB(connector)`, tmpl: sqlTmpl},
+		{in: `return sql.Open("db", "mypath")`, tmpl: sqlTmpl},
+		{in: `return sql.OpenDB(connector)`, tmpl: sqlTmpl},
+
+		{
+			in: `func() (*sql.DB, error) {
+		return sql.Open("db", "mypath")
+	}()`,
+			tmpl: sqlTmpl,
+		},
+
+		{
+			in: `f := func() (*sql.DB, error) {
+		return sql.Open("db", "mypath")
+	}`,
+			tmpl: sqlTmpl,
+		},
+
+		{in: `doesn't matter.\n`, tmpl: ddspanTmpl},
+
+		{in: `http.Handle("/handle", handler)`, tmpl: handleTmpl},
+		{in: `http.Handle("/handle", http.HandlerFunc(myHandler))`, tmpl: handleTmpl},
+		{in: `http.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, tmpl: handleTmpl},
+		{in: `http.HandleFunc("/handle", handler)`, tmpl: handleTmpl},
+		{in: `http.HandleFunc("/handle", http.HandlerFunc(myHandler))`, tmpl: handleTmpl},
+		{in: `http.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, tmpl: handleTmpl},
+		{in: `s.Handle("/handle", handler)`, tmpl: handleTmpl},
+		{in: `s.Handle("/handle", http.HandlerFunc(myHandler))`, tmpl: handleTmpl},
+		{in: `s.Handle("/handle", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))`, tmpl: handleTmpl},
+		{in: `s.HandleFunc("/handle", handler)`, tmpl: handleTmpl},
+		{in: `s.HandleFunc("/handle", http.HandlerFunc(myHandler))`, tmpl: handleTmpl},
+		{in: `s.HandleFunc("/handle", func(w http.ResponseWriter, r *http.Request) {})`, tmpl: handleTmpl},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			code := fmt.Sprintf(tc.tmpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(got))
+		})
+	}
+}

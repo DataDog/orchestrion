@@ -75,6 +75,10 @@ func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Read
 	tc.Check(name, fset, astFile)
 	for _, decl := range f.Decls {
 		if decl, ok := decl.(*dst.FuncDecl); ok {
+			decos := decl.Decorations().Start.All()
+			if hasLabel(dd_ignore, decos) {
+				continue
+			}
 			// report handlers in top-level functions (functions and methods!)
 			decl = reportHandlerFromDecl(decl, tc, conf)
 			// find magic comments on functions
@@ -244,20 +248,27 @@ func buildExprsFromParts(parts []string) []dst.Expr {
 	return out
 }
 
+func skipInstrumentation(ds *dst.NodeDecs) bool {
+	decos := ds.Start.All()
+	return hasLabel(dd_instrumented, decos) ||
+		hasLabel(dd_startinstrument, decos) ||
+		hasLabel(dd_startwrap, decos) ||
+		hasLabel(dd_ignore, decos)
+}
+
 func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config.Config) []dst.Stmt {
 	skip := func(stmt dst.Stmt) bool {
-		return hasLabel(dd_instrumented, stmt.Decorations().Start.All()) || hasLabel(dd_startinstrument, stmt.Decorations().Start.All()) || hasLabel(dd_startwrap, stmt.Decorations().Start.All())
+		return skipInstrumentation(stmt.Decorations())
 	}
 	out := make([]dst.Stmt, 0, len(list))
 	for _, stmt := range list {
+		if skip(stmt) {
+			out = append(out, stmt)
+			continue
+		}
 		appendStmt := true
 		switch stmt := stmt.(type) {
 		case *dst.AssignStmt:
-			// what we actually care about
-			// see if it already has a dd:instrumented
-			if skip(stmt) {
-				break
-			}
 			switch conf.HTTPMode {
 			case "wrap":
 				wrapFromAssign(stmt, tc)
@@ -289,9 +300,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 				}
 			}
 		case *dst.ExprStmt:
-			if skip(stmt) {
-				break
-			}
+
 			switch conf.HTTPMode {
 			case "wrap":
 				wrapHandlerFromExpr(stmt, tc)
@@ -389,6 +398,7 @@ const (
 	dd_endwrap         = "//dd:endwrap"
 	dd_instrumented    = "//dd:instrumented"
 	dd_span            = "//dd:span"
+	dd_ignore          = "//dd:ignore"
 )
 
 func hasLabel(label string, decs []string) bool {
@@ -469,18 +479,18 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 		}
 	*/
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
-		return false
+		return true
 	}
 	if uexpr, ok := stmt.Rhs[0].(*dst.UnaryExpr); ok {
 		if x, ok := uexpr.X.(*dst.CompositeLit); ok {
 			t, ok := x.Type.(*dst.Ident)
 			if !(ok && t.Path == "net/http" && t.Name == "Server") {
-				return false
+				return true
 			}
 			for _, e := range x.Elts {
-				if hasLabel(dd_startwrap, e.Decorations().Start.All()) {
-					return false
-				}
+				// 				if skipInstrumentation(e.Decorations()) {
+				// 					return true
+				// 				}
 				if kve, ok := e.(*dst.KeyValueExpr); ok {
 					k, ok := kve.Key.(*dst.Ident)
 					if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
