@@ -24,14 +24,14 @@ clean:
 	go clean
 
 licenses: bin/go-licenses
-	./bin/go-licenses report . --template ./tools/licenses.tpl > LICENSE-3rdparty.csv 2> errors
+	tools/make-licenses.sh
 
 verify-licenses: bin/go-licenses
 	tools/verify-licenses.sh
 
 bin/go-licenses:
 	mkdir -p $(PWD)/bin
-	GOBIN=$(PWD)/bin go install github.com/google/go-licenses@v1.5.0
+	GOBIN=$(PWD)/bin go install github.com/google/go-licenses@v1.6.0
 
 verify-dd-headers:
-	go run tools/header_check.go
+	go run tools/headercheck/header_check.go
