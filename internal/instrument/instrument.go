@@ -248,8 +248,8 @@ func buildExprsFromParts(parts []string) []dst.Expr {
 	return out
 }
 
-func skipInstrumentation(ds *dst.NodeDecs) bool {
-	decos := ds.Start.All()
+func skipInstrumentation(stmt dst.Stmt) bool {
+	decos := stmt.Decorations().Start.All()
 	return hasLabel(dd_instrumented, decos) ||
 		hasLabel(dd_startinstrument, decos) ||
 		hasLabel(dd_startwrap, decos) ||
@@ -257,12 +257,9 @@ func skipInstrumentation(ds *dst.NodeDecs) bool {
 }
 
 func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config.Config) []dst.Stmt {
-	skip := func(stmt dst.Stmt) bool {
-		return skipInstrumentation(stmt.Decorations())
-	}
 	out := make([]dst.Stmt, 0, len(list))
 	for _, stmt := range list {
-		if skip(stmt) {
+		if skipInstrumentation(stmt) {
 			out = append(out, stmt)
 			continue
 		}
