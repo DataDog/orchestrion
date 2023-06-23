@@ -18,6 +18,114 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestWrapTwice(t *testing.T) {
+	var codeTpl = func(s string) string {
+		return fmt.Sprintf(`package main
+
+import "net/http"
+
+var s http.ServeMux
+
+func register() {
+	%s
+}
+`, s)
+	}
+
+	var wantTpl = func(s string) string {
+		return fmt.Sprintf(`package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion/instrument"
+)
+
+var s http.ServeMux
+
+func register() {
+	%s
+}
+`, s)
+	}
+
+	var codeTpl2 = func(s string) string {
+		return fmt.Sprintf(`package main
+
+import "net/http"
+
+var s *http.Server
+
+func register() {
+	s = &http.Server{
+		Addr:    ":8080",
+		Handler: %s,
+	}
+}
+`, s)
+	}
+
+	var wantTpl2 = func(s string) string {
+		return fmt.Sprintf(`package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion/instrument"
+)
+
+var s *http.Server
+
+func register() {
+	s = &http.Server{
+		Addr: ":8080",
+		//dd:startwrap
+		Handler: %s,
+		//dd:endwrap
+	}
+}
+`, s)
+	}
+
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{
+			in: codeTpl(`http.Handle("/handle", handler)
+	http.Handle("/other", handler2)`),
+			want: wantTpl(`//dd:startwrap
+	http.Handle("/handle", instrument.WrapHandler(handler))
+	//dd:endwrap
+	//dd:startwrap
+	http.Handle("/other", instrument.WrapHandler(handler2))
+	//dd:endwrap`),
+		},
+		{in: codeTpl2(`http.HandlerFunc(myHandler)`), want: wantTpl2(`instrument.WrapHandler(http.HandlerFunc(myHandler))`)},
+		{in: codeTpl2(`myHandler`), want: wantTpl2(`instrument.WrapHandler(myHandler)`)},
+		{in: codeTpl2(`NewHandler()`), want: wantTpl2(`instrument.WrapHandler(NewHandler())`)},
+		{in: codeTpl2(`&handler{}`), want: wantTpl2(`instrument.WrapHandler(&handler{})`)},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			//code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(tc.in), config.Default)
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+
+			reader, err = InstrumentFile("test", strings.NewReader(string(got)), config.Default)
+			require.Nil(t, err)
+			got, err = io.ReadAll(reader)
+			require.Nil(t, err)
+
+			//want := fmt.Sprintf(wantTpl, tc.want)
+			require.Equal(t, tc.want, string(got))
+		})
+	}
+}
+
 func TestMultipleWrap(t *testing.T) {
 	var codeTpl = `package main
 

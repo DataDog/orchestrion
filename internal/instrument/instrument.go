@@ -484,6 +484,9 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 				return false
 			}
 			for _, e := range x.Elts {
+				if hasLabel(dd_startwrap, e.Decorations().Start.All()) {
+					return false
+				}
 				if kve, ok := e.(*dst.KeyValueExpr); ok {
 					k, ok := kve.Key.(*dst.Ident)
 					if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
