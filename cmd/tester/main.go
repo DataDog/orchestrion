@@ -1,3 +1,8 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 package main
 
 import (
@@ -167,12 +172,12 @@ func runInstrumentation(in, outname string) {
 
 	inst := instrumentor{
 		[]instrument{
-			instrument{
+			{
 				t:    reflect.TypeOf(&dst.CallExpr{}),
 				f:    ReplaceCall("fmt", "Printf", "github.com/datadog/format", "Printf"),
 				tags: [2]string{dd_startinstrument, dd_endinstrument},
 			},
-			instrument{
+			{
 				t:    reflect.TypeOf(&dst.CallExpr{}),
 				f:    WrapCall("fmt", "Sprintf", "github.com/datadog/format", "SprintWrap"),
 				tags: [2]string{dd_startinstrument, dd_endinstrument},
