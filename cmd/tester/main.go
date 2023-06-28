@@ -172,12 +172,12 @@ func runInstrumentation(in, outname string) {
 
 	inst := instrumentor{
 		[]instrument{
-			instrument{
+			{
 				t:    reflect.TypeOf(&dst.CallExpr{}),
 				f:    ReplaceCall("fmt", "Printf", "github.com/datadog/format", "Printf"),
 				tags: [2]string{dd_startinstrument, dd_endinstrument},
 			},
-			instrument{
+			{
 				t:    reflect.TypeOf(&dst.CallExpr{}),
 				f:    WrapCall("fmt", "Sprintf", "github.com/datadog/format", "SprintWrap"),
 				tags: [2]string{dd_startinstrument, dd_endinstrument},
