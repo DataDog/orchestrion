@@ -10,8 +10,10 @@ build-only:
 build-linux-x64: generate test
 	GOOS=linux GOARCH=amd64 go build -o ./bin/orchestrion ./
 
-test: generate fmt vet verify-licenses verify-dd-headers
+test: generate 
 	go test ./... -cover
+
+lint: fmt vet verify-licenses verify-dd-headers
 
 vet:
 	go vet ./...
