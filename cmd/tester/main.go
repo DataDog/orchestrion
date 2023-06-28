@@ -159,7 +159,7 @@ func (i *nestedInstrumentor) Visit(n dst.Node) dst.Visitor {
 func runInstrumentation(in, outname string) {
 	file, err := os.Open(in)
 	if err != nil {
-		log.Fatalf("error opening file: %w", err)
+		log.Fatalf("error opening file: %v", err)
 	}
 	defer file.Close()
 
@@ -167,17 +167,17 @@ func runInstrumentation(in, outname string) {
 	d := decorator.NewDecoratorWithImports(fset, in, goast.New())
 	f, err := d.Parse(file)
 	if err != nil {
-		log.Fatalf("error parsing content in %s: %w", in, err)
+		log.Fatalf("error parsing content in %s: %v", in, err)
 	}
 
 	inst := instrumentor{
 		[]instrument{
-			{
+			instrument{
 				t:    reflect.TypeOf(&dst.CallExpr{}),
 				f:    ReplaceCall("fmt", "Printf", "github.com/datadog/format", "Printf"),
 				tags: [2]string{dd_startinstrument, dd_endinstrument},
 			},
-			{
+			instrument{
 				t:    reflect.TypeOf(&dst.CallExpr{}),
 				f:    WrapCall("fmt", "Sprintf", "github.com/datadog/format", "SprintWrap"),
 				tags: [2]string{dd_startinstrument, dd_endinstrument},
@@ -192,13 +192,13 @@ func runInstrumentation(in, outname string) {
 	res := decorator.NewRestorerWithImports(outname, guess.New())
 	outf, err := os.Create(outname)
 	if err != nil {
-		log.Fatalf("error opening file: %w", err)
+		log.Fatalf("error opening file: %v", err)
 	}
 	defer outf.Close()
 
 	err = res.Fprint(outf, f)
 	if err != nil {
-		log.Fatalf("error writing file: %w", err)
+		log.Fatalf("error writing file: %v", err)
 	}
 }
 
