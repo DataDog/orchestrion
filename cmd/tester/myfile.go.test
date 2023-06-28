@@ -1,0 +1,34 @@
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	//dd:ignore
+	fmt.Printf("hello\n")
+
+	//This one won't be ignored
+	fmt.Printf("another hello!\n")
+
+	//dd:ignore
+	// ignore everything in this function.
+	y := func() {
+		fmt.Printf("goodbye\n")
+		fmt.Printf("goodbye twice\n")
+	}
+
+	z := func() {
+		fmt.Printf("a\n")
+		//dd:ignore
+		// Just ignore this call.
+		fmt.Printf("b\n")
+	}
+
+	name := "bob"
+	hello := fmt.Sprintf("hello, %s", name)
+
+	fmt.Println(hello)
+	y()
+	z()
+}

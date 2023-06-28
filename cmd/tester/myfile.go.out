@@ -1,0 +1,42 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/datadog/format"
+)
+
+func main() {
+	//dd:ignore
+	fmt.Printf("hello\n")
+
+	//This one won't be ignored
+	//dd:startinstrument
+	format.Printf("another hello!\n")
+	//dd:endinstrument
+
+	//dd:ignore
+	// ignore everything in this function.
+	y := func() {
+		fmt.Printf("goodbye\n")
+		fmt.Printf("goodbye twice\n")
+	}
+
+	//dd:startinstrument
+	z := func() {
+		format.Printf("a\n")
+		//dd:ignore
+		// Just ignore this call.
+		fmt.Printf("b\n")
+	}
+	//dd:endinstrument
+
+	name := "bob"
+	//dd:startinstrument
+	hello := format.SprintWrap(format.SprintWrap("hello, %s", name))
+	//dd:endinstrument
+
+	fmt.Println(hello)
+	y()
+	z()
+}
