@@ -4,38 +4,250 @@ Automatic instrumentation of Go code
 
 ![Orchestrion](https://upload.wikimedia.org/wikipedia/commons/5/55/Welteorchestrion1862.jpg)
 
+## What it does
+
+Orchestrion processes Go source code and automatically inserts instrumentation.
+Currently this instrumentation will create Datadog APM traces for the instrumented code, but future work will include support for OpenTelemetry as well.
+
 ## Getting started
+
+Orchestrion will automatically add instrumentation to your source code. This process saves the time that engineers would have to spend manually adding the tracer and integrations by replacing that process with a single command. There are a couple ways it's possible to add instrumentation to your projects using orchestrion.
+
+There are a couple ways to use orchestrion
+Orchestrion will also optionally (`-rm`) remove any instrumentation it has added, so this process is reversible.
+
+### Instrument your code before check-in.
+
+The easiest and quickest way to instrument your code is to download and run orchestrion on your development machine, and then check-in the instrumented code.
+
 
 1. Install Orchestrion
 
 ```sh
-go install github.com/datadog/orchestrion
+go install github.com/datadog/orchestrion@latest
 ```
 
 2. Let Orchestrion scan the codebase and rewrite it
 
 ```sh
+## Go to your project root
+cd ~/my_go_project
+
+## Run orchestrion on the root directory. This will recursively instrument everything in the directory and its subdirectories.
 orchestrion -w ./
+
+## Build your project like normal. If you get errors here, you may need to tidy your go.mod file (go mod tidy)
+go build ./cmd/exe
+
+## Congrats! You have a program with tracing automatically installed.
+./exe
 ```
 
 3. Check-in the modified code! You might need to run `go get github.com/datadog/orchestrion` and `go mod tidy` if it's the first time you add `orchestrion` to your Go project.
 
-## What it does
+4. Deploy your service!
+The executable(s) built with this instrumented code will support tracing.
 
-Orchestrion processes Go source code and automatically inserts instrumentation.
+### Instrument your code at build time
+
+It is also possible to instrument your code at build time. This process looks mostly like the above, but instead of running orchestrion on your machine and then checking-in the code, instead you will run orchestrion in your build pipeline right before `go build`. 
+
+1. Install Orchestrion
+In your build scripts/jobs, you need to make sure you install orchestrion.
+```sh
+go install github.com/datadog/orchestrion@latest
+```
+
+2. Let Orchestrion scan the codebase and rewrite it
+Just before your compile step (`go build whatever`) run orchestrion over your project:
+```sh
+## This will recursively instrument everything in the directory (./) and its subdirectories.
+orchestrion -w ./
+
+go build whatever
+```
+
+3. Your build script should now build a traced version of your project. You won't have to check in this code, so your code base can remain untouched by tracing-specific code.
+
+#### Note
+Currently the instrumentation added alters the line numbers of files which have added instrumentation. We plan to address this in the near future, but currently stack traces will have line numbers that are slightly different than the checked-in code in version control if it is added at build-time instead of being checked-in.
+
+## Example
+
+#### Starting Code
+
+Given a small `main.go` file, we can add instrumentation with one command.
+
+`main.go`:
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+)
+
+func main() {
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		data, err := GetSomeData(request.Context())
+		if err != nil {
+			http.Error(writer, fmt.Sprintf("Failed to get data: %v", err), http.StatusInternalServerError)
+			return
+		}
+		writer.Write(data)
+	})
+
+	http.ListenAndServe(":8080", nil)
+}
+
+//dd:span my:tag
+func GetSomeData(ctx context.Context) ([]byte, error) {
+	client := &http.Client{
+		Timeout: time.Second,
+	}
+	req, err := http.NewRequestWithContext(ctx,
+		http.MethodPost, "http://example.com",
+		strings.NewReader("Hello, World!"))
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(resp.Status)
+	if resp.Body == nil {
+		return nil, nil
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+```
+
+#### Adding Instrumentation
+Run Orchestrion:
+```
+## in the directory with main.go
+orchestrion -w ./
+```
+
+#### Results
+
+The `main.go` file has been modified with added instrumentation.
+
+`main.go`:
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/datadog/orchestrion/instrument"
+	"github.com/datadog/orchestrion/instrument/event"
+)
+
+func main() {
+	//dd:startinstrument
+	defer instrument.Init()()
+	//dd:endinstrument
+	//dd:startwrap
+	http.HandleFunc("/", instrument.WrapHandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		data, err := GetSomeData(request.Context())
+		if err != nil {
+			http.Error(writer, fmt.Sprintf("Failed to get data: %v", err), http.StatusInternalServerError)
+			return
+		}
+		writer.Write(data)
+	}))
+	//dd:endwrap
+
+	http.ListenAndServe(":8080", nil)
+}
+
+//dd:span my:tag
+func GetSomeData(ctx context.Context) ([]byte, error) {
+	//dd:startinstrument
+	ctx = instrument.Report(ctx, event.EventStart, "function-name", "GetSomeData", "my", "tag")
+	defer instrument.Report(ctx, event.EventEnd, "function-name", "GetSomeData", "my", "tag")
+	//dd:endinstrument
+	//dd:startwrap
+	client := instrument.WrapHTTPClient(&http.Client{
+		Timeout: time.Second,
+	})
+	//dd:endwrap
+	req, err := http.NewRequestWithContext(ctx,
+		http.MethodPost, "http://example.com",
+		strings.NewReader("Hello, World!"))
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(resp.Status)
+	if resp.Body == nil {
+		return nil, nil
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+```
+
+#### Building
+
+```
+## You may need to tidy the go.mod file:
+go mod tidy
+
+## Then it can be built normally
+go build main.go
+```
+
+And running it, we can see traces when the sample program receives requests.
+```
+./main
+2023/07/18 10:13:28 Datadog Tracer v1.53.0-rc.1 INFO: DATADOG TRACER CONFIGURATION ...
+```
+
+In another terminal:
+```
+curl http://localhost:8080/
+```
+
+In the UI:
+![A trace for the instrumented application](doc/trace.png)
+
+## Additional Examples
+
+For a more complete, downloadable example including distributed traces between multiple services, please see our sample application here: [DataDog/go-sample-app](https://github.com/DataDog/go-sample-app)
 
 ## How it works
 
-The source code package tree is scanned. For each source code file, use `dave/dst` to build an AST of the source code in the file.
+The source code package tree is scanned. For each source code file, `dave/dst` is used to build an AST of the source code in the file.
 
-The AST is checked for package level functions or methods that have a `//dd:span` comment attached to them. A function or method annotated with //dd:span must meet an additional condition in order for a span to be automatically inserted into the code. Passing trace information through a Go program requires a context to be present. In order to pass the context through the code, either the first parameter of the function or method must be of type `context.Context` or there must be a parameter of type `*http.Request` (the context can be passed via a field in `*http.Request`). If both conditions are met, the `//dd:span` comment is scanned for tags and code is inserted as the first lines of the function.
+The AST is checked for package level functions or methods that have a `//dd:span` comment attached to them. A function or method annotated with `//dd:span` must have a `context.Context` as its first parameter, or an `*http.Request` as any parameter in order for a span to be automatically inserted into the code. The context or request is required for trace information to be passed through function calls in a Go program. If this condition is met, the `//dd:span` comment is scanned for tags and code is inserted as the first lines of the function.
 
 Orchestrion also supports automatic tracing of the following libraries:
+
 - [x] `net/http`
 - [x] `database/sql`
 - [x] `google.golang.org/grpc`
+
+Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for distributed traces.
 
 ## Next steps
 
 - [ ] Support compile-time auto-instrumentation via `-toolexec`
 - [ ] Support auto-instrumenting more third-party libraries
+- [ ] Support for OpenTelemetry
