@@ -4,29 +4,29 @@ Automatic instrumentation of Go code
 
 ![Orchestrion](https://upload.wikimedia.org/wikipedia/commons/5/55/Welteorchestrion1862.jpg)
 
-## What it does
+## Overview
 
 Orchestrion processes Go source code and automatically inserts instrumentation.
-Currently this instrumentation will create Datadog APM traces for the instrumented code, but future work will include support for OpenTelemetry as well.
+This instrumentation creates Datadog APM traces for the instrumented code, but future work will include support for OpenTelemetry as well.
 
 ## Getting started
 
 Orchestrion automatically adds instrumentation to your source code. This process saves time that engineers would have to spend manually adding the tracer and integrations by replacing that process with a single command.
 
-There are a couple of ways to add instrumentation to your projects using orchestrion. Orchestrion will also optionally (`-rm`) remove any instrumentation it has added, so this process is reversible.
+There are a couple of ways to add instrumentation to your projects using Orchestrion. Orchestrion will also optionally (`-rm`) remove any instrumentation it has added, so this process is reversible.
 
 ### Instrument your code before check-in
 
-The easiest and quickest way to instrument your code is to download and run orchestrion on your development machine, and then check-in the instrumented code.
+The quickest way to instrument your code is to download and run Orchestrion on your development machine, and then check in the instrumented code. The executable(s) built with this instrumented code support tracing.
 
 
-1. Install Orchestrion
+1. Install Orchestrion.
 
 ```sh
 go install github.com/datadog/orchestrion@latest
 ```
 
-2. Let Orchestrion scan the codebase and rewrite it
+2. Run Orchestrion to scan and rewrite the codebase.
 
 ```sh
 ## Go to your project root
@@ -42,23 +42,20 @@ go build ./cmd/exe
 ./exe
 ```
 
-3. Check-in the modified code! You might need to run `go get github.com/datadog/orchestrion` and `go mod tidy` if it's the first time you add `orchestrion` to your Go project.
+3. Check-in the modified code. You might need to run `go get github.com/datadog/orchestrion` and `go mod tidy` if it's the first time you add `orchestrion` to your Go project.
 
-4. Deploy your service!
-The executable(s) built with this instrumented code will support tracing.
+4. Deploy your service.
 
 ### Instrument your code at build time
 
-It is also possible to instrument your code at build time. This process looks mostly like the above, but instead of running orchestrion on your machine and then checking-in the code, instead you will run orchestrion in your build pipeline right before `go build`. 
+It is also possible to instrument your code at build time. Instead of running Orchestrion on your machine and then checking in the code, you run Orchestrion in your build pipeline right before `go build`. 
 
-1. Install Orchestrion
-In your build scripts/jobs, you need to make sure you install orchestrion.
+1. Install Orchestrion in your build scripts/jobs.
 ```sh
 go install github.com/datadog/orchestrion@latest
 ```
 
-2. Let Orchestrion scan the codebase and rewrite it
-Just before your compile step (`go build whatever`) run orchestrion over your project:
+2. Run Orchestrion over your project before your compile step (`go build <target>`).
 ```sh
 ## This will recursively instrument everything in the directory (./) and its subdirectories.
 orchestrion -w ./
@@ -66,14 +63,13 @@ orchestrion -w ./
 go build whatever
 ```
 
-3. Your build script should now build a traced version of your project. You won't have to check in this code, so your code base can remain untouched by tracing-specific code.
+3. Your build script should build a traced version of your project. You won't have to check in this code, so your codebase can remain untouched by tracing-specific code.
 
-#### Note
-Currently the instrumentation added alters the line numbers of files which have added instrumentation. We plan to address this in the near future, but currently stack traces will have line numbers that are slightly different than the checked-in code in version control if it is added at build-time instead of being checked-in.
+**Note**: It's a known issue that adding instrumentation at build time can alter the line numbers in your instrumented files. As a result, the line numbers in stack traces may differ from those in the checked-in code in your version control system.
 
 ## Example
 
-#### Starting Code
+### Starting code
 
 Given a small `main.go` file, we can add instrumentation with one command.
 
@@ -127,14 +123,14 @@ func GetSomeData(ctx context.Context) ([]byte, error) {
 }
 ```
 
-#### Adding Instrumentation
+### Adding instrumentation
 Run Orchestrion:
 ```
 ## in the directory with main.go
 orchestrion -w ./
 ```
 
-#### Results
+### Results
 
 The `main.go` file has been modified with added instrumentation.
 
@@ -203,7 +199,7 @@ func GetSomeData(ctx context.Context) ([]byte, error) {
 
 ```
 
-#### Building
+### Building
 
 ```
 ## You may need to tidy the go.mod file:
@@ -225,11 +221,12 @@ curl http://localhost:8080/
 ```
 
 In the UI:
+
 ![A trace for the instrumented application](doc/trace.png)
 
 ## Additional Examples
 
-For a more complete, downloadable example including distributed traces between multiple services, please see our sample application here: [DataDog/go-sample-app](https://github.com/DataDog/go-sample-app)
+For a more complete, downloadable example including distributed traces between multiple services, please see our sample application here: [DataDog/go-sample-app][1].
 
 ## How it works
 
@@ -250,3 +247,5 @@ Calls to these libraries are instrumented with library-specific code adding trac
 - [ ] Support compile-time auto-instrumentation via `-toolexec`
 - [ ] Support auto-instrumenting more third-party libraries
 - [ ] Support for OpenTelemetry
+
+[1]: https://github.com/DataDog/go-sample-app
