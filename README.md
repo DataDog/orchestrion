@@ -11,12 +11,11 @@ Currently this instrumentation will create Datadog APM traces for the instrument
 
 ## Getting started
 
-Orchestrion will automatically add instrumentation to your source code. This process saves the time that engineers would have to spend manually adding the tracer and integrations by replacing that process with a single command. There are a couple ways it's possible to add instrumentation to your projects using orchestrion.
+Orchestrion automatically adds instrumentation to your source code. This process saves time that engineers would have to spend manually adding the tracer and integrations by replacing that process with a single command.
 
-There are a couple ways to use orchestrion
-Orchestrion will also optionally (`-rm`) remove any instrumentation it has added, so this process is reversible.
+There are a couple of ways to add instrumentation to your projects using orchestrion. Orchestrion will also optionally (`-rm`) remove any instrumentation it has added, so this process is reversible.
 
-### Instrument your code before check-in.
+### Instrument your code before check-in
 
 The easiest and quickest way to instrument your code is to download and run orchestrion on your development machine, and then check-in the instrumented code.
 
