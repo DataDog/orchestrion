@@ -39,7 +39,7 @@ orchestrion -w ./
 go build ./cmd/exe
 
 ## Congrats! You have a program with tracing automatically installed.
-./exe
+./<executable>
 ```
 
 3. Check-in the modified code. You might need to run `go get github.com/datadog/orchestrion` and `go mod tidy` if it's the first time you add `orchestrion` to your Go project.
