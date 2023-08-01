@@ -60,7 +60,7 @@ go install github.com/datadog/orchestrion@latest
 ## This will recursively instrument everything in the directory (./) and its subdirectories.
 orchestrion -w ./
 
-go build whatever
+go build <target>
 ```
 
 3. Your build script should build a traced version of your project. You won't have to check in this code, so your codebase can remain untouched by tracing-specific code.
