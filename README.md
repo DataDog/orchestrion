@@ -36,7 +36,7 @@ cd ~/my_go_project
 orchestrion -w ./
 
 ## Build your project like normal. If you get errors here, you may need to tidy your go.mod file (go mod tidy)
-go build ./cmd/exe
+go build <target>
 
 ## Congrats! You have a program with tracing automatically installed.
 ./<executable>
