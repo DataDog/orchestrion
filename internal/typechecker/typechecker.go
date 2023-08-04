@@ -39,6 +39,10 @@ func New(dec *decorator.Decorator) *TypeChecker {
 // It must be called at least once before calling ofType or typeOf.
 func (tc *TypeChecker) Check(name string, fset *token.FileSet, file *ast.File) {
 	conf := &types.Config{
+		// FIXME: The default importer is unable to know object types from 3rd party imports.
+		// See https://github.com/golang/go/issues/10276 and https://github.com/golang/go/issues/10249#issuecomment-86671707
+		// A possible workaround is to use the "source" compiler importer.ForCompiler(fset, "source", nil)
+		// However, it increases the execution time of orchestrion considerably (x20).
 		Importer: importer.Default(),
 		Error:    func(err error) { /* ignore type check errors */ },
 	}
