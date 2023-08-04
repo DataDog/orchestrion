@@ -239,6 +239,7 @@ Orchestrion also supports automatic tracing of the following libraries:
 - [x] `net/http`
 - [x] `database/sql`
 - [x] `google.golang.org/grpc`
+- [x] `github.com/gin-gonic/gin`
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for distributed traces.
 

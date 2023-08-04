@@ -15,8 +15,10 @@ import (
 
 	"github.com/datadog/orchestrion/instrument/event"
 
+	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -194,6 +196,13 @@ func Open(driverName, dataSourceName string) (*sql.DB, error) {
 
 func OpenDB(c driver.Connector) *sql.DB {
 	return sqltrace.OpenDB(c)
+}
+
+func GinMiddleware() gin.HandlerFunc {
+	// Passing an empty service name until we have a solid
+	// and unified mechanism to guess the service name in Orchestrion.
+	// gintrace defaults to DD_SERVICE or gin.router as service name.
+	return gintrace.Middleware("")
 }
 
 func Init() func() {
