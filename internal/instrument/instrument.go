@@ -280,6 +280,11 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 			}
 			wrapSqlOpenFromAssign(stmt)
 			wrapGRPC(stmt)
+			if isGin(stmt) {
+				out = append(out, stmt)
+				appendStmt = false
+				out = append(out, ginMiddleware(stmt))
+			}
 
 			// Recurse when there is a function literal on the RHS of the assignment.
 			for _, expr := range stmt.Rhs {
@@ -943,4 +948,40 @@ func reportHandlerFromDecl(decl *dst.FuncDecl, tc *typechecker.TypeChecker, conf
 		decl = addCodeToHandler(decl)
 	}
 	return decl
+}
+
+func isGin(stmt *dst.AssignStmt) bool {
+	rhs := stmt.Rhs[0]
+	call, ok := rhs.(*dst.CallExpr)
+	if !ok {
+		return false
+	}
+	f, ok := call.Fun.(*dst.Ident)
+	return ok && f.Path == "github.com/gin-gonic/gin" && (f.Name == "New" || f.Name == "Default")
+}
+
+func ginMiddleware(got *dst.AssignStmt) dst.Stmt {
+	iden, ok := got.Lhs[0].(*dst.Ident)
+	if !ok {
+		return nil
+	}
+	stmt := &dst.ExprStmt{
+		X: &dst.CallExpr{
+			Fun: &dst.SelectorExpr{
+				X:   &dst.Ident{Name: iden.Name},
+				Sel: &dst.Ident{Name: "Use"},
+			},
+			Args: []dst.Expr{
+				&dst.CallExpr{
+					Fun: &dst.Ident{
+						Name: "GinMiddleware",
+						Path: "github.com/datadog/orchestrion/instrument",
+					},
+				},
+			},
+		},
+	}
+	stmt.Decorations().Start.Append(dd_startwrap)
+	stmt.Decorations().End.Append("\n", dd_endwrap)
+	return stmt
 }

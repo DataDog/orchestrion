@@ -20,6 +20,8 @@ import (
 	"github.com/dave/dst/decorator/resolver/guess"
 )
 
+// unwrappers contains the list of helpers responsible for
+// removing wrapping-based instrumentation.
 var unwrappers = []func(n dst.Node) bool{
 	unwrapClient,
 	unwrapHandlerExpr,
@@ -28,6 +30,12 @@ var unwrappers = []func(n dst.Node) bool{
 	unwrapSqlAssign,
 	unwrapSqlReturn,
 	unwrapGRPC,
+}
+
+// removers contains the list of helpers responsible for
+// removing instrumentation that adds code.
+var removers = []func(stmt dst.Stmt) bool{
+	removeGin,
 }
 
 func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, error) {
@@ -106,6 +114,17 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 		}
 	}
 
+	remove := func(l []dst.Stmt, left, right int) []dst.Stmt {
+		for i := left; i < right; i++ {
+			for _, rm := range removers {
+				if rm(l[i]) {
+					l = append(l[:i], l[i+1:]...)
+				}
+			}
+		}
+		return l
+	}
+
 	for i, stmt := range list {
 		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
 			stmt.Decorations().Start.Replace(
@@ -116,6 +135,7 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 				stmt.Decorations().End.Replace(
 					removeDecl(dd_endwrap, stmt.Decorations().End)...)
 				unwrap(list[i : i+1])
+				list = remove(list, i, i+1)
 			} else {
 				// search for dd:endwrap and then unwrap all the lines between
 				// dd:startwrap and dd:endwrap
@@ -124,6 +144,7 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 						stmt.Decorations().Start.Replace(
 							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
 						unwrap(list[i : i+j])
+						list = remove(list, i, i+j)
 					}
 				}
 			}
@@ -322,4 +343,35 @@ func unwrapGRPC(n dst.Node) bool {
 		ce.Args = removeLast(ce.Args, opt)
 	}
 	return true
+}
+
+// removeGin returns whether a statement corresponds to orchestrion's Gin-middleware registration
+func removeGin(stmt dst.Stmt) bool {
+	es, ok := stmt.(*dst.ExprStmt)
+	if !ok {
+		return false
+	}
+	f, ok := es.X.(*dst.CallExpr)
+	if !ok {
+		return false
+	}
+	selexpr, ok := f.Fun.(*dst.SelectorExpr)
+	if !ok {
+		return false
+	}
+	if selexpr.Sel.Name != "Use" {
+		return false
+	}
+	if len(f.Args) != 1 {
+		return false
+	}
+	arg, ok := f.Args[0].(*dst.CallExpr)
+	if !ok {
+		return false
+	}
+	fun, ok := arg.Fun.(*dst.Ident)
+	if !ok {
+		return false
+	}
+	return fun.Name == "GinMiddleware" && fun.Path == "github.com/datadog/orchestrion/instrument"
 }

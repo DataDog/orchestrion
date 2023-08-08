@@ -825,3 +825,55 @@ func init() {
 
 	})
 }
+
+func TestGin(t *testing.T) {
+	var codeTpl = `package main
+
+import "github.com/gin-gonic/gin"
+
+func register() {
+	%s
+}
+`
+	var wantTpl = `package main
+
+import (
+	"github.com/datadog/orchestrion/instrument"
+	"github.com/gin-gonic/gin"
+)
+
+func register() {
+	%s
+	//dd:startwrap
+	%s
+	//dd:endwrap
+}
+`
+
+	tests := []struct {
+		in   string
+		want string
+		tmpl string
+	}{
+		{in: `g := gin.New()`, want: `g.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
+		{in: `g := gin.Default()`, want: `g.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
+	}
+
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("tc-%d", i), func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.in)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(tc.tmpl, tc.in, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+}
