@@ -16,10 +16,12 @@ import (
 	"github.com/datadog/orchestrion/instrument/event"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"google.golang.org/grpc"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+	echotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
@@ -203,6 +205,13 @@ func GinMiddleware() gin.HandlerFunc {
 	// and unified mechanism to guess the service name in Orchestrion.
 	// gintrace defaults to DD_SERVICE or gin.router as service name.
 	return gintrace.Middleware("")
+}
+
+func EchoV4Middleware() echo.MiddlewareFunc {
+	// As in GinMiddleware, passing an empty service name until we have
+	// a unified mechanism to guess the service name in Orchestrion.
+	// echotrace defaults to DD_SERVICE or echo as service name.
+	return echotrace.Middleware()
 }
 
 func Init() func() {

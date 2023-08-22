@@ -64,7 +64,8 @@ func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Read
 		return nil, fmt.Errorf("error parsing content in %s: %w", name, err)
 	}
 
-	dec := decorator.NewDecoratorWithImports(fset, name, goast.New())
+	resolver := newResolver()
+	dec := decorator.NewDecoratorWithImports(fset, name, goast.WithResolver(resolver))
 	f, err := dec.DecorateFile(astFile)
 	if err != nil {
 		return nil, fmt.Errorf("error decorating file %s: %w", name, err)
@@ -97,10 +98,26 @@ func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Read
 		}
 	}
 
-	res := decorator.NewRestorerWithImports(name, guess.New())
+	res := decorator.NewRestorerWithImports(name, resolver)
 	var out bytes.Buffer
 	err = res.Fprint(&out, f)
 	return &out, err
+}
+
+var (
+	specialPackages = map[string]string{
+		"github.com/labstack/echo/v4": "echo",
+	}
+)
+
+func newResolver() guess.RestorerResolver {
+	// Related to dave/dst#44, the default guess resolver used by goast assumes
+	// the last segment of the import path is the package name.
+	// This behavior leads to unexpected package names in cases like github.com/labstack/echo/v4,
+	// as guess assumes the package name to be v4 instead of echo.
+	// We could use gopackages, but it's slower. Benchmark anecdata: guess <0s; gopackages ~1.5s.
+	r := guess.WithMap(specialPackages)
+	return r
 }
 
 func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.TypeChecker) *dst.FuncDecl {
@@ -284,6 +301,11 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 				out = append(out, stmt)
 				appendStmt = false
 				out = append(out, ginMiddleware(stmt))
+			}
+			if isEcho(stmt) {
+				out = append(out, stmt)
+				appendStmt = false
+				out = append(out, echoMiddleware(stmt))
 			}
 
 			// Recurse when there is a function literal on the RHS of the assignment.
@@ -952,11 +974,7 @@ func reportHandlerFromDecl(decl *dst.FuncDecl, tc *typechecker.TypeChecker, conf
 
 func isGin(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
-	call, ok := rhs.(*dst.CallExpr)
-	if !ok {
-		return false
-	}
-	f, ok := call.Fun.(*dst.Ident)
+	f, ok := funcIdent(rhs)
 	return ok && f.Path == "github.com/gin-gonic/gin" && (f.Name == "New" || f.Name == "Default")
 }
 
@@ -965,23 +983,60 @@ func ginMiddleware(got *dst.AssignStmt) dst.Stmt {
 	if !ok {
 		return nil
 	}
+	stmt := useMiddleware(iden.Name, "GinMiddleware")
+	wrap(stmt)
+	return stmt
+}
+
+func isEcho(stmt *dst.AssignStmt) bool {
+	rhs := stmt.Rhs[0]
+	f, ok := funcIdent(rhs)
+	return ok && f.Path == "github.com/labstack/echo/v4" && f.Name == "New"
+}
+
+func echoMiddleware(got *dst.AssignStmt) dst.Stmt {
+	iden, ok := got.Lhs[0].(*dst.Ident)
+	if !ok {
+		return nil
+	}
+	stmt := useMiddleware(iden.Name, "EchoV4Middleware")
+	wrap(stmt)
+	return stmt
+}
+
+func funcIdent(e dst.Expr) (*dst.Ident, bool) {
+	call, ok := e.(*dst.CallExpr)
+	if !ok {
+		return nil, false
+	}
+	f, ok := call.Fun.(*dst.Ident)
+	if !ok {
+		return nil, false
+	}
+	return f, true
+}
+
+func useMiddleware(pkg, middleware string) *dst.ExprStmt {
 	stmt := &dst.ExprStmt{
 		X: &dst.CallExpr{
 			Fun: &dst.SelectorExpr{
-				X:   &dst.Ident{Name: iden.Name},
+				X:   &dst.Ident{Name: pkg},
 				Sel: &dst.Ident{Name: "Use"},
 			},
 			Args: []dst.Expr{
 				&dst.CallExpr{
 					Fun: &dst.Ident{
-						Name: "GinMiddleware",
+						Name: middleware,
 						Path: "github.com/datadog/orchestrion/instrument",
 					},
 				},
 			},
 		},
 	}
+	return stmt
+}
+
+func wrap(stmt dst.Stmt) {
 	stmt.Decorations().Start.Append(dd_startwrap)
 	stmt.Decorations().End.Append("\n", dd_endwrap)
-	return stmt
 }
