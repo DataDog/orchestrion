@@ -17,7 +17,6 @@ import (
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/goast"
-	"github.com/dave/dst/decorator/resolver/guess"
 )
 
 // unwrappers contains the list of helpers responsible for
@@ -36,11 +35,13 @@ var unwrappers = []func(n dst.Node) bool{
 // removing instrumentation that adds code.
 var removers = []func(stmt dst.Stmt) bool{
 	removeGin,
+	removeEcho,
 }
 
 func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, error) {
 	fset := token.NewFileSet()
-	d := decorator.NewDecoratorWithImports(fset, name, goast.New())
+	resolver := newResolver()
+	d := decorator.NewDecoratorWithImports(fset, name, goast.WithResolver(resolver))
 	f, err := d.Parse(r)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing content in %s: %w", name, err)
@@ -83,7 +84,7 @@ func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, 
 		}
 	}
 
-	res := decorator.NewRestorerWithImports(name, guess.New())
+	res := decorator.NewRestorerWithImports(name, resolver)
 	var out bytes.Buffer
 	err = res.Fprint(&out, f)
 	return &out, err
@@ -119,6 +120,7 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 			for _, rm := range removers {
 				if rm(l[i]) {
 					l = append(l[:i], l[i+1:]...)
+					break
 				}
 			}
 		}
@@ -347,6 +349,15 @@ func unwrapGRPC(n dst.Node) bool {
 
 // removeGin returns whether a statement corresponds to orchestrion's Gin-middleware registration
 func removeGin(stmt dst.Stmt) bool {
+	return removeUseMiddleware(stmt, "GinMiddleware")
+}
+
+// removeEcho returns whether a statement corresponds to orchestrion's Echo-middleware registration
+func removeEcho(stmt dst.Stmt) bool {
+	return removeUseMiddleware(stmt, "EchoV4Middleware")
+}
+
+func removeUseMiddleware(stmt dst.Stmt, name string) bool {
 	es, ok := stmt.(*dst.ExprStmt)
 	if !ok {
 		return false
@@ -365,13 +376,9 @@ func removeGin(stmt dst.Stmt) bool {
 	if len(f.Args) != 1 {
 		return false
 	}
-	arg, ok := f.Args[0].(*dst.CallExpr)
+	fun, ok := funcIdent(f.Args[0])
 	if !ok {
 		return false
 	}
-	fun, ok := arg.Fun.(*dst.Ident)
-	if !ok {
-		return false
-	}
-	return fun.Name == "GinMiddleware" && fun.Path == "github.com/datadog/orchestrion/instrument"
+	return fun.Name == name && fun.Path == "github.com/datadog/orchestrion/instrument"
 }
