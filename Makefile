@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := build
 
-.PHONY: build generate vet test clean fmt licenses verify-licenses
+.PHONY: build generate tidy vet test clean fmt licenses verify-licenses
 
 build: generate test build-only
 
@@ -10,8 +10,14 @@ build-only:
 build-linux-x64: generate test
 	GOOS=linux GOARCH=amd64 go build -o ./bin/orchestrion ./
 
-test: generate fmt vet verify-licenses verify-dd-headers
+test: tidy fmt vet verify-licenses verify-dd-headers
 	go test ./... -cover
+
+generate:
+	go generate ./...
+
+tidy:
+	go mod tidy
 
 vet:
 	go vet ./...
