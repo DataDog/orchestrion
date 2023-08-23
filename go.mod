@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-chi/chi/v5 v5.0.0
 	github.com/labstack/echo/v4 v4.11.1
 	github.com/stretchr/testify v1.8.3
 	google.golang.org/grpc v1.54.0

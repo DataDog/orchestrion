@@ -241,6 +241,7 @@ Orchestrion also supports automatic tracing of the following libraries:
 - [x] `google.golang.org/grpc`
 - [x] `github.com/gin-gonic/gin`
 - [x] `github.com/labstack/echo/v4`
+- [x] `https://github.com/go-chi/chi/v5`
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for distributed traces.
 
