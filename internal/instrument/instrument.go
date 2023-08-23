@@ -107,6 +107,7 @@ func InstrumentFile(name string, content io.Reader, conf config.Config) (io.Read
 var (
 	specialPackages = map[string]string{
 		"github.com/labstack/echo/v4": "echo",
+		"github.com/go-chi/chi/v5":    "chi",
 	}
 )
 
@@ -306,6 +307,11 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 				out = append(out, stmt)
 				appendStmt = false
 				out = append(out, echoV4Middleware(stmt))
+			}
+			if isChiV5(stmt) {
+				out = append(out, stmt)
+				appendStmt = false
+				out = append(out, chiV5Middleware(stmt))
 			}
 
 			// Recurse when there is a function literal on the RHS of the assignment.
