@@ -29,6 +29,7 @@ var unwrappers = []func(n dst.Node) bool{
 	unwrapSqlAssign,
 	unwrapSqlReturn,
 	unwrapGRPC,
+	unwrapGorillaMux,
 }
 
 // removers contains the list of helpers responsible for

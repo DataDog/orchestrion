@@ -298,6 +298,7 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 			}
 			wrapSqlOpenFromAssign(stmt)
 			wrapGRPC(stmt)
+			wrapGorillaMux(stmt)
 			if isGin(stmt) {
 				out = append(out, stmt)
 				appendStmt = false
