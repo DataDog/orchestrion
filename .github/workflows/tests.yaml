@@ -1,5 +1,8 @@
 name: Tests
 on: [ push ]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -27,3 +30,41 @@ jobs:
           go-version: "1.19"
       - name: Run unit tests
         run: make test
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      testagent:
+        image: ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:v1.11.0
+        ports:
+          - 8126:8126
+        env:
+          LOG_LEVEL: DEBUG
+          TRACE_LANGUAGE: golang
+          ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
+          #PORT: 8126
+          #DD_SUPPRESS_TRACE_PARSE_ERRORS: true
+          #DD_POOL_TRACE_CHECK_FAILURES: true
+          #DD_DISABLE_ERROR_RESPONSES: true
+    steps:
+      - name: Get current date
+        id: date
+        #run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+        run: echo "date="$(date +'%Y-%m-%d') >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ steps.date.outputs.date }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ steps.date.outputs.date }}
+      - name: testdate
+        run: echo ${{ steps.date.outputs.date }}
+      - uses: actions/checkout@v3
+        with:
+          repository: 'DataDog/orchestrion'
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
+      - name: Run Integration Tests
+        run: make integration-tests

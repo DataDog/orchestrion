@@ -1,0 +1,25 @@
+{
+    "url": "http://localhost:8080",
+    "output": [
+	{
+	    "name": "grpc.client",
+	    "service": "grpc.client",
+	    "resource": "/helloworld.Greeter/SayHello",
+	    "type": "rpc",
+	    "_children": [
+		{
+		    "name": "grpc.server",
+		    "service": "grpc.server",
+		    "resource": "/helloworld.Greeter/SayHello",
+		    "type": "rpc"
+		}
+	    ]
+	},
+	{
+	    "name": "http.request",
+	    "resource": "http.request",
+	    "service": "grpc",
+	    "type": "web"
+	}
+    ]
+}

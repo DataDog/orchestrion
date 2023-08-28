@@ -1,0 +1,24 @@
+{
+    "url": "http://localhost:8080",
+    "output": [
+	{
+	"name": "http.request",
+	"service": "net_http_ddspan",
+	"resource": "http.request",
+	"type": "web",
+	"metrics": {
+	    "_sampling_priority_v1": 1.0
+	},
+	"_children": [
+	    {
+		"name": "subfn",
+		"service": "net_http_ddspan",
+		"resource": "subfn",
+		"meta": {
+		    "test1": "subfn",
+		    "function-name": "subfn"
+		}
+	    }
+	]
+    }]
+}

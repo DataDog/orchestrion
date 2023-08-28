@@ -843,6 +843,7 @@ import (
 )
 
 func register() {
+	//dd:instrumented
 	%s
 	//dd:startwrap
 	%s
@@ -895,6 +896,7 @@ import (
 )
 
 func register() {
+	//dd:instrumented
 	%s
 	//dd:startwrap
 	%s
@@ -949,6 +951,7 @@ import (
 )
 
 func register() {
+	//dd:instrumented
 	%s
 	//dd:startwrap
 	%s

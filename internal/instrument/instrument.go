@@ -303,16 +303,19 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 				out = append(out, stmt)
 				appendStmt = false
 				out = append(out, ginMiddleware(stmt))
+				stmt.Decorations().Start.Prepend(dd_instrumented)
 			}
 			if isEchoV4(stmt) {
 				out = append(out, stmt)
 				appendStmt = false
 				out = append(out, echoV4Middleware(stmt))
+				stmt.Decorations().Start.Prepend(dd_instrumented)
 			}
 			if isChiV5(stmt) {
 				out = append(out, stmt)
 				appendStmt = false
 				out = append(out, chiV5Middleware(stmt))
+				stmt.Decorations().Start.Prepend(dd_instrumented)
 			}
 
 			// Recurse when there is a function literal on the RHS of the assignment.

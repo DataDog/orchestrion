@@ -1,0 +1,13 @@
+{
+    "url": "http://localhost:8080",
+    "output": [
+	{
+	    "name": "http.request",
+	    "service": "chi.router",
+	    "resource": "GET /",
+	    "type": "web",
+	    "meta": {
+		"http.url": "http://localhost:8080/"
+	    }
+	}]
+}

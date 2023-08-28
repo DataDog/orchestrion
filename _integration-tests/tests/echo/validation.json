@@ -1,0 +1,13 @@
+{
+    "url": "http://localhost:8080/ping",
+    "output": [
+	{
+	    "name": "http.request",
+	    "service": "echo",
+	    "resource": "GET /ping",
+	    "type": "web",
+	    "meta": {
+		"http.url": "http://localhost:8080/ping"
+	    }
+	}]
+}

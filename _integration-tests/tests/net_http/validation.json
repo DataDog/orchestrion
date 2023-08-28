@@ -1,0 +1,13 @@
+{
+    "url": "http://localhost:8080",
+    "output": [
+	{
+	    "name": "http.request",
+	    "service": "net_http",
+	    "resource": "http.request",
+	    "type": "web",
+	    "metrics": {
+		"_sampling_priority_v1": 1.0
+	    }
+	}]
+}
