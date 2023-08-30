@@ -243,12 +243,12 @@ Orchestrion also supports automatic tracing of the following libraries:
 - [x] `github.com/labstack/echo/v4`
 - [x] `github.com/go-chi/chi/v5`
 - [x] `github.com/gorilla/mux`
+- [x] Support compile-time auto-instrumentation via `-toolexec`
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for distributed traces.
 
 ## Next steps
 
-- [ ] Support compile-time auto-instrumentation via `-toolexec`
 - [ ] Support auto-instrumenting more third-party libraries
 - [ ] Support for OpenTelemetry
 

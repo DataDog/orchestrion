@@ -27,8 +27,10 @@ func main() {
 	var write bool
 	var remove bool
 	var httpMode string
+	var tool bool
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
+	flag.BoolVar(&tool, "t", false, "if set, run in toolexec mode")
 	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
 	flag.Parse()
 	if len(flag.Args()) == 0 {
@@ -40,7 +42,7 @@ func main() {
 		txt, _ := io.ReadAll(out)
 		fmt.Println(string(txt))
 	}
-	if write {
+	if write || tool {
 		output = func(fullName string, out io.Reader) {
 			fmt.Printf("overwriting %s:\n", fullName)
 			// write the output
@@ -55,6 +57,14 @@ func main() {
 	if err := conf.Validate(); err != nil {
 		fmt.Printf("Config error: %v\n", err)
 		os.Exit(1)
+	}
+	if tool {
+		err := runToolexecMode(conf, output)
+		if err != nil {
+			fmt.Printf("toolexec error: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 	for _, v := range flag.Args() {
 		p, err := filepath.Abs(v)
