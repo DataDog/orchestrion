@@ -181,24 +181,25 @@ func removeStartEndWrapExpr(list []dst.Expr) []dst.Expr {
 	}
 
 	for i, stmt := range list {
-		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
-			stmt.Decorations().Start.Replace(
-				removeDecl(dd_startwrap, stmt.Decorations().Start)...)
-			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
-				// dd:endwrap is at the end decorations of the same line as //dd:startwrap.
-				// We only need to unwrap() this one line.
-				stmt.Decorations().End.Replace(
-					removeDecl(dd_endwrap, stmt.Decorations().End)...)
-				unwrap(list[i : i+1])
-			} else {
-				// search for dd:endwrap and then unwrap all the lines between
-				// dd:startwrap and dd:endwrap
-				for j, stmt := range list[i:] {
-					if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
-						stmt.Decorations().Start.Replace(
-							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
-						unwrap(list[i : i+j])
-					}
+		if !hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
+			continue
+		}
+		stmt.Decorations().Start.Replace(
+			removeDecl(dd_startwrap, stmt.Decorations().Start)...)
+		if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
+			// dd:endwrap is at the end decorations of the same line as //dd:startwrap.
+			// We only need to unwrap() this one line.
+			stmt.Decorations().End.Replace(
+				removeDecl(dd_endwrap, stmt.Decorations().End)...)
+			unwrap(list[i : i+1])
+		} else {
+			// search for dd:endwrap and then unwrap all the lines between
+			// dd:startwrap and dd:endwrap
+			for j, stmt := range list[i:] {
+				if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
+					stmt.Decorations().Start.Replace(
+						removeDecl(dd_endwrap, stmt.Decorations().Start)...)
+					unwrap(list[i : i+j])
 				}
 			}
 		}
