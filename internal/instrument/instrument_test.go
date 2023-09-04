@@ -109,7 +109,7 @@ func register() {
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
-			//code := fmt.Sprintf(codeTpl, tc.in)
+			// code := fmt.Sprintf(codeTpl, tc.in)
 			reader, err := InstrumentFile("test", strings.NewReader(tc.in), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
@@ -120,7 +120,7 @@ func register() {
 			got, err = io.ReadAll(reader)
 			require.Nil(t, err)
 
-			//want := fmt.Sprintf(wantTpl, tc.want)
+			// want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, tc.want, string(got))
 		})
 	}
@@ -305,13 +305,11 @@ func register() {
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			// TODO: Implement unwrapHandlerAssign to uncomment the following assertions!
-			//
-			// reader, err = UninstrumentFile("test", strings.NewReader(want))
-			// require.Nil(t, err)
-			// orig, err := io.ReadAll(reader)
-			// require.Nil(t, err)
-			// require.Equal(t, code, string(orig))
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
 		})
 	}
 }

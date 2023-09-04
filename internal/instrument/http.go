@@ -45,7 +45,7 @@ func analyzeStmtForRequestClient(stmt *dst.AssignStmt) (string, bool) {
 }
 
 func buildFunctionLiteralHandlerCode(name dst.Expr, funLit *dst.FuncLit) []dst.Stmt {
-	//check if magic comment is attached to first line
+	// check if magic comment is attached to first line
 	if len(funLit.Body.List) > 0 {
 		decs := funLit.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
@@ -77,30 +77,36 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 	if !(len(stmt.Lhs) == 1 && len(stmt.Rhs) == 1) {
 		return false
 	}
-	if uexpr, ok := stmt.Rhs[0].(*dst.UnaryExpr); ok {
-		if x, ok := uexpr.X.(*dst.CompositeLit); ok {
-			t, ok := x.Type.(*dst.Ident)
-			if !(ok && t.Path == "net/http" && t.Name == "Server") {
-				return false
-			}
-			for _, e := range x.Elts {
-				if hasLabel(dd_startwrap, e.Decorations().Start.All()) {
-					return false
-				}
-				if kve, ok := e.(*dst.KeyValueExpr); ok {
-					k, ok := kve.Key.(*dst.Ident)
-					if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
-						continue
-					}
-					wrap(kve)
-					kve.Value = &dst.CallExpr{
-						Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion/instrument"},
-						Args: []dst.Expr{kve.Value},
-					}
-					return true
-				}
-			}
+	uexpr, ok := stmt.Rhs[0].(*dst.UnaryExpr)
+	if !ok {
+		return false
+	}
+	x, ok := uexpr.X.(*dst.CompositeLit)
+	if !ok {
+		return false
+	}
+	t, ok := x.Type.(*dst.Ident)
+	if !(ok && t.Path == "net/http" && t.Name == "Server") {
+		return false
+	}
+	for _, e := range x.Elts {
+		if hasLabel(dd_startwrap, e.Decorations().Start.All()) {
+			return false
 		}
+		kve, ok := e.(*dst.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		k, ok := kve.Key.(*dst.Ident)
+		if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
+			continue
+		}
+		wrap(kve)
+		kve.Value = &dst.CallExpr{
+			Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion/instrument"},
+			Args: []dst.Expr{kve.Value},
+		}
+		return true
 	}
 	return false
 }
@@ -287,7 +293,7 @@ func reportHandlerFromDecl(decl *dst.FuncDecl, tc *typechecker.TypeChecker, conf
 }
 
 func addCodeToHandler(decl *dst.FuncDecl) *dst.FuncDecl {
-	//check if magic comment is attached to first line
+	// check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
@@ -390,24 +396,46 @@ func unwrapHandlerExpr(n dst.Node) bool {
 	if !ok {
 		return true
 	}
-	if len(f.Args) > 1 {
-		if ce, ok := f.Args[1].(*dst.CallExpr); ok {
-			if cei, ok := ce.Fun.(*dst.Ident); ok {
-				if cei.Path == "github.com/datadog/orchestrion/instrument" &&
-					strings.HasPrefix(cei.Name, "WrapHandler") {
-					// This catches both WrapHandler *and* WrapHandlerFunc
-					f.Args[1] = ce.Args[0]
-					return false
-				}
-			}
-		}
+	if len(f.Args) <= 1 {
+		return true
 	}
-	return true
+	cei, ok := funcIdent(f.Args[1])
+	if !ok {
+		return true
+	}
+	if !(cei.Path == "github.com/datadog/orchestrion/instrument" &&
+		// This catches both WrapHandler *and* WrapHandlerFunc
+		strings.HasPrefix(cei.Name, "WrapHandler")) {
+		return true
+	}
+	ce := f.Args[1].(*dst.CallExpr)
+	f.Args[1] = ce.Args[0]
+	return false
 }
 
 // unwrapHandlerAssign unwraps handler assignements, to be used in dst.Inspect.
 // Returns true to continue the traversal, false to stop.
 func unwrapHandlerAssign(n dst.Node) bool {
-	// TODO: Implement me
+	es, ok := n.(*dst.KeyValueExpr)
+	if !ok {
+		return true
+	}
+	f, ok := es.Value.(*dst.CallExpr)
+	if !ok {
+		return true
+	}
+	if len(f.Args) < 1 {
+		return true
+	}
+	iden, ok := f.Fun.(*dst.Ident)
+	if !ok {
+		return true
+	}
+	if !(iden.Path == "github.com/datadog/orchestrion/instrument" &&
+		// This catches both WrapHandler *and* WrapHandlerFunc
+		strings.HasPrefix(iden.Name, "WrapHandler")) {
+		return true
+	}
+	es.Value = f.Args[0]
 	return false
 }
