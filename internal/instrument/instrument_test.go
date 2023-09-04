@@ -305,7 +305,6 @@ func register() {
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			return
 			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
 			require.Nil(t, err)
 			orig, err := io.ReadAll(reader)

@@ -78,6 +78,12 @@ func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, 
 					case *dst.FuncLit:
 						v.Body.List = removeStartEndWrap(v.Body.List)
 						v.Body.List = removeStartEndInstrument(v.Body.List)
+					case *dst.UnaryExpr:
+						compLit, ok := v.X.(*dst.CompositeLit)
+						if !ok {
+							continue
+						}
+						compLit.Elts = removeStartEndWrapExpr(compLit.Elts)
 					}
 				}
 			case *dst.ExprStmt:
@@ -157,6 +163,41 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
 						unwrap(list[i : i+j])
 						list = remove(list, i, i+j)
+					}
+				}
+			}
+		}
+	}
+	return list
+}
+
+func removeStartEndWrapExpr(list []dst.Expr) []dst.Expr {
+	unwrap := func(l []dst.Expr) {
+		for _, s := range l {
+			for _, unwrap := range unwrappers {
+				dst.Inspect(s, unwrap)
+			}
+		}
+	}
+
+	for i, stmt := range list {
+		if hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
+			stmt.Decorations().Start.Replace(
+				removeDecl(dd_startwrap, stmt.Decorations().Start)...)
+			if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
+				// dd:endwrap is at the end decorations of the same line as //dd:startwrap.
+				// We only need to unwrap() this one line.
+				stmt.Decorations().End.Replace(
+					removeDecl(dd_endwrap, stmt.Decorations().End)...)
+				unwrap(list[i : i+1])
+			} else {
+				// search for dd:endwrap and then unwrap all the lines between
+				// dd:startwrap and dd:endwrap
+				for j, stmt := range list[i:] {
+					if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
+						stmt.Decorations().Start.Replace(
+							removeDecl(dd_endwrap, stmt.Decorations().Start)...)
+						unwrap(list[i : i+j])
 					}
 				}
 			}

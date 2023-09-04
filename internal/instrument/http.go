@@ -416,15 +416,15 @@ func unwrapHandlerExpr(n dst.Node) bool {
 // unwrapHandlerAssign unwraps handler assignements, to be used in dst.Inspect.
 // Returns true to continue the traversal, false to stop.
 func unwrapHandlerAssign(n dst.Node) bool {
-	es, ok := n.(*dst.ExprStmt)
+	es, ok := n.(*dst.KeyValueExpr)
 	if !ok {
 		return true
 	}
-	f, ok := es.X.(*dst.CallExpr)
+	f, ok := es.Value.(*dst.CallExpr)
 	if !ok {
 		return true
 	}
-	if len(f.Args) != 1 {
+	if len(f.Args) < 1 {
 		return true
 	}
 	iden, ok := f.Fun.(*dst.Ident)
@@ -435,6 +435,6 @@ func unwrapHandlerAssign(n dst.Node) bool {
 		strings.HasPrefix(iden.Name, "WrapHandler")) {
 		return true
 	}
-	es.X = f.Args[0]
+	es.Value = f.Args[0]
 	return false
 }
