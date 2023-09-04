@@ -50,37 +50,45 @@ func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, 
 	}
 
 	for _, decl := range f.Decls {
-		if decl, ok := decl.(*dst.FuncDecl); ok {
-			decl.Body.List = removeStartEndWrap(decl.Body.List)
-			decl.Body.List = removeStartEndInstrument(decl.Body.List)
-			// recurse for function literals
-			for _, stmt := range decl.Body.List {
-				switch stmt := stmt.(type) {
-				case *dst.AssignStmt:
-					for _, expr := range stmt.Rhs {
-						if compLit, ok := expr.(*dst.CompositeLit); ok {
-							for _, v := range compLit.Elts {
-								if kv, ok := v.(*dst.KeyValueExpr); ok {
-									if funLit, ok := kv.Value.(*dst.FuncLit); ok {
-										funLit.Body.List = removeStartEndWrap(funLit.Body.List)
-										funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
-									}
-								}
+		decl, ok := decl.(*dst.FuncDecl)
+		if !ok {
+			continue
+		}
+		decl.Body.List = removeStartEndWrap(decl.Body.List)
+		decl.Body.List = removeStartEndInstrument(decl.Body.List)
+		// recurse for function literals
+		for _, stmt := range decl.Body.List {
+			switch stmt := stmt.(type) {
+			case *dst.AssignStmt:
+				for _, expr := range stmt.Rhs {
+					switch v := expr.(type) {
+					case *dst.CompositeLit:
+						for _, v := range v.Elts {
+							kv, ok := v.(*dst.KeyValueExpr)
+							if !ok {
+								continue
 							}
-						}
-						if funLit, ok := expr.(*dst.FuncLit); ok {
+							funLit, ok := kv.Value.(*dst.FuncLit)
+							if !ok {
+								continue
+							}
 							funLit.Body.List = removeStartEndWrap(funLit.Body.List)
 							funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
 						}
+					case *dst.FuncLit:
+						v.Body.List = removeStartEndWrap(v.Body.List)
+						v.Body.List = removeStartEndInstrument(v.Body.List)
 					}
-				case *dst.ExprStmt:
-					if call, ok := stmt.X.(*dst.CallExpr); ok {
-						switch funLit := call.Fun.(type) {
-						case *dst.FuncLit:
-							funLit.Body.List = removeStartEndWrap(funLit.Body.List)
-							funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
-						}
-					}
+				}
+			case *dst.ExprStmt:
+				call, ok := stmt.X.(*dst.CallExpr)
+				if !ok {
+					continue
+				}
+				switch funLit := call.Fun.(type) {
+				case *dst.FuncLit:
+					funLit.Body.List = removeStartEndWrap(funLit.Body.List)
+					funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
 				}
 			}
 		}
