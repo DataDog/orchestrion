@@ -404,11 +404,11 @@ func unwrapHandlerExpr(n dst.Node) bool {
 		return true
 	}
 	if !(cei.Path == "github.com/datadog/orchestrion/instrument" &&
+		// This catches both WrapHandler *and* WrapHandlerFunc
 		strings.HasPrefix(cei.Name, "WrapHandler")) {
 		return true
 	}
 	ce := f.Args[1].(*dst.CallExpr)
-	// This catches both WrapHandler *and* WrapHandlerFunc
 	f.Args[1] = ce.Args[0]
 	return false
 }
@@ -432,6 +432,7 @@ func unwrapHandlerAssign(n dst.Node) bool {
 		return true
 	}
 	if !(iden.Path == "github.com/datadog/orchestrion/instrument" &&
+		// This catches both WrapHandler *and* WrapHandlerFunc
 		strings.HasPrefix(iden.Name, "WrapHandler")) {
 		return true
 	}
