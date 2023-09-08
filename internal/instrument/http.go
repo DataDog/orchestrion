@@ -101,7 +101,7 @@ func wrapHandlerFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) bo
 		if !(ok && k.Name == "Handler" && tc.OfType(k, "net/http.Handler")) {
 			continue
 		}
-		wrap(kve)
+		markAsWrap(kve)
 		kve.Value = &dst.CallExpr{
 			Fun:  &dst.Ident{Name: "WrapHandler", Path: "github.com/datadog/orchestrion/instrument"},
 			Args: []dst.Expr{kve.Value},
@@ -124,7 +124,7 @@ func wrapClientFromAssign(stmt *dst.AssignStmt, tc *typechecker.TypeChecker) boo
 	if !(ok && tc.OfType(iden, "*net/http.Client")) {
 		return false
 	}
-	wrap(stmt)
+	markAsWrap(stmt)
 	stmt.Rhs[0] = &dst.CallExpr{
 		Fun:  &dst.Ident{Name: "WrapHTTPClient", Path: "github.com/datadog/orchestrion/instrument"},
 		Args: []dst.Expr{stmt.Rhs[0]},
@@ -160,7 +160,7 @@ func wrapHandlerFromExpr(stmt *dst.ExprStmt, tc *typechecker.TypeChecker) bool {
 		default:
 			return false
 		}
-		wrap(fun)
+		markAsWrap(fun)
 		fun.Args[1] = &dst.CallExpr{
 			Fun:  &dst.Ident{Name: wrapper, Path: "github.com/datadog/orchestrion/instrument"},
 			Args: []dst.Expr{fun.Args[1]},

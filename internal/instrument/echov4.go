@@ -7,6 +7,17 @@ package instrument
 
 import "github.com/dave/dst"
 
+func instrumentEchoV4(stmt *dst.AssignStmt) []dst.Stmt {
+	if !isEchoV4(stmt) {
+		return nil
+	}
+	stmt.Decorations().Start.Prepend(dd_instrumented)
+	return []dst.Stmt{
+		stmt,
+		echoV4Middleware(stmt),
+	}
+}
+
 func isEchoV4(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
 	f, ok := funcIdent(rhs)
@@ -19,7 +30,7 @@ func echoV4Middleware(got *dst.AssignStmt) dst.Stmt {
 		return nil
 	}
 	stmt := useMiddleware(iden.Name, "EchoV4Middleware")
-	wrap(stmt)
+	markAsInstrumented(stmt)
 	return stmt
 }
 
