@@ -427,6 +427,64 @@ func MyFunc(somectx context.Context) {
 	}
 }
 
+func TestSpanInstrumentationWithHTTPRequest(t *testing.T) {
+	codef := func(s string) string {
+		var code = `package main
+
+import "net/http"
+
+//dd:span foo2:bar2 type:request name req.Method
+func MyFunc2(name string, req *http.Request) {%s}
+`
+
+		return fmt.Sprintf(code, s)
+	}
+
+	wantf := func(s string) string {
+		var want = `package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion/instrument"
+	"github.com/datadog/orchestrion/instrument/event"
+)
+
+//dd:span foo2:bar2 type:request name req.Method
+func MyFunc2(name string, req *http.Request) {
+	//dd:startinstrument
+	req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method))
+	defer instrument.Report(req.Context(), event.EventEnd, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method)
+	//dd:endinstrument%s
+}
+`
+		return fmt.Sprintf(want, s)
+	}
+
+	for _, tt := range []struct {
+		in, out string
+	}{
+		{in: "", out: ""},
+		{in: "\n\twhatever.Code()\n", out: "\n\twhatever.Code()"},
+	} {
+		t.Run("", func(t *testing.T) {
+			var code = codef(tt.in)
+			var want = wantf(tt.out)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
+			require.NoError(t, err)
+			got, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+}
+
 func TestMainInstrumentation(t *testing.T) {
 	var code = `package main
 
