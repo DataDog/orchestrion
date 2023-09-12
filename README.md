@@ -236,23 +236,27 @@ The AST is checked for package level functions or methods that have a `//dd:span
 
 ### dd:span magic comment
 
+Use a `dd:span` comment before any function or method to create specific spans from your automatically instrumented code. Spans will include tags described as arguments in the `dd:span`.
+
 A function or method annotated with `//dd:span` must have a `context.Context` as its first parameter, or an `*http.Request` as any parameter in order for a span to be automatically inserted into the code.
 
 The context or request is required for trace information to be passed through function calls in a Go program. If this condition is met, the `//dd:span` comment is scanned and code is inserted as the first lines of the function.
 
-It's possible to add key-value pairs separated by `:` or arguments (including their fields) present in the function or method signature. 
+It's possible to add key-value pairs separated by `:` or arguments (including their fields) present in the function or method signature.
 
 ```go
-//dd:span foo2:bar2 type:request name req.Method
-func MyFunc2(name string, req *http.Request) {
+//dd:span my:tag type:request name req.Method
+func HandleRequest(name string, req *http.Request) {
 	//dd:startinstrument
-	req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method))
-	defer instrument.Report(req.Context(), event.EventEnd, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method)
-	//dd:endinstrument%s
+	req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "HandleRequest", "my", "tag", "type", "request", "name", name, "req.Method", req.Method))
+	defer instrument.Report(req.Context(), event.EventEnd, "function-name", "HandleRequest", "my", "tag", "type", "request", "name", name, "req.Method", req.Method)
+	//dd:endinstrument
+	
+	// your code here
 }
 ```
 
-Key-value pairs will be passed as strings. Arguments' values are expected to be string too.
+Note: key-value pairs will be passed as strings. Arguments' values are expected to be string too.
 
 ## Supported libraries
 
