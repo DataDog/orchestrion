@@ -16,7 +16,7 @@ func wrapGorillaMux(stmt *dst.AssignStmt) {
 	if !(f.Path == "github.com/gorilla/mux" && f.Name == "NewRouter") {
 		return
 	}
-	wrap(stmt)
+	markAsWrap(stmt)
 	call := rhs.(*dst.CallExpr)
 	call.Args = []dst.Expr{
 		&dst.CallExpr{

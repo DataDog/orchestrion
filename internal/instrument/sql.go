@@ -23,7 +23,7 @@ func wrapSqlReturnCall(stmt *dst.ReturnStmt) *dst.ReturnStmt {
 			continue
 		}
 		if wrapSqlCall(fun) {
-			wrap(stmt)
+			markAsWrap(stmt)
 			stmt.Decorations().Before = dst.NewLine
 		}
 	}
@@ -46,7 +46,7 @@ func wrapSqlOpenFromAssign(stmt *dst.AssignStmt) bool {
 		return false
 	}
 	if wrapSqlCall(fun) {
-		wrap(stmt)
+		markAsWrap(stmt)
 		return true
 	}
 	return false

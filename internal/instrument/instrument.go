@@ -122,7 +122,7 @@ func newResolver() guess.RestorerResolver {
 }
 
 func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.TypeChecker) *dst.FuncDecl {
-	//check if magic comment is attached to first line
+	// check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
@@ -299,20 +299,17 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 			wrapSqlOpenFromAssign(stmt)
 			wrapGRPC(stmt)
 			wrapGorillaMux(stmt)
-			if isGin(stmt) {
-				out = append(out, stmt)
+			if r := instrumentGin(stmt); r != nil {
 				appendStmt = false
-				out = append(out, ginMiddleware(stmt))
+				out = append(out, r...)
 			}
-			if isEchoV4(stmt) {
-				out = append(out, stmt)
+			if r := instrumentEchoV4(stmt); r != nil {
 				appendStmt = false
-				out = append(out, echoV4Middleware(stmt))
+				out = append(out, r...)
 			}
-			if isChiV5(stmt) {
-				out = append(out, stmt)
+			if r := instrumentChiV5(stmt); r != nil {
 				appendStmt = false
-				out = append(out, chiV5Middleware(stmt))
+				out = append(out, r...)
 			}
 
 			// Recurse when there is a function literal on the RHS of the assignment.
@@ -415,7 +412,7 @@ func hasLabel(label string, decs []string) bool {
 }
 
 func addInit(decl *dst.FuncDecl) *dst.FuncDecl {
-	//check if magic comment is attached to first line
+	// check if magic comment is attached to first line
 	if len(decl.Body.List) > 0 {
 		decs := decl.Body.List[0].Decorations().Start
 		for _, v := range decs.All() {
@@ -572,7 +569,12 @@ func useMiddleware(pkg, middleware string) *dst.ExprStmt {
 	return stmt
 }
 
-func wrap(stmt dst.Node) {
+func markAsWrap(stmt dst.Node) {
 	stmt.Decorations().Start.Append(dd_startwrap)
 	stmt.Decorations().End.Append("\n", dd_endwrap)
+}
+
+func markAsInstrumented(stmt dst.Node) {
+	stmt.Decorations().Start.Append(dd_startinstrument)
+	stmt.Decorations().End.Append("\n", dd_endinstrument)
 }

@@ -9,6 +9,17 @@ import (
 	"github.com/dave/dst"
 )
 
+func instrumentChiV5(stmt *dst.AssignStmt) []dst.Stmt {
+	if !isChiV5(stmt) {
+		return nil
+	}
+	stmt.Decorations().Start.Prepend(dd_instrumented)
+	return []dst.Stmt{
+		stmt,
+		chiV5Middleware(stmt),
+	}
+}
+
 func isChiV5(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
 	f, ok := funcIdent(rhs)
@@ -21,7 +32,7 @@ func chiV5Middleware(got *dst.AssignStmt) dst.Stmt {
 		return nil
 	}
 	stmt := useMiddleware(iden.Name, "ChiV5Middleware")
-	wrap(stmt)
+	markAsInstrumented(stmt)
 	return stmt
 }
 
