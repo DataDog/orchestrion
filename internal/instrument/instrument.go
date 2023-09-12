@@ -46,7 +46,7 @@ func ProcessPackage(name string, process ProcessFunc, output OutputFunc, conf co
 			return fmt.Errorf("error opening file: %w", err)
 		}
 		out, err := process(path, file, conf)
-		file.Close()
+		_ = file.Close()
 		if err != nil {
 			return fmt.Errorf("error scanning file %s: %w", path, err)
 		}
@@ -164,9 +164,7 @@ func addSpanCodeToFunction(comment string, decl *dst.FuncDecl, tc *typechecker.T
 		log.Println("no context in function parameters, cannot instrument", funcName)
 		return decl
 	}
-	newLines := buildSpanInstrumentation(ci,
-		parts,
-		funcName)
+	newLines := buildSpanInstrumentation(ci, parts, funcName)
 	decl.Body.List = append(newLines, decl.Body.List...)
 	return decl
 }
@@ -193,38 +191,58 @@ func buildSpanInstrumentation(contextExpr contextInfo, parts []string, name stri
 			defer Report(contextIdent, EventEnd, "name", "doThing", parts...)
 			//dd:endinstrument
 	*/
-	if contextExpr.contextType != ident {
-		return nil
+	return []dst.Stmt{
+		buildReportStmt(contextExpr, parts, name),
+		buildReportDeferStmt(contextExpr, parts, name),
 	}
+}
 
-	newLines := []dst.Stmt{
-		&dst.AssignStmt{
-			Lhs: []dst.Expr{&dst.Ident{Name: contextExpr.name}},
-			Tok: token.ASSIGN,
-			Rhs: []dst.Expr{
-				&dst.CallExpr{
-					Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
-					Args: buildArgs(contextExpr, event.EventStart, name, parts),
+func buildReportStmt(contextExpr contextInfo, parts []string, name string) dst.Stmt {
+	var rhs []dst.Expr
+	switch contextExpr.contextType {
+	case ident:
+		rhs = []dst.Expr{buildReportCallExpr(contextExpr, parts, name)}
+	case call:
+		rhs = []dst.Expr{
+			&dst.CallExpr{
+				Fun: &dst.SelectorExpr{
+					X:   &dst.Ident{Name: contextExpr.name, Path: contextExpr.path},
+					Sel: &dst.Ident{Name: "WithContext"},
 				},
+				Args: []dst.Expr{buildReportCallExpr(contextExpr, parts, name)},
 			},
-			Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
-				Before: dst.NewLine,
-				Start:  dst.Decorations{dd_startinstrument},
-				After:  dst.NewLine,
-			}},
-		},
-		&dst.DeferStmt{
-			Call: &dst.CallExpr{
-				Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
-				Args: buildArgs(contextExpr, event.EventEnd, name, parts),
-			},
-			Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
-				After: dst.NewLine,
-				End:   dst.Decorations{"\n", dd_endinstrument},
-			}},
-		},
+		}
 	}
-	return newLines
+	return &dst.AssignStmt{
+		Lhs: []dst.Expr{&dst.Ident{Name: contextExpr.name}},
+		Tok: token.ASSIGN,
+		Rhs: rhs,
+		Decs: dst.AssignStmtDecorations{NodeDecs: dst.NodeDecs{
+			Before: dst.NewLine,
+			Start:  dst.Decorations{dd_startinstrument},
+			After:  dst.NewLine,
+		}},
+	}
+}
+
+func buildReportCallExpr(contextExpr contextInfo, parts []string, name string) dst.Expr {
+	return &dst.CallExpr{
+		Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+		Args: buildArgs(contextExpr, event.EventStart, name, parts),
+	}
+}
+
+func buildReportDeferStmt(contextExpr contextInfo, parts []string, name string) *dst.DeferStmt {
+	return &dst.DeferStmt{
+		Call: &dst.CallExpr{
+			Fun:  &dst.Ident{Name: "Report", Path: "github.com/datadog/orchestrion/instrument"},
+			Args: buildArgs(contextExpr, event.EventEnd, name, parts),
+		},
+		Decs: dst.DeferStmtDecorations{NodeDecs: dst.NodeDecs{
+			After: dst.NewLine,
+			End:   dst.Decorations{"\n", dd_endinstrument},
+		}},
+	}
 }
 
 func buildArgs(contextExpr contextInfo, event event.Event, name string, parts []string) []dst.Expr {
@@ -259,9 +277,13 @@ func dupCtxExprForSpan(in contextInfo) dst.Expr {
 func buildExprsFromParts(parts []string) []dst.Expr {
 	out := make([]dst.Expr, 0, len(parts)*2)
 	for _, v := range parts {
-		key, val, _ := strings.Cut(v, ":")
+		key, val, found := strings.Cut(v, ":")
 		out = append(out, &dst.BasicLit{Kind: token.STRING, Value: `"` + key + `"`})
-		out = append(out, &dst.BasicLit{Kind: token.STRING, Value: `"` + val + `"`})
+		if found {
+			out = append(out, &dst.BasicLit{Kind: token.STRING, Value: `"` + val + `"`})
+		} else {
+			out = append(out, &dst.BasicLit{Kind: token.VAR, Value: key})
+		}
 	}
 	return out
 }
