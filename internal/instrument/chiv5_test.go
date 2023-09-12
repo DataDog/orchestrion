@@ -79,7 +79,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func echoV4Server() {
+func chiV5Server() {
 	//dd:instrumented
 	r := chi.NewRouter()
 	//dd:startinstrument
