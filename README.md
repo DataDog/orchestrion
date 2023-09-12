@@ -232,9 +232,31 @@ For a more complete, downloadable example including distributed traces between m
 
 The source code package tree is scanned. For each source code file, `dave/dst` is used to build an AST of the source code in the file.
 
-The AST is checked for package level functions or methods that have a `//dd:span` comment attached to them. A function or method annotated with `//dd:span` must have a `context.Context` as its first parameter, or an `*http.Request` as any parameter in order for a span to be automatically inserted into the code. The context or request is required for trace information to be passed through function calls in a Go program. If this condition is met, the `//dd:span` comment is scanned for tags and code is inserted as the first lines of the function.
+The AST is checked for package level functions or methods that have a `//dd:span` comment attached to them.
 
-Orchestrion also supports automatic tracing of the following libraries:
+### dd:span magic comment
+
+A function or method annotated with `//dd:span` must have a `context.Context` as its first parameter, or an `*http.Request` as any parameter in order for a span to be automatically inserted into the code.
+
+The context or request is required for trace information to be passed through function calls in a Go program. If this condition is met, the `//dd:span` comment is scanned and code is inserted as the first lines of the function.
+
+It's possible to add key-value pairs separated by `:` or arguments (including their fields) present in the function or method signature. 
+
+```go
+//dd:span foo2:bar2 type:request name req.Method
+func MyFunc2(name string, req *http.Request) {
+	//dd:startinstrument
+	req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method))
+	defer instrument.Report(req.Context(), event.EventEnd, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method)
+	//dd:endinstrument%s
+}
+```
+
+Key-value pairs will be passed as strings. Arguments' values are expected to be string too.
+
+## Supported libraries
+
+Orchestrion supports automatic tracing of the following libraries:
 
 - [x] `net/http`
 - [x] `database/sql`
