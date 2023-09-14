@@ -23,9 +23,9 @@ type Validation struct {
 	Output []map[string]interface{}
 }
 
-// assembleTraces2 Reads the traces from the fake agent and returns
+// assembleTraces Reads the traces from the fake agent and returns
 // a map structure in the same format as the "output" field of validation.json files.
-func assembleTraces2(r io.Reader) ([]map[string]interface{}, error) {
+func assembleTraces(r io.Reader) ([]map[string]interface{}, error) {
 	roots := make(map[uint64]map[string]interface{})
 	spans := make(map[uint64]map[string]interface{})
 
@@ -102,7 +102,6 @@ func assembleTraces2(r io.Reader) ([]map[string]interface{}, error) {
 			fmt.Printf("Found span with no parent present: %v\n", s)
 			os.Exit(1)
 		}
-		//parent.Children[s.ID] = s
 		if parent["_children"] == nil {
 			parent["_children"] = []interface{}{s}
 		} else {
@@ -164,7 +163,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	fakeTraces, err := assembleTraces2(resp.Body)
+	fakeTraces, err := assembleTraces(resp.Body)
 	if err != nil {
 		fmt.Printf("Failed to decode traces from the fake agent: %v\n", err)
 		os.Exit(1)
