@@ -50,37 +50,51 @@ func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, 
 	}
 
 	for _, decl := range f.Decls {
-		if decl, ok := decl.(*dst.FuncDecl); ok {
-			decl.Body.List = removeStartEndWrap(decl.Body.List)
-			decl.Body.List = removeStartEndInstrument(decl.Body.List)
-			// recurse for function literals
-			for _, stmt := range decl.Body.List {
-				switch stmt := stmt.(type) {
-				case *dst.AssignStmt:
-					for _, expr := range stmt.Rhs {
-						if compLit, ok := expr.(*dst.CompositeLit); ok {
-							for _, v := range compLit.Elts {
-								if kv, ok := v.(*dst.KeyValueExpr); ok {
-									if funLit, ok := kv.Value.(*dst.FuncLit); ok {
-										funLit.Body.List = removeStartEndWrap(funLit.Body.List)
-										funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
-									}
-								}
+		decl, ok := decl.(*dst.FuncDecl)
+		if !ok {
+			continue
+		}
+		decl.Body.List = removeStartEndWrap(decl.Body.List)
+		decl.Body.List = removeStartEndInstrument(decl.Body.List)
+		// recurse for function literals
+		for _, stmt := range decl.Body.List {
+			switch stmt := stmt.(type) {
+			case *dst.AssignStmt:
+				for _, expr := range stmt.Rhs {
+					switch v := expr.(type) {
+					case *dst.CompositeLit:
+						for _, v := range v.Elts {
+							kv, ok := v.(*dst.KeyValueExpr)
+							if !ok {
+								continue
 							}
-						}
-						if funLit, ok := expr.(*dst.FuncLit); ok {
+							funLit, ok := kv.Value.(*dst.FuncLit)
+							if !ok {
+								continue
+							}
 							funLit.Body.List = removeStartEndWrap(funLit.Body.List)
 							funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
 						}
-					}
-				case *dst.ExprStmt:
-					if call, ok := stmt.X.(*dst.CallExpr); ok {
-						switch funLit := call.Fun.(type) {
-						case *dst.FuncLit:
-							funLit.Body.List = removeStartEndWrap(funLit.Body.List)
-							funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
+					case *dst.FuncLit:
+						v.Body.List = removeStartEndWrap(v.Body.List)
+						v.Body.List = removeStartEndInstrument(v.Body.List)
+					case *dst.UnaryExpr:
+						compLit, ok := v.X.(*dst.CompositeLit)
+						if !ok {
+							continue
 						}
+						compLit.Elts = removeStartEndWrapExpr(compLit.Elts)
 					}
+				}
+			case *dst.ExprStmt:
+				call, ok := stmt.X.(*dst.CallExpr)
+				if !ok {
+					continue
+				}
+				switch funLit := call.Fun.(type) {
+				case *dst.FuncLit:
+					funLit.Body.List = removeStartEndWrap(funLit.Body.List)
+					funLit.Body.List = removeStartEndInstrument(funLit.Body.List)
 				}
 			}
 		}
@@ -150,6 +164,42 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 						unwrap(list[i : i+j])
 						list = remove(list, i, i+j)
 					}
+				}
+			}
+		}
+	}
+	return list
+}
+
+func removeStartEndWrapExpr(list []dst.Expr) []dst.Expr {
+	unwrap := func(l []dst.Expr) {
+		for _, s := range l {
+			for _, unwrap := range unwrappers {
+				dst.Inspect(s, unwrap)
+			}
+		}
+	}
+
+	for i, stmt := range list {
+		if !hasLabel(dd_startwrap, stmt.Decorations().Start.All()) {
+			continue
+		}
+		stmt.Decorations().Start.Replace(
+			removeDecl(dd_startwrap, stmt.Decorations().Start)...)
+		if hasLabel(dd_endwrap, stmt.Decorations().End.All()) {
+			// dd:endwrap is at the end decorations of the same line as //dd:startwrap.
+			// We only need to unwrap() this one line.
+			stmt.Decorations().End.Replace(
+				removeDecl(dd_endwrap, stmt.Decorations().End)...)
+			unwrap(list[i : i+1])
+		} else {
+			// search for dd:endwrap and then unwrap all the lines between
+			// dd:startwrap and dd:endwrap
+			for j, stmt := range list[i:] {
+				if hasLabel(dd_endwrap, stmt.Decorations().Start.All()) {
+					stmt.Decorations().Start.Replace(
+						removeDecl(dd_endwrap, stmt.Decorations().Start)...)
+					unwrap(list[i : i+j])
 				}
 			}
 		}

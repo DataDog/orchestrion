@@ -109,7 +109,7 @@ func register() {
 
 	for _, tc := range tests {
 		t.Run("", func(t *testing.T) {
-			//code := fmt.Sprintf(codeTpl, tc.in)
+			// code := fmt.Sprintf(codeTpl, tc.in)
 			reader, err := InstrumentFile("test", strings.NewReader(tc.in), config.Default)
 			require.Nil(t, err)
 			got, err := io.ReadAll(reader)
@@ -120,7 +120,7 @@ func register() {
 			got, err = io.ReadAll(reader)
 			require.Nil(t, err)
 
-			//want := fmt.Sprintf(wantTpl, tc.want)
+			// want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, tc.want, string(got))
 		})
 	}
@@ -305,13 +305,11 @@ func register() {
 			want := fmt.Sprintf(wantTpl, tc.want)
 			require.Equal(t, want, string(got))
 
-			// TODO: Implement unwrapHandlerAssign to uncomment the following assertions!
-			//
-			// reader, err = UninstrumentFile("test", strings.NewReader(want))
-			// require.Nil(t, err)
-			// orig, err := io.ReadAll(reader)
-			// require.Nil(t, err)
-			// require.Equal(t, code, string(orig))
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
 		})
 	}
 }
@@ -399,6 +397,64 @@ func MyFunc(somectx context.Context) {
 	//dd:startinstrument
 	somectx = instrument.Report(somectx, event.EventStart, "function-name", "MyFunc", "foo", "bar", "other", "tag")
 	defer instrument.Report(somectx, event.EventEnd, "function-name", "MyFunc", "foo", "bar", "other", "tag")
+	//dd:endinstrument%s
+}
+`
+		return fmt.Sprintf(want, s)
+	}
+
+	for _, tt := range []struct {
+		in, out string
+	}{
+		{in: "", out: ""},
+		{in: "\n\twhatever.Code()\n", out: "\n\twhatever.Code()"},
+	} {
+		t.Run("", func(t *testing.T) {
+			var code = codef(tt.in)
+			var want = wantf(tt.out)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
+			require.NoError(t, err)
+			got, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+}
+
+func TestSpanInstrumentationWithHTTPRequest(t *testing.T) {
+	codef := func(s string) string {
+		var code = `package main
+
+import "net/http"
+
+//dd:span foo2:bar2 type:request name req.Method
+func MyFunc2(name string, req *http.Request) {%s}
+`
+
+		return fmt.Sprintf(code, s)
+	}
+
+	wantf := func(s string) string {
+		var want = `package main
+
+import (
+	"net/http"
+
+	"github.com/datadog/orchestrion/instrument"
+	"github.com/datadog/orchestrion/instrument/event"
+)
+
+//dd:span foo2:bar2 type:request name req.Method
+func MyFunc2(name string, req *http.Request) {
+	//dd:startinstrument
+	req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method))
+	defer instrument.Report(req.Context(), event.EventEnd, "function-name", "MyFunc2", "foo2", "bar2", "type", "request", "name", name, "req.Method", req.Method)
 	//dd:endinstrument%s
 }
 `
@@ -824,167 +880,4 @@ func init() {
 		require.Equal(t, code, string(got))
 
 	})
-}
-
-func TestGin(t *testing.T) {
-	var codeTpl = `package main
-
-import "github.com/gin-gonic/gin"
-
-func register() {
-	%s
-}
-`
-	var wantTpl = `package main
-
-import (
-	"github.com/datadog/orchestrion/instrument"
-	"github.com/gin-gonic/gin"
-)
-
-func register() {
-	//dd:instrumented
-	%s
-	//dd:startwrap
-	%s
-	//dd:endwrap
-}
-`
-
-	tests := []struct {
-		in   string
-		want string
-		tmpl string
-	}{
-		{in: `g := gin.New()`, want: `g.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
-		{in: `g := gin.Default()`, want: `g.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
-	}
-
-	for i, tc := range tests {
-		t.Run(fmt.Sprintf("tc-%d", i), func(t *testing.T) {
-			code := fmt.Sprintf(codeTpl, tc.in)
-			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
-			require.Nil(t, err)
-			got, err := io.ReadAll(reader)
-			require.Nil(t, err)
-			want := fmt.Sprintf(tc.tmpl, tc.in, tc.want)
-			require.Equal(t, want, string(got))
-
-			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
-			require.Nil(t, err)
-			orig, err := io.ReadAll(reader)
-			require.Nil(t, err)
-			require.Equal(t, code, string(orig))
-		})
-	}
-}
-
-func TestEchoV4(t *testing.T) {
-	var codeTpl = `package main
-
-import %s
-
-func register() {
-	%s
-}
-`
-	var wantTpl = `package main
-
-import (
-	"github.com/datadog/orchestrion/instrument"
-	%s
-)
-
-func register() {
-	//dd:instrumented
-	%s
-	//dd:startwrap
-	%s
-	//dd:endwrap
-}
-`
-
-	tests := []struct {
-		pkg  string
-		stmt string
-		want string
-		tmpl string
-	}{
-		{pkg: `"github.com/labstack/echo/v4"`, stmt: `r := echo.New()`, want: `r.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
-		{pkg: `echo "github.com/labstack/echo/v4"`, stmt: `r := echo.New()`, want: `r.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
-		{pkg: `echov4 "github.com/labstack/echo/v4"`, stmt: `r := echov4.New()`, want: `r.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
-	}
-
-	for i, tc := range tests {
-		t.Run(fmt.Sprintf("tc-%d", i), func(t *testing.T) {
-			code := fmt.Sprintf(codeTpl, tc.pkg, tc.stmt)
-			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
-			require.Nil(t, err)
-			got, err := io.ReadAll(reader)
-			require.Nil(t, err)
-			want := fmt.Sprintf(tc.tmpl, tc.pkg, tc.stmt, tc.want)
-			require.Equal(t, want, string(got))
-
-			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
-			require.Nil(t, err)
-			orig, err := io.ReadAll(reader)
-			require.Nil(t, err)
-			require.Equal(t, code, string(orig))
-		})
-	}
-}
-
-func TestChiV5(t *testing.T) {
-	var codeTpl = `package main
-
-import %s
-
-func register() {
-	%s
-}
-`
-	var wantTpl = `package main
-
-import (
-	"github.com/datadog/orchestrion/instrument"
-	%s
-)
-
-func register() {
-	//dd:instrumented
-	%s
-	//dd:startwrap
-	%s
-	//dd:endwrap
-}
-`
-
-	tests := []struct {
-		pkg  string
-		stmt string
-		want string
-		tmpl string
-	}{
-		{pkg: `"github.com/go-chi/chi/v5"`, stmt: `r := chi.NewRouter()`, want: `r.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
-		{pkg: `chi "github.com/go-chi/chi/v5"`, stmt: `r := chi.NewRouter()`, want: `r.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
-		{pkg: `chiv5 "github.com/go-chi/chi/v5"`, stmt: `r := chiv5.NewRouter()`, want: `r.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
-	}
-
-	for i, tc := range tests {
-		t.Run(fmt.Sprintf("tc-%d", i), func(t *testing.T) {
-			code := fmt.Sprintf(codeTpl, tc.pkg, tc.stmt)
-			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
-			require.Nil(t, err)
-			got, err := io.ReadAll(reader)
-			require.Nil(t, err)
-			want := fmt.Sprintf(tc.tmpl, tc.pkg, tc.stmt, tc.want)
-			require.Equal(t, want, string(got))
-
-			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
-			require.Nil(t, err)
-			orig, err := io.ReadAll(reader)
-			require.Nil(t, err)
-			require.Equal(t, code, string(orig))
-		})
-	}
 }

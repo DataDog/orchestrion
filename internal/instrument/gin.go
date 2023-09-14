@@ -7,6 +7,17 @@ package instrument
 
 import "github.com/dave/dst"
 
+func instrumentGin(stmt *dst.AssignStmt) []dst.Stmt {
+	if !isGin(stmt) {
+		return nil
+	}
+	stmt.Decorations().Start.Prepend(dd_instrumented)
+	return []dst.Stmt{
+		stmt,
+		ginMiddleware(stmt),
+	}
+}
+
 func isGin(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
 	f, ok := funcIdent(rhs)
@@ -19,7 +30,7 @@ func ginMiddleware(got *dst.AssignStmt) dst.Stmt {
 		return nil
 	}
 	stmt := useMiddleware(iden.Name, "GinMiddleware")
-	wrap(stmt)
+	markAsInstrumented(stmt)
 	return stmt
 }
 

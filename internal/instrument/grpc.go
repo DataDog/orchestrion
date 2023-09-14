@@ -28,7 +28,7 @@ func wrapGRPC(stmt *dst.AssignStmt) {
 				if !(iden.Name == targetName && iden.Path == "google.golang.org/grpc") {
 					return
 				}
-				wrap(stmt)
+				markAsWrap(stmt)
 				for _, opt := range opts {
 					fun.Args = append(fun.Args,
 						&dst.CallExpr{Fun: &dst.Ident{Name: opt, Path: "github.com/datadog/orchestrion/instrument"}},
