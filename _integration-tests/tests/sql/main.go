@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -69,38 +68,6 @@ func main() {
 VALUES (?, ?, datetime('now'));`, userid, content)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to insert: %v", err), http.StatusInternalServerError)
-		}
-	})
-
-	mux.HandleFunc("/notes", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		ids, ok := r.Form["userid"]
-		if !ok || len(ids) == 0 {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		id := ids[0]
-		rows, err := db.QueryContext(r.Context(), "SELECT id, content, created FROM notes WHERE userid = ?;", id)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Failed to query db: %v", err)
-			return
-		}
-
-		enc := json.NewEncoder(w)
-		for rows.Next() {
-			var note struct {
-				ID      int
-				Content string
-				Created string
-			}
-			rows.Scan(&note.ID, &note.Content, &note.Created)
-			err = enc.Encode(note)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "Failed to encode JSON: %v", err)
-				return
-			}
 		}
 	})
 

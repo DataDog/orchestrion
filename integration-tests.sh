@@ -28,10 +28,6 @@ go build -o ./_integration-tests/orchestrion
 
 cd ./_integration-tests
 
-## We need to change the default behavior of getting the latest release
-## and instead use the head of the main branch.
-go get github.com/datadog/orchestrion@main
-
 ## Run Orchestrion on the integration test services
 ./orchestrion -w ./tests
 
@@ -39,11 +35,11 @@ go get github.com/datadog/orchestrion@main
 go mod tidy
 go build -o valid ./validator
 for i in tests/*; do    
-    ss -lntp
     tname=`basename $i`
     if [[ "$testname" != "" && "$testname" != "$tname" ]]; then
        continue
     fi
+    ss -lntp
     echo '################################################################################'
     echo RUN ${tname}:
     curl "http://localhost:8126/test/session/start?test_session_token=${tname}"

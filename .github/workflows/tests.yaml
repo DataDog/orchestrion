@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.19"
+          go-version: "stable"
           cache: true
       - uses: actions/checkout@v3
         with:
@@ -27,7 +27,7 @@ jobs:
       - name: Checkout Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.19"
+          go-version: "stable"
       - name: Run unit tests
         run: make test
   integration-tests:
@@ -38,13 +38,11 @@ jobs:
         ports:
           - 8126:8126
         env:
+          # See documentation for configuration:
+          # https://github.com/DataDog/dd-apm-test-agent#environment-variables
           LOG_LEVEL: DEBUG
           TRACE_LANGUAGE: golang
           ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
-          #PORT: 8126
-          #DD_SUPPRESS_TRACE_PARSE_ERRORS: true
-          #DD_POOL_TRACE_CHECK_FAILURES: true
-          #DD_DISABLE_ERROR_RESPONSES: true
     steps:
       - name: Get current date
         id: date
@@ -65,6 +63,6 @@ jobs:
           repository: 'DataDog/orchestrion'
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.20"
+          go-version: "stable"
       - name: Run Integration Tests
         run: make integration-tests

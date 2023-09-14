@@ -6,9 +6,6 @@
 	"service": "net_http_ddspan",
 	"resource": "http.request",
 	"type": "web",
-	"metrics": {
-	    "_sampling_priority_v1": 1.0
-	},
 	"_children": [
 	    {
 		"name": "subfn",
