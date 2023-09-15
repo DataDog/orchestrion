@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/datadog/orchestrion/instrument/event"
+	"github.com/datadog/orchestrion/internal/version"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
@@ -67,6 +68,6 @@ func Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 }
 
 func Init() func() {
-	tracer.Start()
+	tracer.Start(tracer.WithOrchestrion(map[string]string{"version": version.Tag}))
 	return tracer.Stop
 }
