@@ -28,6 +28,12 @@ go build -o ./_integration-tests/orchestrion
 
 cd ./_integration-tests
 
+## If we're not running in a github action, set up the fake agent locally.
+if [[ "$GITHUB_ACTIONS" == "" ]]; then
+    docker-compose up -d
+    trap 'docker-compose down' EXIT
+fi
+
 ## Run Orchestrion on the integration test services
 ./orchestrion -w ./tests
 
