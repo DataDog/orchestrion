@@ -56,8 +56,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ steps.date.outputs.date }}
           restore-keys: |
             ${{ runner.os }}-go-${{ steps.date.outputs.date }}
-      - name: testdate
-        run: echo ${{ steps.date.outputs.date }}
       - uses: actions/checkout@v3
         with:
           repository: 'DataDog/orchestrion'
