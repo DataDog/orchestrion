@@ -44,18 +44,17 @@ jobs:
           TRACE_LANGUAGE: golang
           ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
     steps:
-      - name: Get current date
-        id: date
-        #run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
-        run: echo "date="$(date +'%Y-%m-%d') >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ steps.date.outputs.date }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ steps.date.outputs.date }}
+#      - name: Get current date
+#        id: date
+#        run: echo "date="$(date +'%Y-%m-%d') >> $GITHUB_OUTPUT
+#      - uses: actions/cache@v3
+#        with:
+#          path: |
+#            ~/.cache/go-build
+#            ~/go/pkg/mod
+#          key: ${{ runner.os }}-go-${{ steps.date.outputs.date }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-${{ steps.date.outputs.date }}
       - uses: actions/checkout@v3
         with:
           repository: 'DataDog/orchestrion'
