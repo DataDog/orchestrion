@@ -17,7 +17,7 @@ func main() {
 	go runServer()
 
 	s := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8083",
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {

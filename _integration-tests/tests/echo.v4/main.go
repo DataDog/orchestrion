@@ -12,19 +12,11 @@ import (
 	"orchestrion/integration"
 	"time"
 
-	"github.com/datadog/orchestrion/instrument"
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
-	//dd:startinstrument
-	defer instrument.Init()()
-	//dd:endinstrument
-	//dd:instrumented
 	r := echo.New()
-	//dd:startwrap
-	r.Use(instrument.EchoV4Middleware())
-	//dd:endwrap
 	r.GET("/ping", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{
 			"message": "pong",
@@ -34,5 +26,5 @@ func main() {
 		ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
 		r.Shutdown(ctx)
 	})
-	log.Print(r.Start(":8080"))
+	log.Print(r.Start(":8081"))
 }

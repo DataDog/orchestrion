@@ -1,5 +1,5 @@
 {
-    "url": "http://localhost:8080/ping",
+    "url": "http://localhost:8082/ping",
     "output": [
 	{
 	    "name": "http.request",
