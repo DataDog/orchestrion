@@ -28,7 +28,7 @@ func main() {
 
 	//dd:ignore
 	s := &http.Server{
-		Addr:    ":8084",
+		Addr:    ":8088",
 		Handler: r,
 	}
 	integration.OnSignal(func() {

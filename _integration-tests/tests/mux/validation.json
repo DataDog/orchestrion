@@ -1,5 +1,5 @@
 {
-    "url": "http://localhost:8084/ping",
+    "url": "http://localhost:8088/ping",
     "output": [
 	{
 	    "name": "http.request",
@@ -7,7 +7,7 @@
 	    "resource": "GET /ping",
 	    "type": "web",
 	    "meta": {
-		"http.url": "http://localhost:8084/ping"
+		"http.url": "http://localhost:8088/ping"
 	    }
 	}]
 }
