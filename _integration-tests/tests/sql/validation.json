@@ -39,7 +39,7 @@
 	    "service": "sql",
 	    "resource": "http.request",
 	    "meta": {
-		"http.url": "http://localhost:8080/new"
+		"http.url": "http://localhost:8087/new"
 	    },
 	    "_children": [
 		{
