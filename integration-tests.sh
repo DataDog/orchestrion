@@ -45,7 +45,7 @@ for i in tests/*; do
     if [[ "$testname" != "" && "$testname" != "$tname" ]]; then
        continue
     fi
-    ss -lntp
+
     echo '################################################################################'
     echo RUN ${tname}:
     curl "http://localhost:8126/test/session/start?test_session_token=${tname}"
