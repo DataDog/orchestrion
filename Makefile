@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := build
 
-.PHONY: build generate tidy vet test clean fmt licenses verify-licenses
+.PHONY: build generate tidy vet test clean fmt licenses verify-licenses verify-dd-headers integration-tests
 
 build: generate test build-only
 
@@ -41,3 +41,6 @@ bin/go-licenses:
 
 verify-dd-headers:
 	go run tools/headercheck/header_check.go
+
+integration-tests:
+	./integration-tests.sh

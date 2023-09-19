@@ -1,0 +1,59 @@
+{
+    "curl": "curl \"http://localhost:8087/new\" -X POST -H \"Content-Type: application/x-www-form-urlencoded\" -d \"userid=1&content=new%20note\"",
+    "output": [
+	{
+	    "resource": "Connect",
+	    "type": "sql",
+	    "name": "sqlite3.query",
+	    "service": "sqlite3.db",
+	    "meta": {
+		"component": "database/sql",
+		"span.kind": "client",
+		"sql.query_type": "Connect"
+	    }
+	},
+	{
+	    "resource": "CREATE TABLE IF NOT EXISTS notes (\n\tid INTEGER PRIMARY KEY AUTOINCREMENT,\n\tuserid INTEGER,\n\tcontent STRING,\n\tcreated STRING\n)",
+	    "type": "sql",
+	    "name": "sqlite3.query",
+	    "service": "sqlite3.db",
+	    "meta": {
+		"component": "database/sql",
+		"span.kind": "client",
+		"sql.query_type": "Exec"
+	    }
+	},
+	{
+	    "resource": "INSERT OR REPLACE INTO notes(userid, content, created)\n\tVALUES (1, 'Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.', datetime('now')),\n\t\t(1, 'Hey, remember to mow the lawn.', datetime('now')),\n\t\t(2, 'Reminder to submit that report by Thursday.', datetime('now')),\n\t\t(2, 'Opportunities don''t happen, you create them.', datetime('now')),\n\t\t(3, 'Pick up cabbage from the store on the way home.', datetime('now')),\n\t\t(3, 'Review PR #1138', datetime('now'));\n",
+	    "type": "sql",
+	    "name": "sqlite3.query",
+	    "meta": {
+		"component": "database/sql",
+		"span.kind": "client",
+		"sql.query_type": "Exec"
+	    },
+	    "service": "sqlite3.db"
+	},
+	{
+	    "name": "http.request",
+	    "service": "sql",
+	    "resource": "http.request",
+	    "meta": {
+		"http.url": "http://localhost:8087/new"
+	    },
+	    "_children": [
+		{
+		    "resource": "INSERT INTO notes (userid, content, created)\nVALUES (?, ?, datetime('now'));",
+		    "type": "sql",
+		    "name": "sqlite3.query",
+		    "meta": {
+			"component": "database/sql",
+			"span.kind": "client",
+			"sql.query_type": "Exec"
+		    },
+		    "service": "sqlite3.db"
+		}
+	    ]
+	}
+    ]
+}

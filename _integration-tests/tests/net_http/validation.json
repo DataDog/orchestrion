@@ -1,0 +1,10 @@
+{
+    "url": "http://localhost:8085",
+    "output": [
+	{
+	    "name": "http.request",
+	    "service": "net_http",
+	    "resource": "http.request",
+	    "type": "web"
+	}]
+}
