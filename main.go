@@ -14,6 +14,7 @@ import (
 
 	"github.com/datadog/orchestrion/internal/config"
 	"github.com/datadog/orchestrion/internal/instrument"
+	"github.com/datadog/orchestrion/internal/version"
 )
 
 func main() {
@@ -30,7 +31,12 @@ func main() {
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
 	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
+	printVersion := flag.Bool("v", false, "print orchestrion version")
 	flag.Parse()
+	if *printVersion {
+		fmt.Println(version.Tag)
+		return
+	}
 	if len(flag.Args()) == 0 {
 		return
 	}
