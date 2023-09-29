@@ -37,7 +37,7 @@
 	{
 	    "name": "http.request",
 	    "service": "sql",
-	    "resource": "http.request",
+	    "resource": "POST /new",
 	    "meta": {
 		"http.url": "http://localhost:8087/new"
 	    },
