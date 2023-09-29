@@ -4,7 +4,7 @@
 	{
 	    "name": "http.request",
 	    "service": "net_http",
-	    "resource": "POST /new",
+	    "resource": "GET /",
 	    "type": "web"
 	}]
 }
