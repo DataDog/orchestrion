@@ -6,6 +6,7 @@
 package instrument
 
 import (
+	"fmt"
 	"net/http"
 
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
@@ -81,8 +82,12 @@ func InsertHeader(r *http.Request) *http.Request {
 	return r
 }
 
+func resourceNamer(r *http.Request) string {
+	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+}
+
 func WrapHandler(handler http.Handler) http.Handler {
-	return httptrace.WrapHandler(handler, "", "")
+	return httptrace.WrapHandler(handler, "", "", httptrace.WithResourceNamer(resourceNamer))
 	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
 	//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	//		r = HandleHeader(r)
@@ -94,7 +99,9 @@ func WrapHandler(handler http.Handler) http.Handler {
 
 func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		httptrace.TraceAndServe(handlerFunc, w, r, &httptrace.ServeConfig{})
+		httptrace.TraceAndServe(handlerFunc, w, r, &httptrace.ServeConfig{
+			Resource: resourceNamer(r),
+		})
 	}
 	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
 	//	return func(w http.ResponseWriter, r *http.Request) {
@@ -107,5 +114,5 @@ func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 func WrapHTTPClient(client *http.Client) *http.Client {
 	// TODO: Stop hard-coding dd-trace-go.
-	return httptrace.WrapClient(client)
+	return httptrace.WrapClient(client, httptrace.RTWithResourceNamer(resourceNamer))
 }
