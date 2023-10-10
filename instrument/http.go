@@ -10,8 +10,12 @@ import (
 	"net/http"
 
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
+
+const componentName = "net/http"
 
 // if a function meets the handlerfunc type, insert code to:
 // get the header from the request and look for the trace id
@@ -101,6 +105,10 @@ func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		httptrace.TraceAndServe(handlerFunc, w, r, &httptrace.ServeConfig{
 			Resource: resourceNamer(r),
+			SpanOpts: []ddtrace.StartSpanOption{
+				tracer.Tag(ext.SpanKind, ext.SpanKindServer),
+				tracer.Tag(ext.Component, componentName),
+			},
 		})
 	}
 	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.

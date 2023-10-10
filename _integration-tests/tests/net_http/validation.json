@@ -5,6 +5,10 @@
 	    "name": "http.request",
 	    "service": "net_http",
 	    "resource": "GET /",
-	    "type": "web"
+	    "type": "web",
+		"meta": {
+			"component": "net/http",
+			"span.kind": "server"
+		}
 	}]
 }
