@@ -10,30 +10,13 @@ import (
 )
 
 func instrumentChiV5(stmt *dst.AssignStmt) []dst.Stmt {
-	if !isChiV5(stmt) {
-		return nil
-	}
-	stmt.Decorations().Start.Prepend(dd_instrumented)
-	return []dst.Stmt{
-		stmt,
-		chiV5Middleware(stmt),
-	}
+	return instrumentMiddleware(stmt, isChiV5, "ChiV5Middleware")
 }
 
 func isChiV5(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
 	f, ok := funcIdent(rhs)
 	return ok && f.Path == "github.com/go-chi/chi/v5" && f.Name == "NewRouter"
-}
-
-func chiV5Middleware(got *dst.AssignStmt) dst.Stmt {
-	iden, ok := got.Lhs[0].(*dst.Ident)
-	if !ok {
-		return nil
-	}
-	stmt := useMiddleware(iden.Name, "ChiV5Middleware")
-	markAsInstrumented(stmt)
-	return stmt
 }
 
 // removeChiV5 returns whether a statement corresponds to orchestrion's Chi-middleware registration

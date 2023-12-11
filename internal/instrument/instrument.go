@@ -15,6 +15,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/datadog/orchestrion/instrument/event"
@@ -571,24 +572,85 @@ func funcIdent(e dst.Expr) (*dst.Ident, bool) {
 	return f, true
 }
 
-func useMiddleware(pkg, middleware string) *dst.ExprStmt {
-	stmt := &dst.ExprStmt{
-		X: &dst.CallExpr{
-			Fun: &dst.SelectorExpr{
-				X:   &dst.Ident{Name: pkg},
-				Sel: &dst.Ident{Name: "Use"},
-			},
-			Args: []dst.Expr{
-				&dst.CallExpr{
-					Fun: &dst.Ident{
-						Name: middleware,
-						Path: "github.com/datadog/orchestrion/instrument",
+// useMiddleware returns a statement that uses the given middleware.
+func useMiddleware(expr dst.Expr, middleware string) (*dst.ExprStmt, error) {
+	/*
+		//dd:instrumented
+		r := echo.New()
+		//dd:startinstrument
+		r.Use(instrument.EchoV4Middleware())
+		//dd:endinstrument
+
+		//dd:instrumented
+		api.server = echo.New()
+		//dd:startinstrument
+		api.serverr.Use(instrument.EchoV4Middleware())
+		//dd:endinstrument
+	*/
+	var stmt *dst.ExprStmt
+	switch ex := expr.(type) {
+	case *dst.Ident:
+		stmt = &dst.ExprStmt{
+			X: &dst.CallExpr{
+				Fun: &dst.SelectorExpr{
+					X:   &dst.Ident{Name: ex.Name},
+					Sel: &dst.Ident{Name: "Use"},
+				},
+				Args: []dst.Expr{
+					&dst.CallExpr{
+						Fun: &dst.Ident{
+							Name: middleware,
+							Path: "github.com/datadog/orchestrion/instrument",
+						},
 					},
 				},
 			},
-		},
+		}
+	case *dst.SelectorExpr:
+		x, ok := ex.X.(*dst.Ident)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type %v", reflect.TypeOf(ex.X))
+		}
+		stmt = &dst.ExprStmt{
+			X: &dst.CallExpr{
+				Fun: &dst.SelectorExpr{
+					X: &dst.SelectorExpr{
+						X:   &dst.Ident{Name: x.Name},
+						Sel: &dst.Ident{Name: ex.Sel.Name},
+					},
+					Sel: &dst.Ident{Name: "Use"},
+				},
+				Args: []dst.Expr{
+					&dst.CallExpr{
+						Fun: &dst.Ident{
+							Name: middleware,
+							Path: "github.com/datadog/orchestrion/instrument",
+						},
+					},
+				},
+			},
+		}
+	default:
+		return nil, fmt.Errorf("unexpected type %v", reflect.TypeOf(expr))
 	}
-	return stmt
+	markAsInstrumented(stmt)
+	return stmt, nil
+}
+
+func instrumentMiddleware(stmt *dst.AssignStmt, check func(*dst.AssignStmt) bool, middleware string) []dst.Stmt {
+	if !check(stmt) {
+		return nil
+	}
+	instrumented, err := useMiddleware(stmt.Lhs[0], middleware)
+	if err != nil {
+		fmt.Println("error instrumenting middleware", err)
+		return nil
+	}
+	stmt.Decorations().Start.Prepend(dd_instrumented)
+	return []dst.Stmt{
+		stmt,
+		instrumented,
+	}
 }
 
 func markAsWrap(stmt dst.Node) {
