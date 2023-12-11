@@ -7,7 +7,7 @@
       "resource": "GET /ping",
       "type": "web",
       "meta": {
-        "http.url": "http://localhost:8089/ping"
+        "http.url": "/ping"
       }
     }]
 }
