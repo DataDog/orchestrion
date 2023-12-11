@@ -584,7 +584,7 @@ func useMiddleware(expr dst.Expr, middleware string) (*dst.ExprStmt, error) {
 		//dd:instrumented
 		api.server = echo.New()
 		//dd:startinstrument
-		api.serverr.Use(instrument.EchoV4Middleware())
+		api.server.Use(instrument.EchoV4Middleware())
 		//dd:endinstrument
 	*/
 	var stmt *dst.ExprStmt
