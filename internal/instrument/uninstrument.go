@@ -38,6 +38,7 @@ var removers = []func(stmt dst.Stmt) bool{
 	removeGin,
 	removeEchoV4,
 	removeChiV5,
+	removeFiberV2,
 }
 
 func UninstrumentFile(name string, r io.Reader, conf config.Config) (io.Reader, error) {

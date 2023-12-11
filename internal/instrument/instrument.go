@@ -108,6 +108,7 @@ var (
 	specialPackages = map[string]string{
 		"github.com/labstack/echo/v4": "echo",
 		"github.com/go-chi/chi/v5":    "chi",
+		"github.com/gofiber/fiber/v2": "fiber",
 	}
 )
 
@@ -330,6 +331,10 @@ func addInFunctionCode(list []dst.Stmt, tc *typechecker.TypeChecker, conf config
 				out = append(out, r...)
 			}
 			if r := instrumentChiV5(stmt); r != nil {
+				appendStmt = false
+				out = append(out, r...)
+			}
+			if r := instrumentFiberV2(stmt); r != nil {
 				appendStmt = false
 				out = append(out, r...)
 			}
