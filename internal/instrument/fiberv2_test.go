@@ -88,7 +88,7 @@ func fiberServer() {
 	r.Get("/ping", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
-	r.Run()
+	r.Listen(":8080")
 }
 `
 
