@@ -881,3 +881,66 @@ func init() {
 
 	})
 }
+
+func TestRecurseUnwrap(t *testing.T) {
+	var code = `package main
+
+import "google.golang.org/grpc"
+
+func init() {
+	if true {
+		_, _ = grpc.Dial("localhost:8888")
+	}
+	if true {
+		if true {
+			_, _ = grpc.Dial("localhost:8888")
+		}
+	}
+	{
+		{
+			_, _ = grpc.Dial("localhost:8888")
+		}
+	}
+}
+`
+	var want = `package main
+
+import (
+	"github.com/datadog/orchestrion/instrument"
+	"google.golang.org/grpc"
+)
+
+func init() {
+	if true {
+		//dd:startwrap
+		_, _ = grpc.Dial("localhost:8888", instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())
+		//dd:endwrap
+	}
+	if true {
+		if true {
+			//dd:startwrap
+			_, _ = grpc.Dial("localhost:8888", instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())
+			//dd:endwrap
+		}
+	}
+	{
+		{
+			//dd:startwrap
+			_, _ = grpc.Dial("localhost:8888", instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())
+			//dd:endwrap
+		}
+	}
+}
+`
+	reader, err := InstrumentFile("test", strings.NewReader(code), config.Default)
+	require.Nil(t, err)
+	got, err := io.ReadAll(reader)
+	require.Nil(t, err)
+	require.Equal(t, want, string(got))
+
+	reader, err = UninstrumentFile("test", strings.NewReader(want), config.Default)
+	require.Nil(t, err)
+	orig, err := io.ReadAll(reader)
+	require.Nil(t, err)
+	require.Equal(t, code, string(orig))
+}
