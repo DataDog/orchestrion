@@ -269,6 +269,7 @@ Orchestrion supports automatic tracing of the following libraries:
 - [x] `github.com/labstack/echo/v4`
 - [x] `github.com/go-chi/chi/v5`
 - [x] `github.com/gorilla/mux`
+- [x] `github.com/gofiber/fiber/v2`
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for distributed traces.
 

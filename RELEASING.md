@@ -10,7 +10,7 @@ The release process consists of creating a release branch, merging fixes to `mai
 
 1. Checkout the repository on the correct branch and changeset (`main`).
 2. Create a new release branch: `git checkout -b vX.Y`.
-3. Add a tag for the first release candidae: `git tag vX.Y.Z-rc.1`.
+3. Add a tag for the first release candidate: `git tag vX.Y.Z-rc.1`.
 4. Push the branch and tag.
 
    ```console

@@ -1,0 +1,101 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package instrument
+
+import (
+	"fmt"
+	"io"
+	"strings"
+	"testing"
+
+	"github.com/datadog/orchestrion/internal/config"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestFiberV2(t *testing.T) {
+	var codeTpl = `package main
+
+import %s
+
+func register() {
+	%s
+}
+`
+	var wantTpl = `package main
+
+import (
+	"github.com/datadog/orchestrion/instrument"
+	%s
+)
+
+func register() {
+	//dd:instrumented
+	%s
+	//dd:startinstrument
+	%s
+	//dd:endinstrument
+}
+`
+
+	tests := []struct {
+		pkg  string
+		stmt string
+		want string
+		tmpl string
+	}{
+		{pkg: `"github.com/gofiber/fiber/v2"`, stmt: `r := fiber.New()`, want: `r.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
+		{pkg: `fiber "github.com/gofiber/fiber/v2"`, stmt: `r := fiber.New()`, want: `r.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
+		{pkg: `fiberv2 "github.com/gofiber/fiber/v2"`, stmt: `r := fiberv2.New()`, want: `r.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
+		{pkg: `"github.com/gofiber/fiber/v2"`, stmt: `api.server := fiber.New()`, want: `api.server.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
+	}
+
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("tc-%d", i), func(t *testing.T) {
+			code := fmt.Sprintf(codeTpl, tc.pkg, tc.stmt)
+			reader, err := InstrumentFile("test", strings.NewReader(code), config.Config{})
+			require.Nil(t, err)
+			got, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			want := fmt.Sprintf(tc.tmpl, tc.pkg, tc.stmt, tc.want)
+			require.Equal(t, want, string(got))
+
+			reader, err = UninstrumentFile("test", strings.NewReader(want), config.Config{})
+			require.Nil(t, err)
+			orig, err := io.ReadAll(reader)
+			require.Nil(t, err)
+			require.Equal(t, code, string(orig))
+		})
+	}
+}
+
+func TestFiberDuplicates(t *testing.T) {
+	var tpl = `package main
+
+import (
+	"github.com/datadog/orchestrion/instrument"
+	"github.com/gofiber/fiber/v2"
+)
+
+func fiberServer() {
+	//dd:instrumented
+	r := fiber.New()
+	//dd:startinstrument
+	r.Use(instrument.FiberMiddleware())
+	//dd:endinstrument
+	r.Get("/ping", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+	r.Listen(":8080")
+}
+`
+
+	reader, err := InstrumentFile("test", strings.NewReader(tpl), config.Config{})
+	require.Nil(t, err)
+	got, err := io.ReadAll(reader)
+	require.Nil(t, err)
+	require.Equal(t, tpl, string(got))
+}

@@ -1,0 +1,13 @@
+{
+  "url": "http://localhost:8089/ping",
+  "output": [
+    {
+      "name": "http.request",
+      "service": "fiber",
+      "resource": "GET /ping",
+      "type": "web",
+      "meta": {
+        "http.url": "/ping"
+      }
+    }]
+}
