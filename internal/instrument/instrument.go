@@ -587,51 +587,37 @@ func useMiddleware(expr dst.Expr, middleware string) (*dst.ExprStmt, error) {
 		api.server.Use(instrument.EchoV4Middleware())
 		//dd:endinstrument
 	*/
-	var stmt *dst.ExprStmt
+	var rExpr dst.Expr
 	switch ex := expr.(type) {
 	case *dst.Ident:
-		stmt = &dst.ExprStmt{
-			X: &dst.CallExpr{
-				Fun: &dst.SelectorExpr{
-					X:   &dst.Ident{Name: ex.Name},
-					Sel: &dst.Ident{Name: "Use"},
-				},
-				Args: []dst.Expr{
-					&dst.CallExpr{
-						Fun: &dst.Ident{
-							Name: middleware,
-							Path: "github.com/datadog/orchestrion/instrument",
-						},
-					},
-				},
-			},
-		}
+		rExpr = &dst.Ident{Name: ex.Name}
 	case *dst.SelectorExpr:
 		x, ok := ex.X.(*dst.Ident)
 		if !ok {
 			return nil, fmt.Errorf("unexpected type %v", reflect.TypeOf(ex.X))
 		}
-		stmt = &dst.ExprStmt{
-			X: &dst.CallExpr{
-				Fun: &dst.SelectorExpr{
-					X: &dst.SelectorExpr{
-						X:   &dst.Ident{Name: x.Name},
-						Sel: &dst.Ident{Name: ex.Sel.Name},
-					},
-					Sel: &dst.Ident{Name: "Use"},
-				},
-				Args: []dst.Expr{
-					&dst.CallExpr{
-						Fun: &dst.Ident{
-							Name: middleware,
-							Path: "github.com/datadog/orchestrion/instrument",
-						},
-					},
-				},
-			},
+		rExpr = &dst.SelectorExpr{
+			X:   &dst.Ident{Name: x.Name},
+			Sel: &dst.Ident{Name: ex.Sel.Name},
 		}
 	default:
 		return nil, fmt.Errorf("unexpected type %v", reflect.TypeOf(expr))
+	}
+	stmt := &dst.ExprStmt{
+		X: &dst.CallExpr{
+			Fun: &dst.SelectorExpr{
+				X:   rExpr,
+				Sel: &dst.Ident{Name: "Use"},
+			},
+			Args: []dst.Expr{
+				&dst.CallExpr{
+					Fun: &dst.Ident{
+						Name: middleware,
+						Path: "github.com/datadog/orchestrion/instrument",
+					},
+				},
+			},
+		},
 	}
 	markAsInstrumented(stmt)
 	return stmt, nil
