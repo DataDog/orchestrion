@@ -2,5 +2,4 @@ Component,Origin,License,Copyright
 orchestrion,github.com/datadog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
-orchestrion,golang.org/x/sys/execabs,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
