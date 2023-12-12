@@ -15,6 +15,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/datadog/orchestrion/instrument/event"
@@ -571,11 +572,41 @@ func funcIdent(e dst.Expr) (*dst.Ident, bool) {
 	return f, true
 }
 
-func useMiddleware(pkg, middleware string) *dst.ExprStmt {
+// useMiddleware returns a statement that uses the given middleware.
+func useMiddleware(expr dst.Expr, middleware string) (*dst.ExprStmt, error) {
+	/*
+		//dd:instrumented
+		r := echo.New()
+		//dd:startinstrument
+		r.Use(instrument.EchoV4Middleware())
+		//dd:endinstrument
+
+		//dd:instrumented
+		api.server = echo.New()
+		//dd:startinstrument
+		api.server.Use(instrument.EchoV4Middleware())
+		//dd:endinstrument
+	*/
+	var rExpr dst.Expr
+	switch ex := expr.(type) {
+	case *dst.Ident:
+		rExpr = &dst.Ident{Name: ex.Name}
+	case *dst.SelectorExpr:
+		x, ok := ex.X.(*dst.Ident)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type %v", reflect.TypeOf(ex.X))
+		}
+		rExpr = &dst.SelectorExpr{
+			X:   &dst.Ident{Name: x.Name},
+			Sel: &dst.Ident{Name: ex.Sel.Name},
+		}
+	default:
+		return nil, fmt.Errorf("unexpected type %v", reflect.TypeOf(expr))
+	}
 	stmt := &dst.ExprStmt{
 		X: &dst.CallExpr{
 			Fun: &dst.SelectorExpr{
-				X:   &dst.Ident{Name: pkg},
+				X:   rExpr,
 				Sel: &dst.Ident{Name: "Use"},
 			},
 			Args: []dst.Expr{
@@ -588,7 +619,24 @@ func useMiddleware(pkg, middleware string) *dst.ExprStmt {
 			},
 		},
 	}
-	return stmt
+	markAsInstrumented(stmt)
+	return stmt, nil
+}
+
+func instrumentMiddleware(stmt *dst.AssignStmt, check func(*dst.AssignStmt) bool, middleware string) []dst.Stmt {
+	if !check(stmt) {
+		return nil
+	}
+	instrumented, err := useMiddleware(stmt.Lhs[0], middleware)
+	if err != nil {
+		fmt.Println("error instrumenting middleware", err)
+		return nil
+	}
+	stmt.Decorations().Start.Prepend(dd_instrumented)
+	return []dst.Stmt{
+		stmt,
+		instrumented,
+	}
 }
 
 func markAsWrap(stmt dst.Node) {

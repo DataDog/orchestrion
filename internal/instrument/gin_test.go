@@ -48,6 +48,7 @@ func register() {
 	}{
 		{in: `g := gin.New()`, want: `g.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
 		{in: `g := gin.Default()`, want: `g.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
+		{in: `api.server = gin.Default()`, want: `api.server.Use(instrument.GinMiddleware())`, tmpl: wantTpl},
 	}
 
 	for i, tc := range tests {

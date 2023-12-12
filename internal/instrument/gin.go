@@ -8,30 +8,13 @@ package instrument
 import "github.com/dave/dst"
 
 func instrumentGin(stmt *dst.AssignStmt) []dst.Stmt {
-	if !isGin(stmt) {
-		return nil
-	}
-	stmt.Decorations().Start.Prepend(dd_instrumented)
-	return []dst.Stmt{
-		stmt,
-		ginMiddleware(stmt),
-	}
+	return instrumentMiddleware(stmt, isGin, "GinMiddleware")
 }
 
 func isGin(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
 	f, ok := funcIdent(rhs)
 	return ok && f.Path == "github.com/gin-gonic/gin" && (f.Name == "New" || f.Name == "Default")
-}
-
-func ginMiddleware(got *dst.AssignStmt) dst.Stmt {
-	iden, ok := got.Lhs[0].(*dst.Ident)
-	if !ok {
-		return nil
-	}
-	stmt := useMiddleware(iden.Name, "GinMiddleware")
-	markAsInstrumented(stmt)
-	return stmt
 }
 
 // removeGin returns whether a statement corresponds to orchestrion's Gin-middleware registration
