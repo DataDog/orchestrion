@@ -50,6 +50,7 @@ func register() {
 		{pkg: `"github.com/gofiber/fiber/v2"`, stmt: `r := fiber.New()`, want: `r.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
 		{pkg: `fiber "github.com/gofiber/fiber/v2"`, stmt: `r := fiber.New()`, want: `r.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
 		{pkg: `fiberv2 "github.com/gofiber/fiber/v2"`, stmt: `r := fiberv2.New()`, want: `r.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
+		{pkg: `"github.com/gofiber/fiber/v2"`, stmt: `api.server := fiber.New()`, want: `api.server.Use(instrument.FiberV2Middleware())`, tmpl: wantTpl},
 	}
 
 	for i, tc := range tests {
