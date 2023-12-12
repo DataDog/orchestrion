@@ -8,30 +8,13 @@ package instrument
 import "github.com/dave/dst"
 
 func instrumentEchoV4(stmt *dst.AssignStmt) []dst.Stmt {
-	if !isEchoV4(stmt) {
-		return nil
-	}
-	stmt.Decorations().Start.Prepend(dd_instrumented)
-	return []dst.Stmt{
-		stmt,
-		echoV4Middleware(stmt),
-	}
+	return instrumentMiddleware(stmt, isEchoV4, "EchoV4Middleware")
 }
 
 func isEchoV4(stmt *dst.AssignStmt) bool {
 	rhs := stmt.Rhs[0]
 	f, ok := funcIdent(rhs)
 	return ok && f.Path == "github.com/labstack/echo/v4" && f.Name == "New"
-}
-
-func echoV4Middleware(got *dst.AssignStmt) dst.Stmt {
-	iden, ok := got.Lhs[0].(*dst.Ident)
-	if !ok {
-		return nil
-	}
-	stmt := useMiddleware(iden.Name, "EchoV4Middleware")
-	markAsInstrumented(stmt)
-	return stmt
 }
 
 // removeEchoV4 returns whether a statement corresponds to orchestrion's Echo-middleware registration

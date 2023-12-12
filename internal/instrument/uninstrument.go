@@ -168,6 +168,26 @@ func removeStartEndWrap(list []dst.Stmt) []dst.Stmt {
 				}
 			}
 		}
+		switch stmt := stmt.(type) {
+		case *dst.BlockStmt:
+			stmt.List = removeStartEndWrap(stmt.List)
+		case *dst.CaseClause:
+			stmt.Body = removeStartEndWrap(stmt.Body)
+		case *dst.CommClause:
+			stmt.Body = removeStartEndWrap(stmt.Body)
+		case *dst.IfStmt:
+			stmt.Body.List = removeStartEndWrap(stmt.Body.List)
+		case *dst.SwitchStmt:
+			stmt.Body.List = removeStartEndWrap(stmt.Body.List)
+		case *dst.TypeSwitchStmt:
+			stmt.Body.List = removeStartEndWrap(stmt.Body.List)
+		case *dst.SelectStmt:
+			stmt.Body.List = removeStartEndWrap(stmt.Body.List)
+		case *dst.ForStmt:
+			stmt.Body.List = removeStartEndWrap(stmt.Body.List)
+		case *dst.RangeStmt:
+			stmt.Body.List = removeStartEndWrap(stmt.Body.List)
+		}
 	}
 	return list
 }
@@ -230,6 +250,26 @@ func removeStartEndInstrument(list []dst.Stmt) []dst.Stmt {
 		}
 		if hasLabel(dd_instrumented, stmt.Decorations().Start.All()) {
 			removeDecoration(dd_instrumented, stmt)
+		}
+		switch stmt := stmt.(type) {
+		case *dst.BlockStmt:
+			stmt.List = removeStartEndInstrument(stmt.List)
+		case *dst.CaseClause:
+			stmt.Body = removeStartEndInstrument(stmt.Body)
+		case *dst.CommClause:
+			stmt.Body = removeStartEndInstrument(stmt.Body)
+		case *dst.IfStmt:
+			stmt.Body.List = removeStartEndInstrument(stmt.Body.List)
+		case *dst.SwitchStmt:
+			stmt.Body.List = removeStartEndInstrument(stmt.Body.List)
+		case *dst.TypeSwitchStmt:
+			stmt.Body.List = removeStartEndInstrument(stmt.Body.List)
+		case *dst.SelectStmt:
+			stmt.Body.List = removeStartEndInstrument(stmt.Body.List)
+		case *dst.ForStmt:
+			stmt.Body.List = removeStartEndInstrument(stmt.Body.List)
+		case *dst.RangeStmt:
+			stmt.Body.List = removeStartEndInstrument(stmt.Body.List)
 		}
 	}
 	return list

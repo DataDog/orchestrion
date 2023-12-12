@@ -50,6 +50,7 @@ func register() {
 		{pkg: `"github.com/labstack/echo/v4"`, stmt: `r := echo.New()`, want: `r.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
 		{pkg: `echo "github.com/labstack/echo/v4"`, stmt: `r := echo.New()`, want: `r.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
 		{pkg: `echov4 "github.com/labstack/echo/v4"`, stmt: `r := echov4.New()`, want: `r.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
+		{pkg: `"github.com/labstack/echo/v4"`, stmt: `api.server = echo.New()`, want: `api.server.Use(instrument.EchoV4Middleware())`, tmpl: wantTpl},
 	}
 
 	for i, tc := range tests {

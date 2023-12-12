@@ -50,6 +50,7 @@ func register() {
 		{pkg: `"github.com/go-chi/chi/v5"`, stmt: `r := chi.NewRouter()`, want: `r.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
 		{pkg: `chi "github.com/go-chi/chi/v5"`, stmt: `r := chi.NewRouter()`, want: `r.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
 		{pkg: `chiv5 "github.com/go-chi/chi/v5"`, stmt: `r := chiv5.NewRouter()`, want: `r.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
+		{pkg: `"github.com/go-chi/chi/v5"`, stmt: `api.server = chi.NewRouter()`, want: `api.server.Use(instrument.ChiV5Middleware())`, tmpl: wantTpl},
 	}
 
 	for i, tc := range tests {
