@@ -273,6 +273,26 @@ Orchestrion supports automatic tracing of the following libraries:
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for distributed traces.
 
+### Adding tracer options for supported libraries [WIP]
+To add your own tracer options, simply add the magic `//dd:options` comment above the function call where you initialize the service. For example,
+```go
+package main
+
+import "database/sql"
+
+func main() {
+	//dd:options service:test-name tag:my_key:my_val
+	db, err := sql.Open("driver", "connectionString")
+}
+```
+#### Current libraries that support custom options, with supported options
+
+  | Library  | Option Name | Decorator Format |
+  | ------------- | ------------- | ---- |
+  | `database/sql` | Service Name | `service:{name}` |
+  | `database/sql` | Custom Tag | `tag:{name}:{value}` |
+
+
 ## Next steps
 
 - [ ] Support compile-time auto-instrumentation via `-toolexec`
