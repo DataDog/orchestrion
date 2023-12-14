@@ -76,7 +76,11 @@ func wrapSqlCall(call *dst.CallExpr, startDeco dst.Decorations) bool {
 			for _, opt := range optList {
 				optSections := strings.Split(opt, ":")
 				if len(optSections) > 1 {
-					args = append(args, mapOptionToCall(optSections[0], optSections[1:]...))
+					optionCall := mapOptionToCall(optSections[0], optSections[1:]...)
+					if optionCall != nil {
+						args = append(args, optionCall)
+					}
+
 				}
 			}
 		}
