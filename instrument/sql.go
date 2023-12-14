@@ -12,10 +12,18 @@ import (
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 )
 
-func Open(driverName, dataSourceName string) (*sql.DB, error) {
-	return sqltrace.Open(driverName, dataSourceName)
+func Open(driverName, dataSourceName string, opts ...sqltrace.Option) (*sql.DB, error) {
+	return sqltrace.Open(driverName, dataSourceName, opts...)
 }
 
-func OpenDB(c driver.Connector) *sql.DB {
-	return sqltrace.OpenDB(c)
+func OpenDB(c driver.Connector, opts ...sqltrace.Option) *sql.DB {
+	return sqltrace.OpenDB(c, opts...)
+}
+
+func SqlWithServiceName(name string) sqltrace.Option {
+	return sqltrace.WithServiceName(name)
+}
+
+func SqlWithCustomTag(key string, value interface{}) sqltrace.Option {
+	return sqltrace.WithCustomTag(key, value)
 }

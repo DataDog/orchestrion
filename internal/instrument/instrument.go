@@ -428,6 +428,7 @@ const (
 	dd_instrumented    = "//dd:instrumented"
 	dd_span            = "//dd:span"
 	dd_ignore          = "//dd:ignore"
+	dd_options         = "//dd:options"
 )
 
 func hasLabel(label string, decs []string) bool {

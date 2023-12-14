@@ -5,7 +5,12 @@
 
 package instrument
 
-import "github.com/dave/dst"
+import (
+	"fmt"
+	"github.com/dave/dst"
+	"go/token"
+	"strings"
+)
 
 func wrapSqlReturnCall(stmt *dst.ReturnStmt) *dst.ReturnStmt {
 	/*
@@ -22,7 +27,7 @@ func wrapSqlReturnCall(stmt *dst.ReturnStmt) *dst.ReturnStmt {
 		if !ok {
 			continue
 		}
-		if wrapSqlCall(fun) {
+		if wrapSqlCall(fun, stmt.Decorations().Start) {
 			markAsWrap(stmt)
 			stmt.Decorations().Before = dst.NewLine
 		}
@@ -45,19 +50,39 @@ func wrapSqlOpenFromAssign(stmt *dst.AssignStmt) bool {
 	if !ok {
 		return false
 	}
-	if wrapSqlCall(fun) {
+	if wrapSqlCall(fun, stmt.Decorations().Start) {
 		markAsWrap(stmt)
 		return true
 	}
 	return false
 }
 
-func wrapSqlCall(call *dst.CallExpr) bool {
+func wrapSqlCall(call *dst.CallExpr, startDeco dst.Decorations) bool {
 	f, ok := call.Fun.(*dst.Ident)
+
 	if !(ok && f.Path == "database/sql" && (f.Name == "Open" || f.Name == "OpenDB")) {
 		return false
 	}
 	f.Path = "github.com/datadog/orchestrion/instrument"
+	args := []dst.Expr{
+		call.Args[0],
+	}
+	if f.Name == "Open" {
+		args = append(args, call.Args[1])
+	}
+	for _, dec := range startDeco.All() {
+		if strings.HasPrefix(dec, dd_options) {
+			optList := strings.Split(strings.TrimPrefix(dec, dd_options), " ")
+			for _, opt := range optList {
+				optSections := strings.Split(opt, ":")
+				if len(optSections) > 1 {
+					args = append(args, mapOptionToCall(optSections[0], optSections[1:]...))
+				}
+			}
+		}
+	}
+
+	call.Args = args
 	return true
 }
 
@@ -77,6 +102,11 @@ func unwrapSqlExpr(n dst.Node) bool {
 	if id.Path == "github.com/datadog/orchestrion/instrument" &&
 		(id.Name == "Open" || id.Name == "OpenDB") {
 		id.Path = "database/sql"
+		if id.Name == "Open" {
+			f.Args = f.Args[:2]
+		} else {
+			f.Args = f.Args[:1]
+		}
 		return true
 	}
 	return true
@@ -98,6 +128,11 @@ func unwrapSqlAssign(n dst.Node) bool {
 	if id.Path == "github.com/datadog/orchestrion/instrument" &&
 		(id.Name == "Open" || id.Name == "OpenDB") {
 		id.Path = "database/sql"
+		if id.Name == "Open" {
+			f.Args = f.Args[:2]
+		} else {
+			f.Args = f.Args[:1]
+		}
 		return true
 	}
 	return true
@@ -119,6 +154,32 @@ func unwrapSqlReturn(n dst.Node) bool {
 			continue
 		}
 		f.Path = "database/sql"
+		if f.Name == "Open" {
+			fun.Args = fun.Args[:2]
+		} else {
+			fun.Args = fun.Args[:1]
+		}
 	}
 	return true
+}
+
+func mapOptionToCall(name string, value ...string) *dst.CallExpr {
+	switch name {
+	case "service":
+		return &dst.CallExpr{
+			Fun: &dst.Ident{Name: "SqlWithServiceName", Path: "github.com/datadog/orchestrion/instrument"},
+			Args: []dst.Expr{
+				&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, value[0])},
+			},
+		}
+	case "tag":
+		return &dst.CallExpr{
+			Fun: &dst.Ident{Name: "SqlWithCustomTag", Path: "github.com/datadog/orchestrion/instrument"},
+			Args: []dst.Expr{
+				&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, value[0])},
+				&dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf(`"%s"`, value[1])},
+			},
+		}
+	}
+	return nil
 }
