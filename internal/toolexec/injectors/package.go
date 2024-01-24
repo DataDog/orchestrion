@@ -55,21 +55,21 @@ func (r *PkgRegister) Import(r2 PkgRegister) {
 }
 
 func (r *PkgRegister) Dump() string {
-	var ret string
+	var str strings.Builder
 
 	for name, path := range r.ImportMap {
-		ret += fmt.Sprintf("importmap %s=%s\n", name, path)
+		str.WriteString(fmt.Sprintf("importmap %s=%s\n", name, path))
 	}
 
 	for name, path := range r.PkgFile {
-		ret += fmt.Sprintf("packagefile %s=%s\n", name, path)
+		str.WriteString(fmt.Sprintf("packagefile %s=%s\n", name, path))
 	}
 
 	for _, data := range r.RandomData {
-		ret += fmt.Sprintf("%s\n", data)
+		str.WriteString(fmt.Sprintf("%s\n", data))
 	}
 
-	return ret
+	return str.String()
 }
 
 func pkgRegiterFromImportCfg(cfg *os.File) PkgRegister {
@@ -215,5 +215,6 @@ func (i *PackageInjector) InjectLink(cmd *proxy.LinkCommand) {
 	log.Printf("====> Injecting dependencies in importcfg.link")
 	file, err = os.Create(cmd.Flags.ImportCfg)
 	utils.ExitIfError(err)
+	defer file.Close()
 	file.WriteString(reg.Dump())
 }

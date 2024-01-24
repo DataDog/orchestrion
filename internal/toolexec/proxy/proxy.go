@@ -13,7 +13,7 @@ type (
 	// - compile
 	// - link
 	// - unknown
-	CommandType uint32
+	CommandType string
 	// Command represents a Go compilation command
 	Command interface {
 		Inject(injector Injector)
@@ -44,21 +44,10 @@ type (
 )
 
 const (
-	CommandTypeUnknown CommandType = iota
-	CommandTypeCompile
-	CommandTypeLink
+	CommandTypeUnknown CommandType = "unknown"
+	CommandTypeCompile             = "compile"
+	CommandTypeLink                = "link"
 )
-
-func (t CommandType) String() string {
-	switch t {
-	case CommandTypeCompile:
-		return "Compile"
-	case CommandTypeLink:
-		return "Link"
-	default:
-		return "Unknown"
-	}
-}
 
 func NewCommand(args []string) command {
 	cmd := command{

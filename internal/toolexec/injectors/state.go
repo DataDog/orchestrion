@@ -18,12 +18,6 @@ type State struct {
 	Deps map[string]PkgRegister
 }
 
-func NewState() State {
-	return State{
-		Deps: make(map[string]PkgRegister),
-	}
-}
-
 func (s *State) serialize() ([]byte, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
