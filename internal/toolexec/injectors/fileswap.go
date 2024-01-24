@@ -1,0 +1,35 @@
+package injectors
+
+import (
+	"log"
+
+	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+)
+
+type GoFileSwapper struct {
+	// Key: file to replace
+	// Value: file to replace with
+	swapMap map[string]string
+}
+
+func NewGoFileSwapper(swapMap map[string]string) GoFileSwapper {
+	return GoFileSwapper{
+		swapMap: swapMap,
+	}
+}
+
+func (s *GoFileSwapper) InjectCompile(cmd *proxy.CompileCommand) {
+	if cmd.Stage() != "b001" {
+		return
+	}
+	log.Printf("[%s] Replacing Go files", cmd.Stage())
+
+	for old, new := range s.swapMap {
+		if err := cmd.ReplaceParam(old, new); err != nil {
+			log.Printf("couldn't replace param: %v", err)
+		} else {
+			log.Printf("====> Replacing %s by %s", old, new)
+		}
+	}
+}
+func (s *GoFileSwapper) InjectLink(*proxy.LinkCommand) {} // nothing to do at link time
