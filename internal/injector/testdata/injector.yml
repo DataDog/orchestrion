@@ -1,0 +1,253 @@
+%YAML 1.1
+---
+http-default:
+  options:
+    injections: &injections
+      - point:
+          function-body:
+            function-declaration:
+              - signature:
+                  args:
+                    - 'http.ResponseWriter'
+                    - '*http.Request'
+        actions:
+          - add-import: github.com/datadog/orchestrion
+          - prepend-statements: |-
+              {{FuncArgName 1}} = orchestrion.HandleHeader({{FuncArgName 1}})
+              orchestrion.Report({{FuncArgName 1}}.Context(), orchestrion.EventStart, "name", {{FuncName}}, "verb", {{FuncArgName 1}}.Method)
+              defer orchestrion.Report({{FuncArgName 1}}.Context(), orchestrion.EventEnd, "name", {{FuncName}}, "verb", {{FuncArgName 1}}.Method)
+  source: &httpSource |
+    package main
+
+    import (
+      "context"
+      "io"
+      "log"
+      "net/http"
+      "orchestrion/integration"
+    )
+
+    func main() {
+      s := &http.Server{
+        Addr:    ":8085",
+        Handler: http.HandlerFunc(handle),
+      }
+      integration.OnSignal(func() {
+        s.Shutdown(context.Background())
+      })
+      log.Printf("Server shut down: %v", s.ListenAndServe())
+    }
+
+    func handle(w http.ResponseWriter, r *http.Request) {
+      data, err := io.ReadAll(r.Body)
+      if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte(err.Error()))
+        return
+      }
+      defer r.Body.Close()
+      w.WriteHeader(http.StatusOK)
+      w.Write(data)
+    }
+  expected:
+    modified: true
+    references: &references
+      github.com/datadog/orchestrion: true # Orchestrion is imported synthetically
+    source: |
+      package main
+
+      import (
+        "context"
+        "github.com/datadog/orchestrion"
+        "io"
+        "log"
+        "net/http"
+        "orchestrion/integration"
+      )
+
+      func main() {
+        s := &http.Server{
+          Addr:    ":8085",
+          Handler: http.HandlerFunc(handle),
+        }
+        integration.OnSignal(func() {
+          s.Shutdown(context.Background())
+        })
+        log.Printf("Server shut down: %v", s.ListenAndServe())
+      }
+
+      func handle(w http.ResponseWriter, r *http.Request) {
+        //dd:startinstrument
+        {
+          r = orchestrion.HandleHeader(r)
+          orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "handle", "verb", r.Method)
+          defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "handle", "verb", r.Method)
+        }
+        //dd:endinstrument
+        data, err := io.ReadAll(r.Body)
+        if err != nil {
+          w.WriteHeader(http.StatusBadRequest)
+          w.Write([]byte(err.Error()))
+          return
+        }
+        defer r.Body.Close()
+        w.WriteHeader(http.StatusOK)
+        w.Write(data)
+      }
+
+http-lineInfo:
+  options:
+    injections: *injections
+    preservelineinfo: true
+  source: *httpSource
+  expected:
+    modified: true
+    references: *references
+    source: |
+      package main
+
+      import (
+        "context"
+        "io"
+        "log"
+        "net/http"
+        "orchestrion/integration"
+      //line <generated>:1
+        "github.com/datadog/orchestrion"
+      )
+
+      //line input.go:11
+      func main() {
+        s := &http.Server{
+          Addr:    ":8085",
+          Handler: http.HandlerFunc(handle),
+        }
+        integration.OnSignal(func() {
+          s.Shutdown(context.Background())
+        })
+        log.Printf("Server shut down: %v", s.ListenAndServe())
+      }
+
+      func handle(w http.ResponseWriter, r *http.Request) {
+      //line <generated>:1
+        //dd:startinstrument
+        {
+          r = orchestrion.HandleHeader(r)
+          orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "handle", "verb", r.Method)
+          defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "handle", "verb", r.Method)
+        }
+        //dd:endinstrument
+      //line input.go:23
+        data, err := io.ReadAll(r.Body)
+        if err != nil {
+          w.WriteHeader(http.StatusBadRequest)
+          w.Write([]byte(err.Error()))
+          return
+        }
+        defer r.Body.Close()
+        w.WriteHeader(http.StatusOK)
+        w.Write(data)
+      }
+
+http-ignored:
+  options:
+    injections: *injections
+  source: |
+    package main
+
+    import (
+      "context"
+      "io"
+      "log"
+      "net/http"
+      "orchestrion/integration"
+    )
+
+    func main() {
+      s := &http.Server{
+        Addr:    ":8085",
+        Handler: http.HandlerFunc(handle),
+      }
+      integration.OnSignal(func() {
+        s.Shutdown(context.Background())
+      })
+      log.Printf("Server shut down: %v", s.ListenAndServe())
+    }
+
+    //dd:ignore
+    func handle(w http.ResponseWriter, r *http.Request) {
+      data, err := io.ReadAll(r.Body)
+      if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte(err.Error()))
+        return
+      }
+      defer r.Body.Close()
+      w.WriteHeader(http.StatusOK)
+      w.Write(data)
+    }
+  expected:
+    modified: false
+
+http-server:
+  options:
+    injections:
+      - point:
+          struct-literal:
+            type: http.Server
+            field: Handler
+        actions:
+          - add-import: github.com/datadog/orchestrion/instrument
+          - wrap-expression: |-
+              //dd:startwrap
+              instrument.WrapHandler({{ Expr }})
+              //dd:endwrap
+    preservelineinfo: true
+  source: *httpSource
+  expected:
+    modified: true
+    references:
+      github.com/datadog/orchestrion/instrument: true
+    source: |
+      package main
+
+      import (
+        "context"
+        "io"
+        "log"
+        "net/http"
+        "orchestrion/integration"
+      //line <generated>:1
+        "github.com/datadog/orchestrion/instrument"
+      )
+
+      //line input.go:11
+      func main() {
+        s := &http.Server{
+          Addr: ":8085",
+          Handler:
+      //line <generated>:1
+          //dd:startwrap
+          instrument.WrapHandler(
+      //line input.go:14
+            http.HandlerFunc(handle)),
+          //dd:endwrap
+        }
+      //line input.go:16
+        integration.OnSignal(func() {
+          s.Shutdown(context.Background())
+        })
+        log.Printf("Server shut down: %v", s.ListenAndServe())
+      }
+
+      func handle(w http.ResponseWriter, r *http.Request) {
+        data, err := io.ReadAll(r.Body)
+        if err != nil {
+          w.WriteHeader(http.StatusBadRequest)
+          w.Write([]byte(err.Error()))
+          return
+        }
+        defer r.Body.Close()
+        w.WriteHeader(http.StatusOK)
+        w.Write(data)
+      }

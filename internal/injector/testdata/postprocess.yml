@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+no change needed:
+  source: &noChangeNeededSrc |
+    package dummy
+    func foo() {
+    //line :0
+      return
+    }
+  expected: *noChangeNeededSrc
+
+multiple changes:
+  source: |
+    package dummy
+
+    //line :0
+    func foo() {
+      //line :10
+      return
+      //line :100
+    }
+    //line :1000
+  expected: |
+    package dummy
+
+    //line :0
+    func foo() {
+    //line :10
+      return
+    //line :100
+    }
+    //line :1000
