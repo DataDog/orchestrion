@@ -3,6 +3,7 @@ package proxy
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type compileFlagSet struct {
@@ -21,6 +22,29 @@ func (cmd *CompileCommand) Type() CommandType { return CommandTypeCompile }
 
 func (cmd *CompileCommand) Inject(i Injector) {
 	i.InjectCompile(cmd)
+}
+
+// GoFiles returns the list of Go files passed as arguments to cmd
+func (cmd *CompileCommand) GoFiles() []string {
+	files := make([]string, 0, len(cmd.args))
+	for _, path := range cmd.args {
+		if !strings.HasSuffix(path, ".go") {
+			continue
+		}
+		files = append(files, path)
+	}
+
+	return files
+}
+
+// AddGoFiles adds the provided go files paths to the list of Go files passed
+// as arguments to cmd
+func (cmd *CompileCommand) AddGoFiles(files ...string) {
+	paramIdx := len(cmd.paramPos)
+
+	for i, f := range files {
+		cmd.paramPos[f] = paramIdx + i
+	}
 }
 
 func (f *compileFlagSet) IsValid() bool {
