@@ -65,6 +65,13 @@ func (n *TypeName) matches(node dst.Expr) bool {
 	case *dst.StarExpr:
 		return n.Pointer && (&TypeName{Path: n.Path, Name: n.Name}).matches(node.X)
 
+	case *dst.InterfaceType:
+		// We only match the empty interface (as "any")
+		if len(node.Methods.List) != 0 {
+			return false
+		}
+		return n.Path == "" && n.Name == "any"
+
 	default:
 		return false
 	}

@@ -19,21 +19,15 @@ import (
 func templateFuncs(ctx context.Context, csor *dstutil.Cursor) template.FuncMap {
 	return template.FuncMap{
 		"FuncArgName": func(index int) (string, error) {
-			var funcType *dst.FuncType
-			if funcDecl, ok := typed.ContextValue[*dst.FuncDecl](ctx); ok {
-				funcType = funcDecl.Type
-			} else if funcDecl, ok = csor.Parent().(*dst.FuncDecl); ok {
-				funcType = funcDecl.Type
-			} else if funcLit, ok := csor.Parent().(*dst.FuncLit); ok {
-				funcType = funcLit.Type
-			} else {
-				return "", errors.New("no *dst.FuncDecl nor *dst.FuncLit is available in this context")
+			funcType, err := getFuncType(ctx, csor)
+			if err != nil {
+				return "", err
 			}
 			if index >= len(funcType.Params.List) {
 				return "", fmt.Errorf("requested name of parameter %d of function with %d parameters", index, len(funcType.Params.List))
 			}
 
-			// Is arguments are anonymous, we'll proactively name all of them "_", and
+			// If arguments are anonymous, we'll proactively name all of them "_", and
 			// the arguments that are actually used (their name is returned by this
 			// funtion) will be named `_<index>`.
 			for _, param := range funcType.Params.List {
@@ -65,5 +59,41 @@ func templateFuncs(ctx context.Context, csor *dstutil.Cursor) template.FuncMap {
 			}
 			return funcDecl.Name.Name, nil
 		},
+		"FuncReturnValue": func(index int) (string, error) {
+			funcType, err := getFuncType(ctx, csor)
+			if err != nil {
+				return "", err
+			}
+
+			if index >= len(funcType.Results.List) {
+				return "", fmt.Errorf("requested name of return value %d of function with %d return values", index, len(funcType.Results.List))
+			}
+
+			// If return values are anonymous, proactively give them all referenceable
+			// names.
+			for i, res := range funcType.Results.List {
+				if len(res.Names) == 0 {
+					res.Names = []*dst.Ident{dst.NewIdent(fmt.Sprintf("_ret_%d", i))}
+				}
+			}
+
+			ret := funcType.Results.List[index]
+			if ret.Names[0].Name == "_" {
+				ret.Names[0].Name = fmt.Sprintf("_ret_%d", index)
+			}
+			return ret.Names[0].Name, nil
+		},
+	}
+}
+
+func getFuncType(ctx context.Context, csor *dstutil.Cursor) (*dst.FuncType, error) {
+	if funcDecl, ok := typed.ContextValue[*dst.FuncDecl](ctx); ok {
+		return funcDecl.Type, nil
+	} else if funcDecl, ok = csor.Parent().(*dst.FuncDecl); ok {
+		return funcDecl.Type, nil
+	} else if funcLit, ok := csor.Parent().(*dst.FuncLit); ok {
+		return funcLit.Type, nil
+	} else {
+		return nil, errors.New("no *dst.FuncDecl nor *dst.FuncLit is available in this context")
 	}
 }

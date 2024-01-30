@@ -393,3 +393,58 @@ http-server:
         w.WriteHeader(http.StatusOK)
         w.Write(data)
       }
+
+change-return-value:
+  options:
+    injections:
+      - point:
+          function-body:
+            function:
+              - signature:
+                  returns:
+                    - any
+                    - error
+        actions:
+          - add-import: "log"
+          - prepend-statements: |-
+              {{- $ret := FuncReturnValue 1 -}}
+              defer func(){
+                if {{$ret}} != nil {
+                  log.Println("error in {{FuncName}}:", {{$ret}})
+                }
+              }()
+  source: |
+    package main
+
+    import (
+      "errors"
+      "log"
+    )
+
+    func test() (interface{}, error) {
+      log.Println("Running test function...")
+      return nil, errors.ErrUnsupported
+    }
+  expected:
+    modified: true
+    source: |
+      package main
+
+      import (
+        "errors"
+        "log"
+      )
+
+      func test() (_ret_0 interface{}, _ret_1 error) {
+        //dd:startinstrument
+        {
+          defer func() {
+            if _ret_1 != nil {
+              log.Println("error in test:", _ret_1)
+            }
+          }()
+        }
+        //dd:endinstrument
+        log.Println("Running test function...")
+        return nil, errors.ErrUnsupported
+      }
