@@ -95,6 +95,69 @@ http-default:
         w.Write(data)
       }
 
+http-no-arg-name:
+  options:
+    injections: *injections
+  source: |
+    package main
+
+    import (
+      "context"
+      "io"
+      "log"
+      "net/http"
+      "orchestrion/integration"
+    )
+
+    func main() {
+      s := &http.Server{
+        Addr:    ":8085",
+        Handler: http.HandlerFunc(handle),
+      }
+      integration.OnSignal(func() {
+        s.Shutdown(context.Background())
+      })
+      log.Printf("Server shut down: %v", s.ListenAndServe())
+    }
+
+    func handle(http.ResponseWriter, *http.Request) {
+    }
+  expected:
+    modified: true
+    references: *references
+    source: |
+      package main
+
+      import (
+        "context"
+        "github.com/datadog/orchestrion"
+        "io"
+        "log"
+        "net/http"
+        "orchestrion/integration"
+      )
+
+      func main() {
+        s := &http.Server{
+          Addr:    ":8085",
+          Handler: http.HandlerFunc(handle),
+        }
+        integration.OnSignal(func() {
+          s.Shutdown(context.Background())
+        })
+        log.Printf("Server shut down: %v", s.ListenAndServe())
+      }
+
+      func handle(_ http.ResponseWriter, _1 *http.Request) {
+        //dd:startinstrument
+        {
+          _1 = orchestrion.HandleHeader(_1)
+          orchestrion.Report(_1.Context(), orchestrion.EventStart, "name", "handle", "verb", _1.Method)
+          defer orchestrion.Report(_1.Context(), orchestrion.EventEnd, "name", "handle", "verb", _1.Method)
+        }
+        //dd:endinstrument
+      }
+
 http-lineInfo:
   options:
     injections: *injections

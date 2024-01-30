@@ -29,9 +29,20 @@ func templateFuncs(ctx context.Context, csor *dstutil.Cursor) template.FuncMap {
 			if index >= len(funcDecl.Type.Params.List) {
 				return "", fmt.Errorf("requested name of parameter %d of function with %d parameters", index, len(funcDecl.Type.Params.List))
 			}
+
+			// Is arguments are anonymous, we'll proactively name all of them "_", and
+			// the arguments that are actually used (their name is returned by this
+			// funtion) will be named `_<index>`.
+			for _, param := range funcDecl.Type.Params.List {
+				if len(param.Names) == 0 {
+					param.Names = []*dst.Ident{dst.NewIdent("_")}
+				}
+			}
+
 			names := funcDecl.Type.Params.List[index].Names
-			if len(names) == 0 {
-				return "", fmt.Errorf("parameter %d of function has no name", index)
+			if names[0].Name == "_" {
+				// Give a referenceable name to the argument instead of blank.
+				names[0].Name = fmt.Sprintf("_%d", index)
 			}
 			return names[0].Name, nil
 		},
