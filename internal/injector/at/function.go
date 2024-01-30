@@ -15,18 +15,18 @@ import (
 )
 
 type (
-	FuncDeclOption interface {
-		evaluate(*dst.FuncDecl) bool
+	FunctionOption interface {
+		evaluate(*dst.FuncType) bool
 	}
 
 	funcDecl struct {
-		opts []FuncDeclOption
+		opts []FunctionOption
 	}
 )
 
-// FunctionDeclaration matches function declaration nodes based on properties of
+// Function matches function declaration nodes based on properties of
 // their signature.
-func FunctionDeclaration(opts ...FuncDeclOption) *funcDecl {
+func Function(opts ...FunctionOption) *funcDecl {
 	return &funcDecl{opts: opts}
 }
 
@@ -35,13 +35,17 @@ func (s *funcDecl) Matches(csor *dstutil.Cursor) bool {
 }
 
 func (s *funcDecl) matchesNode(node dst.Node) bool {
-	decl, ok := node.(*dst.FuncDecl)
-	if !ok {
+	var funcType *dst.FuncType
+	if decl, ok := node.(*dst.FuncDecl); ok {
+		funcType = decl.Type
+	} else if lit, ok := node.(*dst.FuncLit); ok {
+		funcType = lit.Type
+	} else {
 		return false
 	}
 
 	for _, opt := range s.opts {
-		if !opt.evaluate(decl) {
+		if !opt.evaluate(funcType) {
 			return false
 		}
 	}
@@ -56,13 +60,11 @@ type signature struct {
 
 // Signature matches function declarations based on their arguments and return
 // value types.
-func Signature(args []TypeName, ret []TypeName) FuncDeclOption {
+func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{args: args, returns: ret}
 }
 
-func (fo *signature) evaluate(decl *dst.FuncDecl) bool {
-	fnType := decl.Type
-
+func (fo *signature) evaluate(fnType *dst.FuncType) bool {
 	if fnType.Results == nil {
 		if len(fo.returns) != 0 {
 			return false
@@ -112,8 +114,14 @@ func (s *funcBody) Matches(csor *dstutil.Cursor) bool {
 		return false
 	}
 
-	funcDecl := parentNode.(*dst.FuncDecl)
-	return csor.Node() == funcDecl.Body
+	switch parent := parentNode.(type) {
+	case *dst.FuncDecl:
+		return csor.Node() == parent.Body
+	case *dst.FuncLit:
+		return csor.Node() == parent.Body
+	default:
+		return false
+	}
 }
 
 func init() {
@@ -124,26 +132,26 @@ func init() {
 		}
 		up, ok := ip.(*funcDecl)
 		if !ok {
-			return nil, fmt.Errorf("line %d: function-body only supports function-declaration injection points", node.Content[1].Line)
+			return nil, fmt.Errorf("line %d: function-body only supports function injection points", node.Content[1].Line)
 		}
 		return FunctionBody(up), nil
 	}
 
-	unmarshallers["function-declaration"] = func(node *yaml.Node) (InjectionPoint, error) {
+	unmarshallers["function"] = func(node *yaml.Node) (InjectionPoint, error) {
 		var unmarshalOpts []unmarshalFuncDeclOption
 		if err := node.Decode(&unmarshalOpts); err != nil {
 			return nil, err
 		}
-		opts := make([]FuncDeclOption, len(unmarshalOpts))
+		opts := make([]FunctionOption, len(unmarshalOpts))
 		for i, opt := range unmarshalOpts {
-			opts[i] = opt.FuncDeclOption
+			opts[i] = opt.FunctionOption
 		}
-		return FunctionDeclaration(opts...), nil
+		return Function(opts...), nil
 	}
 }
 
 type unmarshalFuncDeclOption struct {
-	FuncDeclOption
+	FunctionOption
 }
 
 func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
@@ -200,7 +208,7 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			}
 		}
 
-		o.FuncDeclOption = Signature(args, ret)
+		o.FunctionOption = Signature(args, ret)
 	default:
 		return fmt.Errorf("line %d: unknown FuncDeclOption name: %q", node.Content[0].Line, key)
 	}
