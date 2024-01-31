@@ -4,6 +4,8 @@ import (
 	"errors"
 	"path/filepath"
 	"strings"
+
+	"github.com/datadog/orchestrion/internal/toolexec/utils"
 )
 
 // ParseCommand parses the Go tool call and its arguments and returns it as a Command.
@@ -25,6 +27,14 @@ func ParseCommand(args []string) (Command, error) {
 	default:
 		return &command{args: args}, nil
 	}
+}
+
+// MustParseCommand calls ParseCommand and exits on error
+func MustParseCommand(args []string) Command {
+	cmd, err := ParseCommand(args)
+	utils.ExitIfError(err)
+
+	return cmd
 }
 
 func parseCommandID(cmd string) (string, error) {

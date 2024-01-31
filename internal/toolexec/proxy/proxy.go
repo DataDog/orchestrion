@@ -1,7 +1,9 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +19,7 @@ type (
 	// Command represents a Go compilation command
 	Command interface {
 		Inject(injector Injector)
-		Exec() error
+		MustRun()
 		ReplaceParam(param string, val string) error
 		Stage() string
 		Type() CommandType
@@ -74,16 +76,24 @@ func (cmd *command) ReplaceParam(param string, val string) error {
 	return nil
 }
 
-func (cmd *command) Exec() error {
+func (cmd *command) MustRun() {
 	c := exec.Command(cmd.args[0], cmd.args[1:]...)
 	if c == nil {
-		return fmt.Errorf("command couldn't build")
+		log.Printf("%v", fmt.Errorf("command couldn't build"))
+		os.Exit(1)
 	}
 
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	return c.Run()
+	var exitErr *exec.ExitError
+	if err := c.Run(); err != nil {
+		if errors.As(err, &exitErr) {
+			os.Exit(exitErr.ExitCode())
+		} else {
+			log.Fatalln(err)
+		}
+	}
 }
 
 func (cmd *command) Stage() string {
