@@ -6,6 +6,7 @@ import (
 )
 
 type linkFlagSet struct {
+	BuildMode string `ddflag:"-buildmode"`
 	ImportCfg string `ddflag:"-importcfg"`
 	Output    string `ddflag:"-o"`
 }
