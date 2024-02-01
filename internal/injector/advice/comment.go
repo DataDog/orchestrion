@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package ast
+package advice
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func (a *addComment) Apply(_ context.Context, csor *dstutil.Cursor) (bool, error
 }
 
 func init() {
-	unmarshalers["add-comment"] = func(node *yaml.Node) (Action, error) {
+	unmarshalers["add-comment"] = func(node *yaml.Node) (Advice, error) {
 		var text string
 		if err := node.Decode(&text); err != nil {
 			return nil, err

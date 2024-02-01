@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package at
+package join
 
 import (
 	"github.com/dave/dst"
@@ -12,10 +12,10 @@ import (
 )
 
 type assignmentOf struct {
-	value InjectionPoint
+	value Point
 }
 
-func AssignmentOf(value InjectionPoint) *assignmentOf {
+func AssignmentOf(value Point) *assignmentOf {
 	return &assignmentOf{value: value}
 }
 
@@ -38,8 +38,8 @@ func (i *assignmentOf) matchesNode(node dst.Node, parent dst.Node) bool {
 }
 
 func init() {
-	unmarshalers["assignment-of"] = func(node *yaml.Node) (InjectionPoint, error) {
-		value, err := Unmarshal(node)
+	unmarshalers["assignment-of"] = func(node *yaml.Node) (Point, error) {
+		value, err := FromYAML(node)
 		if err != nil {
 			return nil, err
 		}

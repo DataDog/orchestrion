@@ -5,7 +5,7 @@
 
 // Package ast provides implementations of the injector.Action interface for
 // common AST changes.
-package ast
+package advice
 
 import (
 	"context"
@@ -13,9 +13,9 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
-// Action is the interface abstracting actual AST changes performed by
+// Advice is the interface abstracting actual AST changes performed by
 // injections.
-type Action interface {
+type Advice interface {
 	// Apply performs the necessary AST changes on the supplied node. It returns a
 	// boolean indicating whether the node was modified or not (some actions may
 	// short-circuit and not do anything; e.g. import injection may be skipped if

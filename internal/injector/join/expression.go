@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package at
+package join
 
 import (
 	"fmt"
@@ -60,7 +60,7 @@ func (i *functionCall) matchesNode(node dst.Node, parent dst.Node) bool {
 var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([^.]+)\z`)
 
 func init() {
-	unmarshalers["function-call"] = func(node *yaml.Node) (InjectionPoint, error) {
+	unmarshalers["function-call"] = func(node *yaml.Node) (Point, error) {
 		var pattern string
 		if err := node.Decode(&pattern); err != nil {
 			return nil, err

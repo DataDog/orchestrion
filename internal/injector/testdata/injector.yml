@@ -3,14 +3,14 @@
 http-default:
   options:
     injections: &injections
-      - point:
+      - join-point:
           function-body:
             function:
               - signature:
                   args:
                     - 'net/http.ResponseWriter'
                     - '*net/http.Request'
-        actions:
+        advice:
           - prepend-statements:
               imports:
                 instrument: github.com/datadog/orchestrion/instrument
@@ -342,11 +342,11 @@ http-ignored:
 http-server:
   options:
     injections:
-      - point:
+      - join-point:
           struct-literal:
             type: net/http.Server
             field: Handler
-        actions:
+        advice:
           - wrap-expression:
               imports:
                 instrument: github.com/datadog/orchestrion/instrument
@@ -408,14 +408,14 @@ http-server:
 change-return-value:
   options:
     injections:
-      - point:
+      - join-point:
           function-body:
             function:
               - signature:
                   returns:
                     - any
                     - error
-        actions:
+        advice:
           - prepend-statements:
               imports:
                 log: log
@@ -466,10 +466,10 @@ chi5-newroute:
   options:
     preservelineinfo: true
     injections:
-      - point:
+      - join-point:
           assignment-of:
             function-call: github.com/go-chi/chi/v5.NewRouter
-        actions:
+        advice:
           - add-comment: '//dd:instrumented'
           - append-statements:
               template: '{{AssignedVar}}.Use(instrument.ChiV5Middleware())'

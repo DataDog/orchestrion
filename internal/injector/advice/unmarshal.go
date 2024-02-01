@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package ast
+package advice
 
 import (
 	"fmt"
@@ -12,11 +12,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type unmarshalerFn func(*yaml.Node) (Action, error)
+type unmarshalerFn func(*yaml.Node) (Advice, error)
 
 var unmarshalers = make(map[string]unmarshalerFn)
 
-func Unmarshal(node *yaml.Node) (Action, error) {
+func FromYAML(node *yaml.Node) (Advice, error) {
 	key, value, err := singleton.Unmarshal(node)
 	if err != nil {
 		return nil, err

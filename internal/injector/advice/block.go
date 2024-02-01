@@ -3,13 +3,13 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package ast
+package advice
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/ast/code"
+	"github.com/datadog/orchestrion/internal/injector/advice/code"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
@@ -48,7 +48,7 @@ func (a *blockStmts) Apply(ctx context.Context, csor *dstutil.Cursor) (bool, err
 }
 
 func init() {
-	unmarshalers["prepend-statements"] = func(node *yaml.Node) (Action, error) {
+	unmarshalers["prepend-statements"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template
 		if err := node.Decode(&template); err != nil {
 			return nil, err

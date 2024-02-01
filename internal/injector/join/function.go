@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package at
+package join
 
 import (
 	"fmt"
@@ -127,8 +127,8 @@ func (s *funcBody) matchesNode(node dst.Node, parent dst.Node) bool {
 }
 
 func init() {
-	unmarshalers["function-body"] = func(node *yaml.Node) (InjectionPoint, error) {
-		ip, err := Unmarshal(node)
+	unmarshalers["function-body"] = func(node *yaml.Node) (Point, error) {
+		ip, err := FromYAML(node)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +139,7 @@ func init() {
 		return FunctionBody(up), nil
 	}
 
-	unmarshalers["function"] = func(node *yaml.Node) (InjectionPoint, error) {
+	unmarshalers["function"] = func(node *yaml.Node) (Point, error) {
 		var unmarshalOpts []unmarshalFuncDeclOption
 		if err := node.Decode(&unmarshalOpts); err != nil {
 			return nil, err

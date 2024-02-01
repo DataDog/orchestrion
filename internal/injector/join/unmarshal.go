@@ -1,4 +1,4 @@
-package at
+package join
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type unmarshalerFn func(*yaml.Node) (InjectionPoint, error)
+type unmarshalerFn func(*yaml.Node) (Point, error)
 
 var unmarshalers = make(map[string]unmarshalerFn)
 
-func Unmarshal(node *yaml.Node) (InjectionPoint, error) {
+func FromYAML(node *yaml.Node) (Point, error) {
 	key, value, err := singleton.Unmarshal(node)
 	if err != nil {
 		return nil, err

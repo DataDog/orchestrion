@@ -5,7 +5,7 @@
 
 // Package at provides implementations of the InjectionPoint interface for
 // common injection points.
-package at
+package join
 
 import (
 	"fmt"
@@ -15,9 +15,9 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
-// InjectionPoint is the interface that abstracts selection of nodes where to
-// inject code.
-type InjectionPoint interface {
+// Point is the interface that abstracts selection of nodes where to inject
+// code.
+type Point interface {
 	// Matches determines whether the injection should be performed on the given
 	// node or not.
 	Matches(*dstutil.Cursor) bool

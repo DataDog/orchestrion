@@ -42,7 +42,7 @@ type (
 		// overwritten in-place.
 		ModifiedFile ModifiedFileFn
 		// Injections is the set of configured injections to attempt.
-		Injections []Injection
+		Injections []Aspect
 		// PreserveLineInfo enables emission of //line directives to preserve line information from the original file, so
 		// that stack traces resolve to the original source code. This is strongly recommended when performing compile-time
 		// injection.
@@ -184,10 +184,10 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 
 func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor) (mod bool, err error) {
 	for _, inj := range i.opts.Injections {
-		if !inj.Point.Matches(csor) {
+		if !inj.JoinPoint.Matches(csor) {
 			continue
 		}
-		for _, act := range inj.Actions {
+		for _, act := range inj.Advice {
 			var changed bool
 			changed, err = act.Apply(ctx, csor)
 			if changed {
