@@ -18,5 +18,5 @@ type goFilesAdder struct {
 }
 
 func (i goFilesAdder) InjectCompile(cmd *proxy.CompileCommand) {
-	cmd.AddGoFiles(i.files)
+	cmd.AddFiles(i.files)
 }

@@ -19,6 +19,6 @@ type goFilesReplacer struct {
 
 func (i goFilesReplacer) InjectCompile(cmd *proxy.CompileCommand) {
 	for old, new := range i.files {
-		cmd.ReplaceParam(old, new)
+		cmd.ReplaceFile(old, new)
 	}
 }
