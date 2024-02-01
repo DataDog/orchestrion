@@ -15,10 +15,6 @@ type LinkCommand struct {
 	Flags linkFlagSet
 }
 
-func (cmd *LinkCommand) Inject(i Injector) {
-	i.InjectLink(cmd)
-}
-
 func (cmd *LinkCommand) Type() CommandType {
 	return CommandTypeLink
 }

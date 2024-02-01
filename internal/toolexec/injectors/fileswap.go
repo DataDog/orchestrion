@@ -32,4 +32,3 @@ func (s *GoFileSwapper) InjectCompile(cmd *proxy.CompileCommand) {
 		}
 	}
 }
-func (s *GoFileSwapper) InjectLink(*proxy.LinkCommand) {} // nothing to do at link time

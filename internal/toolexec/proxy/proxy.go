@@ -18,18 +18,15 @@ type (
 	CommandType string
 	// Command represents a Go compilation command
 	Command interface {
-		Inject(injector Injector)
 		MustRun()
 		ReplaceParam(param string, val string) error
 		Stage() string
 		Type() CommandType
 	}
 
-	// Injector visits Command types
-	Injector interface {
-		InjectCompile(*CompileCommand)
-		InjectLink(*LinkCommand)
-	}
+	// CommandProcessor is a function that takes a command as input
+	// and is allowed to modify it or read its data
+	CommandProcessor[T Command] func(T)
 
 	commandFlagSet struct {
 		Output string `ddflag:"-o"`
@@ -50,6 +47,15 @@ const (
 	CommandTypeCompile             = "compile"
 	CommandTypeLink                = "link"
 )
+
+// ProcessCommand applies a processor on a command if said command matches
+// the input type of said input processor. Failure to match types is not
+// considered to be an error.
+func ProcessCommand[T Command](cmd Command, p CommandProcessor[T]) {
+	if c, ok := cmd.(T); ok {
+		p(c)
+	}
+}
 
 func NewCommand(args []string) command {
 	cmd := command{
@@ -103,5 +109,3 @@ func (cmd *command) Stage() string {
 func (cmd *command) Type() CommandType {
 	return CommandTypeUnknown
 }
-
-func (cmd *command) Inject(Injector) {}
