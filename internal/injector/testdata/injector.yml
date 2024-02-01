@@ -8,16 +8,18 @@ http-default:
             function:
               - signature:
                   args:
-                    - 'http.ResponseWriter'
-                    - '*http.Request'
+                    - 'net/http.ResponseWriter'
+                    - '*net/http.Request'
         actions:
-          - add-import: github.com/datadog/orchestrion
-          - prepend-statements: |-
-              {{- $arg := FuncArgName 1 -}}
-              {{- $name := FuncName -}}
-              {{$arg}} = orchestrion.HandleHeader({{$arg}})
-              orchestrion.Report({{$arg}}.Context(), orchestrion.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
-              defer orchestrion.Report({{$arg}}.Context(), orchestrion.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
+          - prepend-statements:
+              imports:
+                instrument: github.com/datadog/orchestrion/instrument
+              template: |-
+                {{- $arg := FuncArgName 1 -}}
+                {{- $name := FuncName -}}
+                {{$arg}} = instrument.HandleHeader({{$arg}})
+                instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
+                defer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
   source: &httpSource |
     package main
 
@@ -26,6 +28,7 @@ http-default:
       "io"
       "log"
       "net/http"
+
       "orchestrion/integration"
     )
 
@@ -54,16 +57,17 @@ http-default:
   expected:
     modified: true
     references: &references
-      github.com/datadog/orchestrion: true # Orchestrion is imported synthetically
+      github.com/datadog/orchestrion/instrument: true # Orchestrion is imported synthetically
     source: |
       package main
 
       import (
         "context"
-        "github.com/datadog/orchestrion"
         "io"
         "log"
         "net/http"
+
+        "github.com/datadog/orchestrion/instrument"
         "orchestrion/integration"
       )
 
@@ -81,9 +85,9 @@ http-default:
       func handle(w http.ResponseWriter, r *http.Request) {
         //dd:startinstrument
         {
-          r = orchestrion.HandleHeader(r)
-          orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "handle", "verb", r.Method)
-          defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "handle", "verb", r.Method)
+          r = instrument.HandleHeader(r)
+          instrument.Report(r.Context(), instrument.EventStart, "name", "handle", "verb", r.Method)
+          defer instrument.Report(r.Context(), instrument.EventEnd, "name", "handle", "verb", r.Method)
         }
         //dd:endinstrument
         data, err := io.ReadAll(r.Body)
@@ -108,6 +112,7 @@ http-anonymous-handler:
       "io"
       "log"
       "net/http"
+
       "orchestrion/integration"
     )
 
@@ -139,10 +144,11 @@ http-anonymous-handler:
 
       import (
         "context"
-        "github.com/datadog/orchestrion"
         "io"
         "log"
         "net/http"
+
+        "github.com/datadog/orchestrion/instrument"
         "orchestrion/integration"
       )
 
@@ -152,9 +158,9 @@ http-anonymous-handler:
           Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             //dd:startinstrument
             {
-              r = orchestrion.HandleHeader(r)
-              orchestrion.Report(r.Context(), orchestrion.EventStart, "verb", r.Method)
-              defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "verb", r.Method)
+              r = instrument.HandleHeader(r)
+              instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
+              defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
             }
             //dd:endinstrument
             data, err := io.ReadAll(r.Body)
@@ -182,9 +188,9 @@ http-no-arg-name:
 
     import (
       "context"
-      "io"
       "log"
       "net/http"
+
       "orchestrion/integration"
     )
 
@@ -209,10 +215,10 @@ http-no-arg-name:
 
       import (
         "context"
-        "github.com/datadog/orchestrion"
-        "io"
         "log"
         "net/http"
+
+        "github.com/datadog/orchestrion/instrument"
         "orchestrion/integration"
       )
 
@@ -230,9 +236,9 @@ http-no-arg-name:
       func handle(_ http.ResponseWriter, _1 *http.Request) {
         //dd:startinstrument
         {
-          _1 = orchestrion.HandleHeader(_1)
-          orchestrion.Report(_1.Context(), orchestrion.EventStart, "name", "handle", "verb", _1.Method)
-          defer orchestrion.Report(_1.Context(), orchestrion.EventEnd, "name", "handle", "verb", _1.Method)
+          _1 = instrument.HandleHeader(_1)
+          instrument.Report(_1.Context(), instrument.EventStart, "name", "handle", "verb", _1.Method)
+          defer instrument.Report(_1.Context(), instrument.EventEnd, "name", "handle", "verb", _1.Method)
         }
         //dd:endinstrument
       }
@@ -253,12 +259,13 @@ http-lineInfo:
         "io"
         "log"
         "net/http"
+
         "orchestrion/integration"
       //line <generated>:1
-        "github.com/datadog/orchestrion"
+        "github.com/datadog/orchestrion/instrument"
       )
 
-      //line input.go:11
+      //line input.go:12
       func main() {
         s := &http.Server{
           Addr:    ":8085",
@@ -274,12 +281,12 @@ http-lineInfo:
       //line <generated>:1
         //dd:startinstrument
         {
-          r = orchestrion.HandleHeader(r)
-          orchestrion.Report(r.Context(), orchestrion.EventStart, "name", "handle", "verb", r.Method)
-          defer orchestrion.Report(r.Context(), orchestrion.EventEnd, "name", "handle", "verb", r.Method)
+          r = instrument.HandleHeader(r)
+          instrument.Report(r.Context(), instrument.EventStart, "name", "handle", "verb", r.Method)
+          defer instrument.Report(r.Context(), instrument.EventEnd, "name", "handle", "verb", r.Method)
         }
         //dd:endinstrument
-      //line input.go:23
+      //line input.go:24
         data, err := io.ReadAll(r.Body)
         if err != nil {
           w.WriteHeader(http.StatusBadRequest)
@@ -302,6 +309,7 @@ http-ignored:
       "io"
       "log"
       "net/http"
+
       "orchestrion/integration"
     )
 
@@ -336,14 +344,16 @@ http-server:
     injections:
       - point:
           struct-literal:
-            type: http.Server
+            type: net/http.Server
             field: Handler
         actions:
-          - add-import: github.com/datadog/orchestrion/instrument
-          - wrap-expression: |-
-              //dd:startwrap
-              instrument.WrapHandler({{ Expr }})
-              //dd:endwrap
+          - wrap-expression:
+              imports:
+                instrument: github.com/datadog/orchestrion/instrument
+              template: |-
+                //dd:startwrap
+                instrument.WrapHandler({{ Expr }})
+                //dd:endwrap
     preservelineinfo: true
   source: *httpSource
   expected:
@@ -358,12 +368,13 @@ http-server:
         "io"
         "log"
         "net/http"
+
         "orchestrion/integration"
       //line <generated>:1
         "github.com/datadog/orchestrion/instrument"
       )
 
-      //line input.go:11
+      //line input.go:12
       func main() {
         s := &http.Server{
           Addr: ":8085",
@@ -371,11 +382,11 @@ http-server:
       //line <generated>:1
           //dd:startwrap
           instrument.WrapHandler(
-      //line input.go:14
+      //line input.go:15
             http.HandlerFunc(handle)),
           //dd:endwrap
         }
-      //line input.go:16
+      //line input.go:17
         integration.OnSignal(func() {
           s.Shutdown(context.Background())
         })
@@ -405,14 +416,16 @@ change-return-value:
                     - any
                     - error
         actions:
-          - add-import: "log"
-          - prepend-statements: |-
-              {{- $ret := FuncReturnValue 1 -}}
-              defer func(){
-                if {{$ret}} != nil {
-                  log.Println("error in {{FuncName}}:", {{$ret}})
-                }
-              }()
+          - prepend-statements:
+              imports:
+                log: log
+              template: |-
+                {{- $ret := FuncReturnValue 1 -}}
+                defer func(){
+                  if {{$ret}} != nil {
+                    log.Println("error in {{FuncName}}:", {{$ret}})
+                  }
+                }()
   source: |
     package main
 
@@ -447,4 +460,89 @@ change-return-value:
         //dd:endinstrument
         log.Println("Running test function...")
         return nil, errors.ErrUnsupported
+      }
+
+chi5-newroute:
+  options:
+    preservelineinfo: true
+    injections:
+      - point:
+          assignment-of:
+            function-call: github.com/go-chi/chi/v5.NewRouter
+        actions:
+          - add-comment: '//dd:instrumented'
+          - append-statements:
+              template: '{{AssignedVar}}.Use(instrument.ChiV5Middleware())'
+              imports:
+                instrument: github.com/datadog/orchestrion/instrument
+  source: |
+    package main
+
+    import (
+      "context"
+      "log"
+      "net/http"
+      "time"
+
+      "github.com/go-chi/chi/v5"
+      "orchestrion/integration"
+    )
+
+    func main() {
+      router := chi.NewRouter()
+      router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+        w.Write([]byte("Hello World!"))
+      })
+      s := &http.Server{
+        Addr:    ":8080",
+        Handler: router,
+      }
+      integration.OnSignal(func() {
+        ctx, _ := context.WithTimeout(context.Background(), time.Second)
+        s.Shutdown(ctx)
+      })
+      log.Print(s.ListenAndServe())
+    }
+  expected:
+    modified: true
+    references:
+      github.com/datadog/orchestrion/instrument: true
+    source: |
+      package main
+
+      import (
+        "context"
+        "log"
+        "net/http"
+        "time"
+
+        "github.com/go-chi/chi/v5"
+        "orchestrion/integration"
+      //line <generated>:1
+        "github.com/datadog/orchestrion/instrument"
+      )
+
+      //line input.go:13
+      func main() {
+        //dd:instrumented
+        router := chi.NewRouter()
+      //line <generated>:1
+        //dd:startinstrument
+        {
+          router.Use(instrument.ChiV5Middleware())
+        }
+        //dd:endinstrument
+      //line input.go:15
+        router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+          w.Write([]byte("Hello World!"))
+        })
+        s := &http.Server{
+          Addr:    ":8080",
+          Handler: router,
+        }
+        integration.OnSignal(func() {
+          ctx, _ := context.WithTimeout(context.Background(), time.Second)
+          s.Shutdown(ctx)
+        })
+        log.Print(s.ListenAndServe())
       }

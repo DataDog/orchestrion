@@ -24,16 +24,20 @@ func StructLiteral(typeName TypeName, field string) *structLiteral {
 }
 
 func (s *structLiteral) Matches(csor *dstutil.Cursor) bool {
+	return s.matchesNode(csor.Node(), csor.Parent())
+}
+
+func (s *structLiteral) matchesNode(node dst.Node, parent dst.Node) bool {
 	if s.field == "" {
-		return s.matchesLiteral(csor.Node())
+		return s.matchesLiteral(node)
 	}
 
-	kve, ok := csor.Node().(*dst.KeyValueExpr)
+	kve, ok := node.(*dst.KeyValueExpr)
 	if !ok {
 		return false
 	}
 
-	if !s.matchesLiteral(csor.Parent()) {
+	if !s.matchesLiteral(parent) {
 		return false
 	}
 
@@ -54,7 +58,7 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 }
 
 func init() {
-	unmarshallers["struct-literal"] = func(node *yaml.Node) (InjectionPoint, error) {
+	unmarshalers["struct-literal"] = func(node *yaml.Node) (InjectionPoint, error) {
 		var spec struct {
 			Type  string
 			Field string

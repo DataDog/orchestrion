@@ -7,9 +7,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type unmarshallerFn func(*yaml.Node) (InjectionPoint, error)
+type unmarshalerFn func(*yaml.Node) (InjectionPoint, error)
 
-var unmarshallers = make(map[string]unmarshallerFn)
+var unmarshalers = make(map[string]unmarshalerFn)
 
 func Unmarshal(node *yaml.Node) (InjectionPoint, error) {
 	key, value, err := singleton.Unmarshal(node)
@@ -17,7 +17,7 @@ func Unmarshal(node *yaml.Node) (InjectionPoint, error) {
 		return nil, err
 	}
 
-	unmarshaller, found := unmarshallers[key]
+	unmarshaller, found := unmarshalers[key]
 	if !found {
 		return nil, fmt.Errorf("line %d: unknown injection point type %q", node.Line, key)
 	}

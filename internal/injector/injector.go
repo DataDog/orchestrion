@@ -19,7 +19,9 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver/guess"
 	"github.com/dave/dst/dstutil"
+	"golang.org/x/tools/go/packages"
 )
 
 type (
@@ -28,6 +30,7 @@ type (
 		fileset   *token.FileSet
 		decorator *decorator.Decorator
 		restorer  *decorator.Restorer
+		context   context.Context
 		opts      InjectorOptions
 	}
 
@@ -48,14 +51,44 @@ type (
 )
 
 // NewInjector creates a new injector with the specified options.
-func NewInjector(opts InjectorOptions) *Injector {
+func NewInjector(pkgDir string, opts InjectorOptions) (*Injector, error) {
 	fileset := token.NewFileSet()
+	cfg := &packages.Config{
+		Dir:  pkgDir,
+		Fset: fileset,
+		Mode: packages.NeedName |
+			packages.NeedFiles |
+			packages.NeedCompiledGoFiles |
+			packages.NeedImports |
+			packages.NeedTypes |
+			packages.NeedTypesSizes |
+			packages.NeedSyntax |
+			packages.NeedTypesInfo,
+	}
+	var (
+		pkgPath     string
+		dec         *decorator.Decorator
+		restorerMap map[string]string
+	)
+	if pkgs, err := decorator.Load(cfg /* default */, pkgPath); err != nil {
+		return nil, err
+	} else {
+		pkg := pkgs[0]
+		dec = pkg.Decorator
+		pkgPath = pkg.PkgPath
+		restorerMap = make(map[string]string, len(pkg.Imports))
+		for _, imp := range pkg.Imports {
+			restorerMap[imp.PkgPath] = imp.Name
+		}
+	}
+
 	return &Injector{
 		fileset:   fileset,
-		decorator: decorator.NewDecorator(fileset),
-		restorer:  decorator.NewRestorer(),
+		decorator: dec,
+		restorer:  decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)),
+		context:   typed.ContextWithValue(context.Background(), dec),
 		opts:      opts,
-	}
+	}, nil
 }
 
 type (
@@ -71,23 +104,44 @@ type (
 func (i *Injector) InjectFile(filename string) (res Result, err error) {
 	res.Filename = filename
 
-	src, err := os.ReadFile(filename)
-	if err != nil {
-		return res, err
+	var file *dst.File
+	{
+		stat, err := os.Stat(filename)
+		if err != nil {
+			return res, err
+		}
+		for node, name := range i.decorator.Filenames {
+			s, err := os.Stat(name)
+			if err != nil {
+				continue
+			}
+			if os.SameFile(stat, s) {
+				file = node
+				break
+			}
+		}
 	}
 
-	file, err := i.decorator.ParseFile(filename, src, parser.ParseComments)
-	if err != nil {
-		return res, err
+	if file == nil {
+		src, err := os.ReadFile(filename)
+		if err != nil {
+			return res, err
+		}
+
+		file, err = i.decorator.ParseFile(filename, src, parser.ParseComments)
+		if err != nil {
+			return res, err
+		}
 	}
 
-	res.Modified, res.References, err = i.inject(file)
+	ctx := typed.ContextWithValue(i.context, file)
+	res.Modified, res.References, err = i.inject(ctx, file)
 	if err != nil {
 		return res, err
 	}
 
 	if res.Modified {
-		buf := bytes.NewBuffer(src[:0])
+		buf := bytes.NewBuffer(nil)
 		if err = i.restorer.Fprint(buf, file); err != nil {
 			return res, err
 		}
@@ -99,8 +153,8 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 	return res, err
 }
 
-func (i *Injector) inject(file *dst.File) (mod bool, refs typed.ReferenceMap, err error) {
-	ctx := typed.ContextWithValue(typed.ContextWithValue(context.Background(), file), &refs)
+func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs typed.ReferenceMap, err error) {
+	ctx = typed.ContextWithValue(ctx, &refs)
 
 	dstutil.Apply(
 		file,
@@ -122,7 +176,7 @@ func (i *Injector) inject(file *dst.File) (mod bool, refs typed.ReferenceMap, er
 	)
 
 	if mod && i.opts.PreserveLineInfo {
-		i.addLineDirectives(file)
+		i.addLineDirectives(file, refs)
 	}
 
 	return
@@ -148,7 +202,7 @@ func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor) (mod bo
 	return
 }
 
-func (i *Injector) addLineDirectives(file *dst.File) {
+func (i *Injector) addLineDirectives(file *dst.File, refs typed.ReferenceMap) {
 	inGen := false
 	var stack []bool
 	dst.Inspect(file, func(node dst.Node) bool {

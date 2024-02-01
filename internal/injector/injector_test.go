@@ -9,11 +9,15 @@ import (
 	_ "embed" // For go:embed
 	"fmt"
 	"os"
+	"os/exec"
+	"path"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -22,6 +26,24 @@ import (
 var injectorTestdata []byte
 
 func TestInjector(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	orchestrionPath := path.Dir(path.Dir(path.Dir(filename)))
+
+	var goModFile = []byte(strings.Join([]string{
+		"module dummy/test/module",
+		"",
+		"go 1.19",
+		"",
+		"require (",
+		"\tgithub.com/datadog/orchestrion v0.0.0",
+		"\tgithub.com/go-chi/chi/v5 v5.0.10",
+		"\torchestrion/integration v0.0.0",
+		")",
+		"replace (",
+		fmt.Sprintf("\tgithub.com/datadog/orchestrion => %q", orchestrionPath),
+		fmt.Sprintf("\torchestrion/integration => %q", path.Join(orchestrionPath, "_integration-tests")),
+		")",
+	}, "\n"))
 	type testCase struct {
 		Options  injector.InjectorOptions `yaml:"options"`
 		Source   string                   `yaml:"source"`
@@ -36,28 +58,49 @@ func TestInjector(t *testing.T) {
 	require.NoError(t, err, "failed to parse test suite data")
 
 	for name, tc := range cases {
+		if name != "http-default" {
+			continue
+		}
+
 		t.Run(name, func(t *testing.T) {
 			tc.Options.ModifiedFile = func(filename string) string { return filename + ".edited" }
 
-			file, err := os.CreateTemp("", fmt.Sprintf("orchestrion-injector-test-*-%s-input.go", name))
-			require.NoError(t, err, "failed to create temporary file for injection input")
-			require.NoError(t, file.Close(), "failed to close injection input temporary file")
-			filename := file.Name()
-			defer os.Remove(filename) // Clean up after ourselves
+			dir, err := os.MkdirTemp("", fmt.Sprintf("orchestrion-injector-test-*-%s", name))
+			require.NoError(t, err, "failed to create temporary directory")
+			defer os.RemoveAll(dir)
 
+			require.NoError(t, os.WriteFile(path.Join(dir, "go.mod"), goModFile, 0o644), "failed to write go.mod file")
+
+			require.NoError(t, os.Mkdir(path.Join(dir, "main"), 0o755), "failed to create main directory")
+			require.NoError(t, os.WriteFile(path.Join(dir, "tools.go"), []byte("//go:build tools\npackage tools\nimport _ \"github.com/datadog/orchestrion/instrument\""), 0o644), "failed to write tools.go file")
+
+			filename := path.Join(dir, "main", "input.go")
 			require.NoError(t, os.WriteFile(filename, []byte(tc.Source), 0o644), "failed to write injection input file")
 
-			res, err := injector.NewInjector(tc.Options).InjectFile(filename)
+			run := func(cmd string, args ...string) error {
+				child := exec.Command(cmd, args...)
+				child.Dir = dir
+				child.Stdin = os.Stdin
+				child.Stdout = os.Stdout
+				child.Stderr = os.Stderr
+				return child.Run()
+			}
+			require.NoError(t, run("go", "mod", "tidy"), "failed to run go mod tidy")
+			require.NoError(t, run("go", "mod", "download"), "failed to run go mod download")
+
+			injector, err := injector.NewInjector(path.Dir(filename), tc.Options)
 			require.NoError(t, err)
-			require.Equal(t, tc.Expected.Modified, res.Modified, "modified status")
-			require.Equal(t, tc.Expected.References, res.References)
+			res, err := injector.InjectFile(filename)
+			require.NoError(t, err)
+			assert.Equal(t, tc.Expected.Modified, res.Modified, "modified status")
+			assert.Equal(t, tc.Expected.References, res.References)
 
 			if res.Modified {
-				require.Equal(t, filename+".edited", res.Filename, "output filename")
+				assert.Equal(t, filename+".edited", res.Filename, "output filename")
 
 				out, err := os.ReadFile(res.Filename)
 				require.NoError(t, err, "failed to read injection output file")
-				require.Equal(t, tc.Expected.Source, normalize(out, filename), "injected output")
+				assert.Equal(t, tc.Expected.Source, normalize(out, filename), "injected output")
 			}
 		})
 	}

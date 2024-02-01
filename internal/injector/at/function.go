@@ -31,10 +31,9 @@ func Function(opts ...FunctionOption) *funcDecl {
 }
 
 func (s *funcDecl) Matches(csor *dstutil.Cursor) bool {
-	return s.matchesNode(csor.Node())
+	return s.matchesNode(csor.Node(), csor.Parent())
 }
-
-func (s *funcDecl) matchesNode(node dst.Node) bool {
+func (s *funcDecl) matchesNode(node dst.Node, _ dst.Node) bool {
 	var funcType *dst.FuncType
 	if decl, ok := node.(*dst.FuncDecl); ok {
 		funcType = decl.Type
@@ -65,7 +64,7 @@ func Signature(args []TypeName, ret []TypeName) FunctionOption {
 }
 
 func (fo *signature) evaluate(fnType *dst.FuncType) bool {
-	if fnType.Results == nil {
+	if fnType.Results == nil || len(fnType.Results.List) == 0 {
 		if len(fo.returns) != 0 {
 			return false
 		}
@@ -79,7 +78,7 @@ func (fo *signature) evaluate(fnType *dst.FuncType) bool {
 		}
 	}
 
-	if fnType.Params == nil {
+	if fnType.Params == nil || len(fnType.Params.List) == 0 {
 		if len(fo.args) != 0 {
 			return false
 		}
@@ -109,23 +108,26 @@ func FunctionBody(up *funcDecl) *funcBody {
 }
 
 func (s *funcBody) Matches(csor *dstutil.Cursor) bool {
-	parentNode := csor.Parent()
-	if !s.up.matchesNode(parentNode) {
+	return s.matchesNode(csor.Node(), csor.Parent())
+}
+
+func (s *funcBody) matchesNode(node dst.Node, parent dst.Node) bool {
+	if !s.up.matchesNode(parent, nil /* unused */) {
 		return false
 	}
 
-	switch parent := parentNode.(type) {
+	switch parent := parent.(type) {
 	case *dst.FuncDecl:
-		return csor.Node() == parent.Body
+		return node == parent.Body
 	case *dst.FuncLit:
-		return csor.Node() == parent.Body
+		return node == parent.Body
 	default:
 		return false
 	}
 }
 
 func init() {
-	unmarshallers["function-body"] = func(node *yaml.Node) (InjectionPoint, error) {
+	unmarshalers["function-body"] = func(node *yaml.Node) (InjectionPoint, error) {
 		ip, err := Unmarshal(node)
 		if err != nil {
 			return nil, err
@@ -137,7 +139,7 @@ func init() {
 		return FunctionBody(up), nil
 	}
 
-	unmarshallers["function"] = func(node *yaml.Node) (InjectionPoint, error) {
+	unmarshalers["function"] = func(node *yaml.Node) (InjectionPoint, error) {
 		var unmarshalOpts []unmarshalFuncDeclOption
 		if err := node.Decode(&unmarshalOpts); err != nil {
 			return nil, err

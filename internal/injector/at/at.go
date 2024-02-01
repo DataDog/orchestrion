@@ -21,6 +21,10 @@ type InjectionPoint interface {
 	// Matches determines whether the injection should be performed on the given
 	// node or not.
 	Matches(*dstutil.Cursor) bool
+
+	// matchesNode is the same as Matches, except it operates on the node and its
+	// parent, rather than on the *dstutil.Cursor
+	matchesNode(node dst.Node, parent dst.Node) bool
 }
 
 type TypeName struct {
@@ -33,7 +37,7 @@ type TypeName struct {
 	Pointer bool
 }
 
-var typeNameRe = regexp.MustCompile(`\A(\*)?(?:([A-Za-z_][A-Za-z0-9_]+)\.)?([A-Za-z_][A-Za-z0-9_]+)\z`)
+var typeNameRe = regexp.MustCompile(`\A(\*)?(?:([A-Za-z_][A-Za-z0-9_]+(?:/[A-Za-z_][A-Za-z0-9_]+)*)\.)?([A-Za-z_][A-Za-z0-9_]+)\z`)
 
 func parseTypeName(n string) (tn TypeName, err error) {
 	matches := typeNameRe.FindStringSubmatch(n)
