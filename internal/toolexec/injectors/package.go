@@ -106,10 +106,10 @@ func pkgRegiterFromImportCfg(cfg *os.File) PkgRegister {
 // pkgReg including all dependencies and importmaps
 // This is aimed at library packages that don't yield and importcfg.link in their b001
 // compilation subtree
-func PreparePackage(importPath, pkgDir string) (*PkgRegister, error) {
+func PreparePackage(importPath, pkgDir string, buildFlags ...string) (*PkgRegister, error) {
 	// 1 - Build pkg
 	log.Printf("====> Building %s", importPath)
-	wDir, err := utils.GoBuild(pkgDir, "-tags", "appsec")
+	wDir, err := utils.GoBuild(pkgDir, buildFlags...)
 	if err != nil {
 		return nil, err
 	}
@@ -137,13 +137,15 @@ func PreparePackage(importPath, pkgDir string) (*PkgRegister, error) {
 type PackageInjector struct {
 	importPath string
 	pkgDir     string
+	buildFlags []string
 }
 
 // NewPackageInjector creates a new package injector
-func NewPackageInjector(importPath, pkgDir string) PackageInjector {
+func NewPackageInjector(importPath, pkgDir string, flags ...string) PackageInjector {
 	return PackageInjector{
 		importPath: importPath,
 		pkgDir:     pkgDir,
+		buildFlags: flags,
 	}
 }
 
@@ -155,7 +157,7 @@ func (i *PackageInjector) InjectCompile(cmd *proxy.CompileCommand) {
 	}
 	log.Printf("[%s] Injecting %s at compile", cmd.Stage(), i.importPath)
 	// 1 - Build the package
-	pkgReg, err := PreparePackage(i.importPath, i.pkgDir)
+	pkgReg, err := PreparePackage(i.importPath, i.pkgDir, i.buildFlags...)
 	utils.ExitIfError(err)
 	state := State{
 		Deps: map[string]PkgRegister{i.importPath: *pkgReg},
