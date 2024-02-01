@@ -18,7 +18,7 @@ type (
 	CommandType string
 	// Command represents a Go compilation command
 	Command interface {
-		MustRun()
+		Args() []string
 		ReplaceParam(param string, val string) error
 		Stage() string
 		Type() CommandType
@@ -82,18 +82,23 @@ func (cmd *command) ReplaceParam(param string, val string) error {
 	return nil
 }
 
-func (cmd *command) MustRun() {
-	c := exec.Command(cmd.args[0], cmd.args[1:]...)
+func RunCommand(cmd Command) error {
+	args := cmd.Args()
+	c := exec.Command(args[0], args[1:]...)
 	if c == nil {
-		log.Printf("%v", fmt.Errorf("command couldn't build"))
-		os.Exit(1)
+		return fmt.Errorf("command couldn't build")
 	}
 
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+
+	return c.Run()
+}
+
+func MustRunCommand(cmd Command) {
 	var exitErr *exec.ExitError
-	if err := c.Run(); err != nil {
+	if err := RunCommand(cmd); err != nil {
 		if errors.As(err, &exitErr) {
 			os.Exit(exitErr.ExitCode())
 		} else {
@@ -108,4 +113,8 @@ func (cmd *command) Stage() string {
 
 func (cmd *command) Type() CommandType {
 	return CommandTypeUnknown
+}
+
+func (cmd *command) Args() []string {
+	return cmd.args
 }
