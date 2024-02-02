@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-// Package ast provides implementations of the injector.Action interface for
+// Package advice provides implementations of the injector.Action interface for
 // common AST changes.
 package advice
 

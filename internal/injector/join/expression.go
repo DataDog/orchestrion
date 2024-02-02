@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,12 +28,8 @@ func FunctionCall(pattern string) *functionCall {
 	return &functionCall{path: matches[1], name: matches[2]}
 }
 
-func (i *functionCall) Matches(csor *dstutil.Cursor) bool {
-	return i.matchesNode(csor.Node(), csor.Parent())
-}
-
-func (i *functionCall) matchesNode(node dst.Node, parent dst.Node) bool {
-	call, ok := node.(*dst.CallExpr)
+func (i *functionCall) Matches(chain *node.Chain) bool {
+	call, ok := node.As[*dst.CallExpr](chain)
 	if !ok {
 		return false
 	}

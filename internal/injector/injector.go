@@ -14,8 +14,10 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -155,25 +157,39 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 
 func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs typed.ReferenceMap, err error) {
 	ctx = typed.ContextWithValue(ctx, &refs)
+	var chain *node.Chain
 
 	dstutil.Apply(
 		file,
 		func(csor *dstutil.Cursor) bool {
-			if err != nil || csor.Node() == nil {
+			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
+				return false
+			}
+			chain = chain.ChildFromCursor(csor)
+			return true
+		},
+		func(csor *dstutil.Cursor) bool {
+			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
 				return false
 			}
 
-			if ddIgnored(csor.Node()) {
-				return false
-			}
+			// Pop the ancestry stack now that we're done with this node.
+			defer func() { chain = chain.Parent() }()
 
 			var changed bool
-			changed, err = i.injectNode(ctx, csor)
+			changed, err = i.injectNode(ctx, csor, chain)
 			mod = mod || changed
+
 			return err == nil
 		},
-		nil,
 	)
+
+	// We only inject synthetic imports here because it may offset declarations by one position in
+	// case a new import declaration is necessary, which causes dstutil.Apply to re-traverse the
+	// current declaration.
+	if refs.AddSyntheticImports(file) {
+		mod = true
+	}
 
 	if mod && i.opts.PreserveLineInfo {
 		i.addLineDirectives(file, refs)
@@ -182,11 +198,12 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 	return
 }
 
-func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor) (mod bool, err error) {
+func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor, chain *node.Chain) (mod bool, err error) {
 	for _, inj := range i.opts.Injections {
-		if !inj.JoinPoint.Matches(csor) {
+		if !inj.JoinPoint.Matches(chain) {
 			continue
 		}
+		i.debug(chain, "Matched aspect %v", inj)
 		for _, act := range inj.Advice {
 			var changed bool
 			changed, err = act.Apply(ctx, csor)
@@ -200,6 +217,18 @@ func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor) (mod bo
 	}
 
 	return
+}
+
+func (i *Injector) debug(chain *node.Chain, msg string, args ...any) {
+	ast, ok := i.decorator.Ast.Nodes[chain.Node]
+	var pos token.Position
+	if ok {
+		pos = i.fileset.Position(ast.Pos())
+	}
+
+	format := "[%s:%d] %s: " + msg
+	args = append(append(make([]any, 0, len(args)+2), pos.Filename, pos.Line, chain), args...)
+	log.Printf(format, args...)
 }
 
 func (i *Injector) addLineDirectives(file *dst.File, refs typed.ReferenceMap) {

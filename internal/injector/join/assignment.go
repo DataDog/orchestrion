@@ -6,8 +6,8 @@
 package join
 
 import (
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,18 +19,14 @@ func AssignmentOf(value Point) *assignmentOf {
 	return &assignmentOf{value: value}
 }
 
-func (i *assignmentOf) Matches(c *dstutil.Cursor) bool {
-	return i.matchesNode(c.Node(), c.Parent())
-}
-
-func (i *assignmentOf) matchesNode(node dst.Node, parent dst.Node) bool {
-	stmt, ok := node.(*dst.AssignStmt)
+func (i *assignmentOf) Matches(chain *node.Chain) bool {
+	stmt, ok := node.As[*dst.AssignStmt](chain)
 	if !ok {
 		return false
 	}
 
-	for _, rhs := range stmt.Rhs {
-		if i.value.matchesNode(rhs, stmt) {
+	for idx, rhs := range stmt.Rhs {
+		if i.value.Matches(chain.Child(rhs, "Rhs", idx)) {
 			return true
 		}
 	}

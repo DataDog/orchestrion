@@ -6,8 +6,8 @@
 package join
 
 import (
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,21 +23,17 @@ func StructLiteral(typeName TypeName, field string) *structLiteral {
 	}
 }
 
-func (s *structLiteral) Matches(csor *dstutil.Cursor) bool {
-	return s.matchesNode(csor.Node(), csor.Parent())
-}
-
-func (s *structLiteral) matchesNode(node dst.Node, parent dst.Node) bool {
+func (s *structLiteral) Matches(chain *node.Chain) bool {
 	if s.field == "" {
-		return s.matchesLiteral(node)
+		return s.matchesLiteral(chain)
 	}
 
-	kve, ok := node.(*dst.KeyValueExpr)
+	kve, ok := node.As[*dst.KeyValueExpr](chain)
 	if !ok {
 		return false
 	}
 
-	if !s.matchesLiteral(parent) {
+	if parent := chain.Parent(); parent == nil || !s.matchesLiteral(parent.Node) {
 		return false
 	}
 
@@ -54,7 +50,7 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 	if !ok {
 		return false
 	}
-	return s.typeName.matches(lit.Type)
+	return s.typeName.Matches(lit.Type)
 }
 
 func init() {
@@ -67,7 +63,7 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := parseTypeName(spec.Type)
+		tn, err := NewTypeName(spec.Type)
 		if err != nil {
 			return nil, err
 		}

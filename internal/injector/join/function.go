@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
 )
 
 type (
 	FunctionOption interface {
-		evaluate(*dst.FuncType) bool
+		evaluate(*dst.FuncType, ...*dst.NodeDecs) bool
 	}
 
 	funcDecl struct {
@@ -30,21 +30,23 @@ func Function(opts ...FunctionOption) *funcDecl {
 	return &funcDecl{opts: opts}
 }
 
-func (s *funcDecl) Matches(csor *dstutil.Cursor) bool {
-	return s.matchesNode(csor.Node(), csor.Parent())
-}
-func (s *funcDecl) matchesNode(node dst.Node, _ dst.Node) bool {
+func (s *funcDecl) Matches(chain *node.Chain) bool {
 	var funcType *dst.FuncType
-	if decl, ok := node.(*dst.FuncDecl); ok {
+	funcDecs := []*dst.NodeDecs{chain.Decorations(), nil}[0:1]
+
+	if decl, ok := node.As[*dst.FuncDecl](chain); ok {
 		funcType = decl.Type
-	} else if lit, ok := node.(*dst.FuncLit); ok {
+	} else if lit, ok := node.As[*dst.FuncLit](chain); ok {
 		funcType = lit.Type
+		if parent, ok := node.As[*dst.AssignStmt](chain.Parent()); ok {
+			funcDecs = append(funcDecs, parent.Decorations())
+		}
 	} else {
 		return false
 	}
 
 	for _, opt := range s.opts {
-		if !opt.evaluate(funcType) {
+		if !opt.evaluate(funcType, funcDecs...) {
 			return false
 		}
 	}
@@ -63,7 +65,7 @@ func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{args: args, returns: ret}
 }
 
-func (fo *signature) evaluate(fnType *dst.FuncType) bool {
+func (fo *signature) evaluate(fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
 	if fnType.Results == nil || len(fnType.Results.List) == 0 {
 		if len(fo.returns) != 0 {
 			return false
@@ -72,7 +74,7 @@ func (fo *signature) evaluate(fnType *dst.FuncType) bool {
 		return false
 	} else {
 		for i := 0; i < len(fo.returns); i++ {
-			if !fo.returns[i].matches(fnType.Results.List[i].Type) {
+			if !fo.returns[i].Matches(fnType.Results.List[i].Type) {
 				return false
 			}
 		}
@@ -86,13 +88,51 @@ func (fo *signature) evaluate(fnType *dst.FuncType) bool {
 		return false
 	} else {
 		for i := 0; i < len(fo.args); i++ {
-			if !fo.args[i].matches(fnType.Params.List[i].Type) {
+			if !fo.args[i].Matches(fnType.Params.List[i].Type) {
 				return false
 			}
 		}
 	}
 
 	return true
+}
+
+type directive struct {
+	name string
+}
+
+// Directive matches function declarations based on the presence of a leading
+// directive comment.
+func Directive(name string) FunctionOption {
+	return &directive{name}
+}
+
+func (fo *directive) evaluate(_ *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
+	for _, decs := range allDecs {
+		for _, dec := range decs.Start {
+			if dec == "//"+fo.name || strings.HasPrefix(dec, "//"+fo.name+" ") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+type receives struct {
+	typeName TypeName
+}
+
+func Receives(typeName TypeName) FunctionOption {
+	return &receives{typeName}
+}
+
+func (fo *receives) evaluate(fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
+	for _, param := range fnType.Params.List {
+		if fo.typeName.Matches(param.Type) {
+			return true
+		}
+	}
+	return false
 }
 
 type funcBody struct {
@@ -107,20 +147,16 @@ func FunctionBody(up *funcDecl) *funcBody {
 	return &funcBody{up: up}
 }
 
-func (s *funcBody) Matches(csor *dstutil.Cursor) bool {
-	return s.matchesNode(csor.Node(), csor.Parent())
-}
-
-func (s *funcBody) matchesNode(node dst.Node, parent dst.Node) bool {
-	if !s.up.matchesNode(parent, nil /* unused */) {
+func (s *funcBody) Matches(chain *node.Chain) bool {
+	if parent := chain.Parent(); parent == nil || !s.up.Matches(parent) {
 		return false
 	}
 
-	switch parent := parent.(type) {
+	switch parent := chain.Parent().Node.(type) {
 	case *dst.FuncDecl:
-		return node == parent.Body
+		return chain.Node == parent.Body
 	case *dst.FuncLit:
-		return node == parent.Body
+		return chain.Node == parent.Body
 	default:
 		return false
 	}
@@ -171,6 +207,22 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	switch key {
+	case "directive":
+		var name string
+		if err := node.Content[1].Decode(&name); err != nil {
+			return err
+		}
+		o.FunctionOption = Directive(name)
+	case "receives":
+		var arg string
+		if err := node.Content[1].Decode(&arg); err != nil {
+			return err
+		}
+		tn, err := NewTypeName(arg)
+		if err != nil {
+			return err
+		}
+		o.FunctionOption = Receives(tn)
 	case "signature":
 		var sig struct {
 			Args  []string             `yaml:"args"`
@@ -193,7 +245,7 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			args = make([]TypeName, len(sig.Args))
 			for i, a := range sig.Args {
 				var err error
-				if args[i], err = parseTypeName(a); err != nil {
+				if args[i], err = NewTypeName(a); err != nil {
 					return err
 				}
 			}
@@ -204,7 +256,7 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			ret = make([]TypeName, len(sig.Ret))
 			for i, r := range sig.Ret {
 				var err error
-				if ret[i], err = parseTypeName(r); err != nil {
+				if ret[i], err = NewTypeName(r); err != nil {
 					return err
 				}
 			}

@@ -546,3 +546,79 @@ chi5-newroute:
         })
         log.Print(s.ListenAndServe())
       }
+
+directive:
+  options:
+    preservelineinfo: true
+    injections:
+      - join-point:
+          function-body:
+            function:
+              - receives: context.Context
+              - directive: 'dd:span'
+        advice:
+          - prepend-statements:
+              imports:
+                event: github.com/datadog/orchestrion/instrument/event
+                instrument: github.com/datadog/orchestrion/instrument
+              template: |-
+                {{- $ctx := .FindArg "context.Context" -}}
+                {{- $name := FuncName -}}
+                instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}
+                {{- range .DirectiveArgs "dd:span" -}}
+                  , {{printf "%q" .Name}}, {{printf "%q" .Value}}
+                {{- end -}})
+                defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}
+                {{- range .DirectiveArgs "dd:span" -}}
+                  , {{printf "%q" .Name}}, {{printf "%q" .Value}}
+                {{- end -}})
+  source: |
+    package test
+
+    //dd:span foo:bar baz:qux
+    func outer(ctx context.Context) {
+      //dd:span
+      inner := func(c context.Context) {
+        panic("Not implemented")
+      }
+      inner(ctx)
+    }
+  expected:
+    modified: true
+    references:
+      github.com/datadog/orchestrion/instrument/event: true
+      github.com/datadog/orchestrion/instrument: true
+    source: |
+      package test
+
+      //line <generated>:1
+      import (
+        "github.com/datadog/orchestrion/instrument"
+        "github.com/datadog/orchestrion/instrument/event"
+      )
+
+      //dd:span foo:bar baz:qux
+      //line input.go:4
+      func outer(ctx context.Context) {
+      //line <generated>:1
+        //dd:startinstrument
+        {
+          instrument.Report(ctx, event.EventStart, "name", "outer", "foo", "bar", "baz", "qux")
+          defer instrument.Report(ctx, event.EventEnd, "name", "outer", "foo", "bar", "baz", "qux")
+        }
+        //dd:endinstrument
+        //dd:span
+      //line input.go:6
+        inner := func(c context.Context) {
+      //line <generated>:1
+          //dd:startinstrument
+          {
+            instrument.Report(c, event.EventStart)
+            defer instrument.Report(c, event.EventEnd)
+          }
+          //dd:endinstrument
+      //line input.go:7
+          panic("Not implemented")
+        }
+        inner(ctx)
+      }

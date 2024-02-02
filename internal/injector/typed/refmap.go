@@ -29,8 +29,8 @@ const (
 )
 
 // AddImport determines whether a new import declaration needs to be added to make the provided path
-// available within the specified file. If so, it adds the import to the file, registers it in this
-// ReferenceMap, and returns true. Otherwise it returns falses.
+// available within the specified file. Returns true if that is the case. False if the import path
+// is already available within the file.
 func (r *ReferenceMap) AddImport(file *dst.File, path string) bool {
 	// Browse the current file to see if the import already exists...
 	for _, spec := range file.Imports {
@@ -43,9 +43,32 @@ func (r *ReferenceMap) AddImport(file *dst.File, path string) bool {
 		}
 	}
 
-	// Add the missing import to the file
-	spec := &dst.ImportSpec{Path: &dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", path)}}
-	file.Imports = append(file.Imports, spec)
+	// Register in this ReferenceMap
+	r.add(path, ImportStatement)
+
+	return true
+}
+
+// AddSyntheticImports adds the registered imports to the provided *dst.File. This is not safe to
+// call during an AST traversal by dstutil.Apply, as this may offset the declaration list by 1 in
+// case a new import declaration needs to be added, which would result in re-traversing current
+// declaration when the cursor moves forward. Instead, it is advise to call this method after
+// dstutil.Apply has returned.
+func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
+	toAdd := make([]*dst.ImportSpec, 0, len(*r))
+
+	for path, kind := range *r {
+		if kind != ImportStatement {
+			continue
+		}
+		toAdd = append(toAdd, &dst.ImportSpec{Path: &dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", path)}})
+	}
+
+	if len(toAdd) == 0 {
+		return false
+	}
+
+	// Find the last import declaration in the file...
 	var imports *dst.GenDecl
 	for _, decl := range file.Decls {
 		if genDecl, ok := decl.(*dst.GenDecl); ok && genDecl.Tok == token.IMPORT {
@@ -54,16 +77,22 @@ func (r *ReferenceMap) AddImport(file *dst.File, path string) bool {
 			break
 		}
 	}
+	// ...or create a new one if none is found...
 	if imports == nil {
 		imports = &dst.GenDecl{Tok: token.IMPORT}
-		list := make([]dst.Decl, 1, len(file.Decls)+1)
+		list := make([]dst.Decl, len(file.Decls)+1)
 		list[0] = imports
-		file.Decls = append(list, file.Decls...)
+		copy(list[1:], file.Decls)
+		file.Decls = list
 	}
-	imports.Specs = append(imports.Specs, spec)
 
-	// Register in this ReferenceMap
-	r.add(path, ImportStatement)
+	// Add the necessary imports
+	file.Imports = append(file.Imports, toAdd...)
+	newSpecs := make([]dst.Spec, len(toAdd))
+	for i, spec := range toAdd {
+		newSpecs[i] = spec
+	}
+	imports.Specs = append(imports.Specs, newSpecs...)
 
 	return true
 }

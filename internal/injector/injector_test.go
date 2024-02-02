@@ -58,10 +58,6 @@ func TestInjector(t *testing.T) {
 	require.NoError(t, err, "failed to parse test suite data")
 
 	for name, tc := range cases {
-		if name != "http-default" {
-			continue
-		}
-
 		t.Run(name, func(t *testing.T) {
 			tc.Options.ModifiedFile = func(filename string) string { return filename + ".edited" }
 

@@ -24,7 +24,7 @@ type Aspect struct {
 	Advice []advice.Advice
 }
 
-func (i *Aspect) UnmarshalYAML(node *yaml.Node) error {
+func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
 		JoinPoint yaml.Node            `yaml:"join-point"`
 		Advice    []yaml.Node          `yaml:"advice"`
@@ -49,13 +49,13 @@ func (i *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	var err error
-	if i.JoinPoint, err = join.FromYAML(&ti.JoinPoint); err != nil {
+	if a.JoinPoint, err = join.FromYAML(&ti.JoinPoint); err != nil {
 		return err
 	}
 
-	i.Advice = make([]advice.Advice, len(ti.Advice))
+	a.Advice = make([]advice.Advice, len(ti.Advice))
 	for idx, node := range ti.Advice {
-		if i.Advice[idx], err = advice.FromYAML(&node); err != nil {
+		if a.Advice[idx], err = advice.FromYAML(&node); err != nil {
 			return err
 		}
 	}

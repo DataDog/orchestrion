@@ -39,7 +39,7 @@ func NewTemplate(template string, imports map[string]string) Template {
 // context.Context and *dstutil.Cursor are used to supply context information to
 // the template functions.
 func (t *Template) CompileBlock(ctx context.Context, csor *dstutil.Cursor) (*dst.BlockStmt, error) {
-	stmts, err := t.compile(ctx, templateFunctions(ctx, csor, false))
+	stmts, err := t.compile(ctx, csor, templateFunctions(ctx, csor, false))
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (t *Template) CompileBlock(ctx context.Context, csor *dstutil.Cursor) (*dst
 // provided dst.Expr will be copied in places where the `{{Expr}}` template
 // function is used.
 func (t *Template) CompileExpression(ctx context.Context, csor *dstutil.Cursor, expr dst.Expr) (dst.Expr, error) {
-	stmts, err := t.compile(ctx, templateFunctions(ctx, csor, true))
+	stmts, err := t.compile(ctx, csor, templateFunctions(ctx, csor, true))
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (t *Template) CompileExpression(ctx context.Context, csor *dstutil.Cursor, 
 
 // compile generates new source based on this Template and returns a cloned
 // version of minimally post-processed dst.Stmt nodes this produced.
-func (t *Template) compile(ctx context.Context, funcMap template.FuncMap) ([]dst.Stmt, error) {
+func (t *Template) compile(ctx context.Context, csor *dstutil.Cursor, funcMap template.FuncMap) ([]dst.Stmt, error) {
 	ctxFile, ok := typed.ContextValue[*dst.File](ctx)
 	if !ok {
 		return nil, errors.New("no *dst.File was available from context")
@@ -110,7 +110,7 @@ func (t *Template) compile(ctx context.Context, funcMap template.FuncMap) ([]dst
 	}
 
 	buf := bytes.NewBuffer(nil)
-	if err := tmpl.ExecuteTemplate(buf, "Wrapper", nil); err != nil {
+	if err := tmpl.ExecuteTemplate(buf, "Wrapper", &resolver{csor}); err != nil {
 		return nil, err
 	}
 
