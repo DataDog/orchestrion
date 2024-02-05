@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -155,6 +154,9 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 	return res, err
 }
 
+// inject performs all configured injections on the specified file. It returns whether the file was
+// modified, any import references introduced by modifications. In case of an error, the
+// trasnformation aborts as quickly as possible and returns the error.
 func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs typed.ReferenceMap, err error) {
 	ctx = typed.ContextWithValue(ctx, &refs)
 	var chain *node.Chain
@@ -198,12 +200,14 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 	return
 }
 
+// injectNode assesses all configured injections agaisnt the current node, and performs any AST
+// transformations. It returns whether the AST was indeed modified. In case of an error, the
+// injector aborts immediately and returns the error.
 func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor, chain *node.Chain) (mod bool, err error) {
 	for _, inj := range i.opts.Injections {
 		if !inj.JoinPoint.Matches(chain) {
 			continue
 		}
-		i.debug(chain, "Matched aspect %v", inj)
 		for _, act := range inj.Advice {
 			var changed bool
 			changed, err = act.Apply(ctx, csor)
@@ -219,18 +223,9 @@ func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor, chain *
 	return
 }
 
-func (i *Injector) debug(chain *node.Chain, msg string, args ...any) {
-	ast, ok := i.decorator.Ast.Nodes[chain.Node]
-	var pos token.Position
-	if ok {
-		pos = i.fileset.Position(ast.Pos())
-	}
-
-	format := "[%s:%d] %s: " + msg
-	args = append(append(make([]any, 0, len(args)+2), pos.Filename, pos.Line, chain), args...)
-	log.Printf(format, args...)
-}
-
+// addLineDirectives travers a transformed AST and adds "//line file:line" directives where
+// necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
+// within a `<generated>` pseudo-file.
 func (i *Injector) addLineDirectives(file *dst.File, refs typed.ReferenceMap) {
 	inGen := false
 	var stack []bool
@@ -274,6 +269,8 @@ func (i *Injector) addLineDirectives(file *dst.File, refs typed.ReferenceMap) {
 	}
 }
 
+// outputFileFor returns the file name to be used when writing a modified file. It uses the options
+// specified when building this Injector.
 func (i *Injector) outputFileFor(filename string) string {
 	if i.opts.ModifiedFile == nil {
 		return filename
