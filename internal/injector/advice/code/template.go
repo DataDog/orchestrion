@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -20,7 +21,7 @@ import (
 )
 
 type Template struct {
-	template string
+	template *template.Template
 	imports  map[string]string
 }
 
@@ -30,16 +31,18 @@ var wrapper = template.Must(template.New("_").Parse("{{define `Wrapper`}}package
 // imports map. The imports map associates names to import paths. The produced
 // AST nodes will feature qualified *dst.Ident nodes in all places where a
 // property of mapped names is selected.
-func NewTemplate(template string, imports map[string]string) Template {
-	return Template{template, imports}
+func NewTemplate(text string, imports map[string]string) (Template, error) {
+	template := template.Must(wrapper.Clone())
+	template, err := template.Parse(text)
+	return Template{template, imports}, err
 }
 
 // CompileBlock generates new source based on this Template and wraps the
 // resulting dst.Stmt nodes in a new *dst.BlockStmt. The provided
 // context.Context and *dstutil.Cursor are used to supply context information to
 // the template functions.
-func (t *Template) CompileBlock(ctx context.Context, csor *dstutil.Cursor) (*dst.BlockStmt, error) {
-	stmts, err := t.compile(ctx, csor, templateFunctions(ctx, csor, false))
+func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.BlockStmt, error) {
+	stmts, err := t.compile(ctx, node, false)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +60,8 @@ func (t *Template) CompileBlock(ctx context.Context, csor *dstutil.Cursor) (*dst
 // are used to supply context information to the template functions. The
 // provided dst.Expr will be copied in places where the `{{Expr}}` template
 // function is used.
-func (t *Template) CompileExpression(ctx context.Context, csor *dstutil.Cursor, expr dst.Expr) (dst.Expr, error) {
-	stmts, err := t.compile(ctx, csor, templateFunctions(ctx, csor, true))
+func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr dst.Expr) (dst.Expr, error) {
+	stmts, err := t.compile(ctx, node, true)
 	if err != nil {
 		return nil, err
 	}
@@ -98,19 +101,16 @@ func (t *Template) CompileExpression(ctx context.Context, csor *dstutil.Cursor, 
 
 // compile generates new source based on this Template and returns a cloned
 // version of minimally post-processed dst.Stmt nodes this produced.
-func (t *Template) compile(ctx context.Context, csor *dstutil.Cursor, funcMap template.FuncMap) ([]dst.Stmt, error) {
-	ctxFile, ok := typed.ContextValue[*dst.File](ctx)
-	if !ok {
-		return nil, errors.New("no *dst.File was available from context")
+func (t *Template) compile(ctx context.Context, chain *node.Chain, hasExpression bool) ([]dst.Stmt, error) {
+	ctxFile, found := node.Find[*dst.File](chain)
+	if !found {
+		return nil, errors.New("no *dst.File was found in the node chain")
 	}
 
-	tmpl, err := template.Must(wrapper.Clone()).Funcs(funcMap).Parse(t.template)
-	if err != nil {
-		return nil, err
-	}
+	tmpl := template.Must(t.template.Clone())
 
 	buf := bytes.NewBuffer(nil)
-	if err := tmpl.ExecuteTemplate(buf, "Wrapper", &resolver{csor}); err != nil {
+	if err := tmpl.ExecuteTemplate(buf, "Wrapper", &dot{node: chain, hasExpression: hasExpression}); err != nil {
 		return nil, err
 	}
 
@@ -168,14 +168,14 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 	}, nil)
 }
 
-func (t *Template) UnmarshalYAML(node *yaml.Node) error {
+func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 	var cfg struct {
 		Template string
 		Imports  map[string]string
 	}
-	if err := node.Decode(&cfg); err != nil {
-		return err
+	if err = node.Decode(&cfg); err != nil {
+		return
 	}
-	*t = NewTemplate(cfg.Template, cfg.Imports)
-	return nil
+	*t, err = NewTemplate(cfg.Template, cfg.Imports)
+	return err
 }

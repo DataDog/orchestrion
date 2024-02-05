@@ -8,6 +8,7 @@ package advice
 import (
 	"context"
 
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
 )
@@ -20,9 +21,9 @@ func AddComment(text string) *addComment {
 	return &addComment{text: text}
 }
 
-func (a *addComment) Apply(_ context.Context, csor *dstutil.Cursor) (bool, error) {
+func (a *addComment) Apply(_ context.Context, node *node.Chain, _ *dstutil.Cursor) (bool, error) {
 	//TODO: This will have offset the line numbers by 1 and needs fixing in preserveLineInfo mode!
-	csor.Node().Decorations().Start.Append(a.text)
+	node.Node.Decorations().Start.Append(a.text)
 	return true, nil
 }
 

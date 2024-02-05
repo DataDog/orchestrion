@@ -135,8 +135,7 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 		}
 	}
 
-	ctx := typed.ContextWithValue(i.context, file)
-	res.Modified, res.References, err = i.inject(ctx, file)
+	res.Modified, res.References, err = i.inject(i.context, file)
 	if err != nil {
 		return res, err
 	}
@@ -179,7 +178,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 			defer func() { chain = chain.Parent() }()
 
 			var changed bool
-			changed, err = i.injectNode(ctx, csor, chain)
+			changed, err = i.injectNode(ctx, chain, csor)
 			mod = mod || changed
 
 			return err == nil
@@ -203,14 +202,14 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 // injectNode assesses all configured injections agaisnt the current node, and performs any AST
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
-func (i *Injector) injectNode(ctx context.Context, csor *dstutil.Cursor, chain *node.Chain) (mod bool, err error) {
+func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (mod bool, err error) {
 	for _, inj := range i.opts.Injections {
 		if !inj.JoinPoint.Matches(chain) {
 			continue
 		}
 		for _, act := range inj.Advice {
 			var changed bool
-			changed, err = act.Apply(ctx, csor)
+			changed, err = act.Apply(ctx, chain, csor)
 			if changed {
 				mod = true
 			}

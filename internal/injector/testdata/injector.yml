@@ -15,8 +15,8 @@ http-default:
               imports:
                 instrument: github.com/datadog/orchestrion/instrument
               template: |-
-                {{- $arg := FuncArgName 1 -}}
-                {{- $name := FuncName -}}
+                {{- $arg := .Function.Argument 1 -}}
+                {{- $name := .Function.Name -}}
                 {{$arg}} = instrument.HandleHeader({{$arg}})
                 instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
                 defer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
@@ -233,12 +233,12 @@ http-no-arg-name:
         log.Printf("Server shut down: %v", s.ListenAndServe())
       }
 
-      func handle(_ http.ResponseWriter, _1 *http.Request) {
+      func handle(_ http.ResponseWriter, __argument__1 *http.Request) {
         //dd:startinstrument
         {
-          _1 = instrument.HandleHeader(_1)
-          instrument.Report(_1.Context(), instrument.EventStart, "name", "handle", "verb", _1.Method)
-          defer instrument.Report(_1.Context(), instrument.EventEnd, "name", "handle", "verb", _1.Method)
+          __argument__1 = instrument.HandleHeader(__argument__1)
+          instrument.Report(__argument__1.Context(), instrument.EventStart, "name", "handle", "verb", __argument__1.Method)
+          defer instrument.Report(__argument__1.Context(), instrument.EventEnd, "name", "handle", "verb", __argument__1.Method)
         }
         //dd:endinstrument
       }
@@ -352,7 +352,7 @@ http-server:
                 instrument: github.com/datadog/orchestrion/instrument
               template: |-
                 //dd:startwrap
-                instrument.WrapHandler({{ Expr }})
+                instrument.WrapHandler({{ . }})
                 //dd:endwrap
     preservelineinfo: true
   source: *httpSource
@@ -420,10 +420,10 @@ change-return-value:
               imports:
                 log: log
               template: |-
-                {{- $ret := FuncReturnValue 1 -}}
+                {{- $ret := .Function.Returns 1 -}}
                 defer func(){
                   if {{$ret}} != nil {
-                    log.Println("error in {{FuncName}}:", {{$ret}})
+                    log.Println("error in {{.Function.Name}}:", {{$ret}})
                   }
                 }()
   source: |
@@ -448,12 +448,12 @@ change-return-value:
         "log"
       )
 
-      func test() (_ret_0 interface{}, _ret_1 error) {
+      func test() (_ interface{}, __returns__1 error) {
         //dd:startinstrument
         {
           defer func() {
-            if _ret_1 != nil {
-              log.Println("error in test:", _ret_1)
+            if __returns__1 != nil {
+              log.Println("error in test:", __returns__1)
             }
           }()
         }
@@ -472,7 +472,7 @@ chi5-newroute:
         advice:
           - add-comment: '//dd:instrumented'
           - append-statements:
-              template: '{{AssignedVar}}.Use(instrument.ChiV5Middleware())'
+              template: '{{.Assignment.Variable}}.Use(instrument.ChiV5Middleware())'
               imports:
                 instrument: github.com/datadog/orchestrion/instrument
   source: |
@@ -562,15 +562,15 @@ directive:
                 event: github.com/datadog/orchestrion/instrument/event
                 instrument: github.com/datadog/orchestrion/instrument
               template: |-
-                {{- $ctx := .FindArg "context.Context" -}}
-                {{- $name := FuncName -}}
+                {{- $ctx := .FindArgument "context.Context" -}}
+                {{- $name := .Function.Name -}}
                 instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}
                 {{- range .DirectiveArgs "dd:span" -}}
-                  , {{printf "%q" .Name}}, {{printf "%q" .Value}}
+                  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
                 {{- end -}})
                 defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}
                 {{- range .DirectiveArgs "dd:span" -}}
-                  , {{printf "%q" .Name}}, {{printf "%q" .Value}}
+                  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
                 {{- end -}})
   source: |
     package test

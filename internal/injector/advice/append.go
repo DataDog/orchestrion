@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/datadog/orchestrion/internal/injector/advice/code"
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
 )
@@ -21,8 +22,8 @@ func AppendStatements(template code.Template) *appendStatements {
 	return &appendStatements{template}
 }
 
-func (a *appendStatements) Apply(ctx context.Context, csor *dstutil.Cursor) (bool, error) {
-	block, err := a.template.CompileBlock(ctx, csor)
+func (a *appendStatements) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
+	block, err := a.template.CompileBlock(ctx, node)
 	if err != nil {
 		return false, err
 	}

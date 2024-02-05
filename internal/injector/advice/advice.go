@@ -10,6 +10,7 @@ package advice
 import (
 	"context"
 
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst/dstutil"
 )
 
@@ -20,5 +21,5 @@ type Advice interface {
 	// boolean indicating whether the node was modified or not (some actions may
 	// short-circuit and not do anything; e.g. import injection may be skipped if
 	// the import already exists).
-	Apply(context.Context, *dstutil.Cursor) (bool, error)
+	Apply(context.Context, *node.Chain, *dstutil.Cursor) (bool, error)
 }

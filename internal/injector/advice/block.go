@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/advice/code"
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
@@ -26,15 +27,13 @@ func PrependStmts(template code.Template) *blockStmts {
 	return &blockStmts{template: template}
 }
 
-func (a *blockStmts) Apply(ctx context.Context, csor *dstutil.Cursor) (bool, error) {
-	node := csor.Node()
-
-	block, ok := node.(*dst.BlockStmt)
+func (a *blockStmts) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
+	block, ok := node.Node.(*dst.BlockStmt)
 	if !ok {
 		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", node)
 	}
 
-	stmts, err := a.template.CompileBlock(ctx, csor)
+	stmts, err := a.template.CompileBlock(ctx, node)
 	if err != nil {
 		return false, err
 	}

@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/advice/code"
+	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
@@ -23,7 +24,7 @@ func WrapExpression(template code.Template) *wrapExpression {
 	return &wrapExpression{template: template}
 }
 
-func (a *wrapExpression) Apply(ctx context.Context, csor *dstutil.Cursor) (bool, error) {
+func (a *wrapExpression) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
 	var (
 		expr dst.Expr
 		kve  *dst.KeyValueExpr
@@ -36,7 +37,7 @@ func (a *wrapExpression) Apply(ctx context.Context, csor *dstutil.Cursor) (bool,
 		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", csor.Node())
 	}
 
-	repl, err := a.template.CompileExpression(ctx, csor, expr)
+	repl, err := a.template.CompileExpression(ctx, node, expr)
 	if err != nil {
 		return false, err
 	}
