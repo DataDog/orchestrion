@@ -8,6 +8,7 @@ package join
 import (
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,6 +52,10 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 		return false
 	}
 	return s.typeName.Matches(lit.Type)
+}
+
+func (s *structLiteral) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.asCode(), jen.Lit(s.field))
 }
 
 func init() {

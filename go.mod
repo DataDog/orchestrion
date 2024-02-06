@@ -3,14 +3,17 @@ module github.com/datadog/orchestrion
 go 1.19
 
 require (
+	github.com/dave/jennifer v1.5.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gorilla/mux v1.8.0
 	github.com/labstack/echo/v4 v4.11.1
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/tools v0.16.0
 	google.golang.org/grpc v1.57.1
 	gopkg.in/DataDog/dd-trace-go.v1 v1.58.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -70,11 +73,9 @@ require (
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230815205213-6bfd019c3878 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	inet.af/netaddr v0.0.0-20230525184311-b8eac61e914a // indirect
 )
 

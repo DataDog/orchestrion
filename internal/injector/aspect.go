@@ -12,6 +12,7 @@ import (
 
 	"github.com/datadog/orchestrion/internal/injector/advice"
 	"github.com/datadog/orchestrion/internal/injector/join"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,10 +25,21 @@ type Aspect struct {
 	Advice []advice.Advice
 }
 
+func (a *Aspect) AsCode() (jp, adv jen.Code) {
+	jp = a.JoinPoint.AsCode()
+	adv = jen.Index().Qual("github.com/datadog/orchestrion/internal/injector/advice", "Advice").ValuesFunc(func(g *jen.Group) {
+		for _, a := range a.Advice {
+			g.Line().Add(a.AsCode())
+		}
+		g.Empty().Line()
+	})
+	return
+}
+
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
 		JoinPoint yaml.Node            `yaml:"join-point"`
-		Advice    []yaml.Node          `yaml:"advice"`
+		Advice    yaml.Node            `yaml:"advice"`
 		Extra     map[string]yaml.Node `yaml:",inline"`
 	}
 	if err := node.Decode(&ti); err != nil {
@@ -37,7 +49,7 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	if ti.JoinPoint.Kind == 0 {
 		return errors.New("missing required key 'join-point'")
 	}
-	if ti.Advice == nil {
+	if ti.Advice.Kind == 0 {
 		return errors.New("missing required key 'advice'")
 	}
 	if len(ti.Extra) != 0 {
@@ -53,11 +65,24 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 
-	a.Advice = make([]advice.Advice, len(ti.Advice))
-	for idx, node := range ti.Advice {
-		if a.Advice[idx], err = advice.FromYAML(&node); err != nil {
+	if ti.Advice.Kind == yaml.SequenceNode {
+		var nodes []yaml.Node
+		if err := ti.Advice.Decode(&nodes); err != nil {
 			return err
 		}
+		a.Advice = make([]advice.Advice, len(nodes))
+		for i, node := range nodes {
+			a.Advice[i], err = advice.FromYAML(&node)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		adv, err := advice.FromYAML(&ti.Advice)
+		if err != nil {
+			return err
+		}
+		a.Advice = []advice.Advice{adv}
 	}
 
 	return nil

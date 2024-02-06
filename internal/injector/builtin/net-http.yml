@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+- join-point:
+    struct-literal:
+      type: net/http.Server
+      field: Handler
+  advice:
+    - wrap-expression:
+        imports:
+          instrument: github.com/datadog/orchestrion/instrument
+        template: |-
+          //dd:startwrap
+          instrument.WrapHandler({{.}})
+          //dd:endwrap
+
+- join-point:
+    function-body:
+      function:
+        - signature:
+            args: [net/http.ResponseWriter, '*net/http.Request']
+  advice:
+    prepend-statements:
+      imports:
+        instrument: github.com/datadog/orchestrion/instrument
+      template: |-
+        {{- $arg := .Function.Argument 1 -}}
+        {{- $name := .Function.Name -}}
+        instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
+        defer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)

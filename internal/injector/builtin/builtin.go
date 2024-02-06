@@ -3,17 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package event
+// Package builtin contains built-in injection configurations for supported
+// instrumentations.
+package builtin
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Event
-type Event int
-
-const (
-	_ Event = iota
-	EventStart
-	EventEnd
-	EventCall
-	EventReturn
-	EventDBCall
-	EventDBReturn
-)
+//go:generate go run ./generate -i *.yml -p builtin -o ./generated.go

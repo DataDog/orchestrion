@@ -11,6 +11,7 @@ import (
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,6 +52,10 @@ func (i *functionCall) Matches(chain *node.Chain) bool {
 	default:
 		return false
 	}
+}
+
+func (i *functionCall) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.path + "." + i.name))
 }
 
 var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([^.]+)\z`)

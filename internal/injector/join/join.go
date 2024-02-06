@@ -8,16 +8,23 @@
 package join
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 
+	"github.com/datadog/orchestrion/internal/injector/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
+	"github.com/dave/jennifer/jen"
 )
+
+const pkgPath = "github.com/datadog/orchestrion/internal/injector/join"
 
 // Point is the interface that abstracts selection of nodes where to inject
 // code.
 type Point interface {
+	code.AsCode
+
 	// Matches determines whether the injection should be performed on the given
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.
@@ -49,6 +56,15 @@ func NewTypeName(n string) (tn TypeName, err error) {
 	return
 }
 
+// MustTypeName is the same as NewTypeName, except it panics in case of an error.
+func MustTypeName(n string) (tn TypeName) {
+	var err error
+	if tn, err = NewTypeName(n); err != nil {
+		panic(err)
+	}
+	return
+}
+
 func (n *TypeName) Matches(node dst.Expr) bool {
 	switch node := node.(type) {
 	case *dst.Ident:
@@ -76,4 +92,18 @@ func (n *TypeName) Matches(node dst.Expr) bool {
 	default:
 		return false
 	}
+}
+
+func (n *TypeName) asCode() jen.Code {
+	str := bytes.NewBuffer(make([]byte, 0, 1+len(n.path)+len(n.name)))
+	if n.pointer {
+		str.WriteString("*")
+	}
+	if n.path != "" {
+		str.WriteString(n.path)
+		str.WriteString(".")
+	}
+	str.WriteString(n.name)
+
+	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
 }

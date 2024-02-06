@@ -10,6 +10,7 @@ import (
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst/dstutil"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,6 +26,10 @@ func (a *addComment) Apply(_ context.Context, node *node.Chain, _ *dstutil.Curso
 	//TODO: This will have offset the line numbers by 1 and needs fixing in preserveLineInfo mode!
 	node.Node.Decorations().Start.Append(a.text)
 	return true, nil
+}
+
+func (a *addComment) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "AddComment").Call(jen.Lit(a.text))
 }
 
 func init() {

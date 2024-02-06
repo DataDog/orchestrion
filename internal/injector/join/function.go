@@ -9,13 +9,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/injector/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
 type (
 	FunctionOption interface {
+		code.AsCode
+
 		evaluate(*dst.FuncType, ...*dst.NodeDecs) bool
 	}
 
@@ -52,6 +56,15 @@ func (s *funcDecl) Matches(chain *node.Chain) bool {
 	}
 
 	return true
+}
+
+func (s *funcDecl) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Function").CallFunc(func(g *jen.Group) {
+		for _, opt := range s.opts {
+			g.Line().Add(opt.AsCode())
+		}
+		g.Empty().Line()
+	})
 }
 
 type signature struct {
@@ -97,6 +110,30 @@ func (fo *signature) evaluate(fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
 	return true
 }
 
+func (fo *signature) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Signature").CallFunc(func(g *jen.Group) {
+		if len(fo.args) > 0 {
+			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
+				for _, arg := range fo.args {
+					g.Add(arg.asCode())
+				}
+			})
+		} else {
+			g.Line().Nil()
+		}
+		if len(fo.returns) > 0 {
+			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
+				for _, ret := range fo.returns {
+					g.Add(ret.asCode())
+				}
+			})
+		} else {
+			g.Line().Nil()
+		}
+		g.Empty().Line()
+	})
+}
+
 type directive struct {
 	name string
 }
@@ -118,6 +155,10 @@ func (fo *directive) evaluate(_ *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
 	return false
 }
 
+func (fo *directive) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(fo.name))
+}
+
 type receives struct {
 	typeName TypeName
 }
@@ -133,6 +174,10 @@ func (fo *receives) evaluate(fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
 		}
 	}
 	return false
+}
+
+func (fo *receives) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.asCode())
 }
 
 type funcBody struct {
@@ -160,6 +205,10 @@ func (s *funcBody) Matches(chain *node.Chain) bool {
 	default:
 		return false
 	}
+}
+
+func (s *funcBody) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "FunctionBody").Call(s.up.AsCode())
 }
 
 func init() {

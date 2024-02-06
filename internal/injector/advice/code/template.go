@@ -17,6 +17,7 @@ import (
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/dstutil"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,6 +36,15 @@ func NewTemplate(text string, imports map[string]string) (Template, error) {
 	template := template.Must(wrapper.Clone())
 	template, err := template.Parse(text)
 	return Template{template, imports}, err
+}
+
+// MustTemplate is the same as NewTemplate, but panics if an error occurs.
+func MustTemplate(text string, imports map[string]string) (template Template) {
+	var err error
+	if template, err = NewTemplate(text, imports); err != nil {
+		panic(err)
+	}
+	return
 }
 
 // CompileBlock generates new source based on this Template and wraps the
@@ -166,6 +176,19 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 
 		return true
 	}, nil)
+}
+
+func (t *Template) AsCode() jen.Code {
+	return jen.Qual("github.com/datadog/orchestrion/internal/injector/advice/code", "MustTemplate").Call(
+		jen.Line().Lit(t.template.Tree.Root.String()),
+		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
+			for k, v := range t.imports {
+				g.Line().Add(jen.Lit(k).Op(":").Lit(v))
+			}
+			g.Empty().Line()
+		}),
+		jen.Empty().Line(),
+	)
 }
 
 func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {

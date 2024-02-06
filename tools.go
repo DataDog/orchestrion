@@ -3,17 +3,10 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package event
+//go:build tools
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Event
-type Event int
+package tools
 
-const (
-	_ Event = iota
-	EventStart
-	EventEnd
-	EventCall
-	EventReturn
-	EventDBCall
-	EventDBReturn
+import (
+	_ "golang.org/x/tools/cmd/stringer"
 )

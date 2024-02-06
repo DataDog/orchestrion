@@ -11,6 +11,7 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst/dstutil"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,6 +31,10 @@ func (a *appendStatements) Apply(ctx context.Context, node *node.Chain, csor *ds
 	csor.InsertAfter(block)
 
 	return true, nil
+}
+
+func (a *appendStatements) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "AppendStatements").Call(a.template.AsCode())
 }
 
 func init() {

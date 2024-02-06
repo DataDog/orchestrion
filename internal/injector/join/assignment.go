@@ -8,6 +8,7 @@ package join
 import (
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,6 +32,10 @@ func (i *assignmentOf) Matches(chain *node.Chain) bool {
 		}
 	}
 	return false
+}
+
+func (i *assignmentOf) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "AssignmentOf").Call(i.value.AsCode())
 }
 
 func init() {

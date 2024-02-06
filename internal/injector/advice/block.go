@@ -13,6 +13,7 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
+	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,6 +45,10 @@ func (a *blockStmts) Apply(ctx context.Context, node *node.Chain, csor *dstutil.
 	block.List = list
 
 	return true, nil
+}
+
+func (a *blockStmts) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "PrependStmts").Call(a.template.AsCode())
 }
 
 func init() {
