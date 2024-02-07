@@ -1,0 +1,14 @@
+%YAML 1.1
+---
+- join-point:
+    assignment-of:
+      one-of:
+        - function-call: github.com/gin-gonic/gin.Default
+        - function-call: github.com/gin-gonic/gin.New
+  advice:
+    - add-comment: //dd:instrumented
+    - append-statements:
+        imports:
+          instrument: github.com/datadog/orchestrion/instrument
+        template: |-
+          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.GinModdleware())

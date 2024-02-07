@@ -58,7 +58,23 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}}  = {{.Assignment.Variable}}.Use(instrument.FiberMiddleware())",
+				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.FiberMiddleware())",
+				map[string]string{
+					"instrument": "github.com/datadog/orchestrion/instrument",
+				},
+			)),
+		},
+	},
+	// From yaml/gin.yml
+	{
+		JoinPoint: join.AssignmentOf(join.OneOf(
+			join.FunctionCall("github.com/gin-gonic/gin.Default"),
+			join.FunctionCall("github.com/gin-gonic/gin.New"),
+		)),
+		Advice: []advice.Advice{
+			advice.AddComment("//dd:instrumented"),
+			advice.AppendStatements(code.MustTemplate(
+				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.GinModdleware())",
 				map[string]string{
 					"instrument": "github.com/datadog/orchestrion/instrument",
 				},
