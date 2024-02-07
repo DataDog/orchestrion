@@ -10,6 +10,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -26,7 +28,7 @@ type Template struct {
 	imports  map[string]string
 }
 
-var wrapper = template.Must(template.New("_").Parse("{{define `Wrapper`}}package _\n\nfunc _() {\n{{template `_` .}}\n}{{end}}"))
+var wrapper = template.Must(template.New("_").Parse("{{define `Wrapper`}}package _\nfunc _() {\n{{template `_` .}}\n}{{end}}"))
 
 // NewTemplate creates a new Template using the provided template string and
 // imports map. The imports map associates names to import paths. The produced
@@ -52,7 +54,7 @@ func MustTemplate(text string, imports map[string]string) (template Template) {
 // context.Context and *dstutil.Cursor are used to supply context information to
 // the template functions.
 func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.BlockStmt, error) {
-	stmts, err := t.compile(ctx, node, false)
+	stmts, err := t.compile(ctx, node, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +73,7 @@ func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.Blo
 // provided dst.Expr will be copied in places where the `{{Expr}}` template
 // function is used, unless `expr` is nil.
 func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr dst.Expr) (dst.Expr, error) {
-	stmts, err := t.compile(ctx, node, expr != nil)
+	stmts, err := t.compile(ctx, node, expr)
 	if err != nil {
 		return nil, err
 	}
@@ -85,39 +87,17 @@ func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr
 		return nil, fmt.Errorf("template must produce an expression, but produced %T", stmts[0])
 	}
 
-	// Move the decorations from the statement to the expression itself.
-	exprStmt.X.Decorations().Start = exprStmt.Decs.Start
-	exprStmt.X.Decorations().End = exprStmt.Decs.End
-
 	result := exprStmt.X
-
-	if expr != nil {
-		// Replace the _.Expr placeholder with the actual wrapped expression
-		result = dstutil.Apply(result, func(csor *dstutil.Cursor) bool {
-			selectorExpr, ok := csor.Node().(*dst.SelectorExpr)
-			if !ok {
-				return true
-			}
-			if selectorExpr.Sel.Name != "Expr" {
-				return true
-			}
-			ident, ok := selectorExpr.X.(*dst.Ident)
-			if !ok {
-				return true
-			}
-			if ident.Name == "_" {
-				csor.Replace(expr)
-			}
-			return true
-		}, nil).(dst.Expr)
-	}
+	// Move the decorations from the statement to the expression itself.
+	result.Decorations().Start = exprStmt.Decs.Start
+	result.Decorations().End = exprStmt.Decs.End
 
 	return result, nil
 }
 
 // compile generates new source based on this Template and returns a cloned
 // version of minimally post-processed dst.Stmt nodes this produced.
-func (t *Template) compile(ctx context.Context, chain *node.Chain, hasExpression bool) ([]dst.Stmt, error) {
+func (t *Template) compile(ctx context.Context, chain *node.Chain, expression dst.Expr) ([]dst.Stmt, error) {
 	ctxFile, found := node.Find[*dst.File](chain)
 	if !found {
 		return nil, errors.New("no *dst.File was found in the node chain")
@@ -126,8 +106,9 @@ func (t *Template) compile(ctx context.Context, chain *node.Chain, hasExpression
 	tmpl := template.Must(t.template.Clone())
 
 	buf := bytes.NewBuffer(nil)
-	if err := tmpl.ExecuteTemplate(buf, "Wrapper", &dot{node: chain, hasExpression: hasExpression}); err != nil {
-		return nil, err
+	dot := &dot{node: chain, expr: expression}
+	if err := tmpl.ExecuteTemplate(buf, "Wrapper", dot); err != nil {
+		return nil, fmt.Errorf("while executing template: %w", err)
 	}
 
 	dec, ok := typed.ContextValue[*decorator.Decorator](ctx)
@@ -136,13 +117,16 @@ func (t *Template) compile(ctx context.Context, chain *node.Chain, hasExpression
 	}
 	file, err := dec.Parse(buf.Bytes())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("while parsing generated code: %w\n%q", err, numberLines(buf.String()))
 	}
 
-	body := file.Decls[0].(*dst.FuncDecl).Body.List
-	stmts := make([]dst.Stmt, len(body))
-	for i, node := range body {
-		stmts[i] = dst.Clone(t.processImports(ctx, ctxFile, node)).(dst.Stmt)
+	body := file.Decls[0].(*dst.FuncDecl).Body
+	dot.placeholders.replaceAllIn(body)
+
+	list := body.List
+	stmts := make([]dst.Stmt, len(list))
+	for i, node := range list {
+		stmts[i] = t.processImports(ctx, ctxFile, node).(dst.Stmt)
 	}
 	return stmts, nil
 }
@@ -207,4 +191,16 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 	}
 	*t, err = NewTemplate(cfg.Template, cfg.Imports)
 	return err
+}
+
+func numberLines(text string) string {
+	lines := strings.Split(text, "\n")
+	width := len(strconv.FormatInt(int64(len(lines)), 10))
+	format := fmt.Sprintf("%% %dd | %%s", width)
+
+	for i, line := range lines {
+		lines[i] = fmt.Sprintf(format, i+1, line)
+	}
+
+	return strings.Join(lines, "\n")
 }

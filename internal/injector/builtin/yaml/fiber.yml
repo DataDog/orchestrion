@@ -9,4 +9,4 @@
         imports:
           fibertrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
         template: |-
-          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(fibertrace.FiberV2Middleware())
+          {{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(fibertrace.FiberV2Middleware())

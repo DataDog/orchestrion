@@ -7,14 +7,16 @@ package code
 
 import (
 	"errors"
-	"go/token"
+	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 )
 
 type assignment struct {
-	Stmt *dst.AssignStmt
+	*placeholders
+	stmt  *dst.AssignStmt
+	index int
 }
 
 // Assignment returns a resolver for the closest assignment statement in the context of the template.
@@ -24,26 +26,39 @@ func (d *dot) Assignment() *assignment {
 	if !found {
 		return nil
 	}
-	return &assignment{stmt}
-}
 
-func (a *assignment) Variable() (string, error) {
-	if len(a.Stmt.Lhs) != 1 {
-		return "", errors.ErrUnsupported
-	}
-
-	ident, ok := a.Stmt.Lhs[0].(*dst.Ident)
-	if !ok {
-		return "", errors.ErrUnsupported
-	}
-
-	if ident.Name == "_" {
-		// Give it a referenceable name
-		ident.Name = "__assigned"
-		// If this was a plain assignment, upgrade it to a definition
-		if a.Stmt.Tok == token.ASSIGN {
-			a.Stmt.Tok = token.DEFINE
+	idx := -1
+	for curr := d.node; curr != nil; curr = curr.Parent() {
+		if curr.Node == stmt {
+			idx = curr.Index()
+			break
 		}
 	}
-	return ident.Name, nil
+
+	return &assignment{&d.placeholders, stmt, idx}
+}
+
+type assignmentLhs struct {
+	*placeholders
+	expr dst.Expr
+}
+
+func (a *assignment) LHS() (*assignmentLhs, error) {
+	var lhs dst.Expr
+	if len(a.stmt.Lhs) == 1 {
+		lhs = a.stmt.Lhs[0]
+	} else if a.index >= 0 {
+		if len(a.stmt.Lhs) >= a.index {
+			return nil, fmt.Errorf("index is out of bounds (%d >= %d)", a.index, len(a.stmt.Lhs))
+		}
+		lhs = a.stmt.Lhs[a.index]
+	} else {
+		return nil, errors.New("multiple LHS expressions are present, but no index is available")
+	}
+
+	return &assignmentLhs{a.placeholders, lhs}, nil
+}
+
+func (lhs *assignmentLhs) String() string {
+	return lhs.placeholders.forNode(lhs.expr, false)
 }

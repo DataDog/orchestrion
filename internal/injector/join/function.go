@@ -159,6 +159,35 @@ func (fo *directive) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(fo.name))
 }
 
+type oneOfFunctions []FunctionOption
+
+func OneOfFunctions(opts ...FunctionOption) oneOfFunctions {
+	return oneOfFunctions(opts)
+
+}
+
+func (fo oneOfFunctions) evaluate(fnType *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
+	for _, opt := range fo {
+		if opt.evaluate(fnType, allDecs...) {
+			return true
+		}
+	}
+	return false
+}
+
+func (fo oneOfFunctions) AsCode() jen.Code {
+	if len(fo) == 1 {
+		return (fo)[0].AsCode()
+	}
+
+	return jen.Qual(pkgPath, "OneOfFunctions").CallFunc(func(g *jen.Group) {
+		for _, opt := range fo {
+			g.Line().Add(opt.AsCode())
+		}
+		g.Line().Empty()
+	})
+}
+
 type receives struct {
 	typeName TypeName
 }
@@ -262,6 +291,16 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		o.FunctionOption = Directive(name)
+	case "one-of":
+		var opts []unmarshalFuncDeclOption
+		if err := node.Content[1].Decode(&opts); err != nil {
+			return err
+		}
+		matchers := make([]FunctionOption, len(opts))
+		for i, opt := range opts {
+			matchers[i] = opt.FunctionOption
+		}
+		o.FunctionOption = OneOfFunctions(matchers...)
 	case "receives":
 		var arg string
 		if err := node.Content[1].Decode(&arg); err != nil {

@@ -4,9 +4,9 @@
     assignment-of:
       function-call: github.com/labstack/echo/v4.New
   advice:
-    - add-comment: //dd:instrumented
+    - add-comment: /*dd:instrumented*/
     - append-statements:
         imports:
           echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
         template: |-
-          {{ .Assignment.Variable }} = {{ .Assignment.Variable }}.Use(echotrace.EchoV4Middleware())
+          {{ .Assignment.LHS }} = {{ .Assignment.LHS }}.Use(echotrace.EchoV4Middleware())

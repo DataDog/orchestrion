@@ -8,4 +8,4 @@
     - append-statements:
         imports:
           chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
-        template: '{{.Assignment.Variable}}.Use(chitrace.ChiV5Middleware())'
+        template: '{{.Assignment.LHS}}.Use(chitrace.ChiV5Middleware())'

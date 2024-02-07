@@ -15,6 +15,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"sync"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
@@ -31,8 +32,8 @@ type (
 		fileset   *token.FileSet
 		decorator *decorator.Decorator
 		restorer  *decorator.Restorer
-		context   context.Context
 		opts      InjectorOptions
+		mutex     sync.Mutex // Guards access to InjectFile
 	}
 
 	// ModifiedFileFn is called with the original file and must return the path to use when writing a modified version.
@@ -87,7 +88,6 @@ func NewInjector(pkgDir string, opts InjectorOptions) (*Injector, error) {
 		fileset:   fileset,
 		decorator: dec,
 		restorer:  decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)),
-		context:   typed.ContextWithValue(context.Background(), dec),
 		opts:      opts,
 	}, nil
 }
@@ -101,8 +101,12 @@ type (
 	}
 )
 
-// Injects code in the specified file.
+// Injects code in the specified file. This method can be called concurrently by multiple goroutines,
+// as is guarded by a sync.Mutex.
 func (i *Injector) InjectFile(filename string) (res Result, err error) {
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+
 	res.Filename = filename
 
 	var file *dst.File
@@ -129,14 +133,13 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 			return res, err
 		}
 
-		file, err = i.decorator.ParseFile(filename, src, parser.ParseComments)
-		if err != nil {
+		if file, err = i.decorator.ParseFile(filename, src, parser.ParseComments); err != nil {
 			return res, err
 		}
 	}
 
-	res.Modified, res.References, err = i.inject(i.context, file)
-	if err != nil {
+	ctx := typed.ContextWithValue(context.Background(), i.decorator)
+	if res.Modified, res.References, err = i.inject(ctx, file); err != nil {
 		return res, err
 	}
 
@@ -242,15 +245,19 @@ func (i *Injector) addLineDirectives(file *dst.File, refs typed.ReferenceMap) {
 
 		ast := i.decorator.Ast.Nodes[node]
 		if ast != nil {
-			if inGen {
-				// We need to properly re-position this node (previous node was synthetic)
-				position := i.fileset.Position(ast.Pos())
-				deco := node.Decorations()
-				deco.Before = dst.NewLine
-				deco.Start.Append(fmt.Sprintf("//line %s:%d", position.Filename, position.Line))
-				inGen = false
+			position := i.fileset.Position(ast.Pos())
+			// Generated nodes from templates may have a corresponding AST node, with a blank filename.
+			// Those should be treated as synthetic nodes (they are!).
+			if position.Filename != "" {
+				if inGen {
+					// We need to properly re-position this node (previous node was synthetic)
+					deco := node.Decorations()
+					deco.Before = dst.NewLine
+					deco.Start.Append(fmt.Sprintf("//line %s:%d", position.Filename, position.Line))
+					inGen = false
+				}
+				return true
 			}
-			return true
 		}
 
 		if !inGen {

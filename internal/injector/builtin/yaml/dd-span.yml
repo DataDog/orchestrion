@@ -3,15 +3,17 @@
 - join-point:
     function-body:
       function:
-        - receives: context.Context
         - directive: 'dd:span'
+        - one-of:
+            - receives: context.Context
+            - receives: '*net/http.Request'
   advice:
     prepend-statements:
       imports:
         event: github.com/datadog/orchestrion/instrument/event
         instrument: github.com/datadog/orchestrion/instrument
       template: |-
-        {{- $ctx := .FindArgument "context.Context" -}}
+        {{- $ctx := or (.FindArgument "context.Context") (printf "%s.Context()" (.FindArgument "*net/http.Request")) -}}
         {{- $name := .Function.Name -}}
         instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}
         {{- range .DirectiveArgs "dd:span" -}}

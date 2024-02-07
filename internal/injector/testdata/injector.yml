@@ -472,7 +472,7 @@ chi5-newroute:
         advice:
           - add-comment: '//dd:instrumented'
           - append-statements:
-              template: '{{.Assignment.Variable}}.Use(instrument.ChiV5Middleware())'
+              template: '{{.Assignment.LHS}}.Use(instrument.ChiV5Middleware())'
               imports:
                 instrument: github.com/datadog/orchestrion/instrument
   source: |

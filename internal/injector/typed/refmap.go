@@ -8,6 +8,8 @@ package typed
 import (
 	"fmt"
 	"go/token"
+	"slices"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/basiclit"
 	"github.com/dave/dst"
@@ -67,6 +69,11 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 	if len(toAdd) == 0 {
 		return false
 	}
+
+	// Sort the import specs to ensure deterministic output.
+	slices.SortFunc(toAdd, func(l, r *dst.ImportSpec) int {
+		return strings.Compare(l.Path.Value, r.Path.Value)
+	})
 
 	// Find the last import declaration in the file...
 	var imports *dst.GenDecl

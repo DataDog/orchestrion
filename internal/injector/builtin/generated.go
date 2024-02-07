@@ -16,7 +16,7 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}}.Use(chitrace.ChiV5Middleware())",
+				"{{.Assignment.LHS}}.Use(chitrace.ChiV5Middleware())",
 				map[string]string{
 					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
 				},
@@ -49,12 +49,15 @@ var Aspects = [...]injector.Aspect{
 	// From yaml/dd-span.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
-			join.Receives(join.MustTypeName("context.Context")),
 			join.Directive("dd:span"),
+			join.OneOfFunctions(
+				join.Receives(join.MustTypeName("context.Context")),
+				join.Receives(join.MustTypeName("*net/http.Request")),
+			),
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{$ctx := .FindArgument \"context.Context\"}}{{$name := .Function.Name}}instrument.Report({{$ctx}}, event.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
+				"{{$ctx := or (.FindArgument \"context.Context\") (printf \"%s.Context()\" (.FindArgument \"*net/http.Request\"))}}{{$name := .Function.Name}}instrument.Report({{$ctx}}, event.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
 				map[string]string{
 					"event":      "github.com/datadog/orchestrion/instrument/event",
 					"instrument": "github.com/datadog/orchestrion/instrument",
@@ -66,9 +69,9 @@ var Aspects = [...]injector.Aspect{
 	{
 		JoinPoint: join.AssignmentOf(join.FunctionCall("github.com/labstack/echo/v4.New")),
 		Advice: []advice.Advice{
-			advice.AddComment("//dd:instrumented"),
+			advice.AddComment("/*dd:instrumented*/"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(echotrace.EchoV4Middleware())",
+				"{{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(echotrace.EchoV4Middleware())",
 				map[string]string{
 					"echotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 				},
@@ -81,7 +84,7 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(fibertrace.FiberV2Middleware())",
+				"{{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(fibertrace.FiberV2Middleware())",
 				map[string]string{
 					"fibertrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 				},
@@ -97,7 +100,7 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(gintrace.Middleware(\"\"))",
+				"{{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(gintrace.Middleware(\"\"))",
 				map[string]string{
 					"gintrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 				},
@@ -131,8 +134,8 @@ var Aspects = [...]injector.Aspect{
 				code.MustTemplate(
 					"grpc.WithUnaryInterceptor(grpctrace.GRPCUnaryClientInterceptor())",
 					map[string]string{
-						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+						"grpc":      "google.golang.org/grpc",
 					},
 				),
 			),
@@ -180,7 +183,7 @@ var Aspects = [...]injector.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}}))\ndefer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}}))",
+				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
 				map[string]string{
 					"instrument": "github.com/datadog/orchestrion/instrument",
 				},
