@@ -1,0 +1,12 @@
+%YAML 1.1
+---
+- join-point:
+    assignment-of:
+      function-call: github.com/gofiber/fiber/v2.New
+  advice:
+    - add-comment: //dd:instrumented
+    - append-statements:
+        imports:
+          instrument: github.com/datadog/orchestrion/instrument
+        template: |-
+          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.FiberMiddleware())
