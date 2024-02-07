@@ -16,9 +16,32 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}}.Use(instrument.ChiV5Middleware())",
+				"{{.Assignment.Variable}}.Use(chitrace.ChiV5Middleware())",
 				map[string]string{
-					"instrument": "github.com/datadog/orchestrion/instrument",
+					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+				},
+			)),
+		},
+	},
+	// From yaml/database-sql.yml
+	{
+		JoinPoint: join.FunctionCall("sql.Open"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"sqltrace.Open({{.FunctionCall.Arguments}})",
+				map[string]string{
+					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("sql.OpenDB"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"sqltrace.OpenDB({{.FunctionCall.Arguments}})",
+				map[string]string{
+					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 				},
 			)),
 		},
@@ -45,9 +68,9 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.EchoV4Middleware())",
+				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(echotrace.EchoV4Middleware())",
 				map[string]string{
-					"instrument": "github.com/datadog/orchestrion/instrument",
+					"echotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 				},
 			)),
 		},
@@ -58,9 +81,9 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.FiberMiddleware())",
+				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(fibertrace.FiberV2Middleware())",
 				map[string]string{
-					"instrument": "github.com/datadog/orchestrion/instrument",
+					"fibertrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 				},
 			)),
 		},
@@ -74,9 +97,21 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.GinModdleware())",
+				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(gintrace.Middleware(\"\"))",
 				map[string]string{
-					"instrument": "github.com/datadog/orchestrion/instrument",
+					"gintrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
+				},
+			)),
+		},
+	},
+	// From yaml/gorilla.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/gorilla/mux.NewRouter"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"muxtrace.WrapRouter({{.}})",
+				map[string]string{
+					"muxtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
 				},
 			)),
 		},
@@ -87,15 +122,17 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AppendArgs(
 				code.MustTemplate(
-					"instrument.GRPCStreamClientInterceptor()",
+					"grpc.WithStreamInterceptor(grpctrace.GRPCStreamClientInterceptor())",
 					map[string]string{
-						"instrument": "github.com/datadog/orchestrion/instrument",
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
 				),
 				code.MustTemplate(
-					"instrument.GRPCUnaryClientInterceptor()",
+					"grpc.WithUnaryInterceptor(grpctrace.GRPCUnaryClientInterceptor())",
 					map[string]string{
-						"instrument": "github.com/datadog/orchestrion/instrument",
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
 				),
 			),
@@ -106,15 +143,17 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AppendArgs(
 				code.MustTemplate(
-					"instrument.GRPCStreamServerInterceptor()",
+					"grpc.StreamInterceptor(grpctrace.GRPCStreamServerInterceptor())",
 					map[string]string{
-						"instrument": "github.com/datadog/orchestrion/instrument",
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
 				),
 				code.MustTemplate(
-					"instrument.GRPCUnaryServerInterceptor()",
+					"grpc.UnaryInterceptor(grpctrace.GRPCUnaryServerInterceptor())",
 					map[string]string{
-						"instrument": "github.com/datadog/orchestrion/instrument",
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
 				),
 			),

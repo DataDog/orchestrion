@@ -1,0 +1,18 @@
+%YAML 1.1
+---
+- join-point:
+    function-call: sql.Open
+  advice:
+    - wrap-expression:
+        imports:
+          sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+        template: |-
+          sqltrace.Open({{.FunctionCall.Arguments}})
+- join-point:
+    function-call: sql.OpenDB
+  advice:
+    - wrap-expression:
+        imports:
+          sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+        template: |-
+          sqltrace.OpenDB({{.FunctionCall.Arguments}})

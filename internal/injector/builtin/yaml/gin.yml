@@ -9,6 +9,6 @@
     - add-comment: //dd:instrumented
     - append-statements:
         imports:
-          instrument: github.com/datadog/orchestrion/instrument
+          gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
         template: |-
-          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.GinModdleware())
+          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(gintrace.Middleware(""))

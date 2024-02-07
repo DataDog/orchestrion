@@ -7,6 +7,6 @@
     - add-comment: //dd:instrumented
     - append-statements:
         imports:
-          instrument: github.com/datadog/orchestrion/instrument
+          echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
         template: |-
-          {{ .Assignment.Variable }} = {{ .Assignment.Variable }}.Use(instrument.EchoV4Middleware())
+          {{ .Assignment.Variable }} = {{ .Assignment.Variable }}.Use(echotrace.EchoV4Middleware())

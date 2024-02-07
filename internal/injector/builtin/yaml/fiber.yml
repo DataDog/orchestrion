@@ -7,6 +7,6 @@
     - add-comment: //dd:instrumented
     - append-statements:
         imports:
-          instrument: github.com/datadog/orchestrion/instrument
+          fibertrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
         template: |-
-          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.FiberMiddleware())
+          {{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(fibertrace.FiberV2Middleware())
