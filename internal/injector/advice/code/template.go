@@ -69,9 +69,9 @@ func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.Blo
 // the produced dst.Expr node. The provided context.Context and *dstutil.Cursor
 // are used to supply context information to the template functions. The
 // provided dst.Expr will be copied in places where the `{{Expr}}` template
-// function is used.
+// function is used, unless `expr` is nil.
 func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr dst.Expr) (dst.Expr, error) {
-	stmts, err := t.compile(ctx, node, true)
+	stmts, err := t.compile(ctx, node, expr != nil)
 	if err != nil {
 		return nil, err
 	}
@@ -89,24 +89,30 @@ func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr
 	exprStmt.X.Decorations().Start = exprStmt.Decs.Start
 	exprStmt.X.Decorations().End = exprStmt.Decs.End
 
-	// Replace the _.Expr placeholder with the actual wrapped expression
-	return dstutil.Apply(exprStmt.X, func(csor *dstutil.Cursor) bool {
-		selectorExpr, ok := csor.Node().(*dst.SelectorExpr)
-		if !ok {
+	result := exprStmt.X
+
+	if expr != nil {
+		// Replace the _.Expr placeholder with the actual wrapped expression
+		result = dstutil.Apply(result, func(csor *dstutil.Cursor) bool {
+			selectorExpr, ok := csor.Node().(*dst.SelectorExpr)
+			if !ok {
+				return true
+			}
+			if selectorExpr.Sel.Name != "Expr" {
+				return true
+			}
+			ident, ok := selectorExpr.X.(*dst.Ident)
+			if !ok {
+				return true
+			}
+			if ident.Name == "_" {
+				csor.Replace(expr)
+			}
 			return true
-		}
-		if selectorExpr.Sel.Name != "Expr" {
-			return true
-		}
-		ident, ok := selectorExpr.X.(*dst.Ident)
-		if !ok {
-			return true
-		}
-		if ident.Name == "_" {
-			csor.Replace(expr)
-		}
-		return true
-	}, nil).(dst.Expr), nil
+		}, nil).(dst.Expr)
+	}
+
+	return result, nil
 }
 
 // compile generates new source based on this Template and returns a cloned

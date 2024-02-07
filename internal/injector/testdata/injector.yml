@@ -622,3 +622,97 @@ directive:
         }
         inner(ctx)
       }
+
+grpc-client:
+  options:
+    preservelineinfo: true
+    injections:
+      - join-point:
+          function-call: google.golang.org/grpc.Dial
+        advice:
+          - append-args:
+              - imports: &imports
+                  instrument: github.com/datadog/orchestrion/instrument
+                template: instrument.GRPCStreamClientInterceptor()
+              - imports: *imports
+                template: instrument.GRPCUnaryClientInterceptor()
+      - join-point:
+          function-call: google.golang.org/grpc.NewServer
+        advice:
+          - append-args:
+              - imports: *imports
+                template: instrument.GRPCStreamServerInterceptor()
+              - imports: *imports
+                template: instrument.GRPCUnaryServerInterceptor()
+
+  source: |
+    package main
+
+    import (
+      "log"
+      "net"
+
+      "google.golang.org/grpc"
+    )
+
+    func grpcClient() {
+      conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+      if err != nil {
+        log.Fatal(err)
+      }
+      defer conn.Close()
+    }
+
+    func grpcServer() {
+      ln, err := net.Listen("tcp", ":50051")
+      if err != nil {
+        log.Fatal(err)
+      }
+
+      s := grpc.NewServer(grpc.EmptyServerOption{})
+      if err := s.Serve(ln); err != nil {
+        log.Fatalf("failed to serve: %v", err)
+      }
+    }
+  expected:
+    modified: true
+    references:
+      github.com/datadog/orchestrion/instrument: true
+    source: |
+      package main
+
+      import (
+        "log"
+        "net"
+
+        "google.golang.org/grpc"
+      //line <generated>:1
+        "github.com/datadog/orchestrion/instrument"
+      )
+
+      //line input.go:10
+      func grpcClient() {
+        conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(),
+      //line <generated>:1
+          instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())
+      //line input.go:12
+        if err != nil {
+          log.Fatal(err)
+        }
+        defer conn.Close()
+      }
+
+      func grpcServer() {
+        ln, err := net.Listen("tcp", ":50051")
+        if err != nil {
+          log.Fatal(err)
+        }
+
+        s := grpc.NewServer(grpc.EmptyServerOption{},
+      //line <generated>:1
+          instrument.GRPCStreamServerInterceptor(), instrument.GRPCUnaryServerInterceptor())
+      //line input.go:25
+        if err := s.Serve(ln); err != nil {
+          log.Fatalf("failed to serve: %v", err)
+        }
+      }

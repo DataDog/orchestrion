@@ -1,0 +1,22 @@
+%YAML 1.1
+---
+# Client Instrumentation
+- join-point:
+    function-call: google.golang.org/grpc.Dial
+  advice:
+    - append-args:
+        - imports: &imports
+            instrument: github.com/datadog/orchestrion/instrument
+          template: instrument.GRPCStreamClientInterceptor()
+        - imports: *imports
+          template: instrument.GRPCUnaryClientInterceptor()
+
+# Server Instrumentation
+- join-point:
+    function-call: google.golang.org/grpc.NewServer
+  advice:
+    - append-args:
+        - imports: *imports
+          template: instrument.GRPCStreamServerInterceptor()
+        - imports: *imports
+          template: instrument.GRPCUnaryServerInterceptor()

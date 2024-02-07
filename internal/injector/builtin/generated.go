@@ -39,6 +39,45 @@ var Aspects = [...]injector.Aspect{
 			)),
 		},
 	},
+	// From grpc.yml
+	{
+		JoinPoint: join.FunctionCall("google.golang.org/grpc.Dial"),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				code.MustTemplate(
+					"instrument.GRPCStreamClientInterceptor()",
+					map[string]string{
+						"instrument": "github.com/datadog/orchestrion/instrument",
+					},
+				),
+				code.MustTemplate(
+					"instrument.GRPCUnaryClientInterceptor()",
+					map[string]string{
+						"instrument": "github.com/datadog/orchestrion/instrument",
+					},
+				),
+			),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				code.MustTemplate(
+					"instrument.GRPCStreamServerInterceptor()",
+					map[string]string{
+						"instrument": "github.com/datadog/orchestrion/instrument",
+					},
+				),
+				code.MustTemplate(
+					"instrument.GRPCUnaryServerInterceptor()",
+					map[string]string{
+						"instrument": "github.com/datadog/orchestrion/instrument",
+					},
+				),
+			),
+		},
+	},
 	// From net-http.yml
 	{
 		JoinPoint: join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
@@ -60,7 +99,7 @@ var Aspects = [...]injector.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method)\ndefer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method)",
+				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}}))\ndefer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}}))",
 				map[string]string{
 					"instrument": "github.com/datadog/orchestrion/instrument",
 				},
