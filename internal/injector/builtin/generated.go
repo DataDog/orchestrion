@@ -39,6 +39,19 @@ var Aspects = [...]injector.Aspect{
 			)),
 		},
 	},
+	// From echo.yml
+	{
+		JoinPoint: join.AssignmentOf(join.FunctionCall("github.com/labstack/echo/v4.New")),
+		Advice: []advice.Advice{
+			advice.AddComment("//dd:instrumented"),
+			advice.AppendStatements(code.MustTemplate(
+				"{{.Assignment.Variable}} = {{.Assignment.Variable}}.Use(instrument.EchoV4Middleware())",
+				map[string]string{
+					"instrument": "github.com/datadog/orchestrion/instrument",
+				},
+			)),
+		},
+	},
 	// From grpc.yml
 	{
 		JoinPoint: join.FunctionCall("google.golang.org/grpc.Dial"),
