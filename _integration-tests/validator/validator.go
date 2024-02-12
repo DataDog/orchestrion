@@ -142,7 +142,7 @@ func main() {
 
 	f, err := os.Open(*vfile)
 	if err != nil {
-		fmt.Printf("Failed to open validation file '%s': %v\n", err)
+		fmt.Printf("Failed to open validation file %q: %v\n", *vfile, err)
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -152,7 +152,7 @@ func main() {
 	var v Validation
 	err = d.Decode(&v)
 	if err != nil {
-		fmt.Printf("Failed to decode validation from '%s': %v\n", err)
+		fmt.Printf("Failed to decode validation from %q: %v\n", *vfile, err)
 		os.Exit(1)
 	}
 
