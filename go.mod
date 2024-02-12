@@ -3,15 +3,18 @@ module github.com/datadog/orchestrion
 go 1.19
 
 require (
-	github.com/dave/jennifer v1.5.0
+	github.com/datadog/orchestrion/internal/injector/advice/code/generator v0.0.0-00010101000000-000000000000
+	github.com/datadog/orchestrion/internal/injector/builtin/generator v0.0.0-00010101000000-000000000000
+	github.com/dave/dst v0.27.2
+	github.com/dave/jennifer v1.7.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gorilla/mux v1.8.0
 	github.com/labstack/echo/v4 v4.11.1
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/tools v0.16.0
-	google.golang.org/grpc v1.57.1
+	golang.org/x/tools v0.17.0
+	google.golang.org/grpc v1.58.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.58.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -49,6 +52,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
@@ -69,18 +73,19 @@ require (
 	go4.org/intern v0.0.0-20230525184215-6c62f75575cb // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	golang.org/x/arch v0.4.0 // indirect
-	golang.org/x/crypto v0.16.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230815205213-6bfd019c3878 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	inet.af/netaddr v0.0.0-20230525184311-b8eac61e914a // indirect
 )
 
-require (
-	github.com/dave/dst v0.27.2
-	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+replace (
+	github.com/datadog/orchestrion/internal/injector/advice/code/generator => ./internal/injector/advice/code/generator
+	github.com/datadog/orchestrion/internal/injector/builtin/generator => ./internal/injector/builtin/generator
 )
