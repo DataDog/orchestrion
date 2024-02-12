@@ -466,6 +466,7 @@ gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
 gopkg.in/jinzhu/gorm.v1 v1.9.2/go.mod h1:56JJPUzbikvTVnoyP1nppSkbJ2L8sunqTBDY2fDrmFg=
 gopkg.in/olivere/elastic.v3 v3.0.75/go.mod h1:yDEuSnrM51Pc8dM5ov7U8aI/ToR3PG0llA8aRv2qmw0=
 gopkg.in/olivere/elastic.v5 v5.0.84/go.mod h1:LXF6q9XNBxpMqrcgax95C6xyARXWbbCXUrtTxrNrxJI=
+gopkg.in/src-d/go-billy.v4 v4.3.2/go.mod h1:nDjArDMp+XMs1aFAESLRjfGSgfvoYN0hDfzEk0GjC98=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.3/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
