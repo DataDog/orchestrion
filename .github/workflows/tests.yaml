@@ -58,3 +58,11 @@ jobs:
           go-version: "stable"
       - name: Run Integration Tests
         run: make integration-tests
+      - name: Upload artifact
+        # We want this even if the tests failed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-output
+          path: _integration-tests/outputs
+          if-no-files-found: error # That would be very unexpected
