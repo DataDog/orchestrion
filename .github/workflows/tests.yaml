@@ -13,25 +13,25 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "stable"
           cache: true
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'DataDog/orchestrion'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           version: v1.52.2
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'DataDog/orchestrion'
       - name: Checkout Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "stable"
       - name: Run unit tests
@@ -50,10 +50,10 @@ jobs:
           TRACE_LANGUAGE: golang
           ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'DataDog/orchestrion'
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "stable"
       - name: Run Integration Tests
