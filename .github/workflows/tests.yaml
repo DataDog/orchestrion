@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "stable"
-          cache: true
+          cache-dependency-path: "**/*.sum"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
@@ -34,6 +34,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "stable"
+          cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: make test
   integration-tests:
@@ -56,6 +57,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "stable"
+          cache-dependency-path: "**/*.sum"
       - name: Run Integration Tests
         run: make integration-tests
 
