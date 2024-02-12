@@ -1,7 +1,7 @@
 %YAML 1.1
 ---
 - join-point:
-    function-call: sql.Open
+    function-call: database/sql.Open
   advice:
     - wrap-expression:
         imports:
@@ -9,7 +9,7 @@
         template: |-
           sqltrace.Open({{.FunctionCall.Arguments}})
 - join-point:
-    function-call: sql.OpenDB
+    function-call: database/sql.OpenDB
   advice:
     - wrap-expression:
         imports:

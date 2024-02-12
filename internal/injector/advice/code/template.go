@@ -28,7 +28,7 @@ type Template struct {
 	imports  map[string]string
 }
 
-var wrapper = template.Must(template.New("_").Parse("{{define `Wrapper`}}package _\nfunc _() {\n{{template `_` .}}\n}{{end}}"))
+var wrapper = template.Must(template.New("code.Template").Parse("{{define `_`}}package _\nfunc _() {\n{{template `code.Template` .}}\n}{{end}}"))
 
 // NewTemplate creates a new Template using the provided template string and
 // imports map. The imports map associates names to import paths. The produced
@@ -54,7 +54,7 @@ func MustTemplate(text string, imports map[string]string) (template Template) {
 // context.Context and *dstutil.Cursor are used to supply context information to
 // the template functions.
 func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.BlockStmt, error) {
-	stmts, err := t.compile(ctx, node, nil)
+	stmts, err := t.compile(ctx, node)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +72,8 @@ func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.Blo
 // are used to supply context information to the template functions. The
 // provided dst.Expr will be copied in places where the `{{Expr}}` template
 // function is used, unless `expr` is nil.
-func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr dst.Expr) (dst.Expr, error) {
-	stmts, err := t.compile(ctx, node, expr)
+func (t *Template) CompileExpression(ctx context.Context, node *node.Chain) (dst.Expr, error) {
+	stmts, err := t.compile(ctx, node)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (t *Template) CompileExpression(ctx context.Context, node *node.Chain, expr
 
 // compile generates new source based on this Template and returns a cloned
 // version of minimally post-processed dst.Stmt nodes this produced.
-func (t *Template) compile(ctx context.Context, chain *node.Chain, expression dst.Expr) ([]dst.Stmt, error) {
+func (t *Template) compile(ctx context.Context, chain *node.Chain) ([]dst.Stmt, error) {
 	ctxFile, found := node.Find[*dst.File](chain)
 	if !found {
 		return nil, errors.New("no *dst.File was found in the node chain")
@@ -106,8 +106,8 @@ func (t *Template) compile(ctx context.Context, chain *node.Chain, expression ds
 	tmpl := template.Must(t.template.Clone())
 
 	buf := bytes.NewBuffer(nil)
-	dot := &dot{node: chain, expr: expression}
-	if err := tmpl.ExecuteTemplate(buf, "Wrapper", dot); err != nil {
+	dot := &dot{node: chain}
+	if err := tmpl.ExecuteTemplate(buf, "_", dot); err != nil {
 		return nil, fmt.Errorf("while executing template: %w", err)
 	}
 

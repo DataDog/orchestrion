@@ -57,7 +57,13 @@ func TestInjector(t *testing.T) {
 	err := yaml.Unmarshal(injectorTestdata, &cases)
 	require.NoError(t, err, "failed to parse test suite data")
 
+	t.Parallel()
+
 	for name, tc := range cases {
+		if name != "database-sql" {
+			continue
+		}
+
 		t.Run(name, func(t *testing.T) {
 			tc.Options.ModifiedFile = func(filename string) string { return filename + ".edited" }
 

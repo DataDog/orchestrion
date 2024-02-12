@@ -716,3 +716,91 @@ grpc-client:
           log.Fatalf("failed to serve: %v", err)
         }
       }
+
+database-sql:
+  options:
+    preservelineinfo: true
+    injections:
+      - join-point:
+          function-call: database/sql.Open
+        advice:
+          - wrap-expression:
+              imports:
+                sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+              template: |-
+                sqltrace.Open(
+                  {{range .AST.Args}}{{.}},
+                {{end}})
+      - join-point:
+          function-call: database/sql.OpenDB
+        advice:
+          - wrap-expression:
+              imports:
+                sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+              template: |-
+                sqltrace.OpenDB(
+                  {{range .AST.Args}}{{.}},
+                {{end}})
+  source: |
+    package test
+
+    import (
+      "database/sql"
+      "database/sql/driver"
+    )
+
+    var conn driver.Connector
+
+    func main() {
+      db1, err := sql.Open("foo", "bar")
+      if err != nil {
+        panic(err)
+      }
+      defer db1.Close()
+
+      if db2, err := sql.OpenDB(conn); err != nil {
+        panic(err)
+      } else {
+        defer db2.Close()
+      }
+    }
+  expected:
+    modified: true
+    references:
+      gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql: true
+    source: |
+      package test
+
+      import (
+        "database/sql/driver"
+      //line <generated>:1
+        "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+      )
+
+      //line input.go:8
+      var conn driver.Connector
+
+      func main() {
+        db1, err :=
+      //line <generated>:1
+          sql.Open(
+      //line input.go:11
+            "foo", "bar")
+      //line input.go:12
+        if err != nil {
+          panic(err)
+        }
+        defer db1.Close()
+
+        if db2, err :=
+      //line <generated>:1
+          sql.OpenDB(
+      //line input.go:17
+            conn);
+      //line input.go:17
+        err != nil {
+          panic(err)
+        } else {
+          defer db2.Close()
+        }
+      }

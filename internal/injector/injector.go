@@ -80,6 +80,12 @@ func NewInjector(pkgDir string, opts InjectorOptions) (*Injector, error) {
 		pkgPath = pkg.PkgPath
 		restorerMap = make(map[string]string, len(pkg.Imports))
 		for _, imp := range pkg.Imports {
+			if imp.Name == "" {
+				// Happens when there is an error while processing the import, typically inability to resolve the name due to a
+				// typo or something. If we allow blank names in the map, the restorer just removes the qualifiers, which is
+				// obviously undesirable.
+				continue
+			}
 			restorerMap[imp.PkgPath] = imp.Name
 		}
 	}

@@ -34,7 +34,7 @@ func (a *appendArgs) Apply(ctx context.Context, chain *node.Chain, csor *dstutil
 	newArgs := make([]dst.Expr, len(a.templates))
 	var err error
 	for i, t := range a.templates {
-		newArgs[i], err = t.CompileExpression(ctx, chain, nil /* no {{Expr}} here */)
+		newArgs[i], err = t.CompileExpression(ctx, chain)
 		if err != nil {
 			return false, err
 		}

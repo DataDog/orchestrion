@@ -17,42 +17,38 @@ import (
 // information from the template's rendering context.
 type (
 	placeholders struct {
-		singletons map[dst.Expr]string
-		byName     map[string]dst.Expr
+		singletons map[dst.Node]string
+		byName     map[string]dst.Node
 	}
 
 	dot struct {
 		node         *node.Chain // The node in context of which the template is rendered
 		placeholders             // Placeholders used by the template
-		expr         dst.Expr    // The expression to be used in the template (as {{.}}), if any
 	}
 )
 
 func (d *dot) String() string {
-	if d.expr != nil {
-		return d.placeholders.forNode(d.expr, true)
-	}
-	return fmt.Sprintf("/* %s */", d.node.String())
+	return d.placeholders.forNode(d.node.Node, true)
 }
 
 // forNode obtains the placeholder syntax to use for referencing the given node. If singleton is
 // true, this returns the same placeholder for each invocation with the same node argument.
 // Otherwise, this returns a new placeholder for each invocation, guaranteeing that different AST
 // nodes are produced (it's an error to have the same AST node multiple times in the output AST).
-func (p *placeholders) forNode(node dst.Expr, singleton bool) string {
+func (p *placeholders) forNode(node dst.Node, singleton bool) string {
 	if singleton {
 		if name, found := p.singletons[node]; found {
 			return name
 		}
 		if p.singletons == nil {
 			// Will be filled in later once we have determined the name
-			p.singletons = make(map[dst.Expr]string, 1)
+			p.singletons = make(map[dst.Node]string, 1)
 		}
 	}
 
 	name := fmt.Sprintf("__PLACEHOLDER_%d__", len(p.byName))
 	if p.byName == nil {
-		p.byName = make(map[string]dst.Expr, 1)
+		p.byName = make(map[string]dst.Node, 1)
 	}
 	if singleton {
 		p.byName[name] = node

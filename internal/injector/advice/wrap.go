@@ -27,18 +27,17 @@ func WrapExpression(template code.Template) *wrapExpression {
 
 func (a *wrapExpression) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
 	var (
-		expr dst.Expr
-		kve  *dst.KeyValueExpr
-		ok   bool
+		kve *dst.KeyValueExpr
+		ok  bool
 	)
 
 	if kve, ok = csor.Node().(*dst.KeyValueExpr); ok {
-		expr = kve.Value
-	} else if expr, ok = csor.Node().(dst.Expr); !ok {
+		node = node.Child(kve.Value, "Value", -1)
+	} else if _, ok = csor.Node().(dst.Expr); !ok {
 		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", csor.Node())
 	}
 
-	repl, err := a.template.CompileExpression(ctx, node, expr)
+	repl, err := a.template.CompileExpression(ctx, node)
 	if err != nil {
 		return false, err
 	}
