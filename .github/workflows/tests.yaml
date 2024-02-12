@@ -13,13 +13,13 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: 'DataDog/orchestrion'
       - uses: actions/setup-go@v5
         with:
           go-version: "stable"
           cache: true
-      - uses: actions/checkout@v4
-        with:
-          repository: 'DataDog/orchestrion'
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
