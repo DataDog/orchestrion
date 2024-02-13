@@ -1,11 +1,11 @@
 name: Tests
 on:
   pull_request:
-    branches:
-      - "**"
+    branches: ["**"]
+  merge_group:
+    branches: ["main"]
   push:
-    branches:
-      - "main"
+    branches: ["main"]
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -13,27 +13,28 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v4
-        with:
-          go-version: "stable"
-          cache: true
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'DataDog/orchestrion'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+          cache-dependency-path: "**/*.sum"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           version: v1.52.2
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'DataDog/orchestrion'
       - name: Checkout Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: "stable"
+          cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: make test
   integration-tests:
@@ -50,11 +51,23 @@ jobs:
           TRACE_LANGUAGE: golang
           ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: 'DataDog/orchestrion'
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "stable"
+          cache-dependency-path: "**/*.sum"
       - name: Run Integration Tests
         run: make integration-tests
+
+  # This is just a join point intended to simplify branch protection settings
+  complete:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - unit-tests
+      - integration-tests
+    steps:
+      - name: Done
+        run: echo "OK"
