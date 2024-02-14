@@ -3,15 +3,15 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package injector
+package aspect
 
 import (
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/advice"
-	"github.com/datadog/orchestrion/internal/injector/join"
+	"github.com/datadog/orchestrion/internal/injector/aspect/advice"
+	"github.com/datadog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -27,7 +27,7 @@ type Aspect struct {
 
 func (a *Aspect) AsCode() (jp, adv jen.Code) {
 	jp = a.JoinPoint.AsCode()
-	adv = jen.Index().Qual("github.com/datadog/orchestrion/internal/injector/advice", "Advice").ValuesFunc(func(g *jen.Group) {
+	adv = jen.Index().Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice", "Advice").ValuesFunc(func(g *jen.Group) {
 		for _, a := range a.Advice {
 			g.Line().Add(a.AsCode())
 		}

@@ -1,4 +1,4 @@
-module github.com/datadog/orchestrion/internal/injector/advice/code/generator
+module github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator
 
 go 1.19
 

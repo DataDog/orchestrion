@@ -20,7 +20,7 @@ type (
 	FunctionOption interface {
 		code.AsCode
 
-		evaluate(*dst.FuncType, ...*dst.NodeDecs) bool
+		evaluate(string, *dst.FuncType, ...*dst.NodeDecs) bool
 	}
 
 	funcDecl struct {
@@ -35,10 +35,14 @@ func Function(opts ...FunctionOption) *funcDecl {
 }
 
 func (s *funcDecl) Matches(chain *node.Chain) bool {
-	var funcType *dst.FuncType
-	funcDecs := []*dst.NodeDecs{chain.Decorations(), nil}[0:1]
+	var (
+		name     string
+		funcType *dst.FuncType
+		funcDecs = []*dst.NodeDecs{chain.Decorations(), nil}[0:1]
+	)
 
 	if decl, ok := node.As[*dst.FuncDecl](chain); ok {
+		name = decl.Name.Name
 		funcType = decl.Type
 	} else if lit, ok := node.As[*dst.FuncLit](chain); ok {
 		funcType = lit.Type
@@ -50,7 +54,7 @@ func (s *funcDecl) Matches(chain *node.Chain) bool {
 	}
 
 	for _, opt := range s.opts {
-		if !opt.evaluate(funcType, funcDecs...) {
+		if !opt.evaluate(name, funcType, funcDecs...) {
 			return false
 		}
 	}
@@ -67,6 +71,20 @@ func (s *funcDecl) AsCode() jen.Code {
 	})
 }
 
+type funcName string
+
+func Name(name string) FunctionOption {
+	return funcName(name)
+}
+
+func (fo funcName) evaluate(name string, _ *dst.FuncType, _ ...*dst.NodeDecs) bool {
+	return name == string(fo)
+}
+
+func (fo funcName) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Name").Call(jen.Lit(string(fo)))
+}
+
 type signature struct {
 	args    []TypeName
 	returns []TypeName
@@ -78,7 +96,7 @@ func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{args: args, returns: ret}
 }
 
-func (fo *signature) evaluate(fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
+func (fo *signature) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
 	if fnType.Results == nil || len(fnType.Results.List) == 0 {
 		if len(fo.returns) != 0 {
 			return false
@@ -144,7 +162,7 @@ func Directive(name string) FunctionOption {
 	return &directive{name}
 }
 
-func (fo *directive) evaluate(_ *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
+func (fo *directive) evaluate(_ string, _ *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
 	for _, decs := range allDecs {
 		for _, dec := range decs.Start {
 			if dec == "//"+fo.name || strings.HasPrefix(dec, "//"+fo.name+" ") {
@@ -166,9 +184,9 @@ func OneOfFunctions(opts ...FunctionOption) oneOfFunctions {
 
 }
 
-func (fo oneOfFunctions) evaluate(fnType *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
+func (fo oneOfFunctions) evaluate(name string, fnType *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
 	for _, opt := range fo {
-		if opt.evaluate(fnType, allDecs...) {
+		if opt.evaluate(name, fnType, allDecs...) {
 			return true
 		}
 	}
@@ -196,7 +214,7 @@ func Receives(typeName TypeName) FunctionOption {
 	return &receives{typeName}
 }
 
-func (fo *receives) evaluate(fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
+func (fo *receives) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
 	for _, param := range fnType.Params.List {
 		if fo.typeName.Matches(param.Type) {
 			return true
@@ -291,6 +309,12 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		o.FunctionOption = Directive(name)
+	case "name":
+		var name string
+		if err := node.Content[1].Decode(&name); err != nil {
+			return err
+		}
+		o.FunctionOption = Name(name)
 	case "one-of":
 		var opts []unmarshalFuncDeclOption
 		if err := node.Content[1].Decode(&opts); err != nil {

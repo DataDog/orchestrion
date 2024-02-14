@@ -8,7 +8,7 @@ package advice
 import (
 	"context"
 
-	"github.com/datadog/orchestrion/internal/injector/advice/code"
+	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"

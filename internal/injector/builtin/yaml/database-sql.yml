@@ -7,7 +7,9 @@
         imports:
           sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
         template: |-
-          sqltrace.Open({{.FunctionCall.Arguments}})
+          sqltrace.Open(
+            {{range .AST.Args}}{{.}},
+          {{end}})
 - join-point:
     function-call: database/sql.OpenDB
   advice:
@@ -15,4 +17,6 @@
         imports:
           sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
         template: |-
-          sqltrace.OpenDB({{.FunctionCall.Arguments}})
+          sqltrace.OpenDB(
+            {{range .AST.Args}}{{.}},
+          {{end}})

@@ -11,4 +11,4 @@
         imports:
           gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
         template: |-
-          {{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(gintrace.Middleware(""))
+          {{.Assignment.LHS}}.Use(gintrace.Middleware(""))

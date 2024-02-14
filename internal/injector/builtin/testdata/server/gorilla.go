@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 //line <generated>:1
 	"github.com/datadog/orchestrion/instrument"
+	"github.com/datadog/orchestrion/instrument/event"
 	mux1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
@@ -27,8 +28,8 @@ func gorillaMuxServer() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 //line samples/server/gorilla.go:18

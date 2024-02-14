@@ -8,7 +8,7 @@ package code
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/join"
+	"github.com/datadog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
 )
 

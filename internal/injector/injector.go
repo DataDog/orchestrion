@@ -17,6 +17,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/datadog/orchestrion/internal/injector/aspect"
+	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
@@ -32,19 +34,19 @@ type (
 		fileset   *token.FileSet
 		decorator *decorator.Decorator
 		restorer  *decorator.Restorer
-		opts      InjectorOptions
+		opts      Options
 		mutex     sync.Mutex // Guards access to InjectFile
 	}
 
 	// ModifiedFileFn is called with the original file and must return the path to use when writing a modified version.
 	ModifiedFileFn func(string) string
 
-	InjectorOptions struct {
+	Options struct {
+		// Aspects is the set of configured injections to attempt.
+		Aspects []aspect.Aspect
 		// ModifiedFile is called to obtain the file name to use when writing a modified file. If nil, the original file is
 		// overwritten in-place.
 		ModifiedFile ModifiedFileFn
-		// Injections is the set of configured injections to attempt.
-		Injections []Aspect
 		// PreserveLineInfo enables emission of //line directives to preserve line information from the original file, so
 		// that stack traces resolve to the original source code. This is strongly recommended when performing compile-time
 		// injection.
@@ -52,8 +54,8 @@ type (
 	}
 )
 
-// NewInjector creates a new injector with the specified options.
-func NewInjector(pkgDir string, opts InjectorOptions) (*Injector, error) {
+// New creates a new injector with the specified options.
+func New(pkgDir string, opts Options) (*Injector, error) {
 	fileset := token.NewFileSet()
 	cfg := &packages.Config{
 		Dir:  pkgDir,
@@ -72,13 +74,16 @@ func NewInjector(pkgDir string, opts InjectorOptions) (*Injector, error) {
 		dec         *decorator.Decorator
 		restorerMap map[string]string
 	)
-	if pkgs, err := decorator.Load(cfg /* default */, pkgPath); err != nil {
+	if pkgs, err := decorator.Load(cfg, pkgPath); err != nil {
 		return nil, err
 	} else {
 		pkg := pkgs[0]
 		dec = pkg.Decorator
 		pkgPath = pkg.PkgPath
-		restorerMap = make(map[string]string, len(pkg.Imports))
+		restorerMap = make(map[string]string, len(pkg.Imports)+len(builtin.RestorerMap))
+		for path, name := range builtin.RestorerMap {
+			restorerMap[path] = name
+		}
 		for _, imp := range pkg.Imports {
 			if imp.Name == "" {
 				// Happens when there is an error while processing the import, typically inability to resolve the name due to a
@@ -212,7 +217,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
 func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (mod bool, err error) {
-	for _, inj := range i.opts.Injections {
+	for _, inj := range i.opts.Aspects {
 		if !inj.JoinPoint.Matches(chain) {
 			continue
 		}

@@ -3,7 +3,7 @@ module github.com/datadog/orchestrion
 go 1.19
 
 require (
-	github.com/datadog/orchestrion/internal/injector/advice/code/generator v0.0.0-00010101000000-000000000000
+	github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator v0.0.0-00010101000000-000000000000
 	github.com/datadog/orchestrion/internal/injector/builtin/generator v0.0.0-00010101000000-000000000000
 	github.com/dave/dst v0.27.2
 	github.com/dave/jennifer v1.7.0
@@ -86,6 +86,6 @@ require (
 )
 
 replace (
-	github.com/datadog/orchestrion/internal/injector/advice/code/generator => ./internal/injector/advice/code/generator
+	github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator => ./internal/injector/aspect/advice/code/generator
 	github.com/datadog/orchestrion/internal/injector/builtin/generator => ./internal/injector/builtin/generator
 )

@@ -16,8 +16,10 @@
 
 set -euo pipefail
 
+SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 if [[ $# -lt 1 ]]; then
-  echo "Usage: /start.sh <test> [args...]"
+  echo "Usage: ${SCRIPTDIR}/start.sh <test> [args...]"
   echo "Error: missing argument value for <test>"
   exit 2
 fi
@@ -45,13 +47,17 @@ term() {
   kill -TERM "${pid}"
 }
 
+echo "Copying instrumented source to output..."
+mkdir -p "/output/src"
+cp -r ${SCRIPTDIR}/tests/${TEST_NAME}/*.go "/output/src/"
+
 echo -n "Starting test session with the agent..."
 curl -f "http://localhost:8126/test/session/start?test_session_token=${token}"
 echo "" # The test agent response does not end with a new line...
 trap "finish ${token}" EXIT
 
 echo "Starting service handler..."
-"/.bin/${TEST_NAME}" "$@" >/output/stdout.log 2>/output/stderr.log &
+"${SCRIPTDIR}/.bin/${TEST_NAME}" "$@" >/output/stdout.log 2>/output/stderr.log &
 pid=$!
 
 # We trap TERM to circumvent bash's default behavior & ensure the EXIT trap does not run prematurely.

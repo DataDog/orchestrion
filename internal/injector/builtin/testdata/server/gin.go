@@ -20,7 +20,7 @@ func ginServer() {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		r = r.Use(gin1.Middleware(""))
+		r.Use(gin1.Middleware(""))
 	}
 	//dd:endinstrument
 //line samples/server/gin.go:16

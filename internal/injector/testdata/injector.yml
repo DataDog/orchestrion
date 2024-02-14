@@ -2,7 +2,7 @@
 ---
 http-default:
   options:
-    injections: &injections
+    aspects: &aspects
       - join-point:
           function-body:
             function:
@@ -13,13 +13,14 @@ http-default:
         advice:
           - prepend-statements:
               imports:
+                event: github.com/datadog/orchestrion/instrument/event
                 instrument: github.com/datadog/orchestrion/instrument
               template: |-
                 {{- $arg := .Function.Argument 1 -}}
                 {{- $name := .Function.Name -}}
                 {{$arg}} = instrument.HandleHeader({{$arg}})
-                instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
-                defer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
+                instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
+                defer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
   source: &httpSource |
     package main
 
@@ -57,6 +58,7 @@ http-default:
   expected:
     modified: true
     references: &references
+      github.com/datadog/orchestrion/instrument/event: true
       github.com/datadog/orchestrion/instrument: true # Orchestrion is imported synthetically
     source: |
       package main
@@ -68,6 +70,7 @@ http-default:
         "net/http"
 
         "github.com/datadog/orchestrion/instrument"
+        "github.com/datadog/orchestrion/instrument/event"
         "orchestrion/integration"
       )
 
@@ -86,8 +89,8 @@ http-default:
         //dd:startinstrument
         {
           r = instrument.HandleHeader(r)
-          instrument.Report(r.Context(), instrument.EventStart, "name", "handle", "verb", r.Method)
-          defer instrument.Report(r.Context(), instrument.EventEnd, "name", "handle", "verb", r.Method)
+          instrument.Report(r.Context(), event.EventStart, "name", "handle", "verb", r.Method)
+          defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "verb", r.Method)
         }
         //dd:endinstrument
         data, err := io.ReadAll(r.Body)
@@ -103,7 +106,7 @@ http-default:
 
 http-anonymous-handler:
   options:
-    injections: *injections
+    aspects: *aspects
   source: |
     package main
 
@@ -149,6 +152,7 @@ http-anonymous-handler:
         "net/http"
 
         "github.com/datadog/orchestrion/instrument"
+        "github.com/datadog/orchestrion/instrument/event"
         "orchestrion/integration"
       )
 
@@ -159,8 +163,8 @@ http-anonymous-handler:
             //dd:startinstrument
             {
               r = instrument.HandleHeader(r)
-              instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-              defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+              instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+              defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
             }
             //dd:endinstrument
             data, err := io.ReadAll(r.Body)
@@ -182,7 +186,7 @@ http-anonymous-handler:
 
 http-no-arg-name:
   options:
-    injections: *injections
+    aspects: *aspects
   source: |
     package main
 
@@ -219,6 +223,7 @@ http-no-arg-name:
         "net/http"
 
         "github.com/datadog/orchestrion/instrument"
+        "github.com/datadog/orchestrion/instrument/event"
         "orchestrion/integration"
       )
 
@@ -237,15 +242,15 @@ http-no-arg-name:
         //dd:startinstrument
         {
           __argument__1 = instrument.HandleHeader(__argument__1)
-          instrument.Report(__argument__1.Context(), instrument.EventStart, "name", "handle", "verb", __argument__1.Method)
-          defer instrument.Report(__argument__1.Context(), instrument.EventEnd, "name", "handle", "verb", __argument__1.Method)
+          instrument.Report(__argument__1.Context(), event.EventStart, "name", "handle", "verb", __argument__1.Method)
+          defer instrument.Report(__argument__1.Context(), event.EventEnd, "name", "handle", "verb", __argument__1.Method)
         }
         //dd:endinstrument
       }
 
 http-lineInfo:
   options:
-    injections: *injections
+    aspects: *aspects
     preservelineinfo: true
   source: *httpSource
   expected:
@@ -263,6 +268,7 @@ http-lineInfo:
         "orchestrion/integration"
       //line <generated>:1
         "github.com/datadog/orchestrion/instrument"
+        "github.com/datadog/orchestrion/instrument/event"
       )
 
       //line input.go:12
@@ -282,8 +288,8 @@ http-lineInfo:
         //dd:startinstrument
         {
           r = instrument.HandleHeader(r)
-          instrument.Report(r.Context(), instrument.EventStart, "name", "handle", "verb", r.Method)
-          defer instrument.Report(r.Context(), instrument.EventEnd, "name", "handle", "verb", r.Method)
+          instrument.Report(r.Context(), event.EventStart, "name", "handle", "verb", r.Method)
+          defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "verb", r.Method)
         }
         //dd:endinstrument
       //line input.go:24
@@ -300,7 +306,7 @@ http-lineInfo:
 
 http-ignored:
   options:
-    injections: *injections
+    aspects: *aspects
   source: |
     package main
 
@@ -341,7 +347,7 @@ http-ignored:
 
 http-server:
   options:
-    injections:
+    aspects:
       - join-point:
           struct-literal:
             type: net/http.Server
@@ -407,7 +413,7 @@ http-server:
 
 change-return-value:
   options:
-    injections:
+    aspects:
       - join-point:
           function-body:
             function:
@@ -465,7 +471,7 @@ change-return-value:
 chi5-newroute:
   options:
     preservelineinfo: true
-    injections:
+    aspects:
       - join-point:
           assignment-of:
             function-call: github.com/go-chi/chi/v5.NewRouter
@@ -550,7 +556,7 @@ chi5-newroute:
 directive:
   options:
     preservelineinfo: true
-    injections:
+    aspects:
       - join-point:
           function-body:
             function:
@@ -626,7 +632,7 @@ directive:
 grpc-client:
   options:
     preservelineinfo: true
-    injections:
+    aspects:
       - join-point:
           function-call: google.golang.org/grpc.Dial
         advice:
@@ -720,7 +726,7 @@ grpc-client:
 database-sql:
   options:
     preservelineinfo: true
-    injections:
+    aspects:
       - join-point:
           function-call: database/sql.Open
         advice:

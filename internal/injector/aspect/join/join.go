@@ -18,7 +18,7 @@ import (
 	"github.com/dave/jennifer/jen"
 )
 
-const pkgPath = "github.com/datadog/orchestrion/internal/injector/join"
+const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/join"
 
 // Point is the interface that abstracts selection of nodes where to inject
 // code.

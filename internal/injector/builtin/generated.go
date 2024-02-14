@@ -8,20 +8,21 @@
 package builtin
 
 import (
-	injector "github.com/datadog/orchestrion/internal/injector"
-	advice "github.com/datadog/orchestrion/internal/injector/advice"
-	code "github.com/datadog/orchestrion/internal/injector/advice/code"
-	join "github.com/datadog/orchestrion/internal/injector/join"
+	aspect "github.com/datadog/orchestrion/internal/injector/aspect"
+	advice "github.com/datadog/orchestrion/internal/injector/aspect/advice"
+	code "github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
+	join "github.com/datadog/orchestrion/internal/injector/aspect/join"
 )
 
-var Aspects = [...]injector.Aspect{
+// Aspects is the list of built-in aspects.
+var Aspects = [...]aspect.Aspect{
 	// From yaml/chi.yml
 	{
 		JoinPoint: join.AssignmentOf(join.FunctionCall("github.com/go-chi/chi/v5.NewRouter")),
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}}.Use(chitrace.ChiV5Middleware())",
+				"{{.Assignment.LHS}}.Use(chitrace.Middleware())",
 				map[string]string{
 					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
 				},
@@ -33,7 +34,7 @@ var Aspects = [...]injector.Aspect{
 		JoinPoint: join.FunctionCall("database/sql.Open"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.Open({{.FunctionCall.Arguments}})",
+				"sqltrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
 				map[string]string{
 					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 				},
@@ -44,7 +45,7 @@ var Aspects = [...]injector.Aspect{
 		JoinPoint: join.FunctionCall("database/sql.OpenDB"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.OpenDB({{.FunctionCall.Arguments}})",
+				"sqltrace.OpenDB(\n  {{range .AST.Args}}{{.}},\n{{end}})",
 				map[string]string{
 					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 				},
@@ -76,7 +77,7 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("/*dd:instrumented*/"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(echotrace.EchoV4Middleware())",
+				"{{.Assignment.LHS}}.Use(echotrace.Middleware())",
 				map[string]string{
 					"echotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 				},
@@ -89,7 +90,7 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(fibertrace.FiberV2Middleware())",
+				"{{.Assignment.LHS}}.Use(fibertrace.Middleware())",
 				map[string]string{
 					"fibertrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 				},
@@ -105,9 +106,30 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}} = {{.Assignment.LHS}}.Use(gintrace.Middleware(\"\"))",
+				"{{.Assignment.LHS}}.Use(gintrace.Middleware(\"\"))",
 				map[string]string{
 					"gintrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
+				},
+			)),
+		},
+	},
+	// From yaml/go-main.yml
+	{
+		JoinPoint: join.AllOf(
+			join.PackageName("main"),
+			join.FunctionBody(join.Function(
+				join.Signature(
+					nil,
+					nil,
+				),
+				join.Name("main"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()",
+				map[string]string{
+					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
 		},
@@ -130,14 +152,14 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AppendArgs(
 				code.MustTemplate(
-					"grpc.WithStreamInterceptor(grpctrace.GRPCStreamClientInterceptor())",
+					"grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())",
 					map[string]string{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
 				),
 				code.MustTemplate(
-					"grpc.WithUnaryInterceptor(grpctrace.GRPCUnaryClientInterceptor())",
+					"grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())",
 					map[string]string{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
@@ -151,14 +173,14 @@ var Aspects = [...]injector.Aspect{
 		Advice: []advice.Advice{
 			advice.AppendArgs(
 				code.MustTemplate(
-					"grpc.StreamInterceptor(grpctrace.GRPCStreamServerInterceptor())",
+					"grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())",
 					map[string]string{
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
 				),
 				code.MustTemplate(
-					"grpc.UnaryInterceptor(grpctrace.GRPCUnaryServerInterceptor())",
+					"grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())",
 					map[string]string{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
@@ -188,11 +210,35 @@ var Aspects = [...]injector.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
+				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
 				map[string]string{
+					"event":      "github.com/datadog/orchestrion/instrument/event",
 					"instrument": "github.com/datadog/orchestrion/instrument",
 				},
 			)),
 		},
 	},
+}
+
+// RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess
+var RestorerMap = map[string]string{
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1":                            "sarama",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1":            "pubsub",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2": "kafka",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/dimfeld/httptreemux.v5":                   "httptreemux",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6":              "elastic",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/emicklei/go-restful":                      "restful",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/emicklei/go-restful.v3":                   "restful",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5":                            "chi",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-pg/pg.v10":                             "pg",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7":                        "redis",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8":                        "redis",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2":                         "fiber",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc.v12":               "grpc",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gopkg.in/jinzhu/gorm.v1":                  "gorm",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1":                          "gorm",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go":                 "graphql",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4":                         "echo",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9":                        "redis",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0":                    "kafka",
 }

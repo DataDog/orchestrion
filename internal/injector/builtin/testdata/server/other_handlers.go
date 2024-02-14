@@ -25,8 +25,8 @@ func (f foo) fooHandler(rw http.ResponseWriter, req *http.Request) {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		instrument.Report(req.Context(), instrument.EventStart, "name", "fooHandler", "verb", req.Method)
-		defer instrument.Report(req.Context(), instrument.EventEnd, "name", "fooHandler", "verb", req.Method)
+		instrument.Report(req.Context(), event.EventStart, "name", "fooHandler", "verb", req.Method)
+		defer instrument.Report(req.Context(), event.EventEnd, "name", "fooHandler", "verb", req.Method)
 	}
 	//dd:endinstrument
 //line samples/server/other_handlers.go:21
@@ -39,8 +39,8 @@ func buildHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(request.Context(), instrument.EventStart, "verb", request.Method)
-			defer instrument.Report(request.Context(), instrument.EventEnd, "verb", request.Method)
+			instrument.Report(request.Context(), event.EventStart, "verb", request.Method)
+			defer instrument.Report(request.Context(), event.EventEnd, "verb", request.Method)
 		}
 		//dd:endinstrument
 //line samples/server/other_handlers.go:27
@@ -50,8 +50,8 @@ func buildHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 //line samples/server/other_handlers.go:30
@@ -69,8 +69,8 @@ func buildHandlers() {
 //line <generated>:1
 			//dd:startinstrument
 			{
-				instrument.Report(request.Context(), instrument.EventStart, "verb", request.Method)
-				defer instrument.Report(request.Context(), instrument.EventEnd, "verb", request.Method)
+				instrument.Report(request.Context(), event.EventStart, "verb", request.Method)
+				defer instrument.Report(request.Context(), event.EventEnd, "verb", request.Method)
 			}
 			//dd:endinstrument
 //line samples/server/other_handlers.go:41
@@ -85,8 +85,8 @@ func buildHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 //line samples/server/other_handlers.go:49
@@ -110,8 +110,8 @@ func buildHandlers() {
 //line <generated>:1
 			//dd:startinstrument
 			{
-				instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-				defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+				instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+				defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 			}
 			//dd:endinstrument
 //line samples/server/other_handlers.go:66
@@ -123,8 +123,8 @@ func buildHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 //line samples/server/other_handlers.go:71
@@ -171,8 +171,8 @@ func registerHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 	}))
@@ -183,8 +183,8 @@ func registerHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 	})
@@ -196,8 +196,8 @@ func registerHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 	}))
@@ -208,8 +208,8 @@ func registerHandlers() {
 //line <generated>:1
 		//dd:startinstrument
 		{
-			instrument.Report(r.Context(), instrument.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), instrument.EventEnd, "verb", r.Method)
+			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
+			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
 		}
 		//dd:endinstrument
 	})

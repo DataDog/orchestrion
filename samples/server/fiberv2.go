@@ -7,10 +7,12 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
+	fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
 )
 
 func fiberV2Server() {
 	r := fiber.New()
+	r.Use(fibertrace.Middleware())
 	r.Get("/ping", func(c *fiber.Ctx) error {
 		return c.JSON(map[string]any{
 			"message": "pong",

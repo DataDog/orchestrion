@@ -10,12 +10,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/datadog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/dstutil"
@@ -28,7 +30,11 @@ type Template struct {
 	imports  map[string]string
 }
 
-var wrapper = template.Must(template.New("code.Template").Parse("{{define `_`}}package _\nfunc _() {\n{{template `code.Template` .}}\n}{{end}}"))
+var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
+	"Version": func() string { return version.Tag },
+}).Parse(
+	"{{define `_`}}package _\nfunc _() {\n{{template `code.Template` .}}\n}{{end}}",
+))
 
 // NewTemplate creates a new Template using the provided template string and
 // imports map. The imports map associates names to import paths. The produced
@@ -169,10 +175,18 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 }
 
 func (t *Template) AsCode() jen.Code {
-	return jen.Qual("github.com/datadog/orchestrion/internal/injector/advice/code", "MustTemplate").Call(
+	return jen.Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
 		jen.Line().Lit(t.template.Tree.Root.String()),
 		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
-			for k, v := range t.imports {
+			// We sort the keys so the generated code order is consistent...
+			keys := make([]string, 0, len(t.imports))
+			for k := range t.imports {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+
+			for _, k := range keys {
+				v := t.imports[k]
 				g.Line().Add(jen.Lit(k).Op(":").Lit(v))
 			}
 			g.Empty().Line()

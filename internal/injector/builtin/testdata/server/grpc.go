@@ -23,7 +23,7 @@ func grpcServer() {
 
 	s := grpc.NewServer(grpc.EmptyServerOption{},
 //line <generated>:1
-		grpc.StreamInterceptor(grpc1.GRPCStreamServerInterceptor()), grpc.UnaryInterceptor(grpc1.GRPCUnaryServerInterceptor()))
+		grpc.StreamInterceptor(grpc1.StreamServerInterceptor()), grpc.UnaryInterceptor(grpc1.UnaryServerInterceptor()))
 //line samples/server/grpc.go:22
 	if err := s.Serve(ln); err != nil {
 		log.Fatalf("failed to serve: %v", err)

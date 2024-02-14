@@ -39,8 +39,8 @@ func Test(t *testing.T) {
 			pkgDir := path.Join(samplesDir, dir)
 
 			tmp := t.TempDir()
-			inj, err := injector.NewInjector(pkgDir, injector.InjectorOptions{
-				Injections: builtin.Aspects[:],
+			inj, err := injector.New(pkgDir, injector.Options{
+				Aspects: builtin.Aspects[:],
 				ModifiedFile: func(filename string) string {
 					return path.Join(tmp, path.Base(filename))
 				},

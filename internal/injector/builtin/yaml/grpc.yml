@@ -8,9 +8,9 @@
         - imports: &imports
             grpc: google.golang.org/grpc
             grpctrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc
-          template: grpc.WithStreamInterceptor(grpctrace.GRPCStreamClientInterceptor())
+          template: grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
         - imports: *imports
-          template: grpc.WithUnaryInterceptor(grpctrace.GRPCUnaryClientInterceptor())
+          template: grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
 
 # Server Instrumentation
 - join-point:
@@ -18,6 +18,6 @@
   advice:
     - append-args:
         - imports: *imports
-          template: grpc.StreamInterceptor(grpctrace.GRPCStreamServerInterceptor())
+          template: grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
         - imports: *imports
-          template: grpc.UnaryInterceptor(grpctrace.GRPCUnaryServerInterceptor())
+          template: grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())

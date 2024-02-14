@@ -45,8 +45,8 @@ func TestInjector(t *testing.T) {
 		")",
 	}, "\n"))
 	type testCase struct {
-		Options  injector.InjectorOptions `yaml:"options"`
-		Source   string                   `yaml:"source"`
+		Options  injector.Options `yaml:"options"`
+		Source   string           `yaml:"source"`
 		Expected struct {
 			Modified   bool               `yaml:"modified"`
 			References typed.ReferenceMap `yaml:"references"`
@@ -60,10 +60,6 @@ func TestInjector(t *testing.T) {
 	t.Parallel()
 
 	for name, tc := range cases {
-		if name != "database-sql" {
-			continue
-		}
-
 		t.Run(name, func(t *testing.T) {
 			tc.Options.ModifiedFile = func(filename string) string { return filename + ".edited" }
 
@@ -90,7 +86,7 @@ func TestInjector(t *testing.T) {
 			require.NoError(t, run("go", "mod", "tidy"), "failed to run go mod tidy")
 			require.NoError(t, run("go", "mod", "download"), "failed to run go mod download")
 
-			injector, err := injector.NewInjector(path.Dir(filename), tc.Options)
+			injector, err := injector.New(path.Dir(filename), tc.Options)
 			require.NoError(t, err)
 			res, err := injector.InjectFile(filename)
 			require.NoError(t, err)

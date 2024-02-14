@@ -15,7 +15,7 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
-const pkgPath = "github.com/datadog/orchestrion/internal/injector/advice"
+const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/advice"
 
 // Advice is the interface abstracting actual AST changes performed by
 // injections.

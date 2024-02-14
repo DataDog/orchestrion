@@ -21,13 +21,14 @@
   advice:
     prepend-statements:
       imports:
+        event: github.com/datadog/orchestrion/instrument/event
         instrument: github.com/datadog/orchestrion/instrument
       template: |-
         {{- $arg := .Function.Argument 1 -}}
         {{- $name := .Function.Name -}}
-        instrument.Report({{$arg}}.Context(), instrument.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method{{- range .DirectiveArgs "dd:span" -}}
+        instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method{{- range .DirectiveArgs "dd:span" -}}
           , {{printf "%q" .Key}}, {{printf "%q" .Value}}
         {{- end -}})
-        defer instrument.Report({{$arg}}.Context(), instrument.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method{{- range .DirectiveArgs "dd:span" -}}
+        defer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method{{- range .DirectiveArgs "dd:span" -}}
           , {{printf "%q" .Key}}, {{printf "%q" .Value}}
         {{- end -}})

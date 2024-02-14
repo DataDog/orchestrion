@@ -10,7 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 //line <generated>:1
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
+	echo1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
 )
 
 //line samples/server/echov4.go:14
@@ -19,7 +19,7 @@ func echoV4Server() {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		r = r.Use(echo.v4.EchoV4Middleware())
+		r.Use(echo1.Middleware())
 	}
 	//dd:endinstrument
 //line samples/server/echov4.go:16
@@ -40,7 +40,7 @@ func (a *api) echoV4Server() {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		a.srv = a.srv.Use(echo.v4.EchoV4Middleware())
+		a.srv.Use(echo1.Middleware())
 	}
 	//dd:endinstrument
 //line samples/server/echov4.go:30

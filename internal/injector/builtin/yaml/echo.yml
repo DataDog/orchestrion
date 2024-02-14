@@ -9,4 +9,4 @@
         imports:
           echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
         template: |-
-          {{ .Assignment.LHS }} = {{ .Assignment.LHS }}.Use(echotrace.EchoV4Middleware())
+          {{.Assignment.LHS}}.Use(echotrace.Middleware())

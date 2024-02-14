@@ -7,21 +7,20 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
-//line <generated>:1
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
+	fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
 )
 
-//line samples/server/fiberv2.go:12
 func fiberV2Server() {
 	//dd:instrumented
 	r := fiber.New()
 //line <generated>:1
 	//dd:startinstrument
 	{
-		r = r.Use(fiber.v2.FiberV2Middleware())
+		r.Use(fibertrace.Middleware())
 	}
 	//dd:endinstrument
-//line samples/server/fiberv2.go:14
+//line samples/server/fiberv2.go:15
+	r.Use(fibertrace.Middleware())
 	r.Get("/ping", func(c *fiber.Ctx) error {
 		return c.JSON(map[string]any{
 			"message": "pong",

@@ -8,7 +8,7 @@
 package tools
 
 import (
-	_ "github.com/datadog/orchestrion/internal/injector/advice/code/generator"
+	_ "github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator"
 	_ "github.com/datadog/orchestrion/internal/injector/builtin/generator"
 	_ "golang.org/x/tools/cmd/stringer"
 )
