@@ -11,7 +11,6 @@ import (
 	"net/http"
 //line <generated>:1
 	"github.com/datadog/orchestrion/instrument"
-	"github.com/datadog/orchestrion/instrument/event"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -21,7 +20,10 @@ func main() {
 	//dd:startinstrument
 	{
 		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "v0.7.0-dev"}))
-		defer tracer.Stop()
+		defer func() {
+			tracer.Flush()
+			tracer.Stop()
+		}()
 	}
 	//dd:endinstrument
 //line samples/server/main.go:15
@@ -42,14 +44,6 @@ func main() {
 
 // myHandler comment on function
 func myHandler(w http.ResponseWriter, r *http.Request) {
-//line <generated>:1
-	//dd:startinstrument
-	{
-		instrument.Report(r.Context(), event.EventStart, "name", "myHandler", "verb", r.Method)
-		defer instrument.Report(r.Context(), event.EventEnd, "name", "myHandler", "verb", r.Method)
-	}
-	//dd:endinstrument
-//line samples/server/main.go:25
 	b, err := io.ReadAll(r.Body)
 	// test comment in function
 	if err != nil {
@@ -63,14 +57,6 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
-//line <generated>:1
-	//dd:startinstrument
-	{
-		instrument.Report(r.Context(), event.EventStart, "name", "instrumentedHandler", "verb", r.Method)
-		defer instrument.Report(r.Context(), event.EventEnd, "name", "instrumentedHandler", "verb", r.Method)
-	}
-	//dd:endinstrument
-//line samples/server/main.go:38
 	b, err := io.ReadAll(r.Body)
 	// test comment in function
 	if err != nil {

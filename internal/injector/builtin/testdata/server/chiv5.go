@@ -11,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 //line <generated>:1
 	"github.com/datadog/orchestrion/instrument"
-	"github.com/datadog/orchestrion/instrument/event"
 	chi1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
 )
 
@@ -26,16 +25,13 @@ func chiV5Server() {
 	}
 	//dd:endinstrument
 //line samples/server/chiv5.go:16
-	router.Get("/", func(w http.ResponseWriter, __argument__1 *http.Request) {
+	router.Get("/",
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(__argument__1.Context(), event.EventStart, "verb", __argument__1.Method)
-			defer instrument.Report(__argument__1.Context(), event.EventEnd, "verb", __argument__1.Method)
-		}
-		//dd:endinstrument
-//line samples/server/chiv5.go:17
-		w.Write([]byte("Hello World!\n"))
-	})
+		instrument.WrapHandlerFunc(
+//line samples/server/chiv5.go:16
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.Write([]byte("Hello World!\n"))
+			}))
+//line samples/server/chiv5.go:19
 	http.ListenAndServe(":8080", router)
 }

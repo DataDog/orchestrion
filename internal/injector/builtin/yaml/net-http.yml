@@ -1,9 +1,14 @@
 %YAML 1.1
 ---
+# When httpmode is "wrap"
 - join-point:
-    struct-literal:
-      type: net/http.Server
-      field: Handler
+    all-of:
+      - configuration:
+          httpmode: wrap
+      - one-of:
+        - struct-literal:
+            type: net/http.Server
+            field: Handler
   advice:
     - wrap-expression:
         imports:
@@ -12,12 +17,30 @@
           //dd:startwrap
           instrument.WrapHandler({{.}})
           //dd:endwrap
-
 - join-point:
-    function-body:
-      function:
-        - signature:
-            args: [net/http.ResponseWriter, '*net/http.Request']
+    all-of:
+      - configuration:
+          httpmode: wrap
+      - function:
+          - name: '' # This filters only *dst.FuncLit
+          - signature:
+              args: [net/http.ResponseWriter, '*net/http.Request']
+  advice:
+    - wrap-expression:
+        imports:
+          instrument: "github.com/datadog/orchestrion/instrument"
+        template: |-
+          instrument.WrapHandlerFunc({{.}})
+
+# When httpmode is "report"
+- join-point:
+    all-of:
+      - configuration:
+          httpmode: report
+      - function-body:
+          function:
+            - signature:
+                args: [net/http.ResponseWriter, '*net/http.Request']
   advice:
     prepend-statements:
       imports:
@@ -26,9 +49,23 @@
       template: |-
         {{- $arg := .Function.Argument 1 -}}
         {{- $name := .Function.Name -}}
-        instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method{{- range .DirectiveArgs "dd:span" -}}
-          , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-        {{- end -}})
-        defer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method{{- range .DirectiveArgs "dd:span" -}}
-          , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-        {{- end -}})
+        {{$arg}} = {{$arg}}.WithContext(instrument.Report(
+          {{$arg}}.Context(),
+          event.EventStart,
+          {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+          "span.kind", "server",
+          "http.method", {{$arg}}.Method,
+          "http.url", {{$arg}}.URL,
+          "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+          {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
+        ))
+        defer instrument.Report(
+          {{$arg}}.Context(),
+          event.EventEnd,
+          {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+          "span.kind", "server",
+          "http.method", {{$arg}}.Method,
+          "http.url", {{$arg}}.URL,
+          "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+          {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
+        )

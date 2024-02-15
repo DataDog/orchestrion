@@ -114,7 +114,7 @@ type (
 
 // Injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) InjectFile(filename string) (res Result, err error) {
+func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (res Result, err error) {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
 
@@ -150,7 +150,7 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 	}
 
 	ctx := typed.ContextWithValue(context.Background(), i.decorator)
-	if res.Modified, res.References, err = i.inject(ctx, file); err != nil {
+	if res.Modified, res.References, err = i.inject(ctx, file, rootConfig); err != nil {
 		return res, err
 	}
 
@@ -170,7 +170,7 @@ func (i *Injector) InjectFile(filename string) (res Result, err error) {
 // inject performs all configured injections on the specified file. It returns whether the file was
 // modified, any import references introduced by modifications. In case of an error, the
 // trasnformation aborts as quickly as possible and returns the error.
-func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs typed.ReferenceMap, err error) {
+func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
 	ctx = typed.ContextWithValue(ctx, &refs)
 	var chain *node.Chain
 
@@ -181,6 +181,12 @@ func (i *Injector) inject(ctx context.Context, file *dst.File) (mod bool, refs t
 				return false
 			}
 			chain = chain.ChildFromCursor(csor)
+			if _, ok := csor.Node().(*dst.File); ok {
+				// This is the root node, so we set the root configuration on it...
+				for k, v := range rootConfig {
+					chain.SetConfig(k, v)
+				}
+			}
 			return true
 		},
 		func(csor *dstutil.Cursor) bool {

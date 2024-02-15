@@ -36,8 +36,16 @@ finish() {
   echo "Giving traces an instant to become consistent..."
   sleep 5
   echo "Reading traces from the agent..."
-  curl -f "http://localhost:8126/test/session/traces?test_session_token=${token}" \
-    -o "/output/traces.json"
+  for (( i=0; i<5; i++ )); do
+    curl -f "http://${DD_AGENT_HOST:-localhost}:8126/test/session/traces?test_session_token=${token}" \
+      -o "/output/traces.json"
+    if [[ "$(jq '. | length' < /output/traces.json)" == "0" ]]; then
+      echo "Agent returned no traces... retrying in 1 second..."
+      sleep 1
+    else
+      break
+    fi
+  done
   exit $rv
 }
 
@@ -52,12 +60,23 @@ mkdir -p "/output/src"
 cp -r ${SCRIPTDIR}/tests/${TEST_NAME}/*.go "/output/src/"
 
 echo -n "Starting test session with the agent..."
-curl -f "http://localhost:8126/test/session/start?test_session_token=${token}"
+curl -f --retry 5 --retry-all-errors --retry-max-time 30 "http://${DD_AGENT_HOST:-localhost}:8126/test/session/start?test_session_token=${token}"
+
 echo "" # The test agent response does not end with a new line...
 trap "finish ${token}" EXIT
 
-echo "Starting service handler..."
-"${SCRIPTDIR}/.bin/${TEST_NAME}" "$@" >/output/stdout.log 2>/output/stderr.log &
+if [[ "${DEBUG:-}" == "" ]]; then
+  echo "Starting service handler..."
+  "${SCRIPTDIR}/.bin/${TEST_NAME}" "$@" >/output/stdout.log 2>/output/stderr.log &
+else
+  echo "Starting service handler in DEBUG mode..."
+  dlv --listen=:2345 \
+    --headless=true \
+    --accept-multiclient \
+    --api-version=2 \
+    exec \
+  "${SCRIPTDIR}/.bin/${TEST_NAME}" "$@" >/output/stdout.log 2>/output/stderr.log &
+fi
 pid=$!
 
 # We trap TERM to circumvent bash's default behavior & ensure the EXIT trap does not run prematurely.

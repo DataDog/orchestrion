@@ -19,8 +19,8 @@ http-default:
                 {{- $arg := .Function.Argument 1 -}}
                 {{- $name := .Function.Name -}}
                 {{$arg}} = instrument.HandleHeader({{$arg}})
-                instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
-                defer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "verb", {{$arg}}.Method)
+                instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "http.method", {{$arg}}.Method)
+                defer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "http.method", {{$arg}}.Method)
   source: &httpSource |
     package main
 
@@ -89,8 +89,8 @@ http-default:
         //dd:startinstrument
         {
           r = instrument.HandleHeader(r)
-          instrument.Report(r.Context(), event.EventStart, "name", "handle", "verb", r.Method)
-          defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "verb", r.Method)
+          instrument.Report(r.Context(), event.EventStart, "name", "handle", "http.method", r.Method)
+          defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "http.method", r.Method)
         }
         //dd:endinstrument
         data, err := io.ReadAll(r.Body)
@@ -163,8 +163,8 @@ http-anonymous-handler:
             //dd:startinstrument
             {
               r = instrument.HandleHeader(r)
-              instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-              defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
+              instrument.Report(r.Context(), event.EventStart, "http.method", r.Method)
+              defer instrument.Report(r.Context(), event.EventEnd, "http.method", r.Method)
             }
             //dd:endinstrument
             data, err := io.ReadAll(r.Body)
@@ -242,8 +242,8 @@ http-no-arg-name:
         //dd:startinstrument
         {
           __argument__1 = instrument.HandleHeader(__argument__1)
-          instrument.Report(__argument__1.Context(), event.EventStart, "name", "handle", "verb", __argument__1.Method)
-          defer instrument.Report(__argument__1.Context(), event.EventEnd, "name", "handle", "verb", __argument__1.Method)
+          instrument.Report(__argument__1.Context(), event.EventStart, "name", "handle", "http.method", __argument__1.Method)
+          defer instrument.Report(__argument__1.Context(), event.EventEnd, "name", "handle", "http.method", __argument__1.Method)
         }
         //dd:endinstrument
       }
@@ -288,8 +288,8 @@ http-lineInfo:
         //dd:startinstrument
         {
           r = instrument.HandleHeader(r)
-          instrument.Report(r.Context(), event.EventStart, "name", "handle", "verb", r.Method)
-          defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "verb", r.Method)
+          instrument.Report(r.Context(), event.EventStart, "name", "handle", "http.method", r.Method)
+          defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "http.method", r.Method)
         }
         //dd:endinstrument
       //line input.go:24

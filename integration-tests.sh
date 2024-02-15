@@ -56,7 +56,6 @@ image=$(cat "${iid}")
 rm -rf outputs # Ensure the directory is empty before we start
 mkdir -p outputs # Make sure the directory exists
 echo "*" > outputs/.gitignore # Make sure it's always ignored by git once it exists
-echo "*" > outputs/.dockerignore # Make sure output changes don't cause Docker image rebuilds
 
 ## Run all the tests
 for tdir in tests/*; do

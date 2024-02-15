@@ -1,8 +1,0 @@
-go 1.21.7
-
-use (
-	.
-	./_integration-tests
-	./internal/injector/aspect/advice/code/generator
-	./internal/injector/builtin/generator
-)

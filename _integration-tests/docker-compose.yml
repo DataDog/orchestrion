@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  agent:
+    environment:
+      - LOG_LEVEL=DEBUG
+      - TRACE_LANGUAGE=golang
+      - ENABLED_CHECKS=trace_stall,trace_count_header,trace_peer_service,trace_dd_service
+    image: ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:latest
+    expose:
+      - 8126
+  debug:
+    build:
+      context: ..
+      dockerfile: _integration-tests/Dockerfile
+    command: ${TESTNAME?err}
+    depends_on:
+      - agent
+    environment:
+      - DEBUG=1
+      - DD_AGENT_HOST=agent
+      - DD_LOG_LEVEL=debug
+    ports:
+      - 2345:2345
+      - 8080:8080
+    pull_policy: build
+    volumes:
+      - ./outputs/${TESTNAME}:/output

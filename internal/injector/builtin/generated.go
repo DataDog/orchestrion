@@ -56,14 +56,26 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionBody(join.Function(
 			join.Directive("dd:span"),
-			join.OneOfFunctions(
-				join.Receives(join.MustTypeName("context.Context")),
-				join.Receives(join.MustTypeName("*net/http.Request")),
-			),
+			join.Receives(join.MustTypeName("context.Context")),
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{$ctx := or (.FindArgument \"context.Context\") (printf \"%s.Context()\" (.FindArgument \"*net/http.Request\"))}}{{$name := .Function.Name}}instrument.Report({{$ctx}}, event.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
+				"{{$ctx := .FindArgument \"context.Context\"}}{{$name := .Function.Name}}{{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
+				map[string]string{
+					"event":      "github.com/datadog/orchestrion/instrument/event",
+					"instrument": "github.com/datadog/orchestrion/instrument",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Directive("dd:span"),
+			join.Receives(join.MustTypeName("*net/http.Request")),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{$req := .FindArgument \"*net/http.Request\"}}{{$name := .Function.Name}}{{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}}))\ndefer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
 				map[string]string{
 					"event":      "github.com/datadog/orchestrion/instrument/event",
 					"instrument": "github.com/datadog/orchestrion/instrument",
@@ -127,7 +139,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()",
+				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer func(){\n  tracer.Flush()\n  tracer.Stop()\n}()",
 				map[string]string{
 					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
@@ -191,7 +203,12 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From yaml/net-http.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
+		JoinPoint: join.AllOf(
+			join.Configuration(map[string]string{
+				"httpmode": "wrap",
+			}),
+			join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"//dd:startwrap\ninstrument.WrapHandler({{.}})\n//dd:endwrap",
@@ -202,15 +219,42 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.FunctionBody(join.Function(
-			join.Signature(
-				[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
-				nil,
+		JoinPoint: join.AllOf(
+			join.Configuration(map[string]string{
+				"httpmode": "wrap",
+			}),
+			join.Function(
+				join.Name(""),
+				join.Signature(
+					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
+					nil,
+				),
 			),
-		)),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"instrument.WrapHandlerFunc({{.}})",
+				map[string]string{
+					"instrument": "github.com/datadog/orchestrion/instrument",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.Configuration(map[string]string{
+				"httpmode": "report",
+			}),
+			join.FunctionBody(join.Function(
+				join.Signature(
+					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
+					nil,
+				),
+			)),
+		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})\ndefer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, \"name\", {{printf \"%q\" .}}{{end}}, \"verb\", {{$arg}}.Method{{range .DirectiveArgs \"dd:span\"}}, {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}{{end}})",
+				"{{$arg := .Function.Argument 1}}{{$name := .Function.Name}}{{$arg}} = {{$arg}}.WithContext(instrument.Report(\n  {{$arg}}.Context(),\n  event.EventStart,\n  {{with $name}}\"function-name\", {{printf \"%q\" .}},{{end}}\n  \"span.kind\", \"server\",\n  \"http.method\", {{$arg}}.Method,\n  \"http.url\", {{$arg}}.URL,\n  \"http.useragent\", {{$arg}}.Header.Get(\"User-Agent\"),\n  {{range .DirectiveArgs \"dd:span\"}}{{printf \"%q, %q,\\n\" .Key .Value}}{{end}}\n))\ndefer instrument.Report(\n  {{$arg}}.Context(),\n  event.EventEnd,\n  {{with $name}}\"function-name\", {{printf \"%q\" .}},{{end}}\n  \"span.kind\", \"server\",\n  \"http.method\", {{$arg}}.Method,\n  \"http.url\", {{$arg}}.URL,\n  \"http.useragent\", {{$arg}}.Header.Get(\"User-Agent\"),\n  {{range .DirectiveArgs \"dd:span\"}}{{printf \"%q, %q,\" .Key .Value}}{{end}}\n)",
 				map[string]string{
 					"event":      "github.com/datadog/orchestrion/instrument/event",
 					"instrument": "github.com/datadog/orchestrion/instrument",

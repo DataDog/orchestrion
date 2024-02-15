@@ -4,22 +4,42 @@
     function-body:
       function:
         - directive: 'dd:span'
-        - one-of:
-            - receives: context.Context
-            - receives: '*net/http.Request'
+        - receives: context.Context
   advice:
     prepend-statements:
       imports:
         event: github.com/datadog/orchestrion/instrument/event
         instrument: github.com/datadog/orchestrion/instrument
       template: |-
-        {{- $ctx := or (.FindArgument "context.Context") (printf "%s.Context()" (.FindArgument "*net/http.Request")) -}}
+        {{- $ctx := .FindArgument "context.Context" -}}
         {{- $name := .Function.Name -}}
-        instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}
+        {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
         {{- range .DirectiveArgs "dd:span" -}}
           , {{printf "%q" .Key}}, {{printf "%q" .Value}}
         {{- end -}})
-        defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}
+        defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+        {{- range .DirectiveArgs "dd:span" -}}
+          , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+        {{- end -}})
+
+- join-point:
+    function-body:
+      function:
+        - directive: 'dd:span'
+        - receives: '*net/http.Request'
+  advice:
+    prepend-statements:
+      imports:
+        event: github.com/datadog/orchestrion/instrument/event
+        instrument: github.com/datadog/orchestrion/instrument
+      template: |-
+        {{- $req := .FindArgument "*net/http.Request" -}}
+        {{- $name := .Function.Name -}}
+        {{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+        {{- range .DirectiveArgs "dd:span" -}}
+          , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+        {{- end -}}))
+        defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
         {{- range .DirectiveArgs "dd:span" -}}
           , {{printf "%q" .Key}}, {{printf "%q" .Value}}
         {{- end -}})

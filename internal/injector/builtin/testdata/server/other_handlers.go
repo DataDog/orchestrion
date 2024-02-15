@@ -22,42 +22,28 @@ import (
 type foo struct{}
 
 func (f foo) fooHandler(rw http.ResponseWriter, req *http.Request) {
-//line <generated>:1
-	//dd:startinstrument
-	{
-		instrument.Report(req.Context(), event.EventStart, "name", "fooHandler", "verb", req.Method)
-		defer instrument.Report(req.Context(), event.EventEnd, "name", "fooHandler", "verb", req.Method)
-	}
-	//dd:endinstrument
-//line samples/server/other_handlers.go:21
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte("Foo!"))
 }
 
 func buildHandlers() {
-	http.HandleFunc("/foo/bar", func(writer http.ResponseWriter, request *http.Request) {
+	http.HandleFunc("/foo/bar",
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(request.Context(), event.EventStart, "verb", request.Method)
-			defer instrument.Report(request.Context(), event.EventEnd, "verb", request.Method)
-		}
-		//dd:endinstrument
-//line samples/server/other_handlers.go:27
-		writer.Write([]byte("done!"))
-	})
-	v := func(w http.ResponseWriter, r *http.Request) {
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:26
+			func(writer http.ResponseWriter, request *http.Request) {
+				writer.Write([]byte("done!"))
+			}))
+//line samples/server/other_handlers.go:29
+	v :=
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-//line samples/server/other_handlers.go:30
-		w.Write([]byte("another one!"))
-	}
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:29
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte("another one!"))
+			})
 
+//line samples/server/other_handlers.go:33
 	fmt.Printf("%T\n", v)
 
 	type holder struct {
@@ -65,71 +51,61 @@ func buildHandlers() {
 	}
 
 	x := holder{
-		f: func(w http.ResponseWriter, request *http.Request) {
+		f:
 //line <generated>:1
-			//dd:startinstrument
-			{
-				instrument.Report(request.Context(), event.EventStart, "verb", request.Method)
-				defer instrument.Report(request.Context(), event.EventEnd, "verb", request.Method)
-			}
-			//dd:endinstrument
-//line samples/server/other_handlers.go:41
-			w.Write([]byte("asdf"))
-		},
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:40
+			func(w http.ResponseWriter, request *http.Request) {
+				w.Write([]byte("asdf"))
+			}),
 	}
 
+//line samples/server/other_handlers.go:45
 	fmt.Println(x)
 
 	// silly legal things
-	func(w http.ResponseWriter, r *http.Request) {
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-//line samples/server/other_handlers.go:49
-		client := &http.Client{
-			Timeout: time.Second,
-		}
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "localhost:8080", strings.NewReader(os.Args[1]))
-		if err != nil {
-			panic(err)
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(resp.Status)
-		w.Write([]byte("expression!"))
-	}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
+	instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:48
+		func(w http.ResponseWriter, r *http.Request) {
+			client := &http.Client{
+				Timeout: time.Second,
+			}
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "localhost:8080", strings.NewReader(os.Args[1]))
+			if err != nil {
+				panic(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(resp.Status)
+			w.Write([]byte("expression!"))
+		})(
+//line samples/server/other_handlers.go:62
+		httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 
 	for i := 0; i < 10; i++ {
-		go func(w http.ResponseWriter, r *http.Request) {
+		go
 //line <generated>:1
-			//dd:startinstrument
-			{
-				instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-				defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-			}
-			//dd:endinstrument
-//line samples/server/other_handlers.go:66
-			w.Write([]byte("goroutine!"))
-		}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:65
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte("goroutine!"))
+			})(
+//line samples/server/other_handlers.go:67
+			httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 	}
 
-	defer func(w http.ResponseWriter, r *http.Request) {
+	defer
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-//line samples/server/other_handlers.go:71
-		w.Write([]byte("goroutine!"))
-	}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
+	instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:70
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("goroutine!"))
+		})(
+//line samples/server/other_handlers.go:72
+		httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 }
 
 //dd:span foo:bar type:potato
@@ -137,8 +113,8 @@ func myFunc(ctx context.Context, name string) {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		instrument.Report(ctx, event.EventStart, "name", "myFunc", "foo", "bar", "type", "potato")
-		defer instrument.Report(ctx, event.EventEnd, "name", "myFunc", "foo", "bar", "type", "potato")
+		ctx = instrument.Report(ctx, event.EventStart, "function-name", "myFunc", "foo", "bar", "type", "potato")
+		defer instrument.Report(ctx, event.EventEnd, "function-name", "myFunc", "foo", "bar", "type", "potato")
 	}
 	//dd:endinstrument
 //line samples/server/other_handlers.go:77
@@ -150,8 +126,8 @@ func myFunc2(name string, req *http.Request) {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		instrument.Report(req.Context(), event.EventStart, "name", "myFunc2", "foo2", "bar2", "type", "request")
-		defer instrument.Report(req.Context(), event.EventEnd, "name", "myFunc2", "foo2", "bar2", "type", "request")
+		req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "myFunc2", "foo2", "bar2", "type", "request"))
+		defer instrument.Report(req.Context(), event.EventEnd, "function-name", "myFunc2", "foo2", "bar2", "type", "request")
 	}
 	//dd:endinstrument
 //line samples/server/other_handlers.go:82
@@ -167,52 +143,36 @@ func registerHandlers() {
 	handler := http.HandlerFunc(myHandler)
 	http.Handle("/handle-1", handler)
 	http.Handle("/hundle-2", http.HandlerFunc(myHandler))
-	http.Handle("/hundle-3", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/hundle-3", http.HandlerFunc(
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-	}))
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:94
+			func(w http.ResponseWriter, r *http.Request) {})))
 //line samples/server/other_handlers.go:95
 	http.HandleFunc("/handlefunc-1", handler)
 	http.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
-	http.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/handlefunc-3",
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-	})
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:97
+			func(w http.ResponseWriter, r *http.Request) {}))
 //line samples/server/other_handlers.go:98
 	s := http.NewServeMux()
 	s.Handle("/handle-mux", handler)
 	s.Handle("/handle-mux", http.HandlerFunc(myHandler))
-	s.Handle("/handle-mux", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s.Handle("/handle-mux", http.HandlerFunc(
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-	}))
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:101
+			func(w http.ResponseWriter, r *http.Request) {})))
 //line samples/server/other_handlers.go:102
 	s.HandleFunc("/handlefunc-1", handler)
 	s.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
-	s.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {
+	s.HandleFunc("/handlefunc-3",
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-	})
+		instrument.WrapHandlerFunc(
+//line samples/server/other_handlers.go:104
+			func(w http.ResponseWriter, r *http.Request) {}))
 //line samples/server/other_handlers.go:105
 	_ = &http.Server{
 		Addr: ":8080",

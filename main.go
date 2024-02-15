@@ -10,9 +10,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/datadog/orchestrion/internal/config"
+	"github.com/datadog/orchestrion/internal/injector"
+	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/instrument"
 	"github.com/datadog/orchestrion/internal/version"
 )
@@ -28,9 +31,11 @@ func main() {
 	var write bool
 	var remove bool
 	var httpMode string
+	var next bool
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
 	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
+	flag.BoolVar(&next, "next", false, "use the next generation code injector")
 	printVersion := flag.Bool("v", false, "print orchestrion version")
 	flag.Parse()
 	if *printVersion {
@@ -40,6 +45,15 @@ func main() {
 	if len(flag.Args()) == 0 {
 		return
 	}
+
+	if next {
+		if err := doNext(write, httpMode, flag.Args()...); err != nil {
+			fmt.Fprintf(os.Stderr, "An error occurred: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	output := func(fullName string, out io.Reader) {
 		fmt.Printf("%s:\n", fullName)
 		// write the output
@@ -80,4 +94,60 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func doNext(write bool, httpMode string, dirs ...string) error {
+	var modifiedFile injector.ModifiedFileFn
+	if !write {
+		tmp, err := os.MkdirTemp("", "orchestrion")
+		if err != nil {
+			return fmt.Errorf("failed to create temporary directory: %w", err)
+		}
+		defer os.RemoveAll(tmp)
+		modifiedFile = func(filename string) string {
+			return path.Join(tmp, path.Base(filename))
+		}
+	}
+
+	for _, dir := range dirs {
+		gofiles, err := filepath.Glob(path.Join(dir, "*.go"))
+		if err != nil {
+			return fmt.Errorf("failed to list *.go files in %q: %w", dir, err)
+		}
+
+		inj, err := injector.New(dir, injector.Options{
+			Aspects:          builtin.Aspects[:],
+			ModifiedFile:     modifiedFile,
+			PreserveLineInfo: true,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create injector for %q: %w", dir, err)
+		}
+
+		for _, gofile := range gofiles {
+			res, err := inj.InjectFile(gofile, map[string]string{"httpmode": httpMode})
+			if err != nil {
+				return fmt.Errorf("error while injecting code into %q: %w", gofile, err)
+			}
+			if res.Modified {
+				if write {
+					fmt.Printf("Injected new code in %q\n", res.Filename)
+					if len(res.References) > 0 {
+						fmt.Println("New imports have been added, it may be necessary to run `go mod tidy`")
+					}
+				} else {
+					fmt.Printf("Injected new code in %q:\n", gofile)
+					data, err := os.ReadFile(res.Filename)
+					if err != nil {
+						return fmt.Errorf("failed to read modified file %q: %w", res.Filename, err)
+					}
+					if _, err := os.Stdout.Write(data); err != nil {
+						return fmt.Errorf("failed to print modified file content: %w", err)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

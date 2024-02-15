@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 //line <generated>:1
 	"github.com/datadog/orchestrion/instrument"
-	"github.com/datadog/orchestrion/instrument/event"
 	mux1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
@@ -24,20 +23,17 @@ func gorillaMuxServer() {
 //line samples/server/gorilla.go:16
 			mux.NewRouter())
 //line samples/server/gorilla.go:17
-	ping := func(w http.ResponseWriter, r *http.Request) {
+	ping :=
 //line <generated>:1
-		//dd:startinstrument
-		{
-			instrument.Report(r.Context(), event.EventStart, "verb", r.Method)
-			defer instrument.Report(r.Context(), event.EventEnd, "verb", r.Method)
-		}
-		//dd:endinstrument
-//line samples/server/gorilla.go:18
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		instrument.WrapHandlerFunc(
+//line samples/server/gorilla.go:17
+			func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 
-		_, _ = io.WriteString(w, `{"message":"pong"}`)
-	}
+				_, _ = io.WriteString(w, `{"message":"pong"}`)
+			})
+//line samples/server/gorilla.go:23
 	r.HandleFunc("/ping", ping).Methods("GET")
 	_ = http.ListenAndServe(":8080", r)
 }

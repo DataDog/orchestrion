@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/labstack/echo/v4 v4.11.4
 	google.golang.org/grpc v1.61.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.60.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.58.0
 )
 
 require (

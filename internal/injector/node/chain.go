@@ -16,10 +16,11 @@ import (
 // Chain represents a chain of nodes, where the tip node is associated to
 // all its ancestors up to the root node.
 type Chain struct {
-	dst.Node        // The node which ancestry is tracked by this
-	parent   *Chain // The ancestor of this node
-	name     string // The name of this node according to its parent (or an empty string)
-	index    int    // The index of this node in the list it belonds to (or -1 if it's not in a list)
+	dst.Node                   // The node which ancestry is tracked by this
+	parent   *Chain            // The ancestor of this node
+	config   map[string]string // The node's own configuration
+	name     string            // The name of this node according to its parent (or an empty string)
+	index    int               // The index of this node in the list it belonds to (or -1 if it's not in a list)
 
 	repr string
 }
@@ -66,6 +67,28 @@ func (nc *Chain) Index() int {
 		return -1
 	}
 	return nc.index
+}
+
+// SetConfig sets the given configuration key-value pair on this node. This will
+// overwrite any existing value for the same key, and shadows any value for the
+// same key in the node's ancestry.
+func (nc *Chain) SetConfig(key, value string) {
+	if nc.config == nil {
+		nc.config = map[string]string{key: value}
+		return
+	}
+	nc.config[key] = value
+}
+
+// Config reads the value of the given configuration key from this node or any
+// of its ancestors, whichever returns a value first. If no value is found, an
+// emty string and false are returned.
+func (nc *Chain) Config(key string) (value string, found bool) {
+	value, found = nc.config[key]
+	if !found && nc.parent != nil {
+		value, found = nc.parent.Config(key)
+	}
+	return
 }
 
 func (nc *Chain) String() string {

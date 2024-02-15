@@ -13,5 +13,8 @@
           tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
         template: |-
           tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
-          defer tracer.Stop()
+          defer func(){
+            tracer.Flush()
+            tracer.Stop()
+          }()
 

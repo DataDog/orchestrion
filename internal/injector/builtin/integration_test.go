@@ -52,7 +52,7 @@ func Test(t *testing.T) {
 			require.NoError(t, err)
 			for _, filename := range files {
 				t.Run(path.Base(filename), func(t *testing.T) {
-					res, err := inj.InjectFile(filename)
+					res, err := inj.InjectFile(filename, map[string]string{"httpmode": "wrap"})
 					require.NoError(t, err)
 
 					referenceFile := path.Join(referenceDir, dir, path.Base(filename))

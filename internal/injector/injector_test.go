@@ -88,7 +88,7 @@ func TestInjector(t *testing.T) {
 
 			injector, err := injector.New(path.Dir(filename), tc.Options)
 			require.NoError(t, err)
-			res, err := injector.InjectFile(filename)
+			res, err := injector.InjectFile(filename, nil)
 			require.NoError(t, err)
 			assert.Equal(t, tc.Expected.Modified, res.Modified, "modified status")
 			assert.Equal(t, tc.Expected.References, res.References)

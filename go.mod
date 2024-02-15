@@ -3,12 +3,10 @@ module github.com/datadog/orchestrion
 go 1.19
 
 require (
-	github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator v0.0.0-00010101000000-000000000000
-	github.com/datadog/orchestrion/internal/injector/builtin/generator v0.0.0-00010101000000-000000000000
 	github.com/dave/dst v0.27.2
 	github.com/dave/jennifer v1.7.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-chi/chi/v5 v5.0.11
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gorilla/mux v1.8.0
 	github.com/labstack/echo/v4 v4.11.1
@@ -20,11 +18,11 @@ require (
 )
 
 require (
-	github.com/DataDog/appsec-internal-go v1.0.2 // indirect
+	github.com/DataDog/appsec-internal-go v1.4.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.48.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.48.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.3.0 // indirect
-	github.com/DataDog/go-libddwaf/v2 v2.1.0 // indirect
+	github.com/DataDog/go-libddwaf/v2 v2.2.3 // indirect
 	github.com/DataDog/go-tuf v1.0.2-0.5.2 // indirect
 	github.com/DataDog/sketches-go v1.4.2 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
@@ -35,7 +33,7 @@ require (
 	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ebitengine/purego v0.5.0 // indirect
+	github.com/ebitengine/purego v0.5.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -44,9 +42,12 @@ require (
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.4.0 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -61,7 +62,9 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
@@ -70,8 +73,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	go4.org/intern v0.0.0-20230525184215-6c62f75575cb // indirect
-	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
@@ -82,10 +83,4 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
-	inet.af/netaddr v0.0.0-20230525184311-b8eac61e914a // indirect
-)
-
-replace (
-	github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator => ./internal/injector/aspect/advice/code/generator
-	github.com/datadog/orchestrion/internal/injector/builtin/generator => ./internal/injector/builtin/generator
 )
