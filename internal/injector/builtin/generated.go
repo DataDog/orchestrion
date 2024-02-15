@@ -139,7 +139,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer func(){\n  tracer.Flush()\n  tracer.Stop()\n}()",
+				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()",
 				map[string]string{
 					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},

@@ -8,5 +8,4 @@
     - append-statements:
         imports:
           echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
-        template: |-
-          {{.Assignment.LHS}}.Use(echotrace.Middleware())
+        template: '{{.Assignment.LHS}}.Use(echotrace.Middleware())'

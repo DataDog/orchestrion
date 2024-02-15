@@ -20,10 +20,7 @@ func main() {
 	//dd:startinstrument
 	{
 		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "v0.7.0-dev"}))
-		defer func() {
-			tracer.Flush()
-			tracer.Stop()
-		}()
+		defer tracer.Stop()
 	}
 	//dd:endinstrument
 //line samples/server/main.go:15

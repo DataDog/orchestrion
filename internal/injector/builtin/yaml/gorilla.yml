@@ -6,5 +6,4 @@
     - wrap-expression:
         imports:
           muxtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux
-        template: |-
-          muxtrace.WrapRouter({{.}})
+        template: 'muxtrace.WrapRouter({{.}})'

@@ -8,5 +8,4 @@
     - append-statements:
         imports:
           fibertrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
-        template: |-
-          {{.Assignment.LHS}}.Use(fibertrace.Middleware())
+        template: '{{.Assignment.LHS}}.Use(fibertrace.Middleware())'

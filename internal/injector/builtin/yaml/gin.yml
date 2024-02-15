@@ -10,5 +10,4 @@
     - append-statements:
         imports:
           gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
-        template: |-
-          {{.Assignment.LHS}}.Use(gintrace.Middleware(""))
+        template: '{{.Assignment.LHS}}.Use(gintrace.Middleware(""))'
