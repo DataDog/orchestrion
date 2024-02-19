@@ -32,9 +32,7 @@ token="${TEST_NAME}-$(date +'%s.%N')"
 finish() {
   rv=$?
   local token=$1
-  echo "Service exited with status ${rv}... "
-  echo "Giving traces an instant to become consistent..."
-  sleep 5
+  echo "Service exited with status ${rv}"
   echo "Reading traces from the agent..."
   for (( i=0; i<5; i++ )); do
     curl -f "http://${DD_AGENT_HOST:-localhost}:8126/test/session/traces?test_session_token=${token}" \
