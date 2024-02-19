@@ -40,7 +40,6 @@ func main() {
 	if len(flag.Args()) == 0 {
 		return
 	}
-
 	output := func(fullName string, out io.Reader) {
 		fmt.Printf("%s:\n", fullName)
 		// write the output
