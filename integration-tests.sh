@@ -79,7 +79,7 @@ for tdir in tests/*; do
     if [[ "${url}" != "" ]]; then
         echo "Hitting configured url '${url}':"
         # We use Docker here so we can reach the test's own network...
-        docker run --rm -it --network="${network}" curlimages/curl -f "${url}" || { fail ${tname}; continue; }
+        docker run --rm -t --network="${network}" curlimages/curl -f "${url}" || { fail ${tname}; continue; }
         echo ""
     fi
 
@@ -88,7 +88,7 @@ for tdir in tests/*; do
     if [[ "${curl_command}" != "" ]]; then
         echo "Executing configured command against service:"
         # We use Docker here so we can reach the test's own network...
-        docker run --rm -it --network="${network}" --entrypoint="/bin/sh" curlimages/curl -c "${curl_command}" || { fail ${tname}; continue; }
+        docker run --rm -t --network="${network}" --entrypoint="/bin/sh" curlimages/curl -c "${curl_command}" || { fail ${tname}; continue; }
         echo ""
     fi
 
