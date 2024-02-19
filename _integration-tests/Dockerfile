@@ -14,7 +14,7 @@ COPY ./ /src/
 WORKDIR /src
 
 # Instrument the test applications with Orchestrion in `-w` mode
-RUN go run . -next -w ./_integration-tests/tests/*
+RUN go run . -w ./_integration-tests/tests/*
 WORKDIR /src/_integration-tests
 RUN go mod tidy
 
