@@ -1,0 +1,74 @@
+name: Generate
+on:
+  pull_request:
+    branches: ['**']
+  merge_group:
+    branches: ['main']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      has-patch: ${{ steps.is-tree-dirty.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: '**/*.sum'
+      - name: Run 'go generate ./...'
+        run: go generate ./...
+      - name: Check if working tree is dirty
+        id: is-tree-dirty
+        run: |-
+          git add .
+          git diff --staged --patch --exit-code > .repo.patch || echo "result=true" >> ${GITHUB_OUTPUT}
+      - name: Upload patch
+        if: steps.is-tree-dirty.outputs.result == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo.patch
+          path: .repo.patch
+      - name: Fail build if working tree is dirty
+        if: steps.is-tree-dirty.outputs.result == 'true'
+        run: |-
+          echo "::error::Files have been modified by 'go generate ./...' (see logs)."
+          cat .repo.patch
+          exit 1
+
+  # If generated files changed and this is a pull request that we can modify, update the PR with the updated files.
+  self-mutation:
+    needs: generate
+    runs-on: ubuntu-latest
+    if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - name: Download patch
+        uses: actions/download-artifact@v4
+        with:
+          name: repo.patch
+          path: ${{ runner.temp }}
+      - name: Apply patch
+        run: |-
+          [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
+      - name: Setup git identity
+        run: |-
+          git config user.name "github-actions on behalf of ${{ github.actor }}"
+          git config user.email "github-actions@github.com"
+      - name: Push changes
+        run: |-
+          git add .
+          git commit -s -m "chore: update generated files"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
