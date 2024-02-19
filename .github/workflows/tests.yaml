@@ -47,9 +47,9 @@ jobs:
         env:
           # See documentation for configuration:
           # https://github.com/DataDog/dd-apm-test-agent#environment-variables
+          ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
           LOG_LEVEL: DEBUG
           TRACE_LANGUAGE: golang
-          ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,6 +60,8 @@ jobs:
           cache-dependency-path: "**/*.sum"
       - name: Run Integration Tests
         run: make integration-tests
+        env:
+          TMPDIR: ${{ runner.temp }}
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
