@@ -38,7 +38,6 @@ func MustParseCommand(args []string) Command {
 }
 
 func parseCommandID(cmd string) (string, error) {
-	// It mustn't be empty
 	if cmd == "" {
 		return "", errors.New("unexpected empty command name")
 	}

@@ -9,10 +9,10 @@ import (
 
 // ExitIfError calls os.Exit(1) if err is not nil
 func ExitIfError(err error) {
-	if err != nil {
-		log.Printf("%v", err)
-		os.Exit(1)
+	if err == nil {
+	  return
 	}
+	log.Fatalln(err)
 }
 
 // GoBuild builds in provided dir and returns the work directory's true path

@@ -48,13 +48,11 @@ func main() {
 
 	args := os.Args[1:]
 	if len(args) <= 1 {
-		log.Printf("not enough arguments")
-		os.Exit(1)
+		log.Fatalln("Not enough arguments")
 	}
 	cfg, err := cfgFromYaml(args[0])
 	if err != nil {
-		log.Printf("%v", err)
-		os.Exit(1)
+		log.Fatalf("Failed parsing configuration from %s: %v\n", args[0], err)
 	}
 	cmd := proxy.MustParseCommand(args[1:])
 
@@ -68,5 +66,4 @@ func main() {
 		proxy.ProcessCommand(cmd, pkgInj.ProcessLink)
 	}
 	proxy.MustRunCommand(cmd)
-	os.Exit(0)
 }

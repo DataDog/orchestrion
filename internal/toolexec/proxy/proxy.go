@@ -10,11 +10,8 @@ import (
 )
 
 type (
-	// CommandType represents a Go compilation command type
-	// Currently support types are:
-	// - compile
-	// - link
-	// - unknown
+	// CommandType represents a Go toolchain command type, such
+	// as "compile", "link", etc...
 	CommandType string
 	// Command represents a Go compilation command
 	Command interface {
