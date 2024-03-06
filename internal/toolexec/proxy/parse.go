@@ -3,7 +3,6 @@ package proxy
 import (
 	"errors"
 	"path/filepath"
-	"strings"
 )
 
 // ParseCommand parses the Go tool call and its arguments and returns it as a Command.
@@ -44,9 +43,9 @@ func parseCommandID(cmd string) (string, error) {
 
 	// Take the base of the absolute path of the Go tool
 	cmd = filepath.Base(cmd)
-	// Remove the file extension if any
+	// Depending on the architecture/environment, go tools may have extensions. Remove the extension - if any
 	if ext := filepath.Ext(cmd); ext != "" {
-		cmd = strings.TrimSuffix(cmd, ext)
+		cmd = cmd[:len(cmd)-len(ext)]
 	}
 	return cmd, nil
 }
