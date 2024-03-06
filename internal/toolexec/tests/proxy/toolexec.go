@@ -10,19 +10,21 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/datadog/orchestrion/internal/toolexec/processors"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
-type Cfg struct {
-	Inject  map[string]string `yaml:"inject,omitempty"`
+type Config struct {
+	// Inject maps to-be-injected packages directories to their import paths
+	Inject map[string]string `yaml:"inject,omitempty"`
+	// Replace holds an old:new map of go files to be replaced
 	Replace map[string]string `yaml:"replace,omitempty"`
 }
 
-func cfgFromYaml(path string) (Cfg, error) {
-	var cfg Cfg
+func parseConfig(path string) (Config, error) {
+	var cfg Config
 	yamlFile, err := os.ReadFile(path)
 	if err != nil {
 		return cfg, err
@@ -50,7 +52,7 @@ func main() {
 	if len(args) <= 1 {
 		log.Fatalln("Not enough arguments")
 	}
-	cfg, err := cfgFromYaml(args[0])
+	cfg, err := parseConfig(args[0])
 	if err != nil {
 		log.Fatalf("Failed parsing configuration from %s: %v\n", args[0], err)
 	}
