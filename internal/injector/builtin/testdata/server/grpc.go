@@ -1,0 +1,31 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"log"
+	"net"
+
+	"google.golang.org/grpc"
+//line <generated>:1
+	grpc1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+)
+
+//line samples/server/grpc.go:15
+func grpcServer() {
+	ln, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := grpc.NewServer(grpc.EmptyServerOption{},
+//line <generated>:1
+		grpc.StreamInterceptor(grpc1.StreamServerInterceptor()), grpc.UnaryInterceptor(grpc1.UnaryServerInterceptor()))
+//line samples/server/grpc.go:22
+	if err := s.Serve(ln); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
+}

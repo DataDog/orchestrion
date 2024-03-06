@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"reflect"
 	"sort"
@@ -156,17 +157,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	resp, err := http.Get(*surl)
-	if err != nil {
+	var fakeTraces []map[string]any
+	if url, err := url.Parse(*surl); err == nil && url.Scheme == "file" {
+		file, err := os.Open(url.Path)
+		if err != nil {
+			fmt.Printf("Failed to open traces file %q: %v", url.Path, err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		if fakeTraces, err = assembleTraces(file); err != nil {
+			fmt.Printf("Failed to decode traces from %q: %v\n", url.Path, err)
+			os.Exit(1)
+		}
+	} else if resp, err := http.Get(*surl); err != nil {
 		fmt.Printf("Failed to retrieve traces from the fake agent: %v\n", err)
 		os.Exit(1)
-	}
-	defer resp.Body.Close()
+	} else {
+		defer resp.Body.Close()
 
-	fakeTraces, err := assembleTraces(resp.Body)
-	if err != nil {
-		fmt.Printf("Failed to decode traces from the fake agent: %v\n", err)
-		os.Exit(1)
+		if fakeTraces, err = assembleTraces(resp.Body); err != nil {
+			fmt.Printf("Failed to decode traces from the fake agent: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	var vkvs [][]kv

@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# Client Instrumentation
+- join-point:
+    function-call: google.golang.org/grpc.Dial
+  advice:
+    - append-args:
+        - imports: &imports
+            grpc: google.golang.org/grpc
+            grpctrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc
+          template: grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
+        - imports: *imports
+          template: grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
+
+# Server Instrumentation
+- join-point:
+    function-call: google.golang.org/grpc.NewServer
+  advice:
+    - append-args:
+        - imports: *imports
+          template: grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
+        - imports: *imports
+          template: grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())

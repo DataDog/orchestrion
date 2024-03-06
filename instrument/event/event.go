@@ -5,7 +5,7 @@
 
 package event
 
-//go:generate stringer -type=Event
+//go:generate go run golang.org/x/tools/cmd/stringer -type=Event
 type Event int
 
 const (

@@ -1,0 +1,69 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"io"
+	"log"
+	"net/http"
+//line <generated>:1
+	"github.com/datadog/orchestrion/instrument"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+)
+
+//line samples/server/main.go:14
+func main() {
+//line <generated>:1
+	//dd:startinstrument
+	{
+		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "v0.7.0-dev"}))
+		defer tracer.Stop()
+	}
+	//dd:endinstrument
+//line samples/server/main.go:15
+	s := &http.Server{
+		Addr: ":8080",
+		Handler:
+//line <generated>:1
+		//dd:startwrap
+		instrument.WrapHandler(
+//line samples/server/main.go:17
+			http.HandlerFunc(myHandler)),
+		//dd:endwrap
+	}
+
+//line samples/server/main.go:20
+	log.Fatal(s.ListenAndServe())
+}
+
+// myHandler comment on function
+func myHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := io.ReadAll(r.Body)
+	// test comment in function
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	defer r.Body.Close()
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+}
+
+func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := io.ReadAll(r.Body)
+	// test comment in function
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	defer r.Body.Close()
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+}
+
+// comment that is just hanging out unattached

@@ -1,0 +1,11 @@
+%YAML 1.1
+---
+- join-point:
+    assignment-of:
+      function-call: github.com/gofiber/fiber/v2.New
+  advice:
+    - add-comment: //dd:instrumented
+    - append-statements:
+        imports:
+          fibertrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
+        template: '{{.Assignment.LHS}}.Use(fibertrace.Middleware())'

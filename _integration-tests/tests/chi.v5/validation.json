@@ -4,7 +4,7 @@
 	{
 	    "name": "http.request",
 	    "service": "chi.router",
-	    "resource": "GET unknown",
+	    "resource": "GET /",
 	    "type": "web",
 	    "meta": {
 		"http.url": "http://localhost:8080/"

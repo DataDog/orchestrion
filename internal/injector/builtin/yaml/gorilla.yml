@@ -1,0 +1,9 @@
+%YAML 1.1
+---
+- join-point:
+    function-call: github.com/gorilla/mux.NewRouter
+  advice:
+    - wrap-expression:
+        imports:
+          muxtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux
+        template: 'muxtrace.WrapRouter({{.}})'

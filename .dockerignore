@@ -1,0 +1,4 @@
+/go.work
+/go.work.sum
+/integration-tests.sh
+/_integration-tests/outputs

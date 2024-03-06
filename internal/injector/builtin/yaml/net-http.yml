@@ -1,0 +1,71 @@
+%YAML 1.1
+---
+# When httpmode is "wrap"
+- join-point:
+    all-of:
+      - configuration:
+          httpmode: wrap
+      - one-of:
+        - struct-literal:
+            type: net/http.Server
+            field: Handler
+  advice:
+    - wrap-expression:
+        imports:
+          instrument: github.com/datadog/orchestrion/instrument
+        template: |-
+          //dd:startwrap
+          instrument.WrapHandler({{.}})
+          //dd:endwrap
+- join-point:
+    all-of:
+      - configuration:
+          httpmode: wrap
+      - function:
+          - name: '' # This filters only *dst.FuncLit
+          - signature:
+              args: [net/http.ResponseWriter, '*net/http.Request']
+  advice:
+    - wrap-expression:
+        imports:
+          instrument: "github.com/datadog/orchestrion/instrument"
+        template: |-
+          instrument.WrapHandlerFunc({{.}})
+
+# When httpmode is "report"
+- join-point:
+    all-of:
+      - configuration:
+          httpmode: report
+      - function-body:
+          function:
+            - signature:
+                args: [net/http.ResponseWriter, '*net/http.Request']
+  advice:
+    prepend-statements:
+      imports:
+        event: github.com/datadog/orchestrion/instrument/event
+        instrument: github.com/datadog/orchestrion/instrument
+      template: |-
+        {{- $arg := .Function.Argument 1 -}}
+        {{- $name := .Function.Name -}}
+        {{$arg}} = {{$arg}}.WithContext(instrument.Report(
+          {{$arg}}.Context(),
+          event.EventStart,
+          {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+          "span.kind", "server",
+          "http.method", {{$arg}}.Method,
+          "http.url", {{$arg}}.URL,
+          "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+          {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
+        ))
+        defer instrument.Report(
+          {{$arg}}.Context(),
+          event.EventEnd,
+          {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+          "span.kind", "server",
+          "http.method", {{$arg}}.Method,
+          "http.url", {{$arg}}.URL,
+          "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+          {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
+        )
