@@ -19,9 +19,6 @@ func NewGoFileSwapper(swapMap map[string]string) GoFileSwapper {
 }
 
 func (s *GoFileSwapper) ProcessCompile(cmd *proxy.CompileCommand) {
-	if cmd.Stage() != "b001" {
-		return
-	}
 	log.Printf("[%s] Replacing Go files", cmd.Stage())
 
 	for old, new := range s.swapMap {
