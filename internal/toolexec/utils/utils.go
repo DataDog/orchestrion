@@ -2,7 +2,6 @@ package utils
 
 import (
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -10,7 +9,7 @@ import (
 // ExitIfError calls os.Exit(1) if err is not nil
 func ExitIfError(err error) {
 	if err == nil {
-	  return
+		return
 	}
 	log.Fatalln(err)
 }

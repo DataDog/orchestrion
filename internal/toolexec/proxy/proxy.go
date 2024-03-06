@@ -3,7 +3,6 @@ package proxy
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,13 +94,14 @@ func RunCommand(cmd Command) error {
 
 func MustRunCommand(cmd Command) {
 	var exitErr *exec.ExitError
-	if err := RunCommand(cmd); err != nil {
-		if errors.As(err, &exitErr) {
-			os.Exit(exitErr.ExitCode())
-		} else {
-			log.Fatalln(err)
-		}
+	err := RunCommand(cmd)
+	if err == nil {
+		return
 	}
+	if errors.As(err, &exitErr) {
+		os.Exit(exitErr.ExitCode())
+	}
+	panic(err)
 }
 
 func (cmd *command) Stage() string {
