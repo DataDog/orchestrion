@@ -10,12 +10,12 @@ import (
 func ParseCommand(args []string) (Command, error) {
 	cmdID := args[0]
 	args = args[0:]
-	cmdID, err := parseCommandID(cmdID)
+	cmdType, err := parseCommandID(cmdID)
 	if err != nil {
 		return nil, err
 	}
 
-	switch CommandType(cmdID) {
+	switch cmdType {
 	case CommandTypeCompile:
 		return parseCompileCommand(args)
 	case CommandTypeLink:
@@ -36,9 +36,9 @@ func MustParseCommand(args []string) Command {
 	return cmd
 }
 
-func parseCommandID(cmd string) (string, error) {
+func parseCommandID(cmd string) (CommandType, error) {
 	if cmd == "" {
-		return "", errors.New("unexpected empty command name")
+		return CommandTypeOther, errors.New("unexpected empty command name")
 	}
 
 	// Take the base of the absolute path of the Go tool
@@ -47,5 +47,15 @@ func parseCommandID(cmd string) (string, error) {
 	if ext := filepath.Ext(cmd); ext != "" {
 		cmd = cmd[:len(cmd)-len(ext)]
 	}
-	return cmd, nil
+
+	var cmdType CommandType
+	switch cmd {
+	case "compile":
+		cmdType = CommandTypeCompile
+	case "link":
+		cmdType = CommandTypeLink
+	default:
+		cmdType = CommandTypeOther
+	}
+	return cmdType, nil
 }

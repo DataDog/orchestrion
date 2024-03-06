@@ -56,7 +56,7 @@ func TestParseCommand(t *testing.T) {
 		{
 			name:          "unknown",
 			input:         []string{"unknown", "irrelevant"},
-			expectedType:  proxy.CommandTypeUnknown,
+			expectedType:  proxy.CommandTypeOther,
 			expectedStage: ".",
 		},
 		{

@@ -11,7 +11,7 @@ import (
 type (
 	// CommandType represents a Go toolchain command type, such
 	// as "compile", "link", etc...
-	CommandType string
+	CommandType int
 	// Command represents a Go compilation command
 	Command interface {
 		Args() []string
@@ -39,9 +39,9 @@ type (
 )
 
 const (
-	CommandTypeUnknown CommandType = "unknown"
-	CommandTypeCompile CommandType = "compile"
-	CommandTypeLink    CommandType = "link"
+	CommandTypeOther CommandType = iota
+	CommandTypeCompile
+	CommandTypeLink
 )
 
 // ProcessCommand applies a processor on a command if said command matches
@@ -109,7 +109,7 @@ func (cmd *command) Stage() string {
 }
 
 func (cmd *command) Type() CommandType {
-	return CommandTypeUnknown
+	return CommandTypeOther
 }
 
 func (cmd *command) Args() []string {
