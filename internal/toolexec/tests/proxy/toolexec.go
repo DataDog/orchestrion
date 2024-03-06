@@ -1,3 +1,8 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 // Package toolexec acts as a proxy between a Go build command invocation (asm, compile, link...) and its execution.
 // It allows inspecting and modifying build commands using a visitor pattern, by defining to main data types:
 // - Command, an interface representing a single go toolchain command and all its arguments
