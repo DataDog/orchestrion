@@ -3,7 +3,7 @@
 set -exuo pipefail
 
 testDir=$(realpath $(dirname $0))
-cacheDir=$(mktemp -d $TMPDIR/gocache-XXXXX)
+cacheDir=$(realpath $(mktemp -d gocache-XXXXX))
 cd $testDir
 go build -a -o proxy ./proxy
 
