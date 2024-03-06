@@ -1,4 +1,4 @@
-package injectors
+package processors
 
 import (
 	"bytes"

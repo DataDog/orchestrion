@@ -1,4 +1,4 @@
-package injectors
+package processors
 
 import (
 	"bufio"
@@ -149,9 +149,9 @@ func NewPackageInjector(importPath, pkgDir string, flags ...string) PackageInjec
 	}
 }
 
-// InjectCompile visits a compile command, compiles the injected package
+// ProcessCompile visits a compile command, compiles the injected package
 // and includes the package dependency in the target package's importcfg
-func (i *PackageInjector) InjectCompile(cmd *proxy.CompileCommand) {
+func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
 	if cmd.Stage() != "b001" {
 		return
 	}
@@ -190,13 +190,13 @@ func (i *PackageInjector) InjectCompile(cmd *proxy.CompileCommand) {
 	log.Printf("====> Saved state to %s", ddStateFilePath)
 }
 
-func (i *PackageInjector) InjectLink(cmd *proxy.LinkCommand) {
+func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
 	if cmd.Stage() != "b001" {
 		return
 	}
 	log.Printf("[%s] Injecting %s at link", cmd.Stage(), i.importPath)
 
-	// 1 - Read state from disk (created by InjectCompile step)
+	// 1 - Read state from disk (created by ProcessCompile step)
 	log.Printf("====> Reading state from %s", ddStateFilePath)
 	state, err := StateFromFile(ddStateFilePath)
 	defer os.Remove(ddStateFilePath)

@@ -1,4 +1,4 @@
-package injectors
+package processors
 
 import (
 	"log"
@@ -18,7 +18,7 @@ func NewGoFileSwapper(swapMap map[string]string) GoFileSwapper {
 	}
 }
 
-func (s *GoFileSwapper) InjectCompile(cmd *proxy.CompileCommand) {
+func (s *GoFileSwapper) ProcessCompile(cmd *proxy.CompileCommand) {
 	if cmd.Stage() != "b001" {
 		return
 	}

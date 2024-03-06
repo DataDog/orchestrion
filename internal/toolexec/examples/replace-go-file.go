@@ -10,14 +10,14 @@ func ExampleReplaceGoFile() {
 	cmd, err := proxy.ParseCommand(args)
 	utils.ExitIfError(err)
 	filesReplacer := goFilesReplacer{files: map[string]string{"main.go": "custom-main.go"}}
-	proxy.ProcessCommand(cmd, filesReplacer.InjectCompile)
+	proxy.ProcessCommand(cmd, filesReplacer.ProcessCompile)
 }
 
 type goFilesReplacer struct {
 	files map[string]string
 }
 
-func (i goFilesReplacer) InjectCompile(cmd *proxy.CompileCommand) {
+func (i goFilesReplacer) ProcessCompile(cmd *proxy.CompileCommand) {
 	for old, new := range i.files {
 		cmd.ReplaceFile(old, new)
 	}

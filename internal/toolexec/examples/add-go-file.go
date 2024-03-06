@@ -10,13 +10,13 @@ func ExampleAddGoFiles() {
 	cmd, err := proxy.ParseCommand(args)
 	utils.ExitIfError(err)
 	filesAdder := goFilesAdder{files: []string{"added1.go", "added2.go"}}
-	proxy.ProcessCommand(cmd, filesAdder.InjectCompile)
+	proxy.ProcessCommand(cmd, filesAdder.ProcessCompile)
 }
 
 type goFilesAdder struct {
 	files []string
 }
 
-func (i goFilesAdder) InjectCompile(cmd *proxy.CompileCommand) {
+func (i goFilesAdder) ProcessCompile(cmd *proxy.CompileCommand) {
 	cmd.AddFiles(i.files)
 }
