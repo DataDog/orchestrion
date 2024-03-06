@@ -15,8 +15,11 @@ func ExitIfError(err error) {
 }
 
 // GoBuild builds in provided dir and returns the work directory's true path
+// The underlying go build always:
+// - preserves the go work directory (-work)
+// - forces recompilation of all dependencies (-a)
 func GoBuild(dir string, args ...string) (string, error) {
-	args = append([]string{"build", "-work", "-a", "-p", "1"}, args...)
+	args = append([]string{"build", "-work", "-a"}, args...)
 	cmd := exec.Command("go", args...)
 	cmd.Dir = dir
 
