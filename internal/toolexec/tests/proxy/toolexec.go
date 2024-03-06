@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -46,7 +45,6 @@ func parseConfig(path string) (Config, error) {
 
 func main() {
 	log.SetFlags(0)
-	log.SetOutput(io.Discard)
 
 	args := os.Args[1:]
 	if len(args) <= 1 {
