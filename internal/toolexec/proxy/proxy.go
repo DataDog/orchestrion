@@ -44,8 +44,8 @@ type (
 
 const (
 	CommandTypeUnknown CommandType = "unknown"
-	CommandTypeCompile             = "compile"
-	CommandTypeLink                = "link"
+	CommandTypeCompile CommandType = "compile"
+	CommandTypeLink    CommandType = "link"
 )
 
 // ProcessCommand applies a processor on a command if said command matches

@@ -18,7 +18,7 @@ func ParseCommand(args []string) (Command, error) {
 		return nil, err
 	}
 
-	switch cmdID {
+	switch CommandType(cmdID) {
 	case CommandTypeCompile:
 		return parseCompileCommand(args)
 	case CommandTypeLink:
