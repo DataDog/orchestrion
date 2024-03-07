@@ -1,8 +1,9 @@
 name: Toolexec Tests
 on:
-  push:
+  pull_request:
     paths:
       internal/toolexec/**
+  merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -10,12 +11,10 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - uses: actions/setup-go@v5
         with:
           go-version: "stable"
           cache: true
-      - uses: actions/checkout@v3
-        with:
-          repository: 'DataDog/orchestrion'
       - name: Run toolexec package injection tests
         run: make toolexec-tests
