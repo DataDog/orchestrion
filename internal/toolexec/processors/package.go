@@ -8,6 +8,7 @@ package processors
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -18,67 +19,78 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
 )
 
-type PkgRegister struct {
-	BuildDir   string
+// PackageRegister describes Go package and its dependencies
+// It allows reading and editing the content of an `importcfg` file during a Go build step
+type PackageRegister struct {
+	SourceDir  string
 	ImportPath string
-	PkgFile    map[string]string
-	ImportMap  map[string]string
+	// PackageFile maps package dependencies fully-qualified import paths to their build archive location
+	PackageFile map[string]string
+	// ImportMap maps package dependencies import paths to their fully-qualified version
+	ImportMap map[string]string
+	// RandomData is data read from an `importcfg` file that is not needed
+	// We store it so that we can still write the full `importcfg` file back, if needed
 	RandomData []string
 }
 
-func newPkgReg(importPath, buildDir string) PkgRegister {
-	return PkgRegister{
-		BuildDir:   buildDir,
-		ImportPath: importPath,
-		PkgFile:    make(map[string]string),
-		ImportMap:  make(map[string]string),
-		RandomData: make([]string, 0),
+func newPackageRegister(importPath, buildDir string) PackageRegister {
+	return PackageRegister{
+		SourceDir:   buildDir,
+		ImportPath:  importPath,
+		PackageFile: make(map[string]string),
+		ImportMap:   make(map[string]string),
 	}
 }
 
-// Combine merges the two package registers
-// In case of conflict on package name, entries from lhs are kept
-func (r *PkgRegister) Combine(r2 PkgRegister) {
-	for k, v := range r2.ImportMap {
+// Combine copies entries from other into the receiver unless the
+// receiver already has a package with the same name.
+func (r *PackageRegister) Combine(other PackageRegister) {
+	for k, v := range other.ImportMap {
 		if _, ok := r.ImportMap[k]; !ok {
 			r.ImportMap[k] = v
 		}
 
 	}
-	for k, v := range r2.PkgFile {
-		if _, ok := r.PkgFile[k]; !ok {
-			r.PkgFile[k] = v
+	for k, v := range other.PackageFile {
+		if _, ok := r.PackageFile[k]; !ok {
+			r.PackageFile[k] = v
 		}
 	}
 }
 
-// Import imports the r2 package into r.
+// Import imports the other package into r.
 // It effectively combines both packages and adds a dependency on r2 in r
-func (r *PkgRegister) Import(r2 PkgRegister) {
-	r.Combine(r2)
-	r.PkgFile[r2.ImportPath] = fmt.Sprintf("%s/b001/_pkg_.a", r2.BuildDir)
+func (r *PackageRegister) Import(other PackageRegister) {
+	r.Combine(other)
+	r.PackageFile[other.ImportPath] = fmt.Sprintf("%s/b001/_pkg_.a", other.SourceDir)
 }
 
-func (r *PkgRegister) Dump() string {
-	var str strings.Builder
-
+// WriteTo writes the content of the package register to the provided writer
+// Writing to a file will yield a valid importcfg Go build file
+func (r *PackageRegister) WriteTo(writer io.Writer) error {
 	for name, path := range r.ImportMap {
-		str.WriteString(fmt.Sprintf("importmap %s=%s\n", name, path))
+		if _, err := io.WriteString(writer, fmt.Sprintf("importmap %s=%s\n", name, path)); err != nil {
+			return err
+		}
 	}
 
-	for name, path := range r.PkgFile {
-		str.WriteString(fmt.Sprintf("packagefile %s=%s\n", name, path))
+	for name, path := range r.PackageFile {
+		if _, err := io.WriteString(writer, fmt.Sprintf("packagefile %s=%s\n", name, path)); err != nil {
+			return err
+		}
 	}
 
 	for _, data := range r.RandomData {
-		str.WriteString(fmt.Sprintf("%s\n", data))
+		if _, err := io.WriteString(writer, fmt.Sprintf("%s\n", data)); err != nil {
+			return err
+		}
 	}
 
-	return str.String()
+	return nil
 }
 
-func pkgRegiterFromImportCfg(cfg *os.File) PkgRegister {
-	reg := newPkgReg("", filepath.Dir(cfg.Name()))
+func parseImportConfig(cfg *os.File) PackageRegister {
+	reg := newPackageRegister("", filepath.Dir(cfg.Name()))
 	scanner := bufio.NewScanner(cfg)
 	scanner.Split(bufio.ScanLines)
 
@@ -96,7 +108,7 @@ func pkgRegiterFromImportCfg(cfg *os.File) PkgRegister {
 		split := strings.Split(fields[1], "=")
 		switch fields[0] {
 		case "packagefile":
-			reg.PkgFile[split[0]] = split[1]
+			reg.PackageFile[split[0]] = split[1]
 		case "importmap":
 			reg.ImportMap[split[0]] = split[1]
 		default:
@@ -107,22 +119,21 @@ func pkgRegiterFromImportCfg(cfg *os.File) PkgRegister {
 	return reg
 }
 
-// PreparePackage builds the Go package in pkgDir and returns the
-// pkgReg including all dependencies and importmaps
-// This is aimed at library packages that don't yield and importcfg.link in their b001
-// compilation subtree
-func PreparePackage(importPath, pkgDir string, buildFlags ...string) (*PkgRegister, error) {
+// BuildPackage builds the Go package in sourceDir and returns the package register holding all
+// dependencies and importmaps for that package. This is aimed at library packages that don't
+// yield and importcfg.link in their b001 compilation subtree
+func BuildPackage(importPath, pkgDir string, buildFlags ...string) (*PackageRegister, error) {
 	// 1 - Build pkg
-	log.Printf("====> Building %s", importPath)
+	log.Printf("====> Building %s\n", importPath)
 	wDir, err := utils.GoBuild(pkgDir, buildFlags...)
 	if err != nil {
 		return nil, err
 	}
 
-	pkgReg := newPkgReg(importPath, wDir)
+	pkgReg := newPackageRegister(importPath, wDir)
 
 	// 2 - Fetch and combine all dependencies
-	log.Printf("====> Building pkg register for %s", importPath)
+	log.Printf("====> Building pkg register for %s\n", importPath)
 	filepath.WalkDir(wDir, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() || d.Name() != "importcfg" {
 			return nil
@@ -131,25 +142,29 @@ func PreparePackage(importPath, pkgDir string, buildFlags ...string) (*PkgRegist
 		if err != nil {
 			return err
 		}
-		pkgReg.Combine(pkgRegiterFromImportCfg(file))
 		defer file.Close()
+		pkgReg.Combine(parseImportConfig(file))
 		return nil
 	})
 
 	return &pkgReg, err
 }
 
+// PackageInjector holds information needed to inject a Go package
+// and all its dependencies into the build process.
 type PackageInjector struct {
 	importPath string
-	pkgDir     string
+	sourceDir  string
 	buildFlags []string
 }
 
-// NewPackageInjector creates a new package injector
-func NewPackageInjector(importPath, pkgDir string, flags ...string) PackageInjector {
+// NewPackageInjector initializes a command processor that will build the package code
+// at sourceDir using the provided build flags, and add all resulting imports and dependencies
+// into the compilation tree of the current app
+func NewPackageInjector(importPath, sourceDir string, flags ...string) PackageInjector {
 	return PackageInjector{
 		importPath: importPath,
-		pkgDir:     pkgDir,
+		sourceDir:  sourceDir,
 		buildFlags: flags,
 	}
 }
@@ -160,50 +175,52 @@ func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
 	if cmd.Stage() != "b001" {
 		return
 	}
-	log.Printf("[%s] Injecting %s at compile", cmd.Stage(), i.importPath)
+	log.Printf("[%s] Injecting %s at compile\n", cmd.Stage(), i.importPath)
 	// 1 - Build the package
-	pkgReg, err := PreparePackage(i.importPath, i.pkgDir, i.buildFlags...)
+	pkgReg, err := BuildPackage(i.importPath, i.sourceDir, i.buildFlags...)
 	utils.ExitIfError(err)
 	state := State{
-		Deps: map[string]PkgRegister{i.importPath: *pkgReg},
+		Deps: map[string]PackageRegister{i.importPath: *pkgReg},
 	}
 
 	// 2 - Add pkg dependency in importcfg
-	log.Printf("====> Injecting %s in final importcfg", i.importPath)
+	log.Printf("====> Injecting %s in final importcfg\n", i.importPath)
 	err = filepath.WalkDir(filepath.Dir(cmd.Flags.Output), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			log.Printf("err at entry: %v", err)
+			log.Printf("error at entry: %v\n", err)
 			return err
 		}
 		if d.IsDir() || d.Name() != "importcfg" {
 			return nil
 		}
 
-		file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0640)
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR, 0o640)
 		if err != nil {
-			log.Printf("err browsing file dir: %v", err)
+			log.Printf("error opening %s: %v\n", path, err)
 			return err
 		}
 		defer file.Close()
-		str := fmt.Sprintf("packagefile %s=%s/b001/_pkg_.a", i.importPath, pkgReg.BuildDir)
+		str := fmt.Sprintf("packagefile %s=%s/b001/_pkg_.a", i.importPath, pkgReg.SourceDir)
 		_, err = file.WriteString(str)
 		return err
 	})
 
 	// 3 - Save state to disk for the link invocation (separate process)
 	utils.ExitIfError(state.SaveToFile(ddStateFilePath))
-	log.Printf("====> Saved state to %s", ddStateFilePath)
+	log.Printf("====> Saved state to %s\n", ddStateFilePath)
 }
 
+// ProcessLink visits a link command and includes all the new package dependencies
+// yielded by the compile step in importcfg.link
 func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
 	if cmd.Stage() != "b001" {
 		return
 	}
-	log.Printf("[%s] Injecting %s at link", cmd.Stage(), i.importPath)
+	log.Printf("[%s] Injecting %s at link\n", cmd.Stage(), i.importPath)
 
 	// 1 - Read state from disk (created by ProcessCompile step)
-	log.Printf("====> Reading state from %s", ddStateFilePath)
-	state, err := StateFromFile(ddStateFilePath)
+	log.Printf("====> Reading state from %s\n", ddStateFilePath)
+	state, err := LoadFromFile(ddStateFilePath)
 	defer os.Remove(ddStateFilePath)
 	utils.ExitIfError(err)
 
@@ -211,7 +228,7 @@ func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
 	file, err := os.Open(cmd.Flags.ImportCfg)
 	utils.ExitIfError(err)
 
-	reg := pkgRegiterFromImportCfg(file)
+	reg := parseImportConfig(file)
 
 	for _, r := range state.Deps {
 		reg.Import(r)
@@ -219,9 +236,9 @@ func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
 
 	reg.ImportMap = nil
 	file.Close()
-	log.Printf("====> Injecting dependencies in importcfg.link")
+	log.Printf("====> Injecting dependencies in importcfg.link\n")
 	file, err = os.Create(cmd.Flags.ImportCfg)
 	utils.ExitIfError(err)
 	defer file.Close()
-	file.WriteString(reg.Dump())
+	reg.WriteTo(file)
 }

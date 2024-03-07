@@ -6,13 +6,12 @@
 package processors
 
 import (
-	"bytes"
 	"encoding/gob"
-	"fmt"
 	"os"
+	"path"
 )
 
-var ddStateFilePath = fmt.Sprintf("%s/__dd_build.state", os.TempDir())
+var ddStateFilePath = path.Join(os.TempDir(), ".dd_build.state")
 
 // State represents the state of compilation of an app
 // It is used to keep track of whatever packages get built
@@ -20,19 +19,10 @@ var ddStateFilePath = fmt.Sprintf("%s/__dd_build.state", os.TempDir())
 // to keep some state from one call to another (mainly compile -> link)
 type State struct {
 	// mapping import : dependencies
-	Deps map[string]PkgRegister
+	Deps map[string]PackageRegister
 }
 
-func (s *State) serialize() ([]byte, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	if err := enc.Encode(*s); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
+// SaveToFile serializes s and writes the output to a file
 func (s *State) SaveToFile(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
@@ -40,16 +30,12 @@ func (s *State) SaveToFile(path string) error {
 	}
 	defer file.Close()
 
-	data, err := s.serialize()
-
-	if err == nil {
-		file.Write(data)
-	}
-
-	return err
+	enc := gob.NewEncoder(file)
+	return enc.Encode(*s)
 }
 
-func StateFromFile(path string) (State, error) {
+// LoadFromFile reads the file at path and deserializes its content into a State object
+func LoadFromFile(path string) (State, error) {
 	var s State
 
 	file, err := os.Open(path)

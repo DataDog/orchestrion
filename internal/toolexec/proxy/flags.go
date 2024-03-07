@@ -15,7 +15,7 @@ const structTagKey = "ddflag"
 // parseFlags walks through the given arguments and sets the flagSet values
 // present in the argument list. Unknown options, not present in the flagSet
 // are accepted and skipped. The argument list is not modified.
-func parseFlags(flagSet interface{}, args []string) {
+func parseFlags(flagSet any, args []string) {
 	flagSetValueMap := makeFlagSetValueMap(flagSet)
 
 	i := 0
@@ -29,7 +29,7 @@ func parseFlags(flagSet interface{}, args []string) {
 	}
 }
 
-func makeFlagSetValueMap(flagSet interface{}) map[string]reflect.Value {
+func makeFlagSetValueMap(flagSet any) map[string]reflect.Value {
 	v := reflect.ValueOf(flagSet).Elem()
 	typ := v.Type()
 	flagSetValueMap := make(map[string]reflect.Value, v.NumField())

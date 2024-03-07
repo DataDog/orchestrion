@@ -24,13 +24,13 @@ func NewGoFileSwapper(swapMap map[string]string) GoFileSwapper {
 }
 
 func (s *GoFileSwapper) ProcessCompile(cmd *proxy.CompileCommand) {
-	log.Printf("[%s] Replacing Go files", cmd.Stage())
+	log.Printf("[%s] Replacing Go files\n", cmd.Stage())
 
 	for old, new := range s.swapMap {
-		if err := cmd.ReplaceFile(old, new); err != nil {
-			log.Printf("couldn't replace param: %v", err)
+		if err := cmd.ReplaceGoFile(old, new); err != nil {
+			log.Printf("couldn't replace param: %v\n", err)
 		} else {
-			log.Printf("====> Replacing %s by %s", old, new)
+			log.Printf("====> Replacing %s by %s\n", old, new)
 		}
 	}
 }
