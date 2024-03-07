@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -31,6 +32,9 @@ func parseFlags(flagSet any, args []string) {
 
 func makeFlagSetValueMap(flagSet any) map[string]reflect.Value {
 	v := reflect.ValueOf(flagSet).Elem()
+	if v.Kind() != reflect.Struct {
+		panic(fmt.Errorf("flagSet type %T is not a struct", flagSet))
+	}
 	typ := v.Type()
 	flagSetValueMap := make(map[string]reflect.Value, v.NumField())
 	for i := 0; i < typ.NumField(); i++ {
@@ -52,14 +56,11 @@ func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) 
 
 	// Split the argument by its first `=` character if any, and check the
 	// syntax being used.
-	kv := strings.SplitN(arg, "=", 2)
-	option := kv[0]
-
+	option, value, hasValue := strings.Cut(arg, "=")
 	flag, exists := flagSetValueMap[option]
 
-	if len(kv) == 2 {
+	if hasValue {
 		// `-opt=val` syntax
-		value := kv[1]
 		shift = 1
 		if exists {
 			flag.SetString(value)
@@ -75,12 +76,17 @@ func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) 
 			case reflect.Bool:
 				flag.SetBool(true)
 				shift = 1
+			default:
+				panic(fmt.Errorf("unsupported value kind: %s", flag.Kind()))
 			}
 		}
 	} else {
 		// `-opt` syntax (no value)
 		shift = 1
-		if exists && flag.Kind() == reflect.Bool {
+		if exists {
+			if flag.Kind() != reflect.Bool {
+				panic(fmt.Sprintf("missing value for %s flag", flag.Kind()))
+			}
 			flag.SetBool(true)
 		}
 	}
