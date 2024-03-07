@@ -19,6 +19,7 @@ type compileFlagSet struct {
 	TrimPath  string `ddflag:"-trimpath"`
 }
 
+// CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
 	Flags    compileFlagSet

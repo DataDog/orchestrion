@@ -16,6 +16,7 @@ type linkFlagSet struct {
 	Output    string `ddflag:"-o"`
 }
 
+// LinkCommand represents a go tool `link` invocation
 type LinkCommand struct {
 	command
 	Flags linkFlagSet

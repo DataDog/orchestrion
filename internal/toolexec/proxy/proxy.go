@@ -19,9 +19,14 @@ type (
 	CommandType int
 	// Command represents a Go compilation command
 	Command interface {
+		// Args are all the command arguments, starting from the Go tool command
 		Args() []string
 		ReplaceParam(param string, val string) error
+		// Stage returns the build stage of the command. Each stage usually associated
+		// to a specific package and is named using the `bXXX` format, where `X` are numbers.
+		// Stage b001 is the final stage of the go build process
 		Stage() string
+		// Type represents the go tool command type (compile, link, asm, etc.)
 		Type() CommandType
 	}
 
@@ -58,6 +63,8 @@ func ProcessCommand[T Command](cmd Command, p CommandProcessor[T]) {
 	}
 }
 
+// NewCommand initializes a new command object and takes care of tracking the indexes of its
+// arguments
 func NewCommand(args []string) command {
 	cmd := command{
 		args:     args,
@@ -72,6 +79,8 @@ func NewCommand(args []string) command {
 	return cmd
 }
 
+// ReplaceParam will replace any parameter of the command provided it is found
+// A parameter can be a flag, an option, a value, etc
 func (cmd *command) ReplaceParam(param string, val string) error {
 	i, ok := cmd.paramPos[param]
 	if !ok {
@@ -83,6 +92,7 @@ func (cmd *command) ReplaceParam(param string, val string) error {
 	return nil
 }
 
+// RunCommand executes the underlying go tool command and forwards the program's standard fluxes
 func RunCommand(cmd Command) error {
 	args := cmd.Args()
 	c := exec.Command(args[0], args[1:]...)
@@ -97,6 +107,7 @@ func RunCommand(cmd Command) error {
 	return c.Run()
 }
 
+// MustRunCommand is like RunCommand but panics if the command fails to build or run
 func MustRunCommand(cmd Command) {
 	var exitErr *exec.ExitError
 	err := RunCommand(cmd)
