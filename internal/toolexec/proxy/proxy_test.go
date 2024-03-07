@@ -6,11 +6,12 @@
 package proxy_test
 
 import (
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestReplaceParam(t *testing.T) {
