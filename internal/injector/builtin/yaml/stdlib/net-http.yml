@@ -4,96 +4,97 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-# When httpmode is "wrap"
-- join-point:
-    all-of:
-      - configuration:
-          httpmode: wrap
-      - struct-literal:
-          type: net/http.Server
-          field: Handler
-      # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-      - not:
-          import-path: github.com/go-chi/chi/v5
-      - not:
-          import-path: github.com/go-chi/chi/v5/middleware
-      # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
-      - not:
-          import-path: golang.org/x/net/http2
-  advice:
-    - wrap-expression:
-        imports:
-          instrument: github.com/datadog/orchestrion/instrument
-        template: |-
-          //dd:startwrap
-          instrument.WrapHandler({{.}})
-          //dd:endwrap
-- join-point:
-    all-of:
-      - configuration:
-          httpmode: wrap
-      - function:
-          - name: '' # This filters only *dst.FuncLit
-          - signature:
-              args: [net/http.ResponseWriter, '*net/http.Request']
-      # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-      - not:
-          import-path: github.com/go-chi/chi/v5
-      - not:
-          import-path: github.com/go-chi/chi/v5/middleware
-      # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
-      - not:
-          import-path: golang.org/x/net/http2
-  advice:
-    - wrap-expression:
-        imports:
-          instrument: "github.com/datadog/orchestrion/instrument"
-        template: |-
-          instrument.WrapHandlerFunc({{.}})
-
-# When httpmode is "report"
-- join-point:
-    all-of:
-      - configuration:
-          httpmode: report
-      - function-body:
-          function:
+meta:
+  name: net/http
+  description: HTTP client and server implementations.
+  icon: at-symbol
+aspects:
+  # When httpmode is "wrap"
+  - join-point:
+      all-of:
+        - configuration:
+            httpmode: wrap
+        - struct-literal:
+            type: net/http.Server
+            field: Handler
+        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
+        - not:
+            one-of:
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
+              - import-path: golang.org/x/net/http2
+    advice:
+      - wrap-expression:
+          imports:
+            instrument: github.com/datadog/orchestrion/instrument
+          template: |-
+            //dd:startwrap
+            instrument.WrapHandler({{.}})
+            //dd:endwrap
+  - join-point:
+      all-of:
+        - configuration:
+            httpmode: wrap
+        - function:
+            - name: '' # This filters only *dst.FuncLit
             - signature:
                 args: [net/http.ResponseWriter, '*net/http.Request']
-      # No instrumenting github.com/go-chi/chi/v5 as this causes a circular in wrap mode, and we
-      # don't want the behavior to be significantly different between wrap and report modes.
-      - not:
-          import-path: github.com/go-chi/chi/v5
-      - not:
-          import-path: github.com/go-chi/chi/v5/middleware
-      # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
-      - not:
-          import-path: golang.org/x/net/http2
-  advice:
-    prepend-statements:
-      imports:
-        event: github.com/datadog/orchestrion/instrument/event
-        instrument: github.com/datadog/orchestrion/instrument
-      template: |-
-        {{- $arg := .Function.Argument 1 -}}
-        {{- $name := .Function.Name -}}
-        {{$arg}} = {{$arg}}.WithContext(instrument.Report(
-          {{$arg}}.Context(),
-          event.EventStart,
-          {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-          "span.kind", "server",
-          "http.method", {{$arg}}.Method,
-          "http.url", {{$arg}}.URL,
-          "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-          {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
-        ))
-        defer instrument.Report(
-          {{$arg}}.Context(),
-          event.EventEnd,
-          {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-          "span.kind", "server",
-          "http.method", {{$arg}}.Method,
-          "http.url", {{$arg}}.URL,
-          "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-          {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
-        )
+        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
+        - not:
+            one-of:
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
+              # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
+              - import-path: golang.org/x/net/http2
+    advice:
+      - wrap-expression:
+          imports:
+            instrument: "github.com/datadog/orchestrion/instrument"
+          template: |-
+            instrument.WrapHandlerFunc({{.}})
+
+  # When httpmode is "report"
+  - join-point:
+      all-of:
+        - configuration:
+            httpmode: report
+        - function-body:
+            function:
+              - signature:
+                  args: [net/http.ResponseWriter, '*net/http.Request']
+        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular in wrap mode, and we
+        # don't want the behavior to be significantly different between wrap and report modes.
+        - not:
+            one-of:
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
+              # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
+              - import-path: golang.org/x/net/http2
+    advice:
+      prepend-statements:
+        imports:
+          event: github.com/datadog/orchestrion/instrument/event
+          instrument: github.com/datadog/orchestrion/instrument
+        template: |-
+          {{- $arg := .Function.Argument 1 -}}
+          {{- $name := .Function.Name -}}
+          {{$arg}} = {{$arg}}.WithContext(instrument.Report(
+            {{$arg}}.Context(),
+            event.EventStart,
+            {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+            "span.kind", "server",
+            "http.method", {{$arg}}.Method,
+            "http.url", {{$arg}}.URL,
+            "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+            {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
+          ))
+          defer instrument.Report(
+            {{$arg}}.Context(),
+            event.EventEnd,
+            {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+            "span.kind", "server",
+            "http.method", {{$arg}}.Method,
+            "http.url", {{$arg}}.URL,
+            "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+            {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
+          )

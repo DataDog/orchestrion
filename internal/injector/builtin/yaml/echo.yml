@@ -4,11 +4,16 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-- join-point:
-    assignment-of:
-      function-call: github.com/labstack/echo/v4.New
-  advice:
-    - append-statements:
-        imports:
-          echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
-        template: '{{.Assignment.LHS}}.Use(echotrace.Middleware())'
+meta:
+  name: github.com/labstack/echo
+  description: High performance, extensible, minimalist Go web framework.
+  icon: at-symbol
+aspects:
+  - join-point:
+      assignment-of:
+        function-call: github.com/labstack/echo/v4.New
+    advice:
+      - append-statements:
+          imports:
+            echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
+          template: '{{.Assignment.LHS}}.Use(echotrace.Middleware())'

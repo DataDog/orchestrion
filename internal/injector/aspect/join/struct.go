@@ -6,6 +6,7 @@
 package join
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -52,6 +53,10 @@ func (s *structDefinition) Matches(chain *node.Chain) bool {
 
 func (s *structDefinition) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructDefinition").Call(s.typeName.AsCode())
+}
+
+func (s *structDefinition) ToHTML() string {
+	return fmt.Sprintf("Definition of struct <code>%s</code>", s.typeName.ToHTML())
 }
 
 type structLiteral struct {
@@ -105,6 +110,14 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 
 func (s *structLiteral) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), jen.Lit(s.field))
+}
+
+func (s *structLiteral) ToHTML() string {
+	buf := &bytes.Buffer{}
+	buf.WriteString("Composite literal of type <code>")
+	buf.WriteString(s.typeName.ToHTML())
+	buf.WriteString("</code>")
+	return buf.String()
 }
 
 func init() {

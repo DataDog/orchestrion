@@ -62,6 +62,13 @@ func (i *functionCall) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.path + "." + i.name))
 }
 
+func (i *functionCall) ToHTML() string {
+	if i.path != "" {
+		return fmt.Sprintf(`Call to <a href="https://pkg.go.dev/%[1]s#%[2]s" target="_blank" rel="noopener"><code>%[1]s.%[2]s</code></a>`, i.path, i.name)
+	}
+	return fmt.Sprintf("Call to <code>%s</code>", i.name)
+}
+
 var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([^.]+)\z`)
 
 func init() {

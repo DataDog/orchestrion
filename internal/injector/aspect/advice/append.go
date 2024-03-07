@@ -7,6 +7,7 @@ package advice
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -39,6 +40,10 @@ func (a *appendStatements) AsCode() jen.Code {
 
 func (a *appendStatements) AddedImports() []string {
 	return a.template.AddedImports()
+}
+
+func (a *appendStatements) ToHTML() string {
+	return fmt.Sprintf("Append statements after the join point: %s\n", a.template.ToHTML())
 }
 
 func init() {

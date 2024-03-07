@@ -6,6 +6,7 @@
 package advice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -118,6 +119,18 @@ func (a *appendArgs) AddedImports() []string {
 		imports = append(imports, t.AddedImports()...)
 	}
 	return imports
+}
+
+func (a *appendArgs) ToHTML() string {
+	buf := &bytes.Buffer{}
+
+	fmt.Fprintf(buf, "Append <code>%s</code> call arguments:\n<ol>\n", a.typeName.ToHTML())
+	for _, arg := range a.templates {
+		fmt.Fprintf(buf, "<li>%s</li>", arg.ToHTML())
+	}
+	buf.WriteString("</ol>\n")
+
+	return buf.String()
 }
 
 func init() {

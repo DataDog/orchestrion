@@ -6,6 +6,8 @@
 package join
 
 import (
+	"fmt"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -30,6 +32,10 @@ func (p importPath) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ImportPath").Call(jen.Lit(string(p)))
 }
 
+func (p importPath) ToHTML() string {
+	return fmt.Sprintf(`Import path is <a href="http://pkg.go.dev/%[1]s" target="_blank" rel="noopener"><code>%[1]s</code></a>`, p)
+}
+
 type packageName string
 
 func PackageName(name string) packageName {
@@ -47,6 +53,10 @@ func (p packageName) Matches(chain *node.Chain) bool {
 
 func (p packageName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "PackageName").Call(jen.Lit(string(p)))
+}
+
+func (p packageName) ToHTML() string {
+	return fmt.Sprintf("Package is named <code>%s</code>", p)
 }
 
 func init() {

@@ -28,6 +28,7 @@ import (
 type Template struct {
 	template *template.Template
 	imports  map[string]string
+	source   string
 }
 
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
@@ -43,7 +44,7 @@ var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap
 func NewTemplate(text string, imports map[string]string) (Template, error) {
 	template := template.Must(wrapper.Clone())
 	template, err := template.Parse(text)
-	return Template{template, imports}, err
+	return Template{template, imports, text}, err
 }
 
 // MustTemplate is the same as NewTemplate, but panics if an error occurs.
@@ -170,7 +171,7 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 
 func (t *Template) AsCode() jen.Code {
 	return jen.Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
-		jen.Line().Lit(t.template.Tree.Root.String()),
+		jen.Line().Lit(t.source),
 		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
 			// We sort the keys so the generated code order is consistent...
 			keys := make([]string, 0, len(t.imports))
@@ -219,4 +220,22 @@ func numberLines(text string) string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (t *Template) ToHTML() string {
+	buf := bytes.NewBuffer(nil)
+
+	if len(t.imports) > 0 {
+		buf.WriteString("\n\nIdentifier | Import Path\n---|---\n")
+		for name, path := range t.imports {
+			buf.WriteString(fmt.Sprintf(`<code>%[1]s</code>|<a href="http://pkg.go.dev/%[2]s" target="_blank" rel="noopener"><code>%[2]q</code></a>`, name, path))
+			buf.WriteByte('\n')
+		}
+	}
+
+	buf.WriteString("\n\n```go-template\n")
+	buf.WriteString(t.source)
+	buf.WriteString("\n```\n")
+
+	return buf.String()
 }

@@ -55,6 +55,10 @@ func (a *blockStmts) AddedImports() []string {
 	return a.template.AddedImports()
 }
 
+func (a *blockStmts) ToHTML() string {
+	return fmt.Sprintf("Prepend statements using: %s\n", a.template.ToHTML())
+}
+
 func init() {
 	unmarshalers["prepend-statements"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template

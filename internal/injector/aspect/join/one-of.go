@@ -6,6 +6,9 @@
 package join
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -58,6 +61,17 @@ func (o oneOf) AsCode() jen.Code {
 			g.Line().Empty()
 		}
 	})
+}
+
+func (o oneOf) ToHTML() string {
+	buf := &strings.Builder{}
+	fmt.Fprintln(buf, "<strong>One of</strong> the following:")
+	fmt.Fprintln(buf, "<ul>")
+	for _, candidate := range o {
+		fmt.Fprintf(buf, "<li>%s</li>", candidate.ToHTML())
+	}
+	fmt.Fprintln(buf, "</ul>")
+	return buf.String()
 }
 
 func init() {

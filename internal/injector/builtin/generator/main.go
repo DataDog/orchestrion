@@ -11,13 +11,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/dave/jennifer/jen"
 	"golang.org/x/tools/go/packages"
 	"gopkg.in/yaml.v3"
@@ -27,16 +27,20 @@ type globs []string
 
 func main() {
 	var (
-		pkg    string
-		glob   globs
-		output string
-		deps   string
+		pkg     string
+		glob    globs
+		output  string
+		deps    string
+		docsDir string
+		chomp   int
 	)
 
 	flag.StringVar(&pkg, "p", "", "package name")
 	flag.Var(&glob, "i", "input files (glob syntax, can be set multiple times)")
 	flag.StringVar(&output, "o", "", "output file")
 	flag.StringVar(&deps, "d", "", "dependencies file")
+	flag.StringVar(&docsDir, "docs", "", "directory to write documentation files to")
+	flag.IntVar(&chomp, "C", 0, "number of leading path components to strip from matched file names")
 	flag.Parse()
 
 	if len(glob) == 0 {
@@ -53,6 +57,18 @@ func main() {
 	}
 	// Ensure the files are sorted for determinism.
 	sort.Strings(matches)
+
+	if docsDir != "" {
+		filepath.WalkDir(docsDir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() || filepath.Ext(path) != ".md" || strings.HasPrefix(filepath.Base(path), "_") {
+				return nil
+			}
+			return os.Remove(path)
+		})
+	}
 
 	var (
 		depsFile      *jen.File
@@ -93,15 +109,23 @@ func main() {
 			writeAll(checksum, data)
 			writeAll(checksum, []byte{'\x03'})
 
-			var aspects []aspect.Aspect
-			if err := yaml.Unmarshal(data, &aspects); err != nil {
+			var config ConfigurationFile
+			if err := yaml.Unmarshal(data, &config); err != nil {
 				log.Fatalf("failed to unmarshal input file %q: %v\n", match, err)
 			}
 
-			for i, aspect := range aspects {
+			chomped := removeLeadingSegments(match, chomp)
+
+			if docsDir != "" {
+				if err := documentConfiguration(docsDir, chomped, &config); err != nil {
+					log.Fatalf("failed to document aspects from %q: %v\n", match, err)
+				}
+			}
+
+			for i, aspect := range config.Aspects {
 				item := g.Line()
 				if i == 0 {
-					item = item.Commentf("From %s", match).Line()
+					item = item.Commentf("From %s", chomped).Line()
 				}
 				jp, adv := aspect.AsCode()
 				item.Values(
@@ -235,4 +259,16 @@ func (g *globs) glob() (files []string, err error) {
 	sort.Strings(files)
 
 	return
+}
+
+func removeLeadingSegments(path string, n int) string {
+	if n <= 0 {
+		return path
+	}
+	sep := string(filepath.Separator)
+	parts := strings.Split(path, sep)
+	if len(parts) <= n {
+		return path
+	}
+	return strings.Join(parts[n:], sep)
 }

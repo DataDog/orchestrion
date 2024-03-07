@@ -6,6 +6,9 @@
 package join
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -29,6 +32,20 @@ func (n not) Matches(node *node.Chain) bool {
 
 func (n not) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Not").Call(n.jp.AsCode())
+}
+
+func (n not) ToHTML() string {
+	if oneOf, ok := n.jp.(oneOf); ok {
+		buf := &bytes.Buffer{}
+		buf.WriteString("<strong>None of</strong> the following:\n")
+		buf.WriteString("<ul>\n")
+		for _, jp := range oneOf {
+			fmt.Fprintf(buf, "<li>%s</li>\n", jp.ToHTML())
+		}
+		buf.WriteString("</ul>\n")
+		return buf.String()
+	}
+	return fmt.Sprintf("<strong>Not</strong>:<div>%s</div>", n.jp.ToHTML())
 }
 
 func init() {

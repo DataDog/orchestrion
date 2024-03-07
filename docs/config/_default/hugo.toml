@@ -1,0 +1,78 @@
+baseURL = 'https://datadoghq.dev/orchestrion/'
+languageCode = 'en-us'
+title = 'Orchestrion'
+theme = 'hextra'
+
+enableRobotsTXT = true
+enableGitInfo = true
+enableInlineShortCodes = true
+
+[markup.goldmark.renderer]
+unsafe = true
+[markup.highlight]
+noClasses = false
+
+[[menu.main]]
+name = 'Documentation'
+pageRef = '/docs'
+weight = 2
+
+[[menu.main]]
+name = 'Search'
+weight = 900
+params = { type = 'search' }
+
+[[menu.main]]
+name = 'Source'
+url = 'https://github.com/DataDog/orchestrion'
+weight = 999
+params = { icon = 'github' }
+
+[[menu.sidebar]]
+name = 'More'
+identifier = 'more'
+weight = 1
+params = { type = 'separator' }
+
+[[menu.sidebar]]
+name = 'Datadog ↗'
+identifier = 'datadog'
+url = 'https://datadoghq.com'
+weight = 999
+
+[params]
+displayUpdatedDate = true
+dateFormat = '2006-02-01'
+
+[params.editURL]
+enable = true
+base = 'https://github.com/DataDog/orchestrion/edit/main/docs/content'
+
+[params.footer]
+displayCopyright = true
+displayPoweredBy = false
+width = 'normal'
+
+[params.navbar]
+displayTitle = true
+displayLogo = true
+[params.navbar.logo]
+link = '/orchestrion'
+path = 'images/logo.png'
+dark = 'images/logo-dark.png'
+height = 42
+width = 42
+
+[params.search]
+enabled = true
+type = 'flexsearch'
+
+[params.search.flexsearch]
+index = 'content'
+
+[params.page]
+width = 'normal'
+
+[params.theme]
+default = 'system'
+displayToggle = true

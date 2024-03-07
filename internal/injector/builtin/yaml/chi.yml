@@ -4,17 +4,22 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-- join-point:
-    all-of:
-      - assignment-of:
-          function-call: github.com/go-chi/chi/v5.NewRouter
-      # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-      - not:
-          import-path: github.com/go-chi/chi/v5
-      - not:
-          import-path: github.com/go-chi/chi/v5/middleware
-  advice:
-    - append-statements:
-        imports:
-          chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
-        template: '{{.Assignment.LHS}}.Use(chitrace.Middleware())'
+meta:
+  name: github.com/go-chi/chi
+  description: A small, idiomatic and composable router for building HTTP services.
+  icon: at-symbol
+aspects:
+  - join-point:
+      all-of:
+        - assignment-of:
+            function-call: github.com/go-chi/chi/v5.NewRouter
+        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
+        - not:
+            one-of:
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
+    advice:
+      - append-statements:
+          imports:
+            chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
+          template: '{{.Assignment.LHS}}.Use(chitrace.Middleware())'

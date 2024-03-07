@@ -1,0 +1,5 @@
+<a href="https://pkg.go.dev/{{ .Get 0 }}{{ with .Get 1 }}#{{ . }}{{ end }}" target="_blank" rel="noopener"><code>
+  {{- .Get 0 -}}
+  {{- with .Get 1 }}<wbr>.{{ . }}{{ end -}}
+</code></a>
+{{- /* suppress trailing white space */ -}}

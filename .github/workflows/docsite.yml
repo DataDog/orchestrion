@@ -1,0 +1,65 @@
+name: Documentation Site
+on:
+  pull_request:
+    branches: ['**']
+  merge_group:
+    branches: ['main']
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          cache-dependency-path: '**/*.sum'
+      - name: Build Site
+        run: |-
+          go -C ./docs run github.com/gohugoio/hugo --minify --enableGitInfo
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: docs/public/
+          if-no-files-found: error
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: docs/public/
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/public/
+      - name: Deploy to Github Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -6,6 +6,8 @@
 package join
 
 import (
+	"bytes"
+	"fmt"
 	"sort"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -47,6 +49,17 @@ func (jp configuration) AsCode() jen.Code {
 
 		g.Line().Empty()
 	}))
+}
+
+func (jp configuration) ToHTML() string {
+	buf := &bytes.Buffer{}
+	buf.WriteString("Configuration includes:\n")
+	buf.WriteString("<ul>\n")
+	for k, v := range jp {
+		fmt.Fprintf(buf, "<li><code>%s = %q</code></li>\n", k, v)
+	}
+	buf.WriteString("</ul>\n")
+	return buf.String()
 }
 
 func init() {

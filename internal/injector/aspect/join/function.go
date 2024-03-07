@@ -21,6 +21,7 @@ type (
 		code.AsCode
 		impliesImported() []string
 		evaluate(string, *dst.FuncType, ...*dst.NodeDecs) bool
+		toHTML() string
 	}
 
 	funcDecl struct {
@@ -78,6 +79,17 @@ func (s *funcDecl) AsCode() jen.Code {
 	})
 }
 
+func (s *funcDecl) ToHTML() string {
+	buf := &strings.Builder{}
+	buf.WriteString("Function declaration where:\n")
+	buf.WriteString("<ul>\n")
+	for _, opt := range s.opts {
+		fmt.Fprintf(buf, "<li>%s</li>\n", opt.toHTML())
+	}
+	buf.WriteString("</ul>\n")
+	return buf.String()
+}
+
 type funcName string
 
 func Name(name string) FunctionOption {
@@ -94,6 +106,13 @@ func (fo funcName) evaluate(name string, _ *dst.FuncType, _ ...*dst.NodeDecs) bo
 
 func (fo funcName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Name").Call(jen.Lit(string(fo)))
+}
+
+func (fo funcName) toHTML() string {
+	if fo == "" {
+		return "Is a function literal expression"
+	}
+	return fmt.Sprintf("Named <code>%s</code>", string(fo))
 }
 
 type signature struct {
@@ -177,6 +196,35 @@ func (fo *signature) AsCode() jen.Code {
 	})
 }
 
+func (fo *signature) toHTML() string {
+	buf := &strings.Builder{}
+	buf.WriteString("Has signature <code>func(")
+	for i, arg := range fo.args {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(arg.ToHTML())
+	}
+	buf.WriteByte(')')
+	switch len(fo.returns) {
+	case 0:
+		// Nothing to do
+	case 1:
+		buf.WriteString(fo.returns[0].ToHTML())
+	default:
+		buf.WriteString(" (")
+		for i, ret := range fo.returns {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			buf.WriteString(ret.ToHTML())
+		}
+		buf.WriteByte(')')
+	}
+	buf.WriteString("</code>")
+	return buf.String()
+}
+
 type directive struct {
 	name string
 }
@@ -204,6 +252,10 @@ func (fo *directive) evaluate(_ string, _ *dst.FuncType, allDecs ...*dst.NodeDec
 
 func (fo *directive) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(fo.name))
+}
+
+func (fo *directive) toHTML() string {
+	return fmt.Sprintf("Is annotated with <code>//%s</code>\n", fo.name)
 }
 
 type oneOfFunctions []FunctionOption
@@ -253,6 +305,17 @@ func (fo oneOfFunctions) AsCode() jen.Code {
 	})
 }
 
+func (fo oneOfFunctions) toHTML() string {
+	buf := &strings.Builder{}
+	buf.WriteString("One of the following:\n<ul>\n")
+	for _, opt := range fo {
+		fmt.Fprintf(buf, "<li>%s</li>\n", opt.toHTML())
+	}
+	buf.WriteString("</ul>\n")
+	return buf.String()
+
+}
+
 type receives struct {
 	typeName TypeName
 }
@@ -279,6 +342,10 @@ func (fo *receives) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs)
 
 func (fo *receives) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.AsCode())
+}
+
+func (fo *receives) toHTML() string {
+	return fmt.Sprintf("Receives an argument typed <code>%s</code>\n", fo.typeName.ToHTML())
 }
 
 type funcBody struct {
@@ -314,6 +381,10 @@ func (s *funcBody) Matches(chain *node.Chain) bool {
 
 func (s *funcBody) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionBody").Call(s.up.AsCode())
+}
+
+func (s *funcBody) ToHTML() string {
+	return fmt.Sprintf("Body of:<div>%s</div>", s.up.ToHTML())
 }
 
 func init() {

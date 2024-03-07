@@ -6,6 +6,8 @@
 package join
 
 import (
+	"fmt"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -40,6 +42,10 @@ func (i *assignmentOf) Matches(chain *node.Chain) bool {
 
 func (i *assignmentOf) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "AssignmentOf").Call(i.value.AsCode())
+}
+
+func (i *assignmentOf) ToHTML() string {
+	return fmt.Sprintf("Assignment of: <div>%s</div>", i.value.ToHTML())
 }
 
 func init() {

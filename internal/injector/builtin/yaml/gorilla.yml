@@ -4,10 +4,21 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-- join-point:
-    function-call: github.com/gorilla/mux.NewRouter
-  advice:
-    - wrap-expression:
-        imports:
-          muxtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux
-        template: 'muxtrace.WrapRouter({{.}})'
+meta:
+  name: github.com/gorilla/mux
+  description: Package gorilla/mux implements a request router and dispatcher for matching incoming requests to their respective handler.
+  icon: at-symbol
+  caveats: |-
+    The instrumentation changes the type of the value returned by {{<godoc "github.com/gorilla/mux" "NewRouter">}}, and
+    may as a result cause compilation errors to appear; for example in cases where the value is assigned to an
+    explicitly typed variable, or if it is later re-assigned a {{<godoc "github.com/gorilla/mux" "Router">}} value.
+
+    This issue is tracked by [`DataDog/orchestrion#86`](https://github.com/DataDog/orchestrion/issues/86).
+aspects:
+  - join-point:
+      function-call: github.com/gorilla/mux.NewRouter
+    advice:
+      - wrap-expression:
+          imports:
+            muxtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux
+          template: 'muxtrace.WrapRouter({{.}})'

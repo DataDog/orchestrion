@@ -89,6 +89,10 @@ func (a injectSourceFile) AddedImports() []string {
 	return nil
 }
 
+func (a injectSourceFile) ToHTML() string {
+	return fmt.Sprintf("Inject new source file containing:\n\n```go\n%s\n```\n", string(a))
+}
+
 func init() {
 	unmarshalers["inject-source-file"] = func(node *yaml.Node) (Advice, error) {
 		var text string

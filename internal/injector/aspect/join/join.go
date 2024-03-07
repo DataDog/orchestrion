@@ -33,6 +33,10 @@ type Point interface {
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.
 	Matches(node *node.Chain) bool
+
+	// ToHTML renders an HTML block containing the join point's description for
+	// documentation purposes.
+	ToHTML() string
 }
 
 type TypeName struct {
@@ -135,4 +139,21 @@ func (n *TypeName) AsCode() jen.Code {
 	str.WriteString(n.name)
 
 	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
+}
+
+func (n *TypeName) ToHTML() string {
+	buf := &bytes.Buffer{}
+	if n.pointer {
+		buf.WriteByte('*')
+	}
+	if n.path != "" {
+		fmt.Fprintf(buf, `<a href="http://pkg.go.dev/%s#%s" target="_blank" rel="noopener">`, n.path, n.name)
+		buf.WriteString(n.path)
+		buf.WriteString("<wbr>.")
+	}
+	buf.WriteString(n.name)
+	if n.path != "" {
+		buf.WriteString("</a>")
+	}
+	return buf.String()
 }
