@@ -67,26 +67,33 @@ func (r *PackageRegister) Import(other PackageRegister) {
 
 // WriteTo writes the content of the package register to the provided writer
 // Writing to a file will yield a valid importcfg Go build file
-func (r *PackageRegister) WriteTo(writer io.Writer) error {
+func (r *PackageRegister) WriteTo(writer io.Writer) (int64, error) {
+	var count int64
 	for name, path := range r.ImportMap {
-		if _, err := io.WriteString(writer, fmt.Sprintf("importmap %s=%s\n", name, path)); err != nil {
-			return err
+		n, err := io.WriteString(writer, fmt.Sprintf("importmap %s=%s\n", name, path))
+		count = count + int64(n)
+		if err != nil {
+			return count, err
 		}
 	}
 
 	for name, path := range r.PackageFile {
-		if _, err := io.WriteString(writer, fmt.Sprintf("packagefile %s=%s\n", name, path)); err != nil {
-			return err
+		n, err := io.WriteString(writer, fmt.Sprintf("packagefile %s=%s\n", name, path))
+		count = count + int64(n)
+		if err != nil {
+			return count, err
 		}
 	}
 
 	for _, data := range r.RandomData {
-		if _, err := io.WriteString(writer, fmt.Sprintf("%s\n", data)); err != nil {
-			return err
+		n, err := io.WriteString(writer, fmt.Sprintf("%s\n", data))
+		count = count + int64(n)
+		if err != nil {
+			return count, err
 		}
 	}
 
-	return nil
+	return count, nil
 }
 
 func parseImportConfig(cfg *os.File) PackageRegister {
@@ -240,5 +247,6 @@ func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
 	file, err = os.Create(cmd.Flags.ImportCfg)
 	utils.ExitIfError(err)
 	defer file.Close()
-	reg.WriteTo(file)
+	_, err = reg.WriteTo(file)
+	utils.ExitIfError(err)
 }
