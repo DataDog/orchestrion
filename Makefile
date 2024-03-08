@@ -44,3 +44,6 @@ verify-dd-headers:
 
 integration-tests:
 	./integration-tests.sh
+
+toolexec-tests:
+	./internal/toolexec/tests/tests.sh
