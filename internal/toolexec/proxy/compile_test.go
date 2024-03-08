@@ -13,21 +13,18 @@ import (
 )
 
 func TestParseCompile(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
+	for name, tc := range map[string]struct {
 		input    []string
 		stage    string
 		buildDir string
 		goFiles  []string
 		flags    compileFlagSet
 	}{
-		{
-			name:  "version print",
+		"version_print": {
 			input: []string{"/path/compile", "-V=full"},
 			stage: ".",
 		},
-		{
-			name:     "compile",
+		"compile": {
 			input:    []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-importcfg", "/buildDir/b002/importcfg", "/buildDir/b002/main.go", "/buildDir/b002/file1.go"},
 			stage:    "b002",
 			buildDir: "/buildDir/b002",
@@ -39,7 +36,7 @@ func TestParseCompile(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			cmd, err := parseCompileCommand(tc.input)
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeCompile, cmd.Type())

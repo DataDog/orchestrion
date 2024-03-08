@@ -13,19 +13,16 @@ import (
 )
 
 func TestParseLink(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
+	for name, tc := range map[string]struct {
 		input []string
 		stage string
 		flags linkFlagSet
 	}{
-		{
-			name:  "version print",
+		"version_print": {
 			input: []string{"/path/link", "-V=full"},
 			stage: ".",
 		},
-		{
-			name:  "link",
+		"link": {
 			input: []string{"/path/link", "-o", "/buildDir/b001/exe/a.out", "-importcfg", "/buildDir/b001/importcfg.link", "-buildmode=exe", "/buildDir/b001/_pkg_.a"},
 			stage: "b001",
 			flags: linkFlagSet{
@@ -35,7 +32,7 @@ func TestParseLink(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			cmd, err := parseLinkCommand(tc.input)
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeLink, cmd.Type())
