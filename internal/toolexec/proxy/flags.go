@@ -65,7 +65,7 @@ func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) 
 		if exists {
 			flag.SetString(value)
 		}
-	} else if nextArg == "" || len(nextArg) > 1 && nextArg[0] != '-' {
+	} else if nextArg != "" && !strings.HasPrefix(nextArg, "-") {
 		// `-opt val` syntax
 		value := nextArg
 		shift = 2
