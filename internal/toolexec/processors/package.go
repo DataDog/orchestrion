@@ -228,7 +228,6 @@ func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
 	// 1 - Read state from disk (created by ProcessCompile step)
 	log.Printf("====> Reading state from %s\n", ddStateFilePath)
 	state, err := LoadFromFile(ddStateFilePath)
-	defer os.Remove(ddStateFilePath)
 	utils.ExitIfError(err)
 
 	// 2 - Process importcfg.link

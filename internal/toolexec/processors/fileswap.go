@@ -27,7 +27,7 @@ func (s *GoFileSwapper) ProcessCompile(cmd *proxy.CompileCommand) {
 	log.Printf("[%s] Replacing Go files\n", cmd.Stage())
 
 	for old, new := range s.swapMap {
-		if err := cmd.ReplaceGoFile(old, new); err != nil {
+		if err := cmd.ReplaceParam(old, new); err != nil {
 			log.Printf("couldn't replace param: %v\n", err)
 		} else {
 			log.Printf("====> Replacing %s by %s\n", old, new)

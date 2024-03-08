@@ -51,19 +51,6 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
-// ReplaceGoFile is a convenience wrapper around Command.ReplaceParam to
-// replace a Go file by another in the cmd arguments
-func (cmd *CompileCommand) ReplaceGoFile(old, new string) error {
-	if !strings.HasSuffix(old, ".go") {
-		return fmt.Errorf("%s is not a Go file", old)
-	}
-	if !strings.HasSuffix(new, ".go") {
-		return fmt.Errorf("%s is not a Go file", new)
-	}
-
-	return cmd.ReplaceParam(old, new)
-}
-
 func (f *compileFlagSet) Valid() bool {
 	return f.Package != "" && f.Output != "" && f.ImportCfg != "" && f.TrimPath != ""
 }
