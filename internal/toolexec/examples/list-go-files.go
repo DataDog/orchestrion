@@ -6,9 +6,10 @@
 package examples
 
 import (
+	"log"
+
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
-	"log"
 )
 
 func ExampleListGofiles() {

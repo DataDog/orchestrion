@@ -6,9 +6,10 @@
 package proxy
 
 import (
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type testFlagSet struct {
