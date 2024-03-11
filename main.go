@@ -8,6 +8,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/datadog/orchestrion/internal/injector"
+	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,11 +28,13 @@ func main() {
 		fmt.Fprint(w, "options:\n")
 		flag.PrintDefaults()
 	}
-	var write bool
-	var remove bool
-	var httpMode string
+	var (
+		write, remove, proxyMode bool
+		httpMode                 string
+	)
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
+	flag.BoolVar(&proxyMode, "proxy", false, "if set, <description>")
 	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
 	printVersion := flag.Bool("v", false, "print orchestrion version")
 	flag.Parse()
@@ -37,9 +42,16 @@ func main() {
 		fmt.Println(version.Tag)
 		return
 	}
+
 	if len(flag.Args()) == 0 {
 		return
 	}
+
+	if proxyMode {
+		hijack(flag.Args())
+		return
+	}
+
 	output := func(fullName string, out io.Reader) {
 		fmt.Printf("%s:\n", fullName)
 		// write the output
@@ -80,4 +92,33 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func hijack(args []string) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered a panic while hijacking:", r)
+		}
+	}()
+	cmd := proxy.MustParseCommand(args)
+	proxy.ProcessCommand(cmd, processCompile)
+	proxy.MustRunCommand(cmd)
+}
+
+func processCompile(cmd *proxy.CompileCommand) {
+	i, err := injector.New(cmd.BuildDir, injector.Options{
+		Aspects:          builtin.Aspects[:],
+		ModifiedFile:     modifiedFileName,
+		PreserveLineInfo: true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	for _, f := range cmd.GoFiles() {
+		i.InjectFile(f, map[string]string{"<TBD>": "TBD"})
+	}
+}
+
+func modifiedFileName(fileName string) string {
+	return fmt.Sprintf("injected_%s", fileName)
 }
