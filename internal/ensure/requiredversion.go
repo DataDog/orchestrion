@@ -40,7 +40,7 @@ func RequiredVersion() error {
 }
 
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
-// syscall.Exec functions as arguments to allow for easier testing.
+// syscall.Exec functions as arguments to allow for easier testing. Panics if `osArgs` is 0-length.
 func requiredVersion(
 	goModVersion func() (string, error),
 	osGetenv func(string) string,
@@ -83,6 +83,10 @@ func requiredVersion(
 	goBin, err := exec.LookPath("go")
 	if err != nil {
 		return fmt.Errorf("failed to resolve go from PATH: %w", err)
+	}
+
+	if len(osArgs) == 0 {
+		panic("received 0-length osArgs, which is not supposed to happen")
 	}
 
 	args := make([]string, len(osArgs)+2)
