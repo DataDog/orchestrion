@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 	"syscall"
 
 	"github.com/datadog/orchestrion/internal/version"
@@ -22,7 +24,9 @@ const (
 	envValRespawnLocal = "<local>"
 )
 
-// EnsureRequiredVersion makes sure the version of the tool currently running is the same as the one
+var errRespawnLoop = errors.New("re-spawn loop detected")
+
+// RequiredVersion makes sure the version of the tool currently running is the same as the one
 // required in the current working directory's "go.mod" file by calling `syscall.Exec` with the
 // relevant `go run` command if necessary to replace the current process with one using the required
 // version.
@@ -32,6 +36,17 @@ const (
 // before exiting with a non-0 status code. If the process was correctly substituted, this function
 // never returns control to its caller (as the process has been replaced).
 func RequiredVersion() error {
+	return requiredVersion(goModVersion, os.Getenv, syscall.Exec, os.Args)
+}
+
+// requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
+// syscall.Exec functions as arguments to allow for easier testing.
+func requiredVersion(
+	goModVersion func() (string, error),
+	osGetenv func(string) string,
+	syscallExec func(argv0 string, argv []string, env []string) error,
+	osArgs []string,
+) error {
 	required, err := goModVersion()
 	if err != nil {
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
@@ -43,12 +58,13 @@ func RequiredVersion() error {
 		return nil
 	}
 
-	if respawn := os.Getenv(envVarRespawned); respawn != "" && respawn != envValRespawnLocal {
+	if respawn := osGetenv(envVarRespawned); respawn != "" && respawn != envValRespawnLocal {
 		// We're already re-spawning for a non-local version, so we should not be re-spawning again...
 		// If that were the case, we'd likely end up in an infinite loop of re-spawning, which is very
 		// much undesirable.
 		return fmt.Errorf(
-			"re-spawn loop detected (wanted %s, got %s, already respawning for %s)",
+			"%w (wanted %s, got %s, already respawning for %s)",
+			errRespawnLoop,
 			required,
 			version.Tag,
 			respawn,
@@ -64,16 +80,25 @@ func RequiredVersion() error {
 
 	log.Printf("Re-starting with '%s@%s' (this is %s)\n", orchestrionPkgPath, required, version.Tag)
 
-	args := make([]string, len(os.Args)+1)
-	args[0] = "run"
-	args[1] = orchestrionPkgPath
-	copy(args[2:], os.Args[1:])
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		return fmt.Errorf("failed to resolve go from PATH: %w", err)
+	}
+
+	args := make([]string, len(osArgs)+2)
+	args[0] = goBin
+	args[1] = "run"
+	args[2] = orchestrionPkgPath
+	copy(args[3:], osArgs[1:])
 
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("%s=%s", envVarRespawned, required))
 
-	err = syscall.Exec("go", args, env)
-	return fmt.Errorf("failed to exec `go run %s ...`: %w", orchestrionPkgPath, err)
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	// Won't return control if successful, never returns a `nil` error value.
+	return syscallExec(goBin, args, env)
 }
 
 // goModVersion returns the version of the "github.com/datadog/orchestrion" module that is required
