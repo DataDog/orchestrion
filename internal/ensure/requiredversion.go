@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"syscall"
 
@@ -19,12 +20,15 @@ import (
 )
 
 const (
-	orchestrionPkgPath = "github.com/datadog/orchestrion"
-	envVarRespawned    = "DD_ORCHESTRION_RESPAWNED_FOR"
-	envValRespawnLocal = "<local>"
+	orchestrionPkgPath    = "github.com/datadog/orchestrion"
+	envVarRespawned       = "DD_ORCHESTRION_RESPAWNED_FOR"
+	envValRespawnReplaced = "<replaced>"
 )
 
-var errRespawnLoop = errors.New("re-spawn loop detected")
+var (
+	errRespawnLoop    = errors.New("re-spawn loop detected")
+	orchestrionSrcDir string
+)
 
 // RequiredVersion makes sure the version of the tool currently running is the same as the one
 // required in the current working directory's "go.mod" file by calling `syscall.Exec` with the
@@ -42,43 +46,41 @@ func RequiredVersion() error {
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
 // syscall.Exec functions as arguments to allow for easier testing. Panics if `osArgs` is 0-length.
 func requiredVersion(
-	goModVersion func() (string, error),
+	goModVersion func() (string, string, error),
 	osGetenv func(string) string,
 	syscallExec func(argv0 string, argv []string, env []string) error,
 	osArgs []string,
 ) error {
-	required, err := goModVersion()
+	rVersion, path, err := goModVersion()
 	if err != nil {
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
 	}
 
-	if required == version.Tag {
-		// This is the correct version or no specific version could be determined (indicating a dev/replaced package is in
-		// use), so we can proceed without further ado.
+	if rVersion == version.Tag || (rVersion == "" && path == orchestrionSrcDir) {
+		// This is the correct version already, so we can proceed without further ado.
 		return nil
 	}
 
-	if respawn := osGetenv(envVarRespawned); respawn != "" && respawn != envValRespawnLocal {
+	if respawn := osGetenv(envVarRespawned); respawn != "" && respawn != envValRespawnReplaced {
 		// We're already re-spawning for a non-local version, so we should not be re-spawning again...
 		// If that were the case, we'd likely end up in an infinite loop of re-spawning, which is very
 		// much undesirable.
 		return fmt.Errorf(
 			"%w (wanted %s, got %s, already respawning for %s)",
 			errRespawnLoop,
-			required,
+			rVersion,
 			version.Tag,
 			respawn,
 		)
 	}
 
-	if required == "" {
-		// If there is no required version, it means a local version is used instead, either because we
-		// are in Orchestrion's own development tree, or because the user has introduced a "replace"
-		// directive for orchestion. In such cases, we unconditionally exec `go run` exactly once.
-		required = envValRespawnLocal
+	if rVersion == "" {
+		// If there is no required version, it means a replace directive is in use, and it does not
+		// macth the running process' original source tree, so we will unconditionally re-spawn.
+		rVersion = envValRespawnReplaced
 	}
 
-	log.Printf("Re-starting with '%s@%s' (this is %s)\n", orchestrionPkgPath, required, version.Tag)
+	log.Printf("Re-starting with '%s@%s' (this is %s)\n", orchestrionPkgPath, rVersion, version.Tag)
 
 	goBin, err := exec.LookPath("go")
 	if err != nil {
@@ -96,7 +98,7 @@ func requiredVersion(
 	copy(args[3:], osArgs[1:])
 
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("%s=%s", envVarRespawned, required))
+	env = append(env, fmt.Sprintf("%s=%s", envVarRespawned, rVersion))
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -105,14 +107,15 @@ func requiredVersion(
 	return syscallExec(goBin, args, env)
 }
 
-// goModVersion returns the version of the "github.com/datadog/orchestrion" module that is required
-// in the current working directory's "go.mod" file. The versions may be blank, indicating a replace
-// directive redirects the package to a local source tree.
-func goModVersion() (string, error) {
+// goModVersion returns the version and path of the "github.com/datadog/orchestrion" module that is
+// required in the current working directory's "go.mod" file. The version may be blank if a replace
+// directive is in effect; in which case the path value may indicate the location of the source code
+// that is being used instead.
+func goModVersion() (version string, path string, err error) {
 	cfg := &packages.Config{Mode: packages.NeedModule}
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	pkg := pkgs[0]
@@ -121,8 +124,18 @@ func goModVersion() (string, error) {
 		for i, e := range pkg.Errors {
 			errs[i] = errors.New(e.Error())
 		}
-		return "", errors.Join(errs...)
+		return "", "", errors.Join(errs...)
 	}
 
-	return pkg.Module.Version, nil
+	if pkg.Module.Replace != nil {
+		// If there's a replace directive, that's what we need to be honoring instead.
+		return pkg.Module.Replace.Version, pkg.Module.Replace.Path, nil
+	}
+
+	return pkg.Module.Version, pkg.Module.Path, nil
+}
+
+func init() {
+	_, file, _, _ := runtime.Caller(0)
+	orchestrionSrcDir = path.Dir(path.Dir(path.Dir(file)))
 }

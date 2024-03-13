@@ -7,6 +7,9 @@ package ensure
 
 import (
 	"errors"
+	"io"
+	"log"
+	"os"
 	"os/exec"
 	"sync/atomic"
 	"testing"
@@ -24,6 +27,7 @@ func Test(t *testing.T) {
 
 	type goModVersionResult struct {
 		version string
+		path    string
 		err     error
 	}
 	type expectedOutcome struct {
@@ -41,6 +45,10 @@ func Test(t *testing.T) {
 			goModVersion: goModVersionResult{version: version.Tag},
 			expected:     expectedOutcome{err: nil, respawns: false},
 		},
+		"happy path, replaced to this": {
+			goModVersion: goModVersionResult{path: orchestrionSrcDir},
+			expected:     expectedOutcome{err: nil, respawns: false},
+		},
 		"go.mod failure": {
 			goModVersion: goModVersionResult{err: testError},
 			expected:     expectedOutcome{err: testError},
@@ -49,8 +57,12 @@ func Test(t *testing.T) {
 			goModVersion: goModVersionResult{version: "v1337.42.0-phony.0"},
 			expected:     expectedOutcome{respawns: true},
 		},
-		"respawn needed (blank required version)": {
-			goModVersion: goModVersionResult{version: ""},
+		"respawn needed (blank required version, blank path)": {
+			goModVersion: goModVersionResult{},
+			expected:     expectedOutcome{respawns: true},
+		},
+		"respawn needed (blank required version, mismatched path)": {
+			goModVersion: goModVersionResult{path: "/phony/orchestrion/path"},
 			expected:     expectedOutcome{respawns: true},
 		},
 		"respawn loop": {
@@ -60,8 +72,12 @@ func Test(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			mockGoVersion := func() (string, error) {
-				return tc.goModVersion.version, tc.goModVersion.err
+			// Send output to io.Discard to neutralize log entries during test...
+			log.SetOutput(io.Discard)
+			defer log.SetOutput(os.Stderr)
+
+			mockGoVersion := func() (string, string, error) {
+				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}
 			mockGetenv := func(name string) string {
 				require.Equal(t, name, envVarRespawned)
