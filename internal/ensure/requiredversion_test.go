@@ -7,10 +7,13 @@ package ensure
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -18,7 +21,66 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test(t *testing.T) {
+func TestGoModVersion(t *testing.T) {
+	type test struct {
+		version string
+		replace bool
+		err     error
+	}
+	for name, test := range map[string]test{
+		"happy":    {version: "v0.6.0"},
+		"replaced": {version: "v0.6.0", replace: true},
+		"missing":  {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tmp, err := os.MkdirTemp("", "ensure-*")
+			require.NoError(t, err, "failed to create temporary directory")
+			defer os.RemoveAll(tmp)
+
+			goMod := []string{
+				"module test_case",
+				"",
+				"go 1.20",
+				"",
+			}
+			if test.version != "" {
+				goMod = append(goMod, fmt.Sprintf("require %s %s", orchestrionPkgPath, test.version), "")
+				require.NoError(t,
+					os.WriteFile(path.Join(tmp, "tools.go"), []byte(fmt.Sprintf("//go:build tools\npackage tools\n\nimport _ %q\n", orchestrionPkgPath)), 0o640),
+					"failed to write tools.go",
+				)
+			}
+			if test.replace {
+				goMod = append(goMod, fmt.Sprintf("replace %s => %s", orchestrionPkgPath, orchestrionSrcDir), "")
+			}
+
+			require.NoError(t, os.WriteFile(path.Join(tmp, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o640), "failed to write go.mod file")
+
+			child := exec.Command("go", "mod", "tidy")
+			child.Dir = tmp
+			child.Stderr = os.Stderr
+			require.NoError(t, child.Run(), "error while running 'go mod download'")
+
+			rVersion, rDir, err := goModVersion(tmp)
+			if test.err != nil {
+				require.ErrorContains(t, err, test.err.Error())
+				return
+			}
+
+			require.NoError(t, err)
+			if test.replace {
+				require.Equal(t, "", rVersion)
+				require.Equal(t, orchestrionSrcDir, rDir)
+			} else {
+				require.Equal(t, test.version, rVersion)
+				// In this case, the source tree will be in the GOMODCACHE directory.
+				require.Contains(t, rDir, os.Getenv("GOMODCACHE"))
+			}
+		})
+	}
+}
+
+func TestRequiredVersion(t *testing.T) {
 	goBin, err := exec.LookPath("go")
 	require.NoError(t, err, "could not resolve go command path")
 
@@ -76,7 +138,8 @@ func Test(t *testing.T) {
 			log.SetOutput(io.Discard)
 			defer log.SetOutput(os.Stderr)
 
-			mockGoVersion := func() (string, string, error) {
+			mockGoVersion := func(dir string) (string, string, error) {
+				require.Equal(t, "", dir)
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}
 			mockGetenv := func(name string) string {

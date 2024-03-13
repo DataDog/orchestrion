@@ -46,12 +46,12 @@ func RequiredVersion() error {
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
 // syscall.Exec functions as arguments to allow for easier testing. Panics if `osArgs` is 0-length.
 func requiredVersion(
-	goModVersion func() (string, string, error),
+	goModVersion func(string) (string, string, error),
 	osGetenv func(string) string,
 	syscallExec func(argv0 string, argv []string, env []string) error,
 	osArgs []string,
 ) error {
-	rVersion, path, err := goModVersion()
+	rVersion, path, err := goModVersion("" /* Current working directory */)
 	if err != nil {
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
 	}
@@ -108,11 +108,11 @@ func requiredVersion(
 }
 
 // goModVersion returns the version and path of the "github.com/datadog/orchestrion" module that is
-// required in the current working directory's "go.mod" file. The version may be blank if a replace
-// directive is in effect; in which case the path value may indicate the location of the source code
-// that is being used instead.
-func goModVersion() (version string, path string, err error) {
-	cfg := &packages.Config{Mode: packages.NeedModule}
+// required in the specified directory's "go.mod" file. If dir is blank, the process' current
+// working directory is used. The version may be blank if a replace directive is in effect; in which
+// case the path value may indicate the location of the source code that is being used instead.
+func goModVersion(dir string) (moduleVersion string, moduleDir string, err error) {
+	cfg := &packages.Config{Dir: dir, Mode: packages.NeedModule}
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {
 		return "", "", err
@@ -129,10 +129,10 @@ func goModVersion() (version string, path string, err error) {
 
 	if pkg.Module.Replace != nil {
 		// If there's a replace directive, that's what we need to be honoring instead.
-		return pkg.Module.Replace.Version, pkg.Module.Replace.Path, nil
+		return pkg.Module.Replace.Version, pkg.Module.Replace.Dir, nil
 	}
 
-	return pkg.Module.Version, pkg.Module.Path, nil
+	return pkg.Module.Version, pkg.Module.Dir, nil
 }
 
 func init() {
