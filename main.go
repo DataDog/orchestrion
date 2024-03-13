@@ -10,8 +10,11 @@ import (
 	"fmt"
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/datadog/orchestrion/internal/toolexec/processors"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -94,18 +97,36 @@ func main() {
 	}
 }
 
+type orchestrator struct {
+	replacedFiles map[string]string
+	pkgRegister   processors.PackageRegister
+}
+
+func newOrchestrator() *orchestrator {
+	return &orchestrator{
+		replacedFiles: make(map[string]string),
+		refs:          make(typed.ReferenceMap),
+	}
+}
+
 func hijack(args []string) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered a panic while hijacking:", r)
 		}
 	}()
+	o := newOrchestrator()
 	cmd := proxy.MustParseCommand(args)
-	proxy.ProcessCommand(cmd, processCompile)
+	proxy.ProcessCommand(cmd, o.injectGoFiles)
+	for importPath := range o.refs {
+		pkgInjector := processors.NewPackageInjector(importPath, "todo: find source dir")
+		proxy.ProcessCommand(cmd, pkgInjector.ProcessCompile)
+		proxy.ProcessCommand(cmd, pkgInjector.ProcessLink)
+	}
 	proxy.MustRunCommand(cmd)
 }
 
-func processCompile(cmd *proxy.CompileCommand) {
+func (o *orchestrator) injectGoFiles(cmd *proxy.CompileCommand) {
 	i, err := injector.New(cmd.BuildDir, injector.Options{
 		Aspects:          builtin.Aspects[:],
 		ModifiedFile:     modifiedFileName,
@@ -114,9 +135,22 @@ func processCompile(cmd *proxy.CompileCommand) {
 	if err != nil {
 		panic(err)
 	}
-	for _, f := range cmd.GoFiles() {
-		i.InjectFile(f, map[string]string{"<TBD>": "TBD"})
+
+	goFiles := cmd.GoFiles()
+	for _, f := range goFiles {
+		res, err := i.InjectFile(f, map[string]string{"<TBD>": "TBD"})
+		if err != nil {
+			log.Printf("error while injecting %s, f", f)
+			continue
+		}
+		if !res.Modified {
+			continue
+		}
+
+		replacedFiles[f] = res.Filename
 	}
+	log.Printf("replaced files: %v\n", replacedFiles)
+	log.Printf("go files: %v\n", goFiles)
 }
 
 func modifiedFileName(fileName string) string {
