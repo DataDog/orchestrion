@@ -8,13 +8,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/datadog/orchestrion/internal/config"
+	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/instrument"
+	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/datadog/orchestrion/internal/version"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/instrument"
-	"github.com/datadog/orchestrion/internal/version"
 )
 
 func main() {
@@ -25,9 +27,12 @@ func main() {
 		fmt.Fprint(w, "options:\n")
 		flag.PrintDefaults()
 	}
-	var write bool
-	var remove bool
-	var httpMode string
+	var (
+		write, remove, proxyMode, toolexecMode bool
+		httpMode                               string
+	)
+	flag.BoolVar(&toolexecMode, "toolexec", false, "toolexec proxy mode")
+	flag.BoolVar(&proxyMode, "proxy", false, "go driver proxy mode")
 	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
 	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
 	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
@@ -38,6 +43,30 @@ func main() {
 		return
 	}
 	if len(flag.Args()) == 0 {
+		return
+	}
+
+	if proxyMode {
+		args := make([]string, len(flag.Args()))
+		copy(args, flag.Args())
+		orchestrionBin, err := filepath.Abs(os.Args[0])
+		if err != nil {
+			log.Printf("Error: %v", err)
+			os.Exit(1)
+		}
+		err = goproxy.Run(args, goproxy.WithForceBuild(), goproxy.WithDifferentCache(), goproxy.WithToolexec([]string{
+			orchestrionBin, "--toolexec",
+		}))
+		if err != nil {
+			log.Printf("Error: %v", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if toolexecMode {
+		cmd := proxy.MustParseCommand(flag.Args())
+		proxy.MustRunCommand(cmd)
 		return
 	}
 	output := func(fullName string, out io.Reader) {
