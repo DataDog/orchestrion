@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/datadog/orchestrion/internal/version"
 	"os"
 
 	"github.com/datadog/orchestrion/internal/goproxy"
@@ -27,7 +28,7 @@ func main() {
 		printUsage(os.Args[0])
 		return
 	case "version":
-		fmt.Fprintln(os.Stderr, "Implementation missing")
+		fmt.Println(version.Tag)
 		return
 	case "go":
 		err := goproxy.Run(args, goproxy.WithForceBuild(), goproxy.WithDifferentCache())
