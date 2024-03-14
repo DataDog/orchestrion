@@ -6,107 +6,56 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/goproxy"
-	"github.com/datadog/orchestrion/internal/instrument"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
-	"github.com/datadog/orchestrion/internal/version"
-	"io"
-	"log"
 	"os"
-	"path/filepath"
+
+	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
 func main() {
-	flag.Usage = func() {
-		w := flag.CommandLine.Output()
-		fmt.Fprint(w, "usage: orchestrion [options] [path]\n")
-		fmt.Fprint(w, "example: orchestrion -w ./\n")
-		fmt.Fprint(w, "options:\n")
-		flag.PrintDefaults()
-	}
-	var (
-		write, remove, proxyMode, toolexecMode bool
-		httpMode                               string
-	)
-	flag.BoolVar(&toolexecMode, "toolexec", false, "toolexec proxy mode")
-	flag.BoolVar(&proxyMode, "proxy", false, "go driver proxy mode")
-	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
-	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
-	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
-	printVersion := flag.Bool("v", false, "print orchestrion version")
-	flag.Parse()
-	if *printVersion {
-		fmt.Println(version.Tag)
+	if len(os.Args) < 2 {
+		printUsage(os.Args[0])
 		return
 	}
-	if len(flag.Args()) == 0 {
-		return
-	}
+	cmd := os.Args[1]
+	args := make([]string, len(os.Args)-2)
+	copy(args, os.Args[2:])
 
-	if proxyMode {
-		args := make([]string, len(flag.Args()))
-		copy(args, flag.Args())
-		orchestrionBin, err := filepath.Abs(os.Args[0])
+	switch cmd {
+	case "help":
+		printUsage(os.Args[0])
+		return
+	case "version":
+		fmt.Fprintln(os.Stderr, "Implementation missing")
+		return
+	case "go":
+		err := goproxy.Run(args, goproxy.WithForceBuild(), goproxy.WithDifferentCache())
 		if err != nil {
-			log.Printf("Error: %v", err)
-			os.Exit(1)
-		}
-		err = goproxy.Run(args, goproxy.WithForceBuild(), goproxy.WithDifferentCache(), goproxy.WithToolexec([]string{
-			orchestrionBin, "--toolexec",
-		}))
-		if err != nil {
-			log.Printf("Error: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: %v", err)
 			os.Exit(1)
 		}
 		return
+	case "toolexec":
+		proxyCmd := proxy.MustParseCommand(args)
+		proxy.MustRunCommand(proxyCmd)
+		return
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n", cmd)
 	}
+}
 
-	if toolexecMode {
-		cmd := proxy.MustParseCommand(flag.Args())
-		proxy.MustRunCommand(cmd)
-		return
+func printUsage(cmd string) {
+	commands := []string{
+		"go",
+		"help",
+		"toolexec",
+		"version",
 	}
-	output := func(fullName string, out io.Reader) {
-		fmt.Printf("%s:\n", fullName)
-		// write the output
-		txt, _ := io.ReadAll(out)
-		fmt.Println(string(txt))
+	fmt.Printf("Usage:\n    %s <command> [arguments]\n\n", cmd)
+	fmt.Println("Available commands:")
+	for _, cmd := range commands {
+		fmt.Printf("    %s\n", cmd)
 	}
-	if write {
-		output = func(fullName string, out io.Reader) {
-			fmt.Printf("overwriting %s:\n", fullName)
-			// write the output
-			txt, _ := io.ReadAll(out)
-			err := os.WriteFile(fullName, txt, 0644)
-			if err != nil {
-				fmt.Printf("Writing file %s: %v\n", fullName, err)
-			}
-		}
-	}
-	conf := config.Config{HTTPMode: httpMode}
-	if err := conf.Validate(); err != nil {
-		fmt.Printf("Config error: %v\n", err)
-		os.Exit(1)
-	}
-	for _, v := range flag.Args() {
-		p, err := filepath.Abs(v)
-		if err != nil {
-			fmt.Printf("Sanitizing path (%s) failed: %v\n", v, err)
-			continue
-		}
-		fmt.Printf("Scanning Package %s\n", p)
-		processor := instrument.InstrumentFile
-		if remove {
-			fmt.Printf("Removing Orchestrion instrumentation.\n")
-			processor = instrument.UninstrumentFile
-		}
-		err = instrument.ProcessPackage(p, processor, output, conf)
-		if err != nil {
-			fmt.Printf("Failed to scan: %v\n", err)
-			os.Exit(1)
-		}
-	}
+	fmt.Printf("\nFor more information, run %s help <command>\n", cmd)
 }
