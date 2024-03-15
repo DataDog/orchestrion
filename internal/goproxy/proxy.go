@@ -71,12 +71,12 @@ func Run(args []string, opts ...Option) error {
 
 	cmd := args[0]
 	switch cmd {
-	case "build":
+	case "build", "run":
 		if cfg.forceBuild {
-			args = append([]string{"build", "-a"}, args[1:]...)
+			args = append([]string{cmd, "-a"}, args[1:]...)
 		}
 		if len(cfg.toolexecArgs) > 0 {
-			args = append([]string{"build", "-toolexec", cfg.toolexecArgs}, args[1:]...)
+			args = append([]string{cmd, "-toolexec", cfg.toolexecArgs}, args[1:]...)
 		}
 		if cfg.differentCache {
 			dirPath, err := os.MkdirTemp("", ".goproxy_cache*")
@@ -86,11 +86,8 @@ func Run(args []string, opts ...Option) error {
 			cacheVar := fmt.Sprintf("%s=%s", goCacheVar, dirPath)
 			env = append(env, cacheVar)
 		}
-
-	case "version", "install", "mod":
-		break
 	default:
-		return fmt.Errorf("unsupported go command '%s'", cmd)
+		break
 	}
 
 	args = append([]string{goBin}, args...)

@@ -42,7 +42,8 @@ func main() {
 		proxy.MustRunCommand(proxyCmd)
 		return
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n", cmd)
+		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)
+		printUsage(os.Args[0])
 	}
 }
 
