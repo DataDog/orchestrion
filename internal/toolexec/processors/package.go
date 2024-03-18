@@ -179,7 +179,7 @@ func NewPackageInjector(importPath, sourceDir string, flags ...string) PackageIn
 // ProcessCompile visits a compile command, compiles the injected package
 // and includes the package dependency in the target package's importcfg
 func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
-	if cmd.Stage() != "b001" {
+	if cmd.Flags.Output == "" {
 		return
 	}
 	log.Printf("[%s] Injecting %s at compile\n", cmd.Stage(), i.importPath)
@@ -220,7 +220,7 @@ func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
 // ProcessLink visits a link command and includes all the new package dependencies
 // yielded by the compile step in importcfg.link
 func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
-	if cmd.Stage() != "b001" {
+	if cmd.Flags.Output == "" {
 		return
 	}
 	log.Printf("[%s] Injecting %s at link\n", cmd.Stage(), i.importPath)
