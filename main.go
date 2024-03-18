@@ -7,8 +7,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/datadog/orchestrion/internal/version"
 	"os"
+
+	"github.com/datadog/orchestrion/internal/version"
 
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
