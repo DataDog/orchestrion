@@ -8,12 +8,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/ensure"
-	"github.com/datadog/orchestrion/internal/version"
-
 	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/datadog/orchestrion/internal/version"
 )
 
 func main() {
@@ -37,14 +40,27 @@ func main() {
 		fmt.Println(version.Tag)
 		return
 	case "go":
-		err := goproxy.Run(args, goproxy.WithForceBuild(), goproxy.WithDifferentCache())
+		orchestrion, err := os.Executable()
 		if err != nil {
+			if orchestrion, err = filepath.Abs(os.Args[0]); err != nil {
+				orchestrion = os.Args[0]
+			}
+		}
+
+		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrion, "toolexec")); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v", err)
 			os.Exit(1)
 		}
 		return
 	case "toolexec":
 		proxyCmd := proxy.MustParseCommand(args)
+		if proxyCmd.ShowVersion() {
+			stdout := strings.Builder{}
+			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
+			fmt.Printf("%s:orchestrion@%s+%s\n", strings.TrimSpace(stdout.String()), version.Tag, builtin.Checksum)
+			return
+		}
+
 		proxy.MustRunCommand(proxyCmd)
 		return
 	default:
