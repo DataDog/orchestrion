@@ -65,25 +65,27 @@ func Run(args []string, opts ...Option) error {
 		return fmt.Errorf("locating 'go' binary: %w", err)
 	}
 
-	cmd := args[0]
-	switch cmd {
+	argV := make([]string, 1, len(args)+3)
+	argV[0] = goBin
+	argV = append(argV, args...)
+
+	switch cmd := args[0]; cmd {
 	// "go build" arguments are shared by build, clean, get, install, list, run, and test.
 	case "build", "clean", "get", "install", "list", "run", "test":
 		if cfg.toolexec != "" {
-			newArgs := make([]string, len(args)+2)
-			newArgs[0] = cmd
-			newArgs[1] = "-toolexec"
-			newArgs[2] = cfg.toolexec
-			copy(newArgs[3:], args[1:])
-			args = newArgs
+			oldLen := len(argV)
+			// Add two slots to the argV array
+			argV = append(argV, "", "")
+			// Move all values from index 1 2 slots forward
+			copy(argV[4:], argV[2:oldLen])
+			// Fill in the two slots for toolexec.
+			argV[2] = "-toolexec"
+			argV[3] = cfg.toolexec
 		}
-	default:
-		break
 	}
 
-	args = append([]string{goBin}, args...)
-	log.Printf("Executing '%v'", args)
-	return syscall.Exec(goBin, args, env)
+	log.Printf("Executing %q\n", argV)
+	return syscall.Exec(argV[0], argV, env)
 }
 
 var goBinPath string
