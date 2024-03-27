@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/builtin"
@@ -37,7 +38,9 @@ func main() {
 	case "go":
 		orchestrion, err := os.Executable()
 		if err != nil {
-			orchestrion = os.Args[0]
+			if orchestrion, err = filepath.Abs(os.Args[0]); err != nil {
+				orchestrion = os.Args[0]
+			}
 		}
 
 		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrion, "toolexec")); err != nil {

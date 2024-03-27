@@ -22,20 +22,25 @@ type Option func(*config)
 
 // WithToolexec forces a call to Run() to build with the -toolexec option when
 // wrapping a build command
-func WithToolexec(args ...string) Option {
+func WithToolexec(bin string, args ...string) Option {
 	var buffer = strings.Builder{}
+	if _, err := fmt.Fprintf(&buffer, "%q", bin); err != nil {
+		// This is expected to never happen (short of running OOM, maybe?)
+		panic(err)
+	}
+
 	for _, arg := range args {
 		if buffer.Len() > 0 {
 			buffer.WriteByte(' ')
 		}
 		// We are quoting all arguments to hopefully evade shell interpretation.
-		_, err := fmt.Fprintf(&buffer, "%q", arg)
-		if err != nil {
+		if _, err := fmt.Fprintf(&buffer, "%q", arg); err != nil {
 			// This is expected to never happen (short of running OOM, maybe?)
 			panic(err)
 		}
 	}
 	toolexec := buffer.String()
+	buffer.Reset() // Dispose of the buffer's content so its memory can be recclaimed.
 	return func(c *config) {
 		c.toolexec = toolexec
 	}
