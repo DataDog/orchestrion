@@ -12,14 +12,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/builtin"
-	"github.com/datadog/orchestrion/internal/version"
-
+	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/datadog/orchestrion/internal/version"
 )
 
 func main() {
+	if err := ensure.RequiredVersion(); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: Unable to ensure go.mod version of orchestrion is used: %v\n", err)
+	}
+
 	if len(os.Args) < 2 {
 		printUsage(os.Args[0])
 		return

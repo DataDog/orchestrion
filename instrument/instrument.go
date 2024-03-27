@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/datadog/orchestrion/instrument/event"
-	"github.com/datadog/orchestrion/internal/version"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
@@ -54,7 +53,7 @@ func Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 				opts = append(opts, tracer.Tag(k, metadata[i+1]))
 			}
 		}
-		span, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
+		_, ctx = tracer.StartSpanFromContext(ctx, getOpName(metadata...), opts...)
 	} else if e == event.EventEnd || e == event.EventReturn {
 		var ok bool
 		span, ok = tracer.SpanFromContext(ctx)
@@ -65,9 +64,4 @@ func Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 		span.Finish()
 	}
 	return ctx
-}
-
-func Init() func() {
-	tracer.Start(tracer.WithOrchestrion(map[string]string{"version": version.Tag}))
-	return tracer.Stop
 }

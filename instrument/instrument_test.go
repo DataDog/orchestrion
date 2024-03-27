@@ -7,22 +7,12 @@ package instrument
 
 import (
 	"context"
-	"io"
 	"testing"
 
 	"github.com/datadog/orchestrion/instrument/event"
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/instrument"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
-
-func TestScanPackageDST(t *testing.T) {
-	output := func(fullName string, out io.Reader) {
-		io.ReadAll(out)
-	}
-	instrument.ProcessPackage("./samples", instrument.InstrumentFile, output, config.Default)
-}
 
 func TestReport(t *testing.T) {
 	t.Run("start", func(t *testing.T) {
