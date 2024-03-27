@@ -30,9 +30,11 @@ type (
 		Type() CommandType
 	}
 
-	// CommandProcessor is a function that takes a command as input
-	// and is allowed to modify it or read its data
-	CommandProcessor[T Command] func(T)
+	// CommandProcessor is a function that takes a command as input and is allowed to modify it or
+	// read its data. If it returns an error, the processing chain immediately stops and no further
+	// processors will be invoked. The special value `ErrSkipCommand` can be used to request the
+	// command to be skipped by the `toolexec` proxy instead of being finally executed.
+	CommandProcessor[T Command] func(T) error
 
 	commandFlagSet struct {
 		Output string `ddflag:"-o"`
@@ -54,13 +56,22 @@ const (
 	CommandTypeLink
 )
 
+var (
+	// ErrSkipCommand is returned by `CommandProcessor` functions to signal the command they received
+	// should not be executed at all, instead claiming idempotent success (exit code 0).
+	ErrSkipCommand = errors.New("<skip command>")
+)
+
 // ProcessCommand applies a processor on a command if said command matches
-// the input type of said input processor. Failure to match types is not
-// considered to be an error.
-func ProcessCommand[T Command](cmd Command, p CommandProcessor[T]) {
+// the input type of said input processor. Nothing happens if the processor does
+// not correspond to the provided command type.
+func ProcessCommand[T Command](cmd Command, p CommandProcessor[T]) error {
 	if c, ok := cmd.(T); ok {
-		p(c)
+		if err := p(c); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // NewCommand initializes a new command object and takes care of tracking the indexes of its

@@ -142,8 +142,8 @@ func BuildPackage(importPath, pkgDir string, buildFlags ...string) (*PackageRegi
 	// 2 - Fetch and combine all dependencies
 	log.Printf("====> Building pkg register for %s\n", importPath)
 	filepath.WalkDir(wDir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() || d.Name() != "importcfg" {
-			return nil
+		if err != nil || d.IsDir() || d.Name() != "importcfg" {
+			return err
 		}
 		file, err := os.Open(path)
 		if err != nil {
@@ -178,10 +178,7 @@ func NewPackageInjector(importPath, sourceDir string, flags ...string) PackageIn
 
 // ProcessCompile visits a compile command, compiles the injected package
 // and includes the package dependency in the target package's importcfg
-func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
-	if cmd.Flags.Output == "" {
-		return
-	}
+func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) error {
 	log.Printf("[%s] Injecting %s at compile\n", cmd.Stage(), i.importPath)
 	// 1 - Build the package
 	pkgReg, err := BuildPackage(i.importPath, i.sourceDir, i.buildFlags...)
@@ -192,7 +189,7 @@ func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
 
 	// 2 - Add pkg dependency in importcfg
 	log.Printf("====> Injecting %s in final importcfg\n", i.importPath)
-	err = filepath.WalkDir(filepath.Dir(cmd.Flags.Output), func(path string, d fs.DirEntry, err error) error {
+	if err = filepath.WalkDir(filepath.Dir(cmd.Flags.Output), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("error at entry: %v\n", err)
 			return err
@@ -210,42 +207,53 @@ func (i *PackageInjector) ProcessCompile(cmd *proxy.CompileCommand) {
 		str := fmt.Sprintf("packagefile %s=%s/b001/_pkg_.a", i.importPath, pkgReg.SourceDir)
 		_, err = file.WriteString(str)
 		return err
-	})
+	}); err != nil {
+		return fmt.Errorf("creating final importfcg: %w", err)
+	}
 
 	// 3 - Save state to disk for the link invocation (separate process)
-	utils.ExitIfError(state.SaveToFile(ddStateFilePath))
+	if err := state.SaveToFile(ddStateFilePath); err != nil {
+		return fmt.Errorf("saving state to %q: %w", ddStateFilePath, err)
+	}
 	log.Printf("====> Saved state to %s\n", ddStateFilePath)
+	return nil
 }
 
 // ProcessLink visits a link command and includes all the new package dependencies
 // yielded by the compile step in importcfg.link
-func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) {
-	if cmd.Flags.Output == "" {
-		return
-	}
+func (i *PackageInjector) ProcessLink(cmd *proxy.LinkCommand) error {
 	log.Printf("[%s] Injecting %s at link\n", cmd.Stage(), i.importPath)
 
 	// 1 - Read state from disk (created by ProcessCompile step)
 	log.Printf("====> Reading state from %s\n", ddStateFilePath)
 	state, err := LoadFromFile(ddStateFilePath)
-	utils.ExitIfError(err)
+	if err != nil {
+		return fmt.Errorf("loading %q: %w", ddStateFilePath, err)
+	}
 
 	// 2 - Process importcfg.link
 	file, err := os.Open(cmd.Flags.ImportCfg)
-	utils.ExitIfError(err)
+	if err != nil {
+		return fmt.Errorf("opening %q: %w", cmd.Flags.ImportCfg, err)
+	}
 
 	reg := parseImportConfig(file)
-
 	for _, r := range state.Deps {
 		reg.Import(r)
 	}
-
 	reg.ImportMap = nil
 	file.Close()
+
 	log.Printf("====> Injecting dependencies in importcfg.link\n")
 	file, err = os.Create(cmd.Flags.ImportCfg)
-	utils.ExitIfError(err)
+	if err != nil {
+		return fmt.Errorf("opening %q: %w", cmd.Flags.ImportCfg, err)
+	}
 	defer file.Close()
+
 	_, err = reg.WriteTo(file)
-	utils.ExitIfError(err)
+	if err != nil {
+		return fmt.Errorf("writing to %q: %w", cmd.Flags.ImportCfg, err)
+	}
+	return nil
 }
