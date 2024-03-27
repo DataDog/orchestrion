@@ -132,7 +132,7 @@ var Aspects = [...]aspect.Aspect{
 	// From yaml/go-main.yml
 	{
 		JoinPoint: join.AllOf(
-			join.ImportPath("main"),
+			join.PackageName("main"),
 			join.FunctionBody(join.Function(
 				join.Signature(
 					nil,
@@ -303,4 +303,4 @@ var RestorerMap = map[string]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "D8FF30F1267BDDECD9B0A254CE564D51283A68A81FD6DF5E5403D4041BA14A2C89E782A4A3AF8AFEBB53A64706707405BDC39F4873FA4282458F512729151D27"
+const Checksum = "914EAB34731B29A7F9830C2C0872A47DFAA81B695A51406EFC592CE24893A881575ED7BB280D18DDDC082FA651777109167E8EAA0FF9BC063BD1D07E11D2D14F"

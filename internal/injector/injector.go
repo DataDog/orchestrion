@@ -78,6 +78,15 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 		return nil, err
 	} else {
 		pkg := pkgs[0]
+		switch len(pkg.Errors) {
+		case 0:
+			// Nothing to do, this is a success!
+		case 1:
+			return nil, pkg.Errors[0]
+		default:
+			return nil, fmt.Errorf("%w (and %d more)", pkg.Errors[0], len(pkg.Errors)-1)
+		}
+
 		dec = pkg.Decorator
 		pkgPath = pkg.PkgPath
 		restorerMap = make(map[string]string, len(pkg.Imports)+len(builtin.RestorerMap))

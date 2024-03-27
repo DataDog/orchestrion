@@ -7,6 +7,7 @@ package join
 
 import (
 	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -25,6 +26,21 @@ func (p importPath) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ImportPath").Call(jen.Lit(string(p)))
 }
 
+type packageName string
+
+func PackageName(name string) packageName {
+	return packageName(name)
+}
+
+func (p packageName) Matches(chain *node.Chain) bool {
+	file, found := node.Find[*dst.File](chain)
+	return found && file.Name.Name == string(p)
+}
+
+func (p packageName) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "PackageName").Call(jen.Lit(string(p)))
+}
+
 func init() {
 	unmarshalers["import-path"] = func(node *yaml.Node) (Point, error) {
 		var name string
@@ -32,5 +48,13 @@ func init() {
 			return nil, err
 		}
 		return ImportPath(name), nil
+	}
+
+	unmarshalers["package-name"] = func(node *yaml.Node) (Point, error) {
+		var name string
+		if err := node.Decode(&name); err != nil {
+			return nil, err
+		}
+		return PackageName(name), nil
 	}
 }
