@@ -23,8 +23,11 @@ type goFilesReplacer struct {
 	files map[string]string
 }
 
-func (i goFilesReplacer) ProcessCompile(cmd *proxy.CompileCommand) {
+func (i goFilesReplacer) ProcessCompile(cmd *proxy.CompileCommand) error {
 	for old, new := range i.files {
-		cmd.ReplaceParam(old, new)
+		if err := cmd.ReplaceParam(old, new); err != nil {
+			return err
+		}
 	}
+	return nil
 }

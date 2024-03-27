@@ -10,5 +10,6 @@ package tools
 import (
 	_ "github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator"
 	_ "github.com/datadog/orchestrion/internal/injector/builtin/generator"
+	_ "github.com/google/go-licenses"
 	_ "golang.org/x/tools/cmd/stringer"
 )

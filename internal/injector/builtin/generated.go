@@ -286,3 +286,6 @@ var RestorerMap = map[string]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9":                        "redis",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0":                    "kafka",
 }
+
+// Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
+const Checksum = "sha512:rvLF70FdZ2+ncnU115Y/Zncq/tPqUWMdNRD272fhKqPSMRgpCeMLXP3E+LyaLOAec9zP6+Le3phamq8iWq9RsA=="

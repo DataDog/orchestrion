@@ -6,78 +6,80 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
-	"github.com/datadog/orchestrion/internal/config"
-	"github.com/datadog/orchestrion/internal/instrument"
+	"github.com/datadog/orchestrion/internal/ensure"
+	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/version"
 )
 
 func main() {
-	flag.Usage = func() {
-		w := flag.CommandLine.Output()
-		fmt.Fprint(w, "usage: orchestrion [options] [path]\n")
-		fmt.Fprint(w, "example: orchestrion -w ./\n")
-		fmt.Fprint(w, "options:\n")
-		flag.PrintDefaults()
+	if err := ensure.RequiredVersion(); err != nil {
+		fmt.Fprintf(os.Stderr, "WARNING: Unable to ensure go.mod version of orchestrion is used: %v\n", err)
 	}
-	var write bool
-	var remove bool
-	var httpMode string
-	flag.BoolVar(&remove, "rm", false, "remove all instrumentation from the package")
-	flag.BoolVar(&write, "w", false, "if set, overwrite the current file with the instrumented file")
-	flag.StringVar(&httpMode, "httpmode", "wrap", "set the http instrumentation mode: wrap (default) or report")
-	printVersion := flag.Bool("v", false, "print orchestrion version")
-	flag.Parse()
-	if *printVersion {
+
+	if len(os.Args) < 2 {
+		printUsage(os.Args[0])
+		return
+	}
+	cmd := os.Args[1]
+	args := make([]string, len(os.Args)-2)
+	copy(args, os.Args[2:])
+
+	switch cmd {
+	case "help":
+		printUsage(os.Args[0])
+		return
+	case "version":
 		fmt.Println(version.Tag)
 		return
-	}
-	if len(flag.Args()) == 0 {
-		return
-	}
-	output := func(fullName string, out io.Reader) {
-		fmt.Printf("%s:\n", fullName)
-		// write the output
-		txt, _ := io.ReadAll(out)
-		fmt.Println(string(txt))
-	}
-	if write {
-		output = func(fullName string, out io.Reader) {
-			fmt.Printf("overwriting %s:\n", fullName)
-			// write the output
-			txt, _ := io.ReadAll(out)
-			err := os.WriteFile(fullName, txt, 0644)
-			if err != nil {
-				fmt.Printf("Writing file %s: %v\n", fullName, err)
+	case "go":
+		orchestrion, err := os.Executable()
+		if err != nil {
+			if orchestrion, err = filepath.Abs(os.Args[0]); err != nil {
+				orchestrion = os.Args[0]
 			}
 		}
-	}
-	conf := config.Config{HTTPMode: httpMode}
-	if err := conf.Validate(); err != nil {
-		fmt.Printf("Config error: %v\n", err)
-		os.Exit(1)
-	}
-	for _, v := range flag.Args() {
-		p, err := filepath.Abs(v)
-		if err != nil {
-			fmt.Printf("Sanitizing path (%s) failed: %v\n", v, err)
-			continue
-		}
-		fmt.Printf("Scanning Package %s\n", p)
-		processor := instrument.InstrumentFile
-		if remove {
-			fmt.Printf("Removing Orchestrion instrumentation.\n")
-			processor = instrument.UninstrumentFile
-		}
-		err = instrument.ProcessPackage(p, processor, output, conf)
-		if err != nil {
-			fmt.Printf("Failed to scan: %v\n", err)
+
+		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrion, "toolexec")); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v", err)
 			os.Exit(1)
 		}
+		return
+	case "toolexec":
+		proxyCmd := proxy.MustParseCommand(args)
+		if proxyCmd.ShowVersion() {
+			stdout := strings.Builder{}
+			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
+			fmt.Printf("%s:orchestrion@%s+%s\n", strings.TrimSpace(stdout.String()), version.Tag, builtin.Checksum)
+			return
+		}
+
+		proxy.MustRunCommand(proxyCmd)
+		return
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)
+		printUsage(os.Args[0])
 	}
+}
+
+func printUsage(cmd string) {
+	commands := []string{
+		"go",
+		"help",
+		"toolexec",
+		"version",
+	}
+	fmt.Printf("Usage:\n    %s <command> [arguments]\n\n", cmd)
+	fmt.Println("Available commands:")
+	for _, cmd := range commands {
+		fmt.Printf("    %s\n", cmd)
+	}
+	fmt.Printf("\nFor more information, run %s help <command>\n", cmd)
 }

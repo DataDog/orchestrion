@@ -29,15 +29,11 @@ clean:
 	rm -fv orchestrion
 	go clean
 
-licenses: bin/go-licenses
+licenses:
 	tools/make-licenses.sh
 
-verify-licenses: bin/go-licenses
+verify-licenses:
 	tools/verify-licenses.sh
-
-bin/go-licenses:
-	mkdir -p $(PWD)/bin
-	GOBIN=$(PWD)/bin go install github.com/google/go-licenses@v1.6.0
 
 verify-dd-headers:
 	go run tools/headercheck/header_check.go

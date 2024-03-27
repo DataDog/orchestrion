@@ -6,6 +6,7 @@
 package processors
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
@@ -23,14 +24,14 @@ func NewGoFileSwapper(swapMap map[string]string) GoFileSwapper {
 	}
 }
 
-func (s *GoFileSwapper) ProcessCompile(cmd *proxy.CompileCommand) {
+func (s *GoFileSwapper) ProcessCompile(cmd *proxy.CompileCommand) error {
 	log.Printf("[%s] Replacing Go files\n", cmd.Stage())
 
 	for old, new := range s.swapMap {
 		if err := cmd.ReplaceParam(old, new); err != nil {
-			log.Printf("couldn't replace param: %v\n", err)
-		} else {
-			log.Printf("====> Replacing %s by %s\n", old, new)
+			return fmt.Errorf("replacing %q with %q: %w", old, new, err)
 		}
+		log.Printf("====> Replaced %s with %s\n", old, new)
 	}
+	return nil
 }
