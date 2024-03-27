@@ -2,7 +2,7 @@
 ---
 - join-point:
     all-of:
-      - package-name: main
+      - import-path: main
       - function-body:
           function:
             - signature:
