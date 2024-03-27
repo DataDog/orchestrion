@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace" // To have it pinned in the go.mod file
 )
 
 func OnSignal(f func()) {

@@ -19,7 +19,7 @@ var ddStateFilePath = path.Join(os.TempDir(), ".dd_build.state")
 // to keep some state from one call to another (mainly compile -> link)
 type State struct {
 	// mapping import : dependencies
-	Deps map[string]PackageRegister
+	Deps map[string]*PackageRegister
 }
 
 // SaveToFile serializes s and writes the output to a file

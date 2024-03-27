@@ -8,6 +8,7 @@ package proxy
 import (
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -24,6 +25,8 @@ type CompileCommand struct {
 	command
 	Flags    compileFlagSet
 	BuildDir string
+	WorkDir  string
+	StageDir string
 }
 
 func (cmd *CompileCommand) Type() CommandType { return CommandTypeCompile }
@@ -69,6 +72,10 @@ func parseCompileCommand(args []string) (Command, error) {
 	// Some commands just print the tool version, in which case no go file will be provided as arg
 	if len(files) > 0 {
 		cmd.BuildDir = filepath.Dir(files[0])
+	}
+	if cmd.Flags.ImportCfg != "" {
+		cmd.StageDir = path.Dir(cmd.Flags.ImportCfg)
+		cmd.WorkDir = path.Dir(cmd.StageDir)
 	}
 	return &cmd, nil
 }

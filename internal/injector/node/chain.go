@@ -16,11 +16,12 @@ import (
 // Chain represents a chain of nodes, where the tip node is associated to
 // all its ancestors up to the root node.
 type Chain struct {
-	dst.Node                   // The node which ancestry is tracked by this
-	parent   *Chain            // The ancestor of this node
-	config   map[string]string // The node's own configuration
-	name     string            // The name of this node according to its parent (or an empty string)
-	index    int               // The index of this node in the list it belonds to (or -1 if it's not in a list)
+	dst.Node                     // The node which ancestry is tracked by this
+	parent     *Chain            // The ancestor of this node
+	config     map[string]string // The node's own configuration
+	importPath string            // The import path of the surrounding package (fully qualified)
+	name       string            // The name of this node according to its parent (or an empty string)
+	index      int               // The index of this node in the list it belonds to (or -1 if it's not in a list)
 
 	repr string
 }
@@ -28,19 +29,19 @@ type Chain struct {
 // Child creates a new NodeChain with the current node as the parent of the new
 // node, using the specified Name and Index values. This is safe to call on a
 // nil receiver.
-func (nc *Chain) Child(node dst.Node, name string, index int) *Chain {
-	return &Chain{Node: node, parent: nc, name: name, index: index}
+func (nc *Chain) Child(node dst.Node, importPath string, name string, index int) *Chain {
+	return &Chain{Node: node, parent: nc, importPath: importPath, name: name, index: index}
 }
 
 // ChildFromCursor creates a new NodeChain with the current node as the parent
 // of the new node, which is populated from the cursor. This method is safe to
 // call on a nil receiver. Panics if the receiver is not nil, and the
 // *dstutil.Cursor reports a different parent node.
-func (nc *Chain) ChildFromCursor(csor *dstutil.Cursor) *Chain {
+func (nc *Chain) ChildFromCursor(csor *dstutil.Cursor, importPath string) *Chain {
 	if nc != nil && nc.Node != csor.Parent() {
 		panic(errors.New("attempted to create a NodeChain that does not match reality"))
 	}
-	return nc.Child(csor.Node(), csor.Name(), csor.Index())
+	return nc.Child(csor.Node(), importPath, csor.Name(), csor.Index())
 }
 
 // Parent returns the parent of this node, or nil if this node is the root.
@@ -49,6 +50,15 @@ func (nc *Chain) Parent() *Chain {
 		return nil
 	}
 	return nc.parent
+}
+
+// ImportPath returns the fully qualified import path of the package that
+// contains this node, or a blank string if this node is `nil`.
+func (nc *Chain) ImportPath() string {
+	if nc == nil {
+		return ""
+	}
+	return nc.importPath
 }
 
 // Name returns the name of the field in the parent node that contains this node,

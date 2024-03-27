@@ -14,13 +14,17 @@ import (
 // The go tool call path should be the first element of args
 func ParseCommand(args []string) (Command, error) {
 	cmdID := args[0]
-	args = args[0:]
+	args = clone(args) // Clone so we can mutate without affecting os.Args
 	cmdType, err := parseCommandID(cmdID)
 	if err != nil {
 		return nil, err
 	}
 
 	switch cmdType {
+	case CommandTypeAsm:
+		return parseAsmCommand(args)
+	case CommandTypeCgo:
+		return parseCgoCommand(args)
 	case CommandTypeCompile:
 		return parseCompileCommand(args)
 	case CommandTypeLink:
@@ -29,6 +33,13 @@ func ParseCommand(args []string) (Command, error) {
 	default:
 		return &command{args: args}, nil
 	}
+}
+
+// TODO: Use slices.Clone once the MSGV is 1.21
+func clone(args []string) []string {
+	res := make([]string, len(args))
+	copy(res, args)
+	return res
 }
 
 // MustParseCommand calls ParseCommand and exits on error
@@ -55,6 +66,10 @@ func parseCommandID(cmd string) (CommandType, error) {
 
 	var cmdType CommandType
 	switch cmd {
+	case "asm":
+		cmdType = CommandTypeAsm
+	case "cgo":
+		cmdType = CommandTypeCgo
 	case "compile":
 		cmdType = CommandTypeCompile
 	case "link":

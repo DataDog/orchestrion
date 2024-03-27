@@ -27,7 +27,7 @@ func (i *assignmentOf) Matches(chain *node.Chain) bool {
 	}
 
 	for idx, rhs := range stmt.Rhs {
-		if i.value.Matches(chain.Child(rhs, "Rhs", idx)) {
+		if i.value.Matches(chain.Child(rhs, chain.ImportPath(), "Rhs", idx)) {
 			return true
 		}
 	}

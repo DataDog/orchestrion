@@ -63,7 +63,7 @@ func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) 
 		// `-opt=val` syntax
 		shift = 1
 		if exists {
-			flag.SetString(value)
+			setString(flag, value)
 		}
 	} else if nextArg != "" && !strings.HasPrefix(nextArg, "-") {
 		// `-opt val` syntax
@@ -72,7 +72,7 @@ func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) 
 		if exists {
 			switch flag.Kind() {
 			case reflect.String:
-				flag.SetString(value)
+				setString(flag, value)
 			case reflect.Bool:
 				flag.SetBool(true)
 				shift = 1
@@ -92,4 +92,18 @@ func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) 
 	}
 
 	return
+}
+
+func setString(flag reflect.Value, val string) {
+	switch flag.Kind() {
+	case reflect.String:
+		flag.SetString(val)
+		return
+	case reflect.Pointer:
+		if flag.Type().Elem().Kind() == reflect.String {
+			flag.Set(reflect.ValueOf(&val))
+			return
+		}
+	}
+	panic(fmt.Errorf("attempted to set string value to %s flag", flag.Type().String()))
 }

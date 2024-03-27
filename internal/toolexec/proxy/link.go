@@ -27,7 +27,7 @@ func (cmd *LinkCommand) Type() CommandType {
 }
 
 func (cmd *LinkCommand) Stage() string {
-	return filepath.Base(filepath.Dir(filepath.Dir(cmd.Flags.Output)))
+	return filepath.Base(filepath.Dir(cmd.Flags.ImportCfg))
 }
 
 func parseLinkCommand(args []string) (Command, error) {
@@ -36,5 +36,6 @@ func parseLinkCommand(args []string) (Command, error) {
 	}
 	flags := &linkFlagSet{}
 	parseFlags(flags, args[1:])
+
 	return &LinkCommand{command: NewCommand(args), Flags: *flags}, nil
 }

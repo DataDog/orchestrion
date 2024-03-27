@@ -7,7 +7,6 @@ package main
 
 import (
 	"crypto/sha512"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"io"
@@ -115,7 +114,7 @@ func main() {
 	})
 
 	file.Comment("Checksum is a checksum of the built-in configuration which can be used to invalidate caches.")
-	file.Const().Id("Checksum").Op("=").Lit("sha512:" + base64.StdEncoding.EncodeToString(checksum.Sum(nil)))
+	file.Const().Id("Checksum").Op("=").Lit(fmt.Sprintf("%X", checksum.Sum(nil)))
 
 	if err := file.Save(output); err != nil {
 		log.Fatalf("Error writing output file %q: %v\n", output, err)

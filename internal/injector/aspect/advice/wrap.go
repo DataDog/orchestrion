@@ -32,7 +32,7 @@ func (a *wrapExpression) Apply(ctx context.Context, node *node.Chain, csor *dstu
 	)
 
 	if kve, ok = csor.Node().(*dst.KeyValueExpr); ok {
-		node = node.Child(kve.Value, "Value", -1)
+		node = node.Child(kve.Value, node.ImportPath(), "Value", -1)
 	} else if _, ok = csor.Node().(dst.Expr); !ok {
 		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", csor.Node())
 	}

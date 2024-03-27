@@ -10,8 +10,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
+
+	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/version"
 )
 
 type config struct {
@@ -43,12 +47,8 @@ func WithDifferentCache() Option {
 // WithToolexec forces a call to Run() to build with the -toolexec option when
 // wrapping a build command
 func WithToolexec(args []string) Option {
-	var sb strings.Builder
 	return func(c *config) {
-		for _, arg := range args {
-			sb.WriteString(fmt.Sprintf("%s ", arg))
-		}
-		c.toolexecArgs = sb.String()
+		c.toolexecArgs = strings.Join(args, " ")
 	}
 }
 
@@ -71,19 +71,21 @@ func Run(args []string, opts ...Option) error {
 
 	cmd := args[0]
 	switch cmd {
-	case "build", "run":
+	case "build", "run", "test":
 		if cfg.forceBuild {
 			args = append([]string{cmd, "-a"}, args[1:]...)
 		}
-		if len(cfg.toolexecArgs) > 0 {
+		if cfg.toolexecArgs != "" {
 			args = append([]string{cmd, "-toolexec", cfg.toolexecArgs}, args[1:]...)
 		}
+		fallthrough
+	case "env":
 		if cfg.differentCache {
-			dirPath, err := os.MkdirTemp("", ".goproxy_cache*")
+			goCache, err := Goenv(goCacheVar)
 			if err != nil {
 				return err
 			}
-			cacheVar := fmt.Sprintf("%s=%s", goCacheVar, dirPath)
+			cacheVar := fmt.Sprintf("%s=%s.orchestrion-%s@%s", goCacheVar, goCache, version.Tag, builtin.Checksum[:8])
 			env = append(env, cacheVar)
 		}
 	default:
@@ -91,6 +93,11 @@ func Run(args []string, opts ...Option) error {
 	}
 
 	args = append([]string{goBin}, args...)
-	log.Printf("Executing '%v'", args)
+
+	log.Printf("Executing %q", args)
+
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	return syscall.Exec(goBin, args, env)
 }
