@@ -3,19 +3,11 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package integration
+//go:build tools
+
+package tools
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
+	_ "github.com/datadog/orchestrion"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 )
-
-func OnSignal(f func()) {
-	c := make(chan os.Signal, 0)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		f()
-	}()
-}

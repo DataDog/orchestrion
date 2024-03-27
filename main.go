@@ -10,20 +10,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/version"
+	"golang.org/x/mod/semver"
 )
 
 func main() {
-	if err := ensure.RequiredVersion(); err != nil {
-		fmt.Fprintf(os.Stderr, "WARNING: Unable to ensure go.mod version of orchestrion is used: %v\n", err)
-	}
-
 	if len(os.Args) < 2 {
 		printUsage(os.Args[0])
 		return
@@ -40,6 +39,13 @@ func main() {
 		fmt.Println(version.Tag)
 		return
 	case "go":
+		// Ensure we're using the correct version of the tooling...
+		if err := ensure.RequiredVersion(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to detect required version of orchestrion from go.mod: %v\n", err)
+			os.Exit(125)
+		}
+
+		// Process!
 		orchestrion, err := os.Executable()
 		if err != nil {
 			if orchestrion, err = filepath.Abs(os.Args[0]); err != nil {
@@ -57,7 +63,37 @@ func main() {
 		if proxyCmd.ShowVersion() {
 			stdout := strings.Builder{}
 			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
-			fmt.Printf("%s:orchestrion@%s+%s\n", strings.TrimSpace(stdout.String()), version.Tag, builtin.Checksum)
+
+			versionString := version.Tag
+			if strings.HasPrefix(semver.Prerelease(version.Tag), "-dev") {
+				if bi, ok := debug.ReadBuildInfo(); ok {
+					var revision, vcsTime, modified string
+					for _, setting := range bi.Settings {
+						switch setting.Key {
+						case "vcs.revision":
+							revision = setting.Value
+						case "vcs.time":
+							vcsTime = setting.Value
+						case "vcs.modified":
+							modified = setting.Value
+						}
+					}
+					const compactTimeFormat = "20060102T150405Z0700"
+					switch modified {
+					case "": // No VCS information
+						versionString = fmt.Sprintf("%s+DEVEL-%s", versionString, time.Now().Format(compactTimeFormat))
+					case "true":
+						parsed, err := time.Parse(time.RFC3339, vcsTime)
+						if err != nil {
+							panic(err)
+						}
+						versionString = fmt.Sprintf("%s+%s-DIRTY-%s", versionString, revision, parsed.Format(compactTimeFormat))
+					default:
+						versionString = fmt.Sprintf("%s+%s", versionString, revision)
+					}
+				}
+			}
+			fmt.Printf("%s:orchestrion@%s,%s\n", strings.TrimSpace(stdout.String()), versionString, builtin.Checksum)
 			return
 		}
 
