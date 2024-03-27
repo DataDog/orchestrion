@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -67,6 +68,11 @@ func TestInjector(t *testing.T) {
 			require.NoError(t, err, "failed to create temporary directory")
 			defer os.RemoveAll(dir)
 
+			// The TMPDIR may be a symlink, in which case there could be a mismatch between $PWD and the current working
+			// directory, which go tooling asserts as an error (outside of main module or its selected dependencies).
+			dir, err = filepath.EvalSymlinks(dir)
+			require.NoError(t, err, "failed to resolve canonical temporary directory")
+
 			require.NoError(t, os.WriteFile(path.Join(dir, "go.mod"), goModFile, 0o644), "failed to write go.mod file")
 
 			require.NoError(t, os.Mkdir(path.Join(dir, "main"), 0o755), "failed to create main directory")
@@ -85,6 +91,13 @@ func TestInjector(t *testing.T) {
 			}
 			require.NoError(t, run("go", "mod", "tidy"), "failed to run go mod tidy")
 			require.NoError(t, run("go", "mod", "download"), "failed to run go mod download")
+
+			if dir, err := os.Getwd(); err == nil {
+				defer func() {
+					require.NoError(t, os.Chdir(dir))
+				}()
+			}
+			require.NoError(t, os.Chdir(dir))
 
 			injector, err := injector.New(path.Dir(filename), tc.Options)
 			require.NoError(t, err)

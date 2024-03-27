@@ -54,12 +54,12 @@ func main() {
 		for _, match := range matches {
 			data, err := os.ReadFile(match)
 			if err != nil {
-				log.Fatalf("failed to read input file %q: %v", match, err)
+				log.Fatalf("failed to read input file %q: %v\n", match, err)
 			}
 
 			var aspects []aspect.Aspect
 			if err := yaml.Unmarshal(data, &aspects); err != nil {
-				log.Fatalf("failed to unmarshal input file %q: %v", match, err)
+				log.Fatalf("failed to unmarshal input file %q: %v\n", match, err)
 			}
 
 			for i, aspect := range aspects {
@@ -82,7 +82,7 @@ func main() {
 	file.Var().Id("RestorerMap").Op("=").Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
 		pkgs, err := packages.Load(&packages.Config{}, "gopkg.in/DataDog/dd-trace-go.v1/...")
 		if err != nil {
-			log.Fatalf("Failed to load packages: %v", err)
+			log.Fatalf("Failed to load packages: %v\n", err)
 		}
 		sort.Sort(sortable(pkgs))
 
@@ -102,7 +102,7 @@ func main() {
 	})
 
 	if err := file.Save(output); err != nil {
-		log.Fatalf("Error writing output file %q: %v", output, err)
+		log.Fatalf("Error writing output file %q: %v\n", output, err)
 	}
 }
 

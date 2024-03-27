@@ -581,6 +581,10 @@ directive:
   source: |
     package test
 
+    import (
+      "context"
+    )
+
     //dd:span foo:bar baz:qux
     func outer(ctx context.Context) {
       //dd:span
@@ -597,14 +601,15 @@ directive:
     source: |
       package test
 
-      //line <generated>:1
       import (
+        "context"
+      //line <generated>:1
         "github.com/datadog/orchestrion/instrument"
         "github.com/datadog/orchestrion/instrument/event"
       )
 
       //dd:span foo:bar baz:qux
-      //line input.go:4
+      //line input.go:8
       func outer(ctx context.Context) {
       //line <generated>:1
         //dd:startinstrument
@@ -614,7 +619,7 @@ directive:
         }
         //dd:endinstrument
         //dd:span
-      //line input.go:6
+      //line input.go:10
         inner := func(c context.Context) {
       //line <generated>:1
           //dd:startinstrument
@@ -623,7 +628,7 @@ directive:
             defer instrument.Report(c, event.EventEnd)
           }
           //dd:endinstrument
-      //line input.go:7
+      //line input.go:11
           panic("Not implemented")
         }
         inner(ctx)
@@ -764,11 +769,8 @@ database-sql:
       }
       defer db1.Close()
 
-      if db2, err := sql.OpenDB(conn); err != nil {
-        panic(err)
-      } else {
-        defer db2.Close()
-      }
+      db2 := sql.OpenDB(conn)
+      defer db2.Close()
     }
   expected:
     modified: true
@@ -798,15 +800,11 @@ database-sql:
         }
         defer db1.Close()
 
-        if db2, err :=
+        db2 :=
       //line <generated>:1
           sql.OpenDB(
       //line input.go:17
-            conn);
-      //line input.go:17
-        err != nil {
-          panic(err)
-        } else {
-          defer db2.Close()
-        }
+            conn)
+      //line input.go:18
+        defer db2.Close()
       }
