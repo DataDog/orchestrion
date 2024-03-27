@@ -23,6 +23,7 @@ type goFilesAdder struct {
 	files []string
 }
 
-func (i goFilesAdder) ProcessCompile(cmd *proxy.CompileCommand) {
+func (i goFilesAdder) ProcessCompile(cmd *proxy.CompileCommand) error {
 	cmd.AddFiles(i.files)
+	return nil
 }
