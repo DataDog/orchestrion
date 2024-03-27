@@ -11,7 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/index/path/filepath"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
