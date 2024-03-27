@@ -28,6 +28,11 @@ type (
 		Stage() string
 		// Type represents the go tool command type (compile, link, asm, etc.)
 		Type() CommandType
+
+		// ShowVersion returns true if the command received the `-V=full` argument, signaling it should
+		// print its full version information and exit. This feature is used by the go toolchain to
+		// create build cache keys, and allows invalidating all build cache when the tooling changes.
+		ShowVersion() bool
 	}
 
 	// CommandProcessor is a function that takes a command as input
@@ -35,7 +40,8 @@ type (
 	CommandProcessor[T Command] func(T)
 
 	commandFlagSet struct {
-		Output string `ddflag:"-o"`
+		Output  string `ddflag:"-o"`
+		Version string `ddflag:"-V"`
 	}
 
 	// command is the default unknown command type
@@ -79,6 +85,10 @@ func NewCommand(args []string) command {
 	return cmd
 }
 
+func (cmd *command) ShowVersion() bool {
+	return cmd.flags.Version == "full"
+}
+
 // ReplaceParam will replace any parameter of the command provided it is found
 // A parameter can be a flag, an option, a value, etc
 func (cmd *command) ReplaceParam(param string, val string) error {
@@ -92,8 +102,12 @@ func (cmd *command) ReplaceParam(param string, val string) error {
 	return nil
 }
 
+// RunCommandOption allows customizing a run command before execution. For example, this can be used
+// to capture the output of the command instead of forwarding it to the host process' STDIO.
+type RunCommandOption func(*exec.Cmd)
+
 // RunCommand executes the underlying go tool command and forwards the program's standard fluxes
-func RunCommand(cmd Command) error {
+func RunCommand(cmd Command, opts ...RunCommandOption) error {
 	args := cmd.Args()
 	c := exec.Command(args[0], args[1:]...)
 	if c == nil {
@@ -104,13 +118,17 @@ func RunCommand(cmd Command) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
+	for _, opt := range opts {
+		opt(c)
+	}
+
 	return c.Run()
 }
 
 // MustRunCommand is like RunCommand but panics if the command fails to build or run
-func MustRunCommand(cmd Command) {
+func MustRunCommand(cmd Command, opts ...RunCommandOption) {
 	var exitErr *exec.ExitError
-	err := RunCommand(cmd)
+	err := RunCommand(cmd, opts...)
 	if err == nil {
 		return
 	}

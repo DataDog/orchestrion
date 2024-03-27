@@ -15,40 +15,29 @@ import (
 )
 
 type config struct {
-	differentCache bool
-	forceBuild     bool
-	toolexecArgs   string
+	toolexec string
 }
 
 type Option func(*config)
 
-const goCacheVar = "GOCACHE"
-
-// WithForceBuild forces a call to Run() to build all go files and dependencies
-// when wrapping a `go build` command. It effectively adds the `-a` flag to the build
-func WithForceBuild() Option {
-	return func(c *config) {
-		c.forceBuild = true
-	}
-}
-
-// WithDifferentCache forces a call to Run() to override the GOCACHE directory
-// A temporary directory is instead created and all build artifacts are cached there
-func WithDifferentCache() Option {
-	return func(c *config) {
-		c.differentCache = true
-	}
-}
-
 // WithToolexec forces a call to Run() to build with the -toolexec option when
 // wrapping a build command
-func WithToolexec(args []string) Option {
-	var sb strings.Builder
-	return func(c *config) {
-		for _, arg := range args {
-			sb.WriteString(fmt.Sprintf("%s ", arg))
+func WithToolexec(args ...string) Option {
+	var buffer = strings.Builder{}
+	for _, arg := range args {
+		if buffer.Len() > 0 {
+			buffer.WriteByte(' ')
 		}
-		c.toolexecArgs = sb.String()
+		// We are quoting all arguments to hopefully evade shell interpretation.
+		_, err := fmt.Fprintf(&buffer, "%q", arg)
+		if err != nil {
+			// This is expected to never happen (short of running OOM, maybe?)
+			panic(err)
+		}
+	}
+	toolexec := buffer.String()
+	return func(c *config) {
+		c.toolexec = toolexec
 	}
 }
 
@@ -56,35 +45,32 @@ func WithToolexec(args []string) Option {
 // changes specified through opts to the command before running it in a
 // different process
 func Run(args []string, opts ...Option) error {
+	if len(args) == 0 {
+		return fmt.Errorf("empty command line arguments")
+	}
+
 	var cfg config
 	env := os.Environ()
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if len(args) == 0 {
-		return fmt.Errorf("no go command provided")
-	}
-	goBin, err := exec.LookPath("go")
+
+	goBin, err := goBin()
 	if err != nil {
-		return err
+		return fmt.Errorf("locating 'go' binary: %w", err)
 	}
 
 	cmd := args[0]
 	switch cmd {
-	case "build", "run":
-		if cfg.forceBuild {
-			args = append([]string{cmd, "-a"}, args[1:]...)
-		}
-		if len(cfg.toolexecArgs) > 0 {
-			args = append([]string{cmd, "-toolexec", cfg.toolexecArgs}, args[1:]...)
-		}
-		if cfg.differentCache {
-			dirPath, err := os.MkdirTemp("", ".goproxy_cache*")
-			if err != nil {
-				return err
-			}
-			cacheVar := fmt.Sprintf("%s=%s", goCacheVar, dirPath)
-			env = append(env, cacheVar)
+	// "go build" arguments are shared by build, clean, get, install, list, run, and test.
+	case "build", "clean", "get", "install", "list", "run", "test":
+		if cfg.toolexec != "" {
+			newArgs := make([]string, len(args)+2)
+			newArgs[0] = cmd
+			newArgs[1] = "-toolexec"
+			newArgs[2] = cfg.toolexec
+			copy(newArgs[3:], args[1:])
+			args = newArgs
 		}
 	default:
 		break
@@ -93,4 +79,20 @@ func Run(args []string, opts ...Option) error {
 	args = append([]string{goBin}, args...)
 	log.Printf("Executing '%v'", args)
 	return syscall.Exec(goBin, args, env)
+}
+
+var goBinPath string
+
+// goBin returns the resolved path to the `go` command's binary. The result is cached to avoid
+// looking it up multiple times. If the lookup fails, the error is returned and the result is not
+// cached.
+func goBin() (string, error) {
+	if goBinPath == "" {
+		goBin, err := exec.LookPath("go")
+		if err != nil {
+			return "", err
+		}
+		goBinPath = goBin
+	}
+	return goBinPath, nil
 }
