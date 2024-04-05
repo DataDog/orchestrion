@@ -6,7 +6,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +19,9 @@ import (
 	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/toolexec/processors/aspect"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
 	"golang.org/x/mod/semver"
 )
@@ -60,6 +64,7 @@ func main() {
 		return
 	case "toolexec":
 		proxyCmd := proxy.MustParseCommand(args)
+		defer proxyCmd.Close()
 		if proxyCmd.ShowVersion() {
 			stdout := strings.Builder{}
 			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
@@ -97,7 +102,23 @@ func main() {
 			return
 		}
 
+		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
+		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompile); err != nil {
+			if errors.Is(err, proxy.ErrSkipCommand) {
+				log.Printf("SKIP: %q\n", proxyCmd.Args())
+				return
+			}
+			utils.ExitIfError(err)
+		}
+		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
+			if errors.Is(err, proxy.ErrSkipCommand) {
+				log.Printf("SKIP: %q\n", proxyCmd.Args())
+				return
+			}
+			utils.ExitIfError(err)
+		}
 		proxy.MustRunCommand(proxyCmd)
+
 		return
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)

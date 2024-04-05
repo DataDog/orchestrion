@@ -30,6 +30,12 @@ const (
 	RelocationTarget ReferenceKind = false
 )
 
+func (r *ReferenceMap) Merge(other ReferenceMap) {
+	for name, kind := range other {
+		r.add(name, kind)
+	}
+}
+
 // AddImport determines whether a new import declaration needs to be added to make the provided path
 // available within the specified file. Returns true if that is the case. False if the import path
 // is already available within the file.
@@ -107,7 +113,9 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 func (r *ReferenceMap) add(path string, kind ReferenceKind) {
 	if *r == nil {
 		*r = ReferenceMap{path: kind}
-	} else {
+	} else if old, found := (*r)[path]; !found || old != ImportStatement {
+		// If it was already in as an ImportStatement, we don't do anything, since that is the strongest
+		// kind of reference (imported implies relocatable, the reverse is not true).
 		(*r)[path] = kind
 	}
 }

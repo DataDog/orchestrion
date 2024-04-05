@@ -43,7 +43,7 @@ func TestParseCompile(t *testing.T) {
 			require.Equal(t, tc.stage, cmd.Stage())
 			c := cmd.(*CompileCommand)
 			require.True(t, reflect.DeepEqual(tc.flags, c.Flags))
-			require.Equal(t, tc.buildDir, c.BuildDir)
+			require.Equal(t, tc.buildDir, c.SourceDir)
 		})
 	}
 }

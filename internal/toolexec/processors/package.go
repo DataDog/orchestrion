@@ -49,13 +49,18 @@ func (r *PackageRegister) Combine(other PackageRegister) {
 		if _, ok := r.ImportMap[k]; !ok {
 			r.ImportMap[k] = v
 		}
-
 	}
+	r.CombinePackageFile(&other)
+}
+
+func (r *PackageRegister) CombinePackageFile(other *PackageRegister) (changed bool) {
 	for k, v := range other.PackageFile {
 		if _, ok := r.PackageFile[k]; !ok {
 			r.PackageFile[k] = v
+			changed = true
 		}
 	}
+	return
 }
 
 // Import imports the other package into r.
@@ -94,6 +99,17 @@ func (r *PackageRegister) WriteTo(writer io.Writer) (int64, error) {
 	}
 
 	return count, nil
+}
+
+func ParseImportConfig(filename string) (*PackageRegister, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reg := parseImportConfig(file)
+	return &reg, nil
 }
 
 func parseImportConfig(cfg *os.File) PackageRegister {
