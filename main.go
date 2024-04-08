@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -57,7 +58,7 @@ func main() {
 			}
 		}
 
-		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrion, "toolexec")); err != nil {
+		if err := goproxy.Run(args, goproxy.WithToolexec(path.Clean(orchestrion), "toolexec")); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v", err)
 			os.Exit(1)
 		}
