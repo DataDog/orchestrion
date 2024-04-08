@@ -78,6 +78,15 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 		return nil, err
 	} else {
 		pkg := pkgs[0]
+		switch len(pkg.Errors) {
+		case 0:
+			// Nothing to do, this is a success!
+		case 1:
+			return nil, pkg.Errors[0]
+		default:
+			return nil, fmt.Errorf("%w (and %d more)", pkg.Errors[0], len(pkg.Errors)-1)
+		}
+
 		dec = pkg.Decorator
 		pkgPath = pkg.PkgPath
 		restorerMap = make(map[string]string, len(pkg.Imports)+len(builtin.RestorerMap))
@@ -183,7 +192,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[st
 			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
 				return false
 			}
-			chain = chain.ChildFromCursor(csor)
+			chain = chain.ChildFromCursor(csor, i.decorator.Path)
 			if _, ok := csor.Node().(*dst.File); ok {
 				// This is the root node, so we set the root configuration on it...
 				for k, v := range rootConfig {

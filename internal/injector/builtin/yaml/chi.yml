@@ -1,8 +1,14 @@
 %YAML 1.1
 ---
 - join-point:
-    assignment-of:
-      function-call: github.com/go-chi/chi/v5.NewRouter
+    all-of:
+      - assignment-of:
+          function-call: github.com/go-chi/chi/v5.NewRouter
+      # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
+      - not:
+          import-path: github.com/go-chi/chi/v5
+      - not:
+          import-path: github.com/go-chi/chi/v5/middleware
   advice:
     - add-comment: //dd:instrumented
     - append-statements:
