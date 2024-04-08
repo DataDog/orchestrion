@@ -303,4 +303,4 @@ var RestorerMap = map[string]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:rvLF70FdZ2+ncnU115Y/Zncq/tPqUWMdNRD272fhKqPSMRgpCeMLXP3E+LyaLOAec9zP6+Le3phamq8iWq9RsA=="
+const Checksum = "sha512:kU6rNHMbKaf5gwwsCHKkffqoG2laUUBu/Fks4kiTqIFXXte7KA0Y3dwIL6ZRd3EJFn6Oqg/5vAY70dB+EdLRTw=="
