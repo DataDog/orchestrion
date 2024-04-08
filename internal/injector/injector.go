@@ -15,6 +15,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect"
@@ -58,7 +59,6 @@ type (
 func New(pkgDir string, opts Options) (*Injector, error) {
 	fileset := token.NewFileSet()
 	cfg := &packages.Config{
-		Dir:  pkgDir,
 		Fset: fileset,
 		Mode: packages.NeedName |
 			packages.NeedFiles |
@@ -74,10 +74,19 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 		dec         *decorator.Decorator
 		restorerMap map[string]string
 	)
-	if pkgs, err := decorator.Load(cfg, pkgPath); err != nil {
+	if pkgs, err := decorator.Load(cfg, pkgDir); err != nil {
 		return nil, err
 	} else {
 		pkg := pkgs[0]
+		switch len(pkg.Errors) {
+		case 0:
+			// Nothing to do, this is a success!
+		case 1:
+			return nil, pkg.Errors[0]
+		default:
+			return nil, fmt.Errorf("%w (and %d more)", pkg.Errors[0], len(pkg.Errors)-1)
+		}
+
 		dec = pkg.Decorator
 		pkgPath = pkg.PkgPath
 		restorerMap = make(map[string]string, len(pkg.Imports)+len(builtin.RestorerMap))
@@ -161,6 +170,9 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 		}
 
 		res.Filename = i.outputFileFor(filename)
+		if err = os.MkdirAll(path.Dir(res.Filename), 0o750); err != nil {
+			return res, err
+		}
 		err = os.WriteFile(res.Filename, postProcess(buf.Bytes()), 0o644)
 	}
 
@@ -180,7 +192,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[st
 			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
 				return false
 			}
-			chain = chain.ChildFromCursor(csor)
+			chain = chain.ChildFromCursor(csor, i.decorator.Path)
 			if _, ok := csor.Node().(*dst.File); ok {
 				// This is the root node, so we set the root configuration on it...
 				for k, v := range rootConfig {
