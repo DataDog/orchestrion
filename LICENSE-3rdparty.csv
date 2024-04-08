@@ -3,6 +3,7 @@ orchestrion,github.com/DataDog/appsec-internal-go,Apache-2.0,unknown
 orchestrion,github.com/DataDog/datadog-agent/pkg/obfuscate,Apache-2.0,unknown
 orchestrion,github.com/DataDog/datadog-agent/pkg/remoteconfig/state,Apache-2.0,unknown
 orchestrion,github.com/DataDog/datadog-go/v5/statsd,MIT,unknown
+orchestrion,github.com/DataDog/go-libddwaf/v2,Apache-2.0,unknown
 orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,unknown
 orchestrion,github.com/DataDog/sketches-go/ddsketch,Apache-2.0,unknown
 orchestrion,github.com/andybalholm/brotli,MIT,unknown
@@ -11,6 +12,7 @@ orchestrion,github.com/datadog/orchestrion,Apache-2.0,unknown
 orchestrion,github.com/dave/dst,MIT,unknown
 orchestrion,github.com/dave/jennifer/jen,MIT,unknown
 orchestrion,github.com/dustin/go-humanize,MIT,unknown
+orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
 orchestrion,github.com/gabriel-vasile/mimetype,MIT,unknown
 orchestrion,github.com/gin-contrib/sse,MIT,unknown
 orchestrion,github.com/gin-gonic/gin,MIT,unknown
@@ -20,9 +22,11 @@ orchestrion,github.com/go-playground/universal-translator,MIT,unknown
 orchestrion,github.com/go-playground/validator/v10,MIT,unknown
 orchestrion,github.com/gofiber/fiber/v2,MIT,unknown
 orchestrion,github.com/gofiber/fiber/v2/internal/schema,BSD-3-Clause,unknown
-orchestrion,github.com/golang/protobuf,BSD-3-Clause,unknown
+orchestrion,github.com/golang/protobuf/proto,BSD-3-Clause,unknown
 orchestrion,github.com/google/uuid,BSD-3-Clause,unknown
 orchestrion,github.com/gorilla/mux,BSD-3-Clause,unknown
+orchestrion,github.com/hashicorp/errwrap,MPL-2.0,unknown
+orchestrion,github.com/hashicorp/go-multierror,MPL-2.0,unknown
 orchestrion,github.com/klauspost/compress,Apache-2.0,unknown
 orchestrion,github.com/labstack/echo/v4,MIT,unknown
 orchestrion,github.com/labstack/gommon,MIT,unknown
