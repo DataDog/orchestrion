@@ -13,12 +13,11 @@ RUN CGO_ENABLED=0 go install -ldflags "-s -w -extldflags '-static'" github.com/g
 COPY ./ /src/
 WORKDIR /src
 
-# Instrument the test applications with Orchestrion in `-w` mode
-RUN go run . -w ./_integration-tests/tests/*
+# Build Orchestrion
+RUN go build -o bin/ .
 WORKDIR /src/_integration-tests
-RUN go mod tidy
 
 # Build all the test binaries at once into .bin
-RUN mkdir .bin && go build -gcflags "all=-N -l" -o .bin ./tests/...
+RUN mkdir .bin && GOFLAGS='-gcflags "all=-N -l"' ../bin/orchestrion go build -o .bin ./tests/...
 
 ENTRYPOINT ["/bin/bash", "/src/_integration-tests/start.sh"]
