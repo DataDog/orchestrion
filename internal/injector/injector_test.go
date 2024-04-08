@@ -33,7 +33,7 @@ func TestInjector(t *testing.T) {
 	var goModFile = []byte(strings.Join([]string{
 		"module dummy/test/module",
 		"",
-		"go 1.19",
+		"go 1.20",
 		"",
 		"require (",
 		"\tgithub.com/datadog/orchestrion v0.0.0",

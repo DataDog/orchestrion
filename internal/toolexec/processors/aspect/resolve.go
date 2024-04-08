@@ -8,6 +8,7 @@ package aspect
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,11 +34,10 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 		}
 
 		type listItem struct {
-			ImportPath  string // The import path of the package
-			Export      string // The path to its archive, if any
-			Standard    bool   // Whether this is from the standard library
-			Stale       bool   // Whether this is stale (needs rebuilding)
-			StaleReason string // Why it is considered stale
+			ImportPath string // The import path of the package
+			Export     string // The path to its archive, if any
+			BuildID    string // The build ID for the package
+			Standard   bool   // Whether this is from the standard library
 		}
 		var items []listItem
 		dec := json.NewDecoder(&stdout)
@@ -58,13 +58,9 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 				// Special-casing "unsafe", because it's not provided like other modules
 				continue
 			}
-			if item.ImportPath == importPath && item.Stale {
-				err = fmt.Errorf("%s is stale: %s", importPath, item.StaleReason)
-				break
-			}
 			if item.Export == "" {
-				err = fmt.Errorf("%s has no export file", item.ImportPath)
-				break
+				err = errors.Join(err, fmt.Errorf("%s (%s) has no export file", item.ImportPath, item.BuildID))
+				continue
 			}
 			output[item.ImportPath] = item.Export
 		}
