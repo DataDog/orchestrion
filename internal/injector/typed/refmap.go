@@ -104,10 +104,21 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 	return true
 }
 
+func (r *ReferenceMap) Merge(other ReferenceMap) {
+	for path, kind := range other {
+		r.add(path, kind)
+	}
+}
+
 func (r *ReferenceMap) add(path string, kind ReferenceKind) {
 	if *r == nil {
 		*r = ReferenceMap{path: kind}
 	} else {
+		if prev, found := (*r)[path]; found {
+			if prev == ImportStatement {
+				return
+			}
+		}
 		(*r)[path] = kind
 	}
 }

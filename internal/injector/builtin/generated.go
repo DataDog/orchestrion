@@ -18,7 +18,11 @@ import (
 var Aspects = [...]aspect.Aspect{
 	// From yaml/chi.yml
 	{
-		JoinPoint: join.AssignmentOf(join.FunctionCall("github.com/go-chi/chi/v5.NewRouter")),
+		JoinPoint: join.AllOf(
+			join.AssignmentOf(join.FunctionCall("github.com/go-chi/chi/v5.NewRouter")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5/middleware")),
+		),
 		Advice: []advice.Advice{
 			advice.AddComment("//dd:instrumented"),
 			advice.AppendStatements(code.MustTemplate(
@@ -208,6 +212,9 @@ var Aspects = [...]aspect.Aspect{
 				"httpmode": "wrap",
 			}),
 			join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5/middleware")),
+			join.Not(join.ImportPath("golang.org/x/net/http2")),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -230,6 +237,9 @@ var Aspects = [...]aspect.Aspect{
 					nil,
 				),
 			),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5/middleware")),
+			join.Not(join.ImportPath("golang.org/x/net/http2")),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -251,6 +261,9 @@ var Aspects = [...]aspect.Aspect{
 					nil,
 				),
 			)),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5/middleware")),
+			join.Not(join.ImportPath("golang.org/x/net/http2")),
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
@@ -282,10 +295,12 @@ var RestorerMap = map[string]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gopkg.in/jinzhu/gorm.v1":                  "gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1":                          "gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go":                 "graphql",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5":                             "pgx",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4":                         "echo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9":                        "redis",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0":                    "kafka",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/valyala/fasthttp.v1":                      "fasthttp",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:rvLF70FdZ2+ncnU115Y/Zncq/tPqUWMdNRD272fhKqPSMRgpCeMLXP3E+LyaLOAec9zP6+Le3phamq8iWq9RsA=="
+const Checksum = "sha512:kU6rNHMbKaf5gwwsCHKkffqoG2laUUBu/Fks4kiTqIFXXte7KA0Y3dwIL6ZRd3EJFn6Oqg/5vAY70dB+EdLRTw=="
