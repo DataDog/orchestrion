@@ -15,8 +15,8 @@ import (
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/typed"
-	"github.com/datadog/orchestrion/internal/toolexec/processors"
-	"github.com/datadog/orchestrion/internal/toolexec/processors/aspect/linkdeps"
+	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/datadog/orchestrion/internal/toolexec/importcfg"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
@@ -69,7 +69,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return nil
 	}
 
-	reg, err := processors.ParseImportConfig(cmd.Flags.ImportCfg)
+	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
@@ -132,24 +132,14 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	return nil
 }
 
-func writeUpdatedImportConfig(reg *processors.PackageRegister, filename string) (err error) {
+func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err error) {
 	const dotOriginal = ".original"
 
 	if err := os.Rename(filename, filename+dotOriginal); err != nil {
 		return fmt.Errorf("renaming to %q: %w", path.Base(filename)+dotOriginal, err)
 	}
 
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("opening for writing: %w", err)
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("closing: %w", closeErr)
-		}
-	}()
-
-	if _, err := reg.WriteTo(file); err != nil {
+	if err := reg.WriteFile(filename); err != nil {
 		return fmt.Errorf("writing: %w", err)
 	}
 

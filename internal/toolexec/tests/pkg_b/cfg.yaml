@@ -1,4 +1,0 @@
-inject:
-  "pkg_b/lib": "github.com/datadog/orchestrion/internal/toolexec/tests/pkg_b/lib"
-replace:
-  "base/lib/lib.go": "pkg_b/lib/lib.go"

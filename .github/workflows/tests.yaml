@@ -25,6 +25,12 @@ jobs:
         with:
           version: v1.52.2
           skip-cache: true # actions/setup-go has already done this
+      - name: Verify license headers
+        run: go run tools/headercheck/header_check.go
+      - name: vet
+        run: go vet ./...
+      - name: Verify LICENSE-3rdparty.csv
+        run: ./tools/verify-licenses.sh
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +43,7 @@ jobs:
           go-version: "stable"
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
-        run: make test
+        run: go test -cover -covermode=atomic -race ./...
   integration-tests:
     runs-on: ubuntu-latest
     services:
@@ -60,7 +66,7 @@ jobs:
           go-version: "stable"
           cache-dependency-path: "**/*.sum"
       - name: Run Integration Tests
-        run: make integration-tests
+        run: ./integration-tests.sh
         env:
           TMPDIR: ${{ runner.temp }}
       - name: Upload artifact
