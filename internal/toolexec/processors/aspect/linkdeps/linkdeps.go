@@ -75,10 +75,7 @@ func parseV1(r *bufio.Reader) (l LinkDeps, err error) {
 			continue
 		}
 
-		if l.deps == nil {
-			l.deps = make(map[string]struct{}, 1)
-		}
-		l.deps[line] = struct{}{}
+		l.Add(line)
 	}
 }
 
@@ -90,9 +87,8 @@ func (l *LinkDeps) Add(importPath string) {
 	l.deps[importPath] = struct{}{}
 }
 
-// Direct returns all import paths registered in this LinkDeps instance that are
-// marked as direct.
-func (l *LinkDeps) Direct() []string {
+// Dependencies returns all import paths registered in this LinkDeps instance.
+func (l *LinkDeps) Dependencies() []string {
 	deps := make([]string, 0, len(l.deps))
 	for importPath := range l.deps {
 		deps = append(deps, importPath)

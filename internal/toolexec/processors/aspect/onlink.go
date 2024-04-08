@@ -38,7 +38,7 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
 		}
 
-		for _, depPath := range linkDeps.Direct() {
+		for _, depPath := range linkDeps.Dependencies() {
 			deps, err := resolvePackageFiles(depPath)
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)
