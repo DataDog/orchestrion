@@ -15,7 +15,7 @@ import (
 	"os/exec"
 )
 
-// resolvePackageFiles attempts to retrive the archive for the designated import path. It attempts
+// resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
 // to locate the archive for `importPath` and its dependencies using `go list` first, which may
 // return entries from the GOCACHE. If that fails or a component is stale, `go build` will be
 // invoked to create a new archive; and `go list` is then used again to obtain the path of the
