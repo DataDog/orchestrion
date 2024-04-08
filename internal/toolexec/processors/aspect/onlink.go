@@ -6,7 +6,6 @@
 package aspect
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"os/exec"
 
 	"github.com/datadog/orchestrion/internal/toolexec/processors"
+	"github.com/datadog/orchestrion/internal/toolexec/processors/aspect/linkdeps"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
@@ -23,45 +23,29 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	archives := make([]string, 0, len(reg.PackageFile))
-	for _, archive := range reg.PackageFile {
-		archives = append(archives, archive)
-	}
-
 	var changed bool
-	for len(archives) > 0 {
-		last := len(archives) - 1
-		archive := archives[last]
-		archives = archives[:last]
-
-		data, err := archiveData(archive, nameLinkDeps)
+	for _, archive := range reg.PackageFile {
+		data, err := archiveData(archive, linkdeps.LinkDepsFilename)
 		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", nameLinkDeps, archive, err)
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
 		} else if data == nil {
+			// No link dependencies registered here...
 			continue
 		}
 
-		rd := bufio.NewReader(data)
-		for {
-			line, err := rd.ReadString('\n')
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				return fmt.Errorf("reading %s from %q: %w", nameLinkDeps, archive, err)
-			}
-			line = line[:len(line)-1]
-			if _, found := reg.PackageFile[line]; found {
-				// We already have this dependency, nothing more to do...
-				continue
-			}
-			deps, err := resolvePackageFiles(line)
+		linkDeps, err := linkdeps.Read(data)
+		if err != nil {
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
+		}
+
+		for _, depPath := range linkDeps.Direct() {
+			deps, err := resolvePackageFiles(depPath)
 			if err != nil {
-				return fmt.Errorf("resolving %q: %w", line, err)
+				return fmt.Errorf("resolving %q: %w", depPath, err)
 			}
 			for p, a := range deps {
 				if _, found := reg.PackageFile[p]; !found {
 					reg.PackageFile[p] = a
-					archives = append(archives, a)
 					changed = true
 				}
 			}

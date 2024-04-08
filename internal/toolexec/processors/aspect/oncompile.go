@@ -16,11 +16,8 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/datadog/orchestrion/internal/toolexec/processors"
+	"github.com/datadog/orchestrion/internal/toolexec/processors/aspect/linkdeps"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
-)
-
-const (
-	nameLinkDeps = "link.deps"
 )
 
 var (
@@ -78,23 +75,23 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	}
 
 	var (
+		linkDeps   linkdeps.LinkDeps
 		regUpdated bool
-		linkDeps   *os.File
 	)
 	for depImportPath, kind := range references {
-		switch kind {
-		case typed.ImportStatement:
-			if _, ok := reg.PackageFile[depImportPath]; ok {
-				// Already part of natural dependencies, nothing to do...
-				continue
-			}
+		if _, ok := reg.PackageFile[depImportPath]; ok {
+			// Already part of natural dependencies, nothing to do...
+			continue
+		}
 
+		linkDeps.Add(depImportPath)
+
+		if kind == typed.ImportStatement {
+			// Imported packages need to be provided in the compilation's importcfg file
 			deps, err := resolvePackageFiles(depImportPath)
 			if err != nil {
 				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 			}
-
-			regUpdated = true
 			for dep, archive := range deps {
 				if _, ok := reg.PackageFile[dep]; ok {
 					// Already part of natural dependencies, nothing to do...
@@ -103,40 +100,57 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				reg.PackageFile[dep] = archive
 				regUpdated = true
 			}
-
-			fallthrough // For writing into link.deps file
-		case typed.RelocationTarget:
-			if linkDeps == nil {
-				// Lazily create the file (no file --> no link-only dependencies)
-				linkDepsPath := path.Join(orchestrionDir, nameLinkDeps)
-				linkDeps, err = os.Create(linkDepsPath)
-				if err != nil {
-					return fmt.Errorf("creating %s file: %w", nameLinkDeps, err)
-				}
-				defer linkDeps.Close()
-				cmd.OnClose(func() error {
-					return exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsPath).Run()
-				})
-			}
-			if _, err := fmt.Fprintln(linkDeps, depImportPath); err != nil {
-				return fmt.Errorf("writing into %s file: %w", nameLinkDeps, err)
-			}
 		}
 	}
 
-	if regUpdated {
-		if err := os.Rename(cmd.Flags.ImportCfg, cmd.Flags.ImportCfg+".original"); err != nil {
-			return fmt.Errorf("renaming %q: %w", cmd.Flags.ImportCfg, err)
-		}
+	if linkDeps.Empty() {
+		// There are no synthetic dependencies, so we don't need to write an updated importcfg or add
+		// extra objects in the output file.
+		return nil
+	}
 
-		file, err := os.Create(cmd.Flags.ImportCfg)
-		if err != nil {
-			return fmt.Errorf("opening %q for writing: %w", cmd.Flags.ImportCfg, err)
-		}
-		defer file.Close()
-		if _, err := reg.WriteTo(file); err != nil {
+	if regUpdated {
+		// Creating updated version of the importcfg file, with new dependencies
+		if err := writeUpdatedImportConfig(reg, cmd.Flags.ImportCfg); err != nil {
 			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 		}
+	}
+
+	// Write the link.deps file and add it to the output object once the compilation has completed.
+	linkDepsFile := path.Join(orchestrionDir, linkdeps.LinkDepsFilename)
+	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
+		return fmt.Errorf("writing %s file: %w", linkdeps.LinkDepsFilename, err)
+	}
+	cmd.OnClose(func() error {
+		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
+		if err := child.Run(); err != nil {
+			return fmt.Errorf("running %q: %w", child.Args, err)
+		}
+		return nil
+	})
+
+	return nil
+}
+
+func writeUpdatedImportConfig(reg *processors.PackageRegister, filename string) (err error) {
+	const dotOriginal = ".original"
+
+	if err := os.Rename(filename, filename+dotOriginal); err != nil {
+		return fmt.Errorf("renaming to %q: %w", path.Base(filename)+dotOriginal, err)
+	}
+
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("opening for writing: %w", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("closing: %w", closeErr)
+		}
+	}()
+
+	if _, err := reg.WriteTo(file); err != nil {
+		return fmt.Errorf("writing: %w", err)
 	}
 
 	return nil
