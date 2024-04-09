@@ -25,7 +25,7 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 
 	var changed bool
 	for _, archive := range reg.PackageFile {
-		data, err := archiveData(archive, linkdeps.LinkDepsFilename)
+		data, err := readArchiveData(archive, linkdeps.LinkDepsFilename)
 		if err != nil {
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
 		} else if data == nil {
@@ -72,7 +72,9 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 	return nil
 }
 
-func archiveData(archive, entry string) (io.Reader, error) {
+// readArchiveData returns the content of the given entry from the provided archive file. If there
+// is no such entry in the archive, a nil io.Reader and no error is returned.
+func readArchiveData(archive, entry string) (io.Reader, error) {
 	var list, data bytes.Buffer
 	cmd := exec.Command("go", "tool", "pack", "t", archive)
 	cmd.Stdout = &list
