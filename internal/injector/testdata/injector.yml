@@ -553,6 +553,93 @@ chi5-newroute:
         log.Print(s.ListenAndServe())
       }
 
+chi5-newroute-dotimport:
+  options:
+    preservelineinfo: true
+    aspects:
+      - join-point:
+          assignment-of:
+            function-call: github.com/go-chi/chi/v5.NewRouter
+        advice:
+          - add-comment: '//dd:instrumented'
+          - append-statements:
+              template: '{{.Assignment.LHS}}.Use(instrument.ChiV5Middleware())'
+              imports:
+                instrument: github.com/datadog/orchestrion/instrument
+  source: |
+    package main
+
+    import (
+      "context"
+      "log"
+      "net/http"
+      "time"
+
+      "orchestrion/integration"
+
+      . "github.com/go-chi/chi/v5"
+    )
+
+    func main() {
+      router := NewRouter()
+      router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+        w.Write([]byte("Hello World!"))
+      })
+      s := &http.Server{
+        Addr:    ":8080",
+        Handler: router,
+      }
+      integration.OnSignal(func() {
+        ctx, _ := context.WithTimeout(context.Background(), time.Second)
+        s.Shutdown(ctx)
+      })
+      log.Print(s.ListenAndServe())
+    }
+  expected:
+    modified: true
+    references:
+      github.com/datadog/orchestrion/instrument: true
+    source: |
+      package main
+
+      import (
+        "context"
+        "log"
+        "net/http"
+        "time"
+
+        "orchestrion/integration"
+
+        . "github.com/go-chi/chi/v5"
+      //line <generated>:1
+        "github.com/datadog/orchestrion/instrument"
+      )
+
+      //line input.go:14
+      func main() {
+        //dd:instrumented
+        router := NewRouter()
+      //line <generated>:1
+        //dd:startinstrument
+        {
+          router.Use(instrument.ChiV5Middleware())
+        }
+        //dd:endinstrument
+      //line input.go:16
+        router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+          w.Write([]byte("Hello World!"))
+        })
+        s := &http.Server{
+          Addr:    ":8080",
+          Handler: router,
+        }
+        integration.OnSignal(func() {
+          ctx, _ := context.WithTimeout(context.Background(), time.Second)
+          s.Shutdown(ctx)
+        })
+        log.Print(s.ListenAndServe())
+      }
+
 directive:
   options:
     preservelineinfo: true
