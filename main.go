@@ -18,14 +18,22 @@ import (
 	"time"
 
 	"github.com/datadog/orchestrion/internal/ensure"
+	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/toolexec/processors/aspect"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
+
+	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/mod/semver"
 )
+
+// ORCHESTRION_GO_COMMAND_FLAGS is used to pass go command invocation flags
+// from one process to another. This is needed to preserve build ids with respect to
+// the original go command invocation when invoking go commands on our own
+const envGoCommandFlags = "ORCHESTRION_GO_COMMAND_FLAGS"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -64,6 +72,11 @@ func main() {
 		}
 		return
 	case "toolexec":
+		flags, err := parentGoCommandFlags()
+		// TODO: inject in args
+		if err == nil {
+			os.WriteFile("/tmp/orchestrionlog.txt", []byte(flags.String()), 0o644)
+		}
 		proxyCmd := proxy.MustParseCommand(args)
 		defer proxyCmd.Close()
 		if proxyCmd.ShowVersion() {
@@ -140,4 +153,50 @@ func printUsage(cmd string) {
 		fmt.Printf("    %s\n", cmd)
 	}
 	fmt.Printf("\nFor more information, run %s help <command>\n", cmd)
+}
+
+func commandFlags() (goflags.CommandFlags, error) {
+	flagsStr, set := os.LookupEnv(envGoCommandFlags)
+	if set {
+		return goflags.CommandFlagsFromString(flagsStr), nil
+	}
+
+	return parentGoCommandFlags()
+}
+
+// parentGoCommandFlags backtracks through the process tree
+// to find a parent go command invocation and returns its arguments
+func parentGoCommandFlags() (flags goflags.CommandFlags, err error) {
+	goBin, err := goproxy.GoBin()
+	if err != nil {
+		return flags, err
+	}
+
+	p, err := process.NewProcess(int32(os.Getpid()))
+	if err != nil {
+		return flags, err
+	}
+
+	// Backtrack through the process stack until we find the parent Go command
+	var args []string
+	for {
+		p, err = p.Parent()
+		if err != nil {
+			return flags, err
+		}
+		args, err = p.CmdlineSlice()
+		if err != nil {
+			return flags, err
+		}
+		cmd, err := exec.LookPath(args[0])
+		if err != nil {
+			return flags, err
+		}
+		// Found the go command process, break out of backtracking
+		if cmd == goBin {
+			break
+		}
+	}
+
+	return goflags.ParseCommandFlags(args), nil
 }
