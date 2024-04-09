@@ -170,7 +170,7 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 		}
 
 		res.Filename = i.outputFileFor(filename)
-		if err = os.MkdirAll(path.Dir(res.Filename), 0o750); err != nil {
+		if err := os.MkdirAll(path.Dir(res.Filename), 0o755); err != nil {
 			return res, err
 		}
 		err = os.WriteFile(res.Filename, postProcess(buf.Bytes()), 0o644)

@@ -113,12 +113,9 @@ func (r *ReferenceMap) Merge(other ReferenceMap) {
 func (r *ReferenceMap) add(path string, kind ReferenceKind) {
 	if *r == nil {
 		*r = ReferenceMap{path: kind}
-	} else {
-		if prev, found := (*r)[path]; found {
-			if prev == ImportStatement {
-				return
-			}
-		}
+	} else if old, found := (*r)[path]; !found || old != ImportStatement {
+		// If it was already in as an ImportStatement, we don't do anything, since that is the strongest
+		// kind of reference (imported implies relocatable, the reverse is not true).
 		(*r)[path] = kind
 	}
 }
