@@ -2,8 +2,13 @@ package goflags
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 // CommandFlags represents the flags provided to a go command invocation
@@ -12,10 +17,16 @@ type CommandFlags struct {
 	Short []string
 }
 
-// CommandFlagsFromString parses the provided string into a CommandFlags structure
-// str should respect the format return by CommandFlags.String()
-func CommandFlagsFromString(str string) CommandFlags {
-	return ParseCommandFlags(strings.Split(str, " "))
+func (f CommandFlags) Trim(flags ...string) {
+	for _, flag := range flags {
+		delete(f.Long, flag)
+		for i, fl := range f.Short {
+			if fl == flag {
+				f.Short = append(f.Short[:i], f.Short[i+1:]...)
+				break
+			}
+		}
+	}
 }
 
 // Slice returns the command flags as a string slice
@@ -66,6 +77,17 @@ func ParseCommandFlags(args []string) CommandFlags {
 	return flags
 }
 
+// Flags return the top level go command flags
+func Flags() (CommandFlags, error) {
+	var err error
+	if flags == nil {
+		*flags, err = parentGoCommandFlags()
+		flags.Trim("-toolexec", "-o")
+	}
+
+	return *flags, err
+}
+
 func isOption(str string) bool {
 	return len(str) > 0 && str[0] == '-'
 }
@@ -73,3 +95,42 @@ func isOption(str string) bool {
 func isAssigned(str string) bool {
 	return regexp.MustCompile(".+=.+").MatchString(str)
 }
+
+// parentGoCommandFlags backtracks through the process tree
+// to find a parent go command invocation and returns its arguments
+func parentGoCommandFlags() (flags CommandFlags, err error) {
+	goBin, err := goproxy.GoBin()
+	if err != nil {
+		return flags, err
+	}
+
+	p, err := process.NewProcess(int32(os.Getpid()))
+	if err != nil {
+		return flags, err
+	}
+
+	// Backtrack through the process stack until we find the parent Go command
+	var args []string
+	for {
+		p, err = p.Parent()
+		if err != nil {
+			return flags, err
+		}
+		args, err = p.CmdlineSlice()
+		if err != nil {
+			return flags, err
+		}
+		cmd, err := exec.LookPath(args[0])
+		if err != nil {
+			return flags, err
+		}
+		// Found the go command process, break out of backtracking
+		if cmd == goBin {
+			break
+		}
+	}
+
+	return ParseCommandFlags(args), nil
+}
+
+var flags *CommandFlags

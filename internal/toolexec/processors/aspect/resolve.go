@@ -13,6 +13,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+
+	"github.com/datadog/orchestrion/internal/goflags"
 )
 
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
@@ -72,7 +74,15 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 		}
 
 		// Not found or stale -- let's try to `go build` it so it's present and not stale.
-		if err := exec.Command("go", "build", "-toolexec", toolexec, "--", importPath).Run(); err != nil {
+		// Retrieve original go command flags and pass them along
+		flags, err := goflags.Flags()
+		if err != nil {
+			return nil, fmt.Errorf("retrieving go command flags: %v", err)
+		}
+		flagsSlice := flags.Slice()
+		args := append([]string{"go", "build"}, flagsSlice...)
+		args = append(args, "-toolexec", toolexec, "--", importPath)
+		if err := exec.Command("go", args...).Run(); err != nil {
 			return nil, fmt.Errorf("building %q: %w", importPath, err)
 		}
 		attemptedBuild = true
