@@ -17,6 +17,7 @@ type CommandFlags struct {
 	Short []string
 }
 
+// Trim removes the specified flags and their value from the long and short flags
 func (f CommandFlags) Trim(flags ...string) {
 	for _, flag := range flags {
 		delete(f.Long, flag)
