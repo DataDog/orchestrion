@@ -7,7 +7,6 @@ package goproxy
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -84,7 +83,6 @@ func Run(args []string, opts ...Option) error {
 		}
 	}
 
-	log.Printf("Executing %q\n", argV)
 	return syscall.Exec(argV[0], argV, env)
 }
 
