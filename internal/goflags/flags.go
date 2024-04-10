@@ -1,3 +1,6 @@
+// Package goflags allows parsing go command invocations and storing their flags in a
+// CommandFlags structure. It also provides utilities to backtrack through the process stack to
+// find and parse the flags of the first parent go command found in the process hierarchy.
 package goflags
 
 import (
