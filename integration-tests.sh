@@ -33,16 +33,26 @@ pass() {
     messages+="${message}"
 }
 
+declare -a on_cleanup
+cleanup() {
+    echo "Performing cleanup operations..."
+    for cmd in "${on_cleanup[@]}"; do
+        eval "${cmd}"
+    done
+}
+trap cleanup SIGINT SIGTERM EXIT
+
 cid=$(mktemp "${TMPDIR}/orchestrion-integration-tests-CID-XXXXXXXXXX")
-trap "rm -f ${cid}" EXIT
+on_cleanup+=("rm -f ${cid}")
 
 network="host"
 ## If we're not running in a github action, set up the fake agent locally.
 if [[ "${GITHUB_ACTIONS:-}" == "" ]]; then
+    echo -n "Starting test agent container: "
     rm -f "${cid}" # Docker run refuses to proceed if it already exists...
     docker run --rm -id --cidfile="${cid}" -eLOG_LEVEL=DEBUG -eTRACE_LANGUAGE=golang -eENABLED_CHECKS=trace_stall,trace_count_header,trace_peer_service,trace_dd_service ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:latest
     agent_cid=$(cat "${cid}")
-    trap "echo -n 'Stopping agent container: '; docker container rm -f ${agent_cid}" EXIT
+    on_cleanup+=("echo -n 'Stopping agent container: '; docker container rm -f ${agent_cid}")
 
     network="container:${agent_cid}"
 fi
@@ -54,29 +64,14 @@ mkdir -p "${OUT_DIR}"
 echo "*" > ${OUT_DIR}/.gitignore # Make sure it's always ignored by git once it exists
 
 ## Pre-build orchestrion binary
-echo "Building orchestrion binary"
-BIN_DIR="${OUT_DIR}/-orchestrion-"
-mkdir -p "${BIN_DIR}"
-eval $(go env) # Makes all Go environment variables available in this environment.
-docker run --rm -t                                                              \
-    -v"${ROOT_DIR}:${ROOT_DIR}" -w"${ROOT_DIR}"                                 \
-    -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                            \
-    -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"                \
-    -v"${BIN_DIR}:/output"                                                      \
-    -eGOPROXY="${GOPROXY}"                                                      \
-    golang:${GOVERSION#go}                                                      \
-    go build -o /output/ .
-
-echo "Building base image: "
-cat <<EOF > "${BIN_DIR}/Dockerfile"
-FROM golang:${GOVERSION#go}
-RUN apt update -y && apt install -y curl jq
-COPY orchestrion /usr/local/bin/orchestrion
-EOF
+echo "Building base image:"
 iid=$(mktemp "${TMPDIR}/orchestrion-integration-tests-IID-XXXXXXXXXX")
-trap "rm -f ${iid}" EXIT
-docker build --iidfile="${iid}" "${BIN_DIR}"
+on_cleanup+=("rm -f ${iid}")
+docker build --iidfile="${iid}" -f "${ROOT_DIR}/_integration-tests/Dockerfile" "${ROOT_DIR}"
 image=$(cat "${iid}")
+
+# Make all of GO environment variables available without shelling out to `go env` again...
+eval $(go env)
 
 ## Run all the tests
 cd "${ROOT_DIR}/_integration-tests"
@@ -95,10 +90,9 @@ for tdir in ./tests/*; do
     rm -f "${cid}" # Docker run refuses to proceed if it already exists...
     echo "Building the service entry point:"
     docker run --rm -t --net="${network}" --cidfile="${cid}" --quiet            \
-        -v"${ROOT_DIR}:${ROOT_DIR}" -w"${ROOT_DIR}/_integration-tests"          \
+        -v"${ROOT_DIR}:/src" -w"/src/_integration-tests"                         \
         -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                        \
         -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"            \
-        -v"${BIN_DIR}:/var/opt/orchestrion/bin"                                 \
         -v"${OUT_DIR}/${tname}:/output"                                         \
         -eGOPROXY="${GOPROXY}"                                                  \
         -eGOTMPDIR="/output/tmp"                                                \
@@ -119,7 +113,7 @@ for tdir in ./tests/*; do
         "${ROOT_DIR}/_integration-tests/start.sh" "${tname}"                    \
         || { fail "${tname}"; continue; }
     container=$(cat "${cid}")
-    trap "echo -n 'Stopping ${tname} service container: '; docker container rm --force ${container}" EXIT
+    on_cleanup+=("echo -n 'Stopping ${tname} service container: '; docker container rm --force ${container}")
 
     ## Send a request to the "url" field in validation.json, if present.
     url=`cat "${tdir}/validation.json" | jq -r ".url // empty"`
@@ -159,10 +153,9 @@ for tdir in ./tests/*; do
         continue
     }
 
-    echo "Container logs follow:"
-    echo -en "\033[0;33m"
-    docker logs "${container}"
-    echo -en "\033[0m"
+    logfile="${OUT_DIR}/${tname}/container.log"
+    echo "Container logs will be saved to ${logfile}"
+    docker logs "${container}" > "${logfile}"
 
     echo "Validating traces..."
     go run ./validator                                                          \

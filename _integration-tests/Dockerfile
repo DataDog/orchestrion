@@ -1,20 +1,15 @@
 FROM golang:alpine AS build
-
-# Install a compiler toolchain (some tests use sqlite3 which CGO), and other
-# useful utilities (needed by start.sh)
-RUN apk add bash clang curl jq
-ENV CGO_ENABLED=1 \
-  CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
-
-# Copy into the container instead of mounting, so that file changes are local.
+RUN apk add clang git
 COPY ./ /src/
 WORKDIR /src
+RUN git config --global --add safe.directory /src
+RUN go build -v -o /usr/local/bin/orchestrion .
 
-# Build Orchestrion
-RUN go build -o bin/ .
-WORKDIR /src/_integration-tests
-
-# Build all the test binaries at once into .bin
-RUN mkdir .bin && ../bin/orchestrion go build -o .bin ./tests/...
-
-ENTRYPOINT ["/bin/bash", "/src/_integration-tests/start.sh"]
+FROM golang:alpine
+# Install a compiler toolchain (some tests use sqlite3 which CGO), and other
+# useful utilities (needed by start.sh)
+RUN apk add bash clang curl git jq
+RUN git config --global --add safe.directory /src
+ENV CGO_ENABLED=1 \
+  CGO_CFLAGS="-D_LARGEFILE64_SOURCE"
+COPY --from=build /usr/local/bin/orchestrion /usr/local/bin/orchestrion
