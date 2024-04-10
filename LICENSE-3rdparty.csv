@@ -41,7 +41,10 @@ orchestrion,github.com/philhofer/fwd,MIT,unknown
 orchestrion,github.com/pkg/errors,BSD-2-Clause,unknown
 orchestrion,github.com/rivo/uniseg,MIT,unknown
 orchestrion,github.com/secure-systems-lab/go-securesystemslib/cjson,MIT,unknown
+orchestrion,github.com/shirou/gopsutil/v3,BSD-3-Clause,unknown
+orchestrion,github.com/shoenig/go-m1cpu,MPL-2.0,unknown
 orchestrion,github.com/tinylib/msgp/msgp,MIT,unknown
+orchestrion,github.com/tklauser/go-sysconf,BSD-3-Clause,unknown
 orchestrion,github.com/ugorji/go/codec,MIT,unknown
 orchestrion,github.com/valyala/bytebufferpool,MIT,unknown
 orchestrion,github.com/valyala/fasthttp,MIT,unknown
