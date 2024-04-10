@@ -27,7 +27,8 @@ func main() {
 		Handler: router,
 	}
 	integration.OnSignal(func() {
-		ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		s.Shutdown(ctx)
 	})
 	log.Print(s.ListenAndServe())

@@ -9,6 +9,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"orchestrion/integration"
 )
@@ -21,7 +22,9 @@ func main() {
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {
-		s.Shutdown(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		s.Shutdown(ctx)
 	})
 	log.Printf("Server shut down: %v", s.ListenAndServe())
 }

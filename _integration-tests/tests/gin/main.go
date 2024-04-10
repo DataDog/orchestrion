@@ -30,7 +30,8 @@ func main() {
 		Handler: r.Handler(),
 	}
 	integration.OnSignal(func() {
-		ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
 		s.Shutdown(ctx)
 	})
 	log.Print(s.ListenAndServe())
