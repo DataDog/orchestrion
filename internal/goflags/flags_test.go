@@ -15,14 +15,14 @@ func TestTrim(t *testing.T) {
 		"not found": {
 			flags: CommandFlags{
 				Long:  map[string]string{"-long1": "long1val"},
-				Short: []string{"-short1"},
+				Short: map[string]struct{}{"-short1": {}},
 			},
 			remove: []string{"-notfound"},
 		},
 		"found": {
 			flags: CommandFlags{
 				Long:  map[string]string{"-long1": "long1val", "-long2": "long2val"},
-				Short: []string{"-short1", "-short2"},
+				Short: map[string]struct{}{"-short1": {}, "-short2": {}},
 			},
 			remove: []string{"-short1", "-long1"},
 		},
@@ -45,7 +45,7 @@ func TestParse(t *testing.T) {
 	}{
 		"short": {
 			flags:    []string{"-short1", "-short2"},
-			expected: CommandFlags{Short: []string{"-short1", "-short2"}},
+			expected: CommandFlags{Short: map[string]struct{}{"-short1": {}, "-short2": {}}},
 		},
 		"long": {
 			flags:    []string{"-long1", "longval1", "-long2", "longval2"},
@@ -59,22 +59,33 @@ func TestParse(t *testing.T) {
 			flags:    []string{"-long1=longval1", "-long2", "longval2"},
 			expected: CommandFlags{Long: map[string]string{"-long1": "longval1", "-long2": "longval2"}},
 		},
-		"combined": {
-			flags: []string{"-short1", "-long1=longval1", "-short2", "-long2", "longval2"},
+		"special": {
+			flags: []string{"-gcflags", "-N -l -other", "-ldflags", "-extldflags '-lm -lstdc++ -static'"},
 			expected: CommandFlags{
-				Long:  map[string]string{"-long1": "longval1", "-long2": "longval2"},
-				Short: []string{"-short1", "-short2"},
+				Long: map[string]string{"-gcflags": "-N -l -other", "-ldflags": "-extldflags '-lm -lstdc++ -static'"},
 			},
 		},
-		"combined-and-skipped": {
-			flags: []string{"skipped1", "-short1", "-long1=longval1", "skipped2", "-short2", "-long2", "longval2", "skipped3"},
+		"combined": {
+			flags: []string{"-short1", "-gcflags", "-N -l -other", "-ldflags", "-extldflags '-lm -lstdc++ -static'", "-long1=longval1", "-short2", "-long2", "longval2"},
+			expected: CommandFlags{
+				Long:  map[string]string{"-gcflags": "-N -l -other", "-ldflags": "-extldflags '-lm -lstdc++ -static'", "-long1": "longval1", "-long2": "longval2"},
+				Short: map[string]struct{}{"-short1": {}, "-short2": {}},
+			},
+		},
+		"combined-and-unknown": {
+			flags: []string{"unknown1", "-short1", "-long1=longval1", "unknown2", "-short2", "-long2", "longval2", "unknown3"},
 			expected: CommandFlags{
 				Long:  map[string]string{"-long1": "longval1", "-long2": "longval2"},
-				Short: []string{"-short1", "-short2"},
+				Short: map[string]struct{}{"-short1": {}, "-short2": {}},
 			},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
+			shortFlags = tc.expected.Short
+			longFlags = map[string]struct{}{}
+			for flag := range tc.expected.Long {
+				longFlags[flag] = struct{}{}
+			}
 			flags := ParseCommandFlags(tc.flags)
 			if len(tc.expected.Short) > 0 {
 				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short))
