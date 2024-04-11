@@ -13,6 +13,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+
+	"github.com/datadog/orchestrion/internal/log"
 )
 
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
@@ -29,6 +31,8 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 		cmd := exec.Command("go", "list", "-toolexec", toolexec, "-json", "-deps", "-export", "--", importPath)
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout
+
+		log.Tracef("Attempting to resolve %q using %q\n", importPath, cmd.Args)
 		if err := cmd.Run(); err != nil {
 			return nil, fmt.Errorf("running %q: %w", cmd.Args, err)
 		}
@@ -71,7 +75,8 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 			return nil, fmt.Errorf("after `go build`: %s", err)
 		}
 
-		// Not found or stale -- let's try to `go build` it so it's present and not stale.
+		// Not found -- let's try to `go build` it so it's present and not stale.
+		log.Tracef("Attempting to build %q in order to satisfy dependency...\n", importPath)
 		if err := exec.Command("go", "build", "-toolexec", toolexec, "--", importPath).Run(); err != nil {
 			return nil, fmt.Errorf("building %q: %w", importPath, err)
 		}

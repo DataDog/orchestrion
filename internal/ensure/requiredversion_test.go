@@ -8,8 +8,6 @@ package ensure
 import (
 	"errors"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -134,10 +132,6 @@ func TestRequiredVersion(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			// Send output to io.Discard to neutralize log entries during test...
-			log.SetOutput(io.Discard)
-			defer log.SetOutput(os.Stderr)
-
 			mockGoVersion := func(dir string) (string, string, error) {
 				require.Equal(t, "", dir)
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err

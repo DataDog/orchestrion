@@ -8,13 +8,13 @@ package ensure
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
 	"syscall"
 
+	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/version"
 	"golang.org/x/tools/go/packages"
 )
@@ -80,7 +80,7 @@ func requiredVersion(
 		rVersion = envValRespawnReplaced
 	}
 
-	log.Printf("Re-starting with '%s@%s' (this is %s)\n", orchestrionPkgPath, rVersion, version.Tag)
+	log.Infof("Re-starting with '%s@%s' (this is %s)\n", orchestrionPkgPath, rVersion, version.Tag)
 
 	goBin, err := exec.LookPath("go")
 	if err != nil {

@@ -8,7 +8,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -20,6 +19,7 @@ import (
 	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/toolexec/aspect"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
@@ -28,6 +28,8 @@ import (
 )
 
 func main() {
+	defer log.Close()
+
 	if len(os.Args) < 2 {
 		printUsage(os.Args[0])
 		return
@@ -66,7 +68,10 @@ func main() {
 	case "toolexec":
 		proxyCmd := proxy.MustParseCommand(args)
 		defer proxyCmd.Close()
+
 		if proxyCmd.ShowVersion() {
+			log.Tracef("Toolexec version command: %q\n", proxyCmd.Args())
+
 			stdout := strings.Builder{}
 			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
 
@@ -99,25 +104,30 @@ func main() {
 					}
 				}
 			}
+			log.Tracef("Appending orchestrion information to otuput: orchestrion@%s,%s\n", versionString, builtin.Checksum)
 			fmt.Printf("%s:orchestrion@%s,%s\n", strings.TrimSpace(stdout.String()), versionString, builtin.Checksum)
 			return
 		}
 
+		log.Tracef("Toolexec original command: %q\n", proxyCmd.Args())
 		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompile); err != nil {
 			if errors.Is(err, proxy.ErrSkipCommand) {
-				log.Printf("SKIP: %q\n", proxyCmd.Args())
+				log.Infof("SKIP: %q\n", proxyCmd.Args())
 				return
 			}
 			utils.ExitIfError(err)
 		}
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
 			if errors.Is(err, proxy.ErrSkipCommand) {
-				log.Printf("SKIP: %q\n", proxyCmd.Args())
+				log.Infof("SKIP: %q\n", proxyCmd.Args())
 				return
 			}
 			utils.ExitIfError(err)
 		}
+
+		// Spacing so the final command is aligned with the original one...
+		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
 		proxy.MustRunCommand(proxyCmd)
 
 		return
