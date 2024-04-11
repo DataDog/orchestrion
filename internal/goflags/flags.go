@@ -107,7 +107,6 @@ func Flags() (CommandFlags, error) {
 func isAssigned(str string) bool {
 	_, _, ok := strings.Cut(str, "=")
 	return ok
-	//return regexp.MustCompile(".+=.+").MatchString(str)
 }
 
 func isLong(str string) bool {
