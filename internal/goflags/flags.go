@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/goproxy"
@@ -16,9 +15,24 @@ import (
 
 // CommandFlags represents the flags provided to a go command invocation
 type CommandFlags struct {
-	Long  map[string]string
-	Short []string
+	Long    map[string]string
+	Short   []string
+	Unknown []string // flags we don't process but store anyway
 }
+
+var (
+	// specialFlags are long Go command flags that accept other flags as parameters
+	specialFlags = map[string]struct{}{
+		"-asmflags": {}, "-gccgoflags": {}, "-gcflags": {}, "-ldflags": {},
+	}
+	shortFlags = map[string]struct{}{
+		"-asan": {}, "-cover": {}, "-linkshared": {}, "-modcacherw": {}, "-msan": {}, "-race": {}, "-trimpath": {},
+	}
+	longFlags = map[string]struct{}{
+		"-covermode": {}, "-coverpkg": {}, "-buildmode": {}, "-buildvcs": {}, "-compiler": {}, "-mod": {},
+		"-modfile": {}, "-overlay": {}, "-pgo": {}, "-pkgdir": {}, "-tags": {},
+	}
+)
 
 // Trim removes the specified flags and their value from the long and short flags
 func (f CommandFlags) Trim(flags ...string) {
@@ -44,6 +58,9 @@ func (f CommandFlags) Slice() []string {
 	for _, flag := range f.Short {
 		flags = append(flags, flag)
 	}
+	for _, flag := range f.Unknown {
+		flags = append(flags, flag)
+	}
 	return flags
 }
 
@@ -62,19 +79,18 @@ func ParseCommandFlags(args []string) CommandFlags {
 
 	for i := 0; i < len(args); i += 1 {
 		arg := args[i]
-		if !isOption(arg) {
-			continue
-		}
 		if isAssigned(arg) {
 			key, val, found := strings.Cut(arg, "=")
 			if found {
 				flags.Long[key] = val
 			}
-		} else if i == len(args)-1 || isOption(args[i+1]) {
+		} else if isSpecial(arg) || isLong(arg) {
+			flags.Long[arg] = args[i+1]
+			i++
+		} else if isShort(arg) {
 			flags.Short = append(flags.Short, arg)
 		} else {
-			flags.Long[arg] = args[i+1]
-			i = i + 1
+			flags.Unknown = append(flags.Unknown, arg)
 		}
 	}
 
@@ -85,19 +101,34 @@ func ParseCommandFlags(args []string) CommandFlags {
 func Flags() (CommandFlags, error) {
 	var err error
 	if flags == nil {
-		*flags, err = parentGoCommandFlags()
+		var f CommandFlags
+		f, err = parentGoCommandFlags()
+		flags = &f
 		flags.Trim("-toolexec", "-o")
 	}
 
 	return *flags, err
 }
 
-func isOption(str string) bool {
-	return len(str) > 0 && str[0] == '-'
+func isAssigned(str string) bool {
+	_, _, ok := strings.Cut(str, "=")
+	return ok
+	//return regexp.MustCompile(".+=.+").MatchString(str)
 }
 
-func isAssigned(str string) bool {
-	return regexp.MustCompile(".+=.+").MatchString(str)
+func isLong(str string) bool {
+	_, ok := longFlags[str]
+	return ok
+}
+
+func isShort(str string) bool {
+	_, ok := shortFlags[str]
+	return ok
+}
+
+func isSpecial(str string) bool {
+	_, ok := specialFlags[str]
+	return ok
 }
 
 // parentGoCommandFlags backtracks through the process tree
@@ -134,7 +165,7 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		}
 	}
 
-	return ParseCommandFlags(args), nil
+	return ParseCommandFlags(args[2:]), nil
 }
 
 var flags *CommandFlags
