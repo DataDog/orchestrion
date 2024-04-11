@@ -118,8 +118,9 @@ func Flags() (CommandFlags, error) {
 }
 
 func isAssigned(str string) bool {
-	_, _, ok := strings.Cut(str, "=")
-	return ok
+	flag, _, ok := strings.Cut(str, "=")
+	// An assigned flag is a long flag using the '=' separator
+	return ok && isLong(flag)
 }
 
 func isLong(str string) bool {
