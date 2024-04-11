@@ -17,7 +17,7 @@ import (
 // CommandFlags represents the flags provided to a go command invocation
 type CommandFlags struct {
 	Long    map[string]string
-	Short   []string
+	Short   map[string]struct{}
 	Unknown []string // flags we don't process but store anyway
 }
 
@@ -57,12 +57,7 @@ var (
 func (f CommandFlags) Trim(flags ...string) {
 	for _, flag := range flags {
 		delete(f.Long, flag)
-		for i, fl := range f.Short {
-			if fl == flag {
-				f.Short = append(f.Short[:i], f.Short[i+1:]...)
-				break
-			}
-		}
+		delete(f.Short, flag)
 	}
 }
 
@@ -73,9 +68,9 @@ func (f CommandFlags) Trim(flags ...string) {
 func (f CommandFlags) Slice() []string {
 	flags := make([]string, 0, len(f.Long)+len(f.Short))
 	for flag, val := range f.Long {
-		flags = append(flags, fmt.Sprintf("%s=\"%s\"", flag, val))
+		flags = append(flags, fmt.Sprintf("%s=%q", flag, val))
 	}
-	for _, flag := range f.Short {
+	for flag := range f.Short {
 		flags = append(flags, flag)
 	}
 	return flags
@@ -91,7 +86,7 @@ func (f CommandFlags) String() string {
 func ParseCommandFlags(args []string) CommandFlags {
 	flags := CommandFlags{
 		Long:  make(map[string]string, len(args)),
-		Short: make([]string, 0, len(args)),
+		Short: make(map[string]struct{}, len(args)),
 	}
 
 	for i := 0; i < len(args); i += 1 {
@@ -105,7 +100,7 @@ func ParseCommandFlags(args []string) CommandFlags {
 			flags.Long[arg] = args[i+1]
 			i++
 		} else if isShort(arg) {
-			flags.Short = append(flags.Short, arg)
+			flags.Short[arg] = struct{}{}
 		} else {
 			flags.Unknown = append(flags.Unknown, arg)
 		}
