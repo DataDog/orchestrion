@@ -29,8 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: 'DataDog/orchestrion'
       - name: Checkout Go
         uses: actions/setup-go@v5
         with:
