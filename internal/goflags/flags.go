@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/shirou/gopsutil/v3/process"
@@ -48,17 +49,15 @@ func (f CommandFlags) Trim(flags ...string) {
 }
 
 // Slice returns the command flags as a string slice
-// - Long flags are returned as a string of the form '-flagName="flagVal"'
+// - long flags are returned as a string of the form '-flagName="flagVal"'
 // - short flags are returned as a string of the form '-flagName'
+// - unknow flags and values are ignored
 func (f CommandFlags) Slice() []string {
 	flags := make([]string, 0, len(f.Long)+len(f.Short))
 	for flag, val := range f.Long {
 		flags = append(flags, fmt.Sprintf("%s=\"%s\"", flag, val))
 	}
 	for _, flag := range f.Short {
-		flags = append(flags, flag)
-	}
-	for _, flag := range f.Unknown {
 		flags = append(flags, flag)
 	}
 	return flags
@@ -99,15 +98,10 @@ func ParseCommandFlags(args []string) CommandFlags {
 
 // Flags return the top level go command flags
 func Flags() (CommandFlags, error) {
-	var err error
-	if flags == nil {
-		var f CommandFlags
-		f, err = parentGoCommandFlags()
-		flags = &f
-		flags.Trim("-toolexec", "-o")
-	}
-
-	return *flags, err
+	once.Do(func() {
+		flags, flagsErr = parentGoCommandFlags()
+	})
+	return flags, flagsErr
 }
 
 func isAssigned(str string) bool {
@@ -168,4 +162,8 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 	return ParseCommandFlags(args[2:]), nil
 }
 
-var flags *CommandFlags
+var (
+	flags    CommandFlags
+	flagsErr error
+	once     sync.Once
+)
