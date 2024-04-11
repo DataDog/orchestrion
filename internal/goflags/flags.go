@@ -24,14 +24,32 @@ type CommandFlags struct {
 var (
 	// specialFlags are long Go command flags that accept other flags as parameters
 	specialFlags = map[string]struct{}{
-		"-asmflags": {}, "-gccgoflags": {}, "-gcflags": {}, "-ldflags": {},
+		"-asmflags":   {}, // Flags passed through to the assembly
+		"-gccgoflags": {}, // Flags passed through to the gccgo compiler
+		"-gcflags":    {}, // Flags passed through to the gc compiler
+		"-ldflags":    {}, // Flags passed through to the linker
 	}
 	shortFlags = map[string]struct{}{
-		"-asan": {}, "-cover": {}, "-linkshared": {}, "-modcacherw": {}, "-msan": {}, "-race": {}, "-trimpath": {},
+		"-asan":       {}, // Enables address sanitizer
+		"-cover":      {}, // Enables coverage collection
+		"-linkshared": {}, // Build code that links against shared libraries
+		"-modcacherw": {}, // Keep module cache files read-write
+		"-msan":       {}, // Enable memory sanitizer
+		"-race":       {}, // Enable data race detection
+		"-trimpath":   {}, // Remove all file system paths from the resulting executable
 	}
 	longFlags = map[string]struct{}{
-		"-covermode": {}, "-coverpkg": {}, "-buildmode": {}, "-buildvcs": {}, "-compiler": {}, "-mod": {},
-		"-modfile": {}, "-overlay": {}, "-pgo": {}, "-pkgdir": {}, "-tags": {},
+		"-buildmode": {}, // Set build mode
+		"-buildvcs":  {}, // Whether to stamp binaries with version control information
+		"-compiler":  {}, // Select what compiler to use
+		"-covermode": {}, // Set coverage mode
+		"-coverpkg":  {}, // Set list of packages to collect coverage for
+		"-mod":       {}, // Set module download mode
+		"-modfile":   {}, // Set module file
+		"-overlay":   {}, // Set overlay file
+		"-pgo":       {}, // Set profile-guided optimization profile file
+		"-pkgdir":    {}, // Set package install & load directory
+		"-tags":      {}, // Set build tags
 	}
 )
 
