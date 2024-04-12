@@ -12,13 +12,13 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/datadog/orchestrion/internal/toolexec/processors"
-	"github.com/datadog/orchestrion/internal/toolexec/processors/aspect/linkdeps"
+	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/datadog/orchestrion/internal/toolexec/importcfg"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
 func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
-	reg, err := processors.ParseImportConfig(cmd.Flags.ImportCfg)
+	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
@@ -59,13 +59,7 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 	if err := os.Rename(cmd.Flags.ImportCfg, cmd.Flags.ImportCfg+".original"); err != nil {
 		return fmt.Errorf("renaming %q: %w", cmd.Flags.ImportCfg, err)
 	}
-	file, err := os.Create(cmd.Flags.ImportCfg)
-	if err != nil {
-		return fmt.Errorf("creating %q: %w", cmd.Flags.ImportCfg, err)
-	}
-	defer file.Close()
-
-	if _, err := reg.WriteTo(file); err != nil {
+	if err := reg.WriteFile(cmd.Flags.ImportCfg); err != nil {
 		return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
