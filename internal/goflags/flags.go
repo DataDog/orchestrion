@@ -1,3 +1,8 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 // Package goflags allows parsing go command invocations and storing their flags in a
 // CommandFlags structure. It also provides utilities to backtrack through the process stack to
 // find and parse the flags of the first parent go command found in the process hierarchy.
