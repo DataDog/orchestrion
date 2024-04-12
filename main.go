@@ -24,6 +24,7 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
+
 	"golang.org/x/mod/semver"
 )
 
