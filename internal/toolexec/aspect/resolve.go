@@ -17,6 +17,8 @@ import (
 	"github.com/datadog/orchestrion/internal/goflags"
 )
 
+// prepareGoCommandArgs injects the parent Go command's flags into the provided arguments
+// The result can be passed as args to a Go invocation through exec.Command()
 func prepareGoCommandArgs(cmd string, args ...string) ([]string, error) {
 	flags, err := goflags.Flags()
 	if err != nil {
