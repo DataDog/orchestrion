@@ -13,52 +13,69 @@
 
 set -euo pipefail
 
+ROOT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+
 fail=0
 messages=""
 
 testname="${1:-}"
 
 fail() {
-    echo FAIL: $1
+    local message="\033[0;31mFAIL: ${1}\033[0m\n"
+    echo -e "${message}"
     fail=1
-    messages+="\033[0;31mFAIL: ${1}\033[0m\n"
+    messages+="${message}"
 }
 
 pass() {
-    echo PASS: $1
-    messages+="\033[0;32mPASS: ${1}\033[0m\n"
+    local message="\033[0;32mPASS: ${1}\033[0m\n"
+    echo -e "${message}"
+    messages+="${message}"
 }
 
-cd ./_integration-tests
+declare -a on_cleanup
+cleanup() {
+    echo "Performing cleanup operations..."
+    for cmd in "${on_cleanup[@]}"; do
+        eval "${cmd}"
+    done
+}
+trap cleanup SIGINT SIGTERM EXIT
 
 cid=$(mktemp "${TMPDIR}/orchestrion-integration-tests-CID-XXXXXXXXXX")
-trap "rm -f ${cid}" EXIT
+on_cleanup+=("rm -f ${cid}")
 
 network="host"
 ## If we're not running in a github action, set up the fake agent locally.
 if [[ "${GITHUB_ACTIONS:-}" == "" ]]; then
+    echo -n "Starting test agent container: "
     rm -f "${cid}" # Docker run refuses to proceed if it already exists...
     docker run --rm -id --cidfile="${cid}" -eLOG_LEVEL=DEBUG -eTRACE_LANGUAGE=golang -eENABLED_CHECKS=trace_stall,trace_count_header,trace_peer_service,trace_dd_service ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:latest
     agent_cid=$(cat "${cid}")
-    trap "docker container rm -f ${agent_cid}" EXIT
+    on_cleanup+=("echo -n 'Stopping agent container: '; docker container rm -f ${agent_cid}")
 
     network="container:${agent_cid}"
 fi
 
-## Pre-build all binaries (prime the Docker build cache)
-echo "Building test suite Docker image..."
+## Prepare output directory
+OUT_DIR="${ROOT_DIR}/_integration-tests/outputs"
+rm -rf "${OUT_DIR}" # Ensure the directory is empty before we start
+mkdir -p "${OUT_DIR}"
+echo "*" > ${OUT_DIR}/.gitignore # Make sure it's always ignored by git once it exists
+
+## Pre-build orchestrion binary
+echo "Building base image:"
 iid=$(mktemp "${TMPDIR}/orchestrion-integration-tests-IID-XXXXXXXXXX")
-trap "rm -f ${iid}" EXIT
-docker build .. -f ./Dockerfile --iidfile="${iid}"
+on_cleanup+=("rm -f ${iid}")
+docker build --iidfile="${iid}" -f "${ROOT_DIR}/_integration-tests/Dockerfile" "${ROOT_DIR}"
 image=$(cat "${iid}")
 
-## Prepare output directory
-rm -rf outputs # Ensure the directory is empty before we start
-mkdir -p outputs # Make sure the directory exists
-echo "*" > outputs/.gitignore # Make sure it's always ignored by git once it exists
+# Make all of GO environment variables available without shelling out to `go env` again...
+eval $(go env)
 
 ## Run all the tests
-for tdir in tests/*; do
+cd "${ROOT_DIR}/_integration-tests"
+for tdir in ./tests/*; do
     tname=$(basename ${tdir})
     if [[ "${testname}" != "" && "${testname}" != "${tname}" ]]; then
        continue
@@ -67,12 +84,36 @@ for tdir in tests/*; do
     echo -e "\033[0;36m################################################################################\033[0m"
     echo -e "RUN \033[0;35m${tname}\033[0m:"
 
+    mkdir -p "${OUT_DIR}/${tname}/tmp" # Make sure the output directory exists
+
+    # Build the service binary
+    rm -f "${cid}" # Docker run refuses to proceed if it already exists...
+    echo "Building the service entry point:"
+    docker run --rm -t --net="${network}" --cidfile="${cid}" --quiet            \
+        -v"${ROOT_DIR}:/src" -w"/src/_integration-tests"                         \
+        -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                        \
+        -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"            \
+        -v"${OUT_DIR}/${tname}:/output"                                         \
+        -eGOPROXY="${GOPROXY}"                                                  \
+        -eGOTMPDIR="/output/tmp"                                                \
+        "${image}"                                                              \
+        orchestrion go build -work -o "/output/${tname}" "./tests/${tname}"     \
+        || { fail "${tname}"; continue; }
+
     # Start the service in a Docker container
     rm -f "${cid}" # Docker run refuses to proceed if it already exists...
-    echo -n "Starting service container: "
-    docker run -td --net="${network}" --cidfile="${cid}" -v"${PWD}/outputs/${tname}:/output" --quiet "${image}" "${tname}" || { fail "${tname}"; continue; }
+    echo "Starting service container:"
+    docker run -dt --net="${network}" --cidfile="${cid}" --quiet                \
+        -v"${OUT_DIR}/${tname}:/output" -w/output                               \
+        -v"${ROOT_DIR}:${ROOT_DIR}"                                             \
+        -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                        \
+        -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"            \
+        -eGOPROXY="${GOPROXY}"                                                  \
+        "${image}"                                                              \
+        "${ROOT_DIR}/_integration-tests/start.sh" "${tname}"                    \
+        || { fail "${tname}"; continue; }
     container=$(cat "${cid}")
-    trap "docker container rm --force ${container}" EXIT
+    on_cleanup+=("echo -n 'Stopping ${tname} service container: '; docker container rm --force ${container}")
 
     ## Send a request to the "url" field in validation.json, if present.
     url=`cat "${tdir}/validation.json" | jq -r ".url // empty"`
@@ -112,24 +153,24 @@ for tdir in tests/*; do
         continue
     }
 
-    echo "Container logs follow:"
-    echo -en "\033[0;33m"
-    docker logs "${container}"
-    echo -en "\033[0m"
+    logfile="${OUT_DIR}/${tname}/container.log"
+    echo "Container logs will be saved to ${logfile}"
+    docker logs "${container}" > "${logfile}"
 
     echo "Validating traces..."
-    go run ./validator \
-        -tname ${tname} \
-        -vfile ${tdir}/validation.json \
-        -surl "file://${PWD}/outputs/${tname}/traces.json" \
+    go run ./validator                                                          \
+        -tname ${tname}                                                         \
+        -vfile ${tdir}/validation.json                                          \
+        -surl "file://${PWD}/outputs/${tname}/traces.json"                      \
     && pass $tname || fail $tname
 done
 
+echo -e "\033[0;36m################################################################################\033[0m"
 if [ "$fail" != "0" ]; then
     echo "The integration test suite Failed. See the failed tests below and see the logs above to diagnose failures."
 else
     echo "The integration test suite Passed."
 fi
 
-echo -ne $messages
+echo -e $messages
 exit $fail

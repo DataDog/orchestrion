@@ -71,6 +71,10 @@ jobs:
         run: ./integration-tests.sh
         env:
           TMPDIR: ${{ runner.temp }}
+      # Docker will leave stuff owned by root and the upload-artifact action
+      # will fail to scan the directories unless we do this...
+      - name: Fix output files ownership
+        run: sudo chown -R $USER _integration-tests/outputs
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()

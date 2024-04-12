@@ -72,7 +72,7 @@ func Test(t *testing.T) {
 						"package tools",
 						"",
 						"import _ \"github.com/datadog/orchestrion\"",
-					}, "\n")), 0o640),
+					}, "\n")), 0o644),
 					"failed to write tools.go",
 				)
 			}
@@ -81,7 +81,7 @@ func Test(t *testing.T) {
 			}
 
 			require.NoError(t,
-				os.WriteFile(path.Join(wd, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o640),
+				os.WriteFile(path.Join(wd, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o644),
 				"failed to create go.mod file",
 			)
 
