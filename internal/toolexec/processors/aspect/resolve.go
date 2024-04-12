@@ -80,7 +80,7 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 			return nil, fmt.Errorf("retrieving go command flags: %v", err)
 		}
 		flagsSlice := flags.Slice()
-		args := append([]string{"go", "build"}, flagsSlice...)
+		args := append([]string{"build"}, flagsSlice...)
 		args = append(args, "-toolexec", toolexec, "--", importPath)
 		if err := exec.Command("go", args...).Run(); err != nil {
 			return nil, fmt.Errorf("building %q: %w", importPath, err)
