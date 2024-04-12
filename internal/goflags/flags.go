@@ -70,17 +70,12 @@ func (f CommandFlags) Trim(flags ...string) {
 func (f CommandFlags) Slice() []string {
 	flags := make([]string, 0, len(f.Long)+len(f.Short))
 	for flag, val := range f.Long {
-		flags = append(flags, fmt.Sprintf("%s=%q", flag, val))
+		flags = append(flags, fmt.Sprintf("%s=%s", flag, val))
 	}
 	for flag := range f.Short {
 		flags = append(flags, flag)
 	}
 	return flags
-}
-
-// String returns a single string of the concatenated flags
-func (f CommandFlags) String() string {
-	return strings.Join(f.Slice(), " ")
 }
 
 // ParseCommandFlags parses a slice representing a go command invocation
