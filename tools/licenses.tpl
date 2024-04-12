@@ -1,3 +1,3 @@
-Component,Origin,License,Copyright{{ range . }}
-orchestrion,{{.Name}},{{.LicenseName}},
+Component,Origin,License{{ range . }}
+orchestrion,{{.Name}},{{.LicenseName}}
 {{- end }}
