@@ -104,7 +104,7 @@ func main() {
 					}
 				}
 			}
-			log.Tracef("Appending orchestrion information to otuput: orchestrion@%s,%s\n", versionString, builtin.Checksum)
+			log.Tracef("Appending orchestrion information to output: orchestrion@%s,%s\n", versionString, builtin.Checksum)
 			fmt.Printf("%s:orchestrion@%s,%s\n", strings.TrimSpace(stdout.String()), versionString, builtin.Checksum)
 			return
 		}
