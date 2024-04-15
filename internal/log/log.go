@@ -63,6 +63,7 @@ func SetContext(key string, value string) {
 		for i := 0; i < len(contextKeys); {
 			if contextKeys[i] == key {
 				contextKeys = append(contextKeys[:i], contextKeys[i+1:]...)
+				break
 			} else {
 				i++
 			}
