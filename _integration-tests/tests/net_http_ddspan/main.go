@@ -11,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"orchestrion/integration"
+	"runtime"
+	"time"
 )
 
 func main() {
@@ -21,7 +23,9 @@ func main() {
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {
-		s.Shutdown(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		s.Shutdown(ctx)
 	})
 	log.Printf("Server shut down: %v", s.ListenAndServe())
 }
@@ -29,6 +33,7 @@ func main() {
 //dd:span test1:subfn
 func subfn(ctx context.Context) {
 	log.Printf("Nothing really to do here.")
+	runtime.KeepAlive(ctx)
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {

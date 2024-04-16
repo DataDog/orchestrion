@@ -170,7 +170,7 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 		}
 
 		res.Filename = i.outputFileFor(filename)
-		if err = os.MkdirAll(path.Dir(res.Filename), 0o750); err != nil {
+		if err := os.MkdirAll(path.Dir(res.Filename), 0o755); err != nil {
 			return res, err
 		}
 		err = os.WriteFile(res.Filename, postProcess(buf.Bytes()), 0o644)
@@ -225,7 +225,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[st
 	}
 
 	if mod && i.opts.PreserveLineInfo {
-		i.addLineDirectives(file, refs)
+		i.addLineDirectives(file)
 	}
 
 	return
@@ -257,7 +257,7 @@ func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstu
 // addLineDirectives travers a transformed AST and adds "//line file:line" directives where
 // necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
 // within a `<generated>` pseudo-file.
-func (i *Injector) addLineDirectives(file *dst.File, refs typed.ReferenceMap) {
+func (i *Injector) addLineDirectives(file *dst.File) {
 	inGen := false
 	var stack []bool
 	dst.Inspect(file, func(node dst.Node) bool {

@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"orchestrion/integration"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -72,7 +73,9 @@ VALUES (?, ?, datetime('now'));`, userid, content)
 	})
 
 	integration.OnSignal(func() {
-		s.Shutdown(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		s.Shutdown(ctx)
 	})
 
 	log.Print(s.ListenAndServe())

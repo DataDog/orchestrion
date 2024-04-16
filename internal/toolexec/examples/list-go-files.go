@@ -20,8 +20,9 @@ func ExampleListGofiles() {
 	proxy.ProcessCommand(cmd, ProcessCompile)
 }
 
-func ProcessCompile(cmd *proxy.CompileCommand) {
+func ProcessCompile(cmd *proxy.CompileCommand) error {
 	for _, f := range cmd.GoFiles() {
 		log.Println(f)
 	}
+	return nil
 }

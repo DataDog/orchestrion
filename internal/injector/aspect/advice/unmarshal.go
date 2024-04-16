@@ -24,7 +24,7 @@ func FromYAML(node *yaml.Node) (Advice, error) {
 
 	unmarshaler, ok := unmarshalers[key]
 	if !ok {
-		return nil, fmt.Errorf("line %d: unknown action type: %q", node.Line, key)
+		return nil, fmt.Errorf("line %d: unknown advice type: %q", node.Line, key)
 	}
 
 	act, err := unmarshaler(value)

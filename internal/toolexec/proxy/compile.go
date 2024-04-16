@@ -22,8 +22,9 @@ type compileFlagSet struct {
 // CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
-	Flags    compileFlagSet
-	BuildDir string
+	Flags compileFlagSet
+	// SourceDir is the directory containing source files that are in the command's inputs.
+	SourceDir string
 }
 
 func (cmd *CompileCommand) Type() CommandType { return CommandTypeCompile }
@@ -68,7 +69,7 @@ func parseCompileCommand(args []string) (Command, error) {
 	files := cmd.GoFiles()
 	// Some commands just print the tool version, in which case no go file will be provided as arg
 	if len(files) > 0 {
-		cmd.BuildDir = filepath.Dir(files[0])
+		cmd.SourceDir = filepath.Dir(files[0])
 	}
 	return &cmd, nil
 }

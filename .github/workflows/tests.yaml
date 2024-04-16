@@ -24,6 +24,15 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: v1.52.2
+          skip-cache: true # actions/setup-go has already done this
+      - name: Verify license headers
+        run: go run tools/headercheck/header_check.go
+      - name: vet
+        run: go vet ./...
+      - name: Verify LICENSE-3rdparty.csv
+        run: ./tools/verify-licenses.sh
+        env:
+          TMPDIR: ${{ runner.temp }}
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -36,7 +45,7 @@ jobs:
           go-version: "stable"
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
-        run: make test
+        run: go test -cover -covermode=atomic -race ./...
   integration-tests:
     runs-on: ubuntu-latest
     services:
@@ -59,9 +68,13 @@ jobs:
           go-version: "stable"
           cache-dependency-path: "**/*.sum"
       - name: Run Integration Tests
-        run: make integration-tests
+        run: ./integration-tests.sh
         env:
           TMPDIR: ${{ runner.temp }}
+      # Docker will leave stuff owned by root and the upload-artifact action
+      # will fail to scan the directories unless we do this...
+      - name: Fix output files ownership
+        run: sudo chown -R $USER _integration-tests/outputs
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()

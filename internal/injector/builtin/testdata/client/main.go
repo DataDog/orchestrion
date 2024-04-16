@@ -22,7 +22,7 @@ func main() {
 //line <generated>:1
 	//dd:startinstrument
 	{
-		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "v0.7.0-dev"}))
+		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "v0.7.0-dev.0"}))
 		defer tracer.Stop()
 	}
 	//dd:endinstrument

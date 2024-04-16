@@ -8,7 +8,18 @@
 package tools
 
 import (
-	_ "github.com/datadog/orchestrion/internal/injector/aspect/advice/code/generator"
-	_ "github.com/datadog/orchestrion/internal/injector/builtin/generator"
+	// Tool dependencies
+	_ "github.com/google/go-licenses"
 	_ "golang.org/x/tools/cmd/stringer"
+
+	// Instrumentation packages
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
