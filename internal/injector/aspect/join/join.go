@@ -41,7 +41,7 @@ type TypeName struct {
 	pointer bool
 }
 
-var typeNameRe = regexp.MustCompile(`\A(\*)?(?:([A-Za-z_][A-Za-z0-9_]+(?:/[A-Za-z_][A-Za-z0-9_]+)*)\.)?([A-Za-z_][A-Za-z0-9_]+)\z`)
+var typeNameRe = regexp.MustCompile(`\A(\*)?(?:([A-Za-z_][A-Za-z0-9_]+(?:/[A-Za-z_][A-Za-z0-9_]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
 
 func NewTypeName(n string) (tn TypeName, err error) {
 	matches := typeNameRe.FindStringSubmatch(n)
@@ -94,7 +94,16 @@ func (n *TypeName) Matches(node dst.Expr) bool {
 	}
 }
 
-func (n *TypeName) asCode() jen.Code {
+func (n *TypeName) AsNode() dst.Expr {
+	ident := dst.NewIdent(n.name)
+	ident.Path = n.path
+	if n.pointer {
+		return &dst.StarExpr{X: ident}
+	}
+	return ident
+}
+
+func (n *TypeName) AsCode() jen.Code {
 	str := bytes.NewBuffer(make([]byte, 0, 1+len(n.path)+len(n.name)))
 	if n.pointer {
 		str.WriteString("*")

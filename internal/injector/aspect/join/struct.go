@@ -6,11 +6,46 @@
 package join
 
 import (
+	"fmt"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
+
+type structDefinition struct {
+	typeName TypeName
+}
+
+// StructDefinition matches the definition of a particular struct given its fully qualified name.
+func StructDefinition(typeName TypeName) *structDefinition {
+	return &structDefinition{
+		typeName: typeName,
+	}
+}
+
+func (s *structDefinition) Matches(chain *node.Chain) bool {
+	if s.typeName.pointer {
+		// We can't ever match a pointer definition
+		return false
+	}
+
+	spec, ok := chain.Node.(*dst.TypeSpec)
+	if !ok || spec.Name == nil || spec.Name.Name != s.typeName.name {
+		return false
+	}
+
+	if _, ok := spec.Type.(*dst.StructType); !ok {
+		return false
+	}
+
+	return chain.ImportPath() == s.typeName.path
+}
+
+func (s *structDefinition) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "StructDefinition").Call(s.typeName.AsCode())
+}
 
 type structLiteral struct {
 	typeName TypeName
@@ -55,10 +90,26 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 }
 
 func (s *structLiteral) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.asCode(), jen.Lit(s.field))
+	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), jen.Lit(s.field))
 }
 
 func init() {
+	unmarshalers["struct-definition"] = func(node *yaml.Node) (Point, error) {
+		var spec string
+		if err := node.Decode(&spec); err != nil {
+			return nil, err
+		}
+
+		tn, err := NewTypeName(spec)
+		if err != nil {
+			return nil, err
+		}
+		if tn.pointer {
+			return nil, fmt.Errorf("struct-definition type must not be a pointer (got %q)", spec)
+		}
+
+		return StructDefinition(tn), nil
+	}
 	unmarshalers["struct-literal"] = func(node *yaml.Node) (Point, error) {
 		var spec struct {
 			Type  string

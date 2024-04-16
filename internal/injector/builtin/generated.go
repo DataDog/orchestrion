@@ -150,6 +150,14 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From yaml/go-runtime.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
+		Advice: []advice.Advice{
+			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
+			advice.InjectSourceFile("package runtime\n\nimport (\n  _ \"unsafe\" // for go:linkname\n)\n\n//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nfunc __dd_orchestrion_gls_get() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nfunc __dd_orchestrion_gls_set(val any) {\n  getg().m.curg.__dd_gls = val\n}"),
+		},
+	},
 	// From yaml/gorilla.yml
 	{
 		JoinPoint: join.FunctionCall("github.com/gorilla/mux.NewRouter"),
@@ -303,4 +311,4 @@ var RestorerMap = map[string]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:kU6rNHMbKaf5gwwsCHKkffqoG2laUUBu/Fks4kiTqIFXXte7KA0Y3dwIL6ZRd3EJFn6Oqg/5vAY70dB+EdLRTw=="
+const Checksum = "sha512:5pCLu294ZbGQAdwTIA3paSIdPLNtvYIVGyn09oYlEXSutfRHvgUHuYzcFSfbe7hWEoX8ovTnoxMaBupR+j1A4A=="

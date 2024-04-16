@@ -133,7 +133,7 @@ func (fo *signature) AsCode() jen.Code {
 		if len(fo.args) > 0 {
 			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
 				for _, arg := range fo.args {
-					g.Add(arg.asCode())
+					g.Add(arg.AsCode())
 				}
 			})
 		} else {
@@ -142,7 +142,7 @@ func (fo *signature) AsCode() jen.Code {
 		if len(fo.returns) > 0 {
 			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
 				for _, ret := range fo.returns {
-					g.Add(ret.asCode())
+					g.Add(ret.AsCode())
 				}
 			})
 		} else {
@@ -224,7 +224,7 @@ func (fo *receives) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs)
 }
 
 func (fo *receives) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.asCode())
+	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.AsCode())
 }
 
 type funcBody struct {

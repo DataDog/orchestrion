@@ -1,0 +1,29 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+%YAML 1.1
+---
+# Provides access to the Goroutine Local Storage (GLS) for other aspects to use.
+- join-point:
+    struct-definition: runtime.g
+  advice:
+    - add-struct-field:
+        name: __dd_gls
+        type: any
+    - inject-source-file: |-
+        package runtime
+
+        import (
+          _ "unsafe" // for go:linkname
+        )
+
+        //go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
+        func __dd_orchestrion_gls_get() any {
+          return getg().m.curg.__dd_gls
+        }
+
+        //go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set
+        func __dd_orchestrion_gls_set(val any) {
+          getg().m.curg.__dd_gls = val
+        }
