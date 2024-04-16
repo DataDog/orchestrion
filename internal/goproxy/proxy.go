@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+
+	"github.com/datadog/orchestrion/internal/log"
 )
 
 type config struct {
@@ -48,11 +50,7 @@ func WithToolexec(bin string, args ...string) Option {
 // Run takes a go directive (go build, go install, etc...) and applies
 // changes specified through opts to the command before running it in a
 // different process
-func Run(args []string, opts ...Option) error {
-	if len(args) == 0 {
-		return fmt.Errorf("empty command line arguments")
-	}
-
+func Run(goArgs []string, opts ...Option) error {
 	var cfg config
 	env := os.Environ()
 	for _, opt := range opts {
@@ -64,26 +62,47 @@ func Run(args []string, opts ...Option) error {
 		return fmt.Errorf("locating 'go' binary: %w", err)
 	}
 
-	argV := make([]string, 1, len(args)+3)
-	argV[0] = goBin
-	argV = append(argV, args...)
+	// Pre-allocate space for extra arguments...
+	argv := append(
+		append(
+			make([]string, 0, len(goArgs)+3),
+			goBin,
+		),
+		goArgs...,
+	)
 
-	switch cmd := args[0]; cmd {
-	// "go build" arguments are shared by build, clean, get, install, list, run, and test.
-	case "build", "clean", "get", "install", "list", "run", "test":
-		if cfg.toolexec != "" {
-			oldLen := len(argV)
-			// Add two slots to the argV array
-			argV = append(argV, "", "")
-			// Move all values from index 1 2 slots forward
-			copy(argV[4:], argV[2:oldLen])
-			// Fill in the two slots for toolexec.
-			argV[2] = "-toolexec"
-			argV[3] = cfg.toolexec
+	// The command may not be at index 0, if the `-C` flag is used (it is REQUIRED to occur first
+	// before anything else on the go command)
+	cmdIdx := 1
+	for {
+		if cmdIdx+2 < len(argv) && argv[cmdIdx] == "-C" {
+			cmdIdx += 2
+		} else if cmdIdx+1 < len(argv) && strings.HasPrefix(argv[cmdIdx], "-C") {
+			cmdIdx++
+		} else {
+			break
 		}
 	}
 
-	return syscall.Exec(argV[0], argV, env)
+	switch cmd := argv[cmdIdx]; cmd {
+	// "go build" arguments are shared by build, clean, get, install, list, run, and test.
+	case "build", "clean", "get", "install", "list", "run", "test":
+		if cfg.toolexec != "" {
+			log.Debugf("Adding -toolexec=%q argument\n", cfg.toolexec)
+
+			oldLen := len(argv)
+			// Add two slots to the argV array
+			argv = append(argv, "", "")
+			// Move all values after the cmdIdx 2 slots forward
+			copy(argv[cmdIdx+3:], argv[cmdIdx+1:oldLen])
+			// Fill in the two slots for toolexec.
+			argv[cmdIdx+1] = "-toolexec"
+			argv[cmdIdx+2] = cfg.toolexec
+		}
+	}
+
+	log.Tracef("exec: %q\n", argv)
+	return syscall.Exec(argv[0], argv, env)
 }
 
 var goBinPath string

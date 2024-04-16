@@ -15,6 +15,7 @@ import (
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/datadog/orchestrion/internal/toolexec/importcfg"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
@@ -28,8 +29,12 @@ var (
 )
 
 func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
+	log.SetContext("PHASE", "compile")
+	defer log.SetContext("PHASE", "")
+
 	for _, deny := range weavingDenyList {
 		if deny.MatchString(w.ImportPath) {
+			log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
 			// No weaving in those packages!
 			return nil
 		}
@@ -58,6 +63,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 			continue
 		}
 
+		log.Debugf("Modified source code: %q => %q\n", gofile, res.Filename)
 		if err := cmd.ReplaceParam(gofile, res.Filename); err != nil {
 			return fmt.Errorf("replacing %q with %q: %w", gofile, res.Filename, err)
 		}
@@ -84,6 +90,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 			continue
 		}
 
+		log.Debugf("Recording synthetic dependency: %q => %v\n", depImportPath, kind)
 		linkDeps.Add(depImportPath)
 
 		if kind == typed.ImportStatement {
@@ -97,6 +104,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 					// Already part of natural dependencies, nothing to do...
 					continue
 				}
+				log.Debugf("Recording transitive dependency: %q => %q\n", dep, archive)
 				reg.PackageFile[dep] = archive
 				regUpdated = true
 			}
@@ -122,6 +130,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return fmt.Errorf("writing %s file: %w", linkdeps.LinkDepsFilename, err)
 	}
 	cmd.OnClose(func() error {
+		log.Debugf("Adding %s file into %q\n", linkdeps.LinkDepsFilename, cmd.Flags.Output)
 		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
 		if err := child.Run(); err != nil {
 			return fmt.Errorf("running %q: %w", child.Args, err)
@@ -135,10 +144,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err error) {
 	const dotOriginal = ".original"
 
+	log.Tracef("Backing up original %q\n", filename)
 	if err := os.Rename(filename, filename+dotOriginal); err != nil {
 		return fmt.Errorf("renaming to %q: %w", path.Base(filename)+dotOriginal, err)
 	}
 
+	log.Debugf("Writing updated %q\n", filename)
 	if err := reg.WriteFile(filename); err != nil {
 		return fmt.Errorf("writing: %w", err)
 	}

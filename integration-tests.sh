@@ -96,6 +96,8 @@ for tdir in ./tests/*; do
         -v"${OUT_DIR}/${tname}:/output"                                                             \
         -eGOPROXY="${GOPROXY}"                                                                      \
         -eGOTMPDIR="/output/tmp"                                                                    \
+        -eORCHESTRION_LOG_LEVEL=TRACE                                                               \
+        -eORCHESTRION_LOG_FILE=/output/orchestrion-log/\$PID.log                                    \
         "${image}"                                                                                  \
         orchestrion go build -gcflags=all="-N -l" -work -o "/output/${tname}" "./tests/${tname}"    \
         || { fail "${tname}"; continue; }
