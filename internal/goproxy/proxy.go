@@ -57,7 +57,7 @@ func Run(goArgs []string, opts ...Option) error {
 		opt(&cfg)
 	}
 
-	goBin, err := goBin()
+	goBin, err := GoBin()
 	if err != nil {
 		return fmt.Errorf("locating 'go' binary: %w", err)
 	}
@@ -107,10 +107,10 @@ func Run(goArgs []string, opts ...Option) error {
 
 var goBinPath string
 
-// goBin returns the resolved path to the `go` command's binary. The result is cached to avoid
+// GoBin returns the resolved path to the `go` command's binary. The result is cached to avoid
 // looking it up multiple times. If the lookup fails, the error is returned and the result is not
 // cached.
-func goBin() (string, error) {
+func GoBin() (string, error) {
 	if goBinPath == "" {
 		goBin, err := exec.LookPath("go")
 		if err != nil {

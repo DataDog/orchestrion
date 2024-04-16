@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/log"
 )
 
@@ -27,13 +28,17 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 	toolexec := fmt.Sprintf("%q %q", os.Args[0], os.Args[1])
 
 	attemptedBuild := false // Whether we attempted a build already or not
+	// Retrieve parent Go command flags
+	args, err := prepareGoCommandArgs("list", "-toolexec", toolexec, "-json", "-deps", "-export", "--", importPath)
+	if err != nil {
+		return nil, fmt.Errorf("preparing go command %v: %w", args, err)
+	}
 	for {
-		cmd := exec.Command("go", "list", "-toolexec", toolexec, "-json", "-deps", "-export", "--", importPath)
+		cmd := exec.Command("go", args...)
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout
-
 		log.Tracef("Attempting to resolve %q using %q\n", importPath, cmd.Args)
-		if err := cmd.Run(); err != nil {
+		if err = cmd.Run(); err != nil {
 			return nil, fmt.Errorf("running %q: %w", cmd.Args, err)
 		}
 
@@ -75,11 +80,32 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 			return nil, fmt.Errorf("after `go build`: %s", err)
 		}
 
-		// Not found -- let's try to `go build` it so it's present and not stale.
+		// Not found or stale -- let's try to `go build` it so it's present and not stale.
+		// Retrieve original go command flags and pass them along
+		args, err = prepareGoCommandArgs("build", "-toolexec", toolexec, "--", importPath)
+		if err != nil {
+			return nil, fmt.Errorf("retrieving go command flags: %w", err)
+		}
 		log.Tracef("Attempting to build %q in order to satisfy dependency...\n", importPath)
-		if err := exec.Command("go", "build", "-toolexec", toolexec, "--", importPath).Run(); err != nil {
+		if err := exec.Command("go", args...).Run(); err != nil {
 			return nil, fmt.Errorf("building %q: %w", importPath, err)
 		}
 		attemptedBuild = true
 	}
+}
+
+// prepareGoCommandArgs injects the parent Go command's flags into the provided arguments
+// The result can be passed as args to a Go invocation through exec.Command()
+func prepareGoCommandArgs(cmd string, args ...string) ([]string, error) {
+	flags, err := goflags.Flags()
+	if err != nil {
+		return nil, fmt.Errorf("retrieving go command flags: %w", err)
+	}
+	slice := flags.Slice()
+
+	compound := make([]string, 1, 1+len(slice)+len(args))
+	compound[0] = cmd
+	compound = append(compound, slice...)
+	compound = append(compound, args...)
+	return compound, nil
 }

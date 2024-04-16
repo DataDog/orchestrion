@@ -89,17 +89,17 @@ for tdir in ./tests/*; do
     # Build the service binary
     rm -f "${cid}" # Docker run refuses to proceed if it already exists...
     echo "Building the service entry point:"
-    docker run --rm -t --net="${network}" --cidfile="${cid}" --quiet            \
-        -v"${ROOT_DIR}:/src" -w"/src/_integration-tests"                        \
-        -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                        \
-        -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"            \
-        -v"${OUT_DIR}/${tname}:/output"                                         \
-        -eGOPROXY="${GOPROXY}"                                                  \
-        -eGOTMPDIR="/output/tmp"                                                \
-        -eORCHESTRION_LOG_LEVEL=TRACE                                           \
-        -eORCHESTRION_LOG_FILE=/output/orchestrion-log/\$PID.log                \
-        "${image}"                                                              \
-        orchestrion go build -work -o "/output/${tname}" "./tests/${tname}"     \
+    docker run --rm -t --net="${network}" --cidfile="${cid}" --quiet                                \
+        -v"${ROOT_DIR}:/src" -w"/src/_integration-tests"                                            \
+        -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                                            \
+        -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"                                \
+        -v"${OUT_DIR}/${tname}:/output"                                                             \
+        -eGOPROXY="${GOPROXY}"                                                                      \
+        -eGOTMPDIR="/output/tmp"                                                                    \
+        -eORCHESTRION_LOG_LEVEL=TRACE                                                               \
+        -eORCHESTRION_LOG_FILE=/output/orchestrion-log/\$PID.log                                    \
+        "${image}"                                                                                  \
+        orchestrion go build -gcflags=all="-N -l" -work -o "/output/${tname}" "./tests/${tname}"    \
         || { fail "${tname}"; continue; }
 
     # Start the service in a Docker container
