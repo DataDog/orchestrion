@@ -175,6 +175,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("google.golang.org/grpc.Dial"),
 		Advice: []advice.Advice{
 			advice.AppendArgs(
+				join.MustTypeName("google.golang.org/grpc.DialOption"),
 				code.MustTemplate(
 					"grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())",
 					map[string]string{
@@ -196,6 +197,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
 		Advice: []advice.Advice{
 			advice.AppendArgs(
+				join.MustTypeName("google.golang.org/grpc.ServerOption"),
 				code.MustTemplate(
 					"grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())",
 					map[string]string{
@@ -311,4 +313,4 @@ var RestorerMap = map[string]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:5pCLu294ZbGQAdwTIA3paSIdPLNtvYIVGyn09oYlEXSutfRHvgUHuYzcFSfbe7hWEoX8ovTnoxMaBupR+j1A4A=="
+const Checksum = "sha512:K7Wx44EoT37GaznSSDHXAR6eaC+/xX8MucoH5IqZb+TPM5JyMPKMe573l9jI9B9GVkY2sEULLqwqcGsH013BGQ=="

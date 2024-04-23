@@ -729,19 +729,23 @@ grpc-client:
           function-call: google.golang.org/grpc.Dial
         advice:
           - append-args:
-              - imports: &imports
-                  instrument: github.com/datadog/orchestrion/instrument
-                template: instrument.GRPCStreamClientInterceptor()
-              - imports: *imports
-                template: instrument.GRPCUnaryClientInterceptor()
+              type: google.golang.org/grpc.DialOption
+              values:
+                - imports: &imports
+                    instrument: github.com/datadog/orchestrion/instrument
+                  template: instrument.GRPCStreamClientInterceptor()
+                - imports: *imports
+                  template: instrument.GRPCUnaryClientInterceptor()
       - join-point:
           function-call: google.golang.org/grpc.NewServer
         advice:
           - append-args:
-              - imports: *imports
-                template: instrument.GRPCStreamServerInterceptor()
-              - imports: *imports
-                template: instrument.GRPCUnaryServerInterceptor()
+              type: google.golang.org/grpc.ServerOption
+              values:
+                - imports: *imports
+                  template: instrument.GRPCStreamServerInterceptor()
+                - imports: *imports
+                  template: instrument.GRPCUnaryServerInterceptor()
 
   source: |
     package main
@@ -754,7 +758,8 @@ grpc-client:
     )
 
     func grpcClient() {
-      conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+      dialOpts := []grpc.DialOption{grpc.WithInsecure()}
+      conn, err := grpc.Dial("localhost:50051", dialOpts...)
       if err != nil {
         log.Fatal(err)
       }
@@ -790,10 +795,15 @@ grpc-client:
 
       //line input.go:10
       func grpcClient() {
-        conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(),
+        dialOpts := []grpc.DialOption{grpc.WithInsecure()}
+        conn, err := grpc.Dial("localhost:50051",
       //line <generated>:1
-          instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())
+          func(opts ...grpc.DialOption) []grpc.DialOption {
+            return append(opts, instrument.GRPCStreamClientInterceptor(), instrument.GRPCUnaryClientInterceptor())
+          }(
       //line input.go:12
+            dialOpts...)...)
+      //line input.go:13
         if err != nil {
           log.Fatal(err)
         }
@@ -809,7 +819,7 @@ grpc-client:
         s := grpc.NewServer(grpc.EmptyServerOption{},
       //line <generated>:1
           instrument.GRPCStreamServerInterceptor(), instrument.GRPCUnaryServerInterceptor())
-      //line input.go:25
+      //line input.go:26
         if err := s.Serve(ln); err != nil {
           log.Fatalf("failed to serve: %v", err)
         }
