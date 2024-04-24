@@ -41,7 +41,7 @@ type TypeName struct {
 	pointer bool
 }
 
-var typeNameRe = regexp.MustCompile(`\A(\*)?(?:([A-Za-z_][A-Za-z0-9_]+(?:/[A-Za-z_][A-Za-z0-9_]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
+var typeNameRe = regexp.MustCompile(`\A(\*)?\s*(?:([A-Za-z_][A-Za-z0-9_.-]+(?:/[A-Za-z_.-][A-Za-z0-9_.-]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
 
 func NewTypeName(n string) (tn TypeName, err error) {
 	matches := typeNameRe.FindStringSubmatch(n)
@@ -63,6 +63,12 @@ func MustTypeName(n string) (tn TypeName) {
 		panic(err)
 	}
 	return
+}
+
+// ImportPath returns the import path for this type name, or a blank string if
+// this refers to a local or built-in type.
+func (n *TypeName) ImportPath() string {
+	return n.path
 }
 
 func (n *TypeName) Matches(node dst.Expr) bool {
