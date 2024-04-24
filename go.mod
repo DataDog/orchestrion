@@ -13,7 +13,6 @@ require (
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/mod v0.16.0
 	golang.org/x/tools v0.19.0
 	google.golang.org/grpc v1.62.1
 	gopkg.in/DataDog/dd-trace-go.v1 v1.62.0
@@ -98,6 +97,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/mod v0.16.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
