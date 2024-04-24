@@ -6,15 +6,17 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha512"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
-	"time"
 
 	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/goproxy"
@@ -24,8 +26,6 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
-
-	"golang.org/x/mod/semver"
 )
 
 func main() {
@@ -76,37 +76,57 @@ func main() {
 			stdout := strings.Builder{}
 			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
 
-			versionString := version.Tag
-			if strings.HasPrefix(semver.Prerelease(version.Tag), "-dev") {
-				if bi, ok := debug.ReadBuildInfo(); ok {
-					var revision, vcsTime, modified string
-					for _, setting := range bi.Settings {
-						switch setting.Key {
-						case "vcs.revision":
-							revision = setting.Value
-						case "vcs.time":
-							vcsTime = setting.Value
-						case "vcs.modified":
-							modified = setting.Value
-						}
+			versionString := bytes.NewBufferString(version.Tag)
+			if bi, ok := debug.ReadBuildInfo(); ok {
+				var vcsModified bool
+				for _, setting := range bi.Settings {
+					if setting.Key == "vcs.modified" {
+						vcsModified = setting.Value == "true"
+						break
 					}
-					const compactTimeFormat = "20060102T150405Z0700"
-					switch modified {
-					case "": // No VCS information
-						versionString = fmt.Sprintf("%s+DEVEL-%s", versionString, time.Now().Format(compactTimeFormat))
-					case "true":
-						parsed, err := time.Parse(time.RFC3339, vcsTime)
-						if err != nil {
-							panic(err)
+				}
+
+				if vcsModified || bi.Main.Version == "(devel)" {
+					// If this binary was built with `go build`, it may have VCS information indicating the
+					// working directory was dirty (vcsModified). If it was produced with `go run`, it won't
+					// have VCS information, but the version may be `(devel)`, indicating it was built from a
+					// development branch. In either case, we add a checksum of the current binary to the
+					// version string so that development iteration builds aren't frustrated by GOCACHE.
+					// We would have wanted to use `bi.Main.Sum` and `bi.Deps.*.Sum` here instead, but the go
+					// toolchain does not produce `bi.Main.Sum`, which prevents detecting changes in the main
+					// module itself.
+					log.Tracef("Detected this build is from a dev tree: vcs.modified=%v; main.Version=%s\n", vcsModified, bi.Main.Version)
+
+					// Determine the current executable path. The file may not be the same as what is running
+					// in the current process (it might have been overwritten since), but this is an
+					// acceptable approximation.
+					exe, err := os.Executable()
+					if err != nil {
+						// If os.Executable fails, we fall back to os.Args[0].
+						log.Debugf("When determining executable path: %v\n", err)
+						exe = os.Args[0]
+					}
+
+					// We try to open the executable. If that fails, we won't be able to hash it, but we'll
+					// ignore this error. The consequence is that GOCACHE entries may be re-used when they
+					// shouldn't; which is only a problem on dev iteration. On Windows specifically, this may
+					// always fail due to being unable to open a running executable for reading.
+					if file, err := os.Open(exe); err == nil {
+						sha := sha512.New512_224()
+						var buffer [4_096]byte
+						if _, err := io.CopyBuffer(sha, file, buffer[:]); err == nil {
+							var buf [sha512.Size224]byte
+							fmt.Fprintf(versionString, "+%02x", sha.Sum(buf[:0]))
+						} else {
+							log.Debugf("When hashing executable file: %v\n", err)
 						}
-						versionString = fmt.Sprintf("%s+%s-DIRTY-%s", versionString, revision, parsed.Format(compactTimeFormat))
-					default:
-						versionString = fmt.Sprintf("%s+%s", versionString, revision)
+					} else {
+						log.Debugf("When opening executable file for hashing: %v\n", err)
 					}
 				}
 			}
-			log.Tracef("Appending orchestrion information to output: orchestrion@%s,%s\n", versionString, builtin.Checksum)
-			fmt.Printf("%s:orchestrion@%s,%s\n", strings.TrimSpace(stdout.String()), versionString, builtin.Checksum)
+			log.Tracef("Appending orchestrion information to output: orchestrion@%s,%s\n", versionString.String(), builtin.Checksum)
+			fmt.Printf("%s:orchestrion@%s,%s\n", strings.TrimSpace(stdout.String()), versionString.String(), builtin.Checksum)
 			return
 		}
 
