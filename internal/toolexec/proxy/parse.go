@@ -13,6 +13,10 @@ import (
 // ParseCommand parses the Go tool call and its arguments and returns it as a Command.
 // The go tool call path should be the first element of args
 func ParseCommand(args []string) (Command, error) {
+	if len(args) == 0 {
+		return nil, errors.New("unexpected empty command arguments")
+	}
+
 	cmdID := args[0]
 	args = args[0:]
 	cmdType, err := parseCommandID(cmdID)
