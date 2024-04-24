@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.0
+	github.com/fatih/color v1.15.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/gofiber/fiber/v2 v2.52.4
