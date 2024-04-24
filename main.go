@@ -26,6 +26,8 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
+	"github.com/dave/jennifer/jen"
+	"github.com/fatih/color"
 )
 
 func main() {
@@ -44,29 +46,69 @@ func main() {
 		printUsage(os.Args[0])
 		return
 	case "version":
-		fmt.Println(version.Tag)
+		if !requiredVersionOK {
+			warn := color.New(color.BgYellow, color.FgBlack)
+			warn.Fprintln(os.Stderr, "╭────────────────────────────────────────────────────────────────────────────────────╮")
+			warn.Fprintln(os.Stderr, "│ Warning: github.com/datadog/orchestrion does not appear to be listed in the go.mod │")
+			warn.Fprintln(os.Stderr, "│ file. Tracking orchestrion in go.mod ensures consistent, reproductible builds.     │")
+			warn.Fprintln(os.Stderr, "│ Run `orchestrion pin` to automatically add orchestrion to your go.mod file.        │")
+			warn.Fprintln(os.Stderr, "╰────────────────────────────────────────────────────────────────────────────────────╯")
+		}
+
+		if startupVersion := ensure.StartupVersion(); startupVersion != version.Tag {
+			fmt.Printf("%s (started via %s)\n", version.Tag, startupVersion)
+		} else {
+			fmt.Println(version.Tag)
+		}
+		return
+	case "pin":
+		if requiredVersionOK {
+			fmt.Fprintf(os.Stderr, "Orchestrion is already tracked in the go.mod file. Nothing to do!\n")
+			return
+		}
+
+		const orchestrionModule = "github.com/datadog/orchestrion"
+		func() {
+			tools := jen.NewFile("tools")
+			tools.HeaderComment("//go:build tools")
+			tools.Anon(orchestrionModule)
+
+			file, err := os.OpenFile("orchestrion.tool.go", os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o644)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to create tools.go file: %v\n", err)
+				os.Exit(1)
+			}
+			defer file.Close()
+			if err := tools.Render(file); err != nil {
+				// Try to remove the file (it likely contains garbage, if anything...). Ignore errors here.
+				_ = file.Close() // Close before attempting to remove
+				_ = os.Remove("orchestrion.tool.go")
+
+				fmt.Fprintf(os.Stderr, "Unable to generate tools.go source code: %v\n", err)
+				os.Exit(1)
+			}
+		}()
+
+		if err := exec.Command("go", "get", fmt.Sprintf("%s@%s", orchestrionModule, version.Tag)).Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running `go get %s@%s`: %v\n", orchestrionModule, version.Tag, err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Successfully added %s@%s to go.mod!", orchestrionModule, version.Tag)
+
 		return
 	case "go":
-		// Ensure we're using the correct version of the tooling...
-		if err := ensure.RequiredVersion(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to detect required version of orchestrion from go.mod: %v\n", err)
-			os.Exit(125)
-		}
-
-		// Process!
-		orchestrion, err := os.Executable()
-		if err != nil {
-			if orchestrion, err = filepath.Abs(os.Args[0]); err != nil {
-				orchestrion = os.Args[0]
-			}
-		}
-
-		if err := goproxy.Run(args, goproxy.WithToolexec(path.Clean(orchestrion), "toolexec")); err != nil {
+		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrionBinPath, "toolexec")); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v", err)
 			os.Exit(1)
 		}
 		return
 	case "toolexec":
+		if len(args) == 0 {
+			fmt.Fprintf(os.Stderr, "Error: no arguments provided to `orchestrion toolexec`\n")
+			os.Exit(2)
+		}
+
 		proxyCmd := proxy.MustParseCommand(args)
 		defer proxyCmd.Close()
 
@@ -97,21 +139,11 @@ func main() {
 					// module itself.
 					log.Tracef("Detected this build is from a dev tree: vcs.modified=%v; main.Version=%s\n", vcsModified, bi.Main.Version)
 
-					// Determine the current executable path. The file may not be the same as what is running
-					// in the current process (it might have been overwritten since), but this is an
-					// acceptable approximation.
-					exe, err := os.Executable()
-					if err != nil {
-						// If os.Executable fails, we fall back to os.Args[0].
-						log.Debugf("When determining executable path: %v\n", err)
-						exe = os.Args[0]
-					}
-
 					// We try to open the executable. If that fails, we won't be able to hash it, but we'll
 					// ignore this error. The consequence is that GOCACHE entries may be re-used when they
 					// shouldn't; which is only a problem on dev iteration. On Windows specifically, this may
 					// always fail due to being unable to open a running executable for reading.
-					if file, err := os.Open(exe); err == nil {
+					if file, err := os.Open(orchestrionBinPath); err == nil {
 						sha := sha512.New512_224()
 						var buffer [4_096]byte
 						if _, err := io.CopyBuffer(sha, file, buffer[:]); err == nil {
@@ -164,11 +196,33 @@ func printUsage(cmd string) {
 		"help",
 		"toolexec",
 		"version",
+		"pin",
 	}
 	fmt.Printf("Usage:\n    %s <command> [arguments]\n\n", cmd)
 	fmt.Println("Available commands:")
 	for _, cmd := range commands {
 		fmt.Printf("    %s\n", cmd)
 	}
-	fmt.Printf("\nFor more information, run %s help <command>\n", cmd)
+}
+
+var (
+	orchestrionBinPath string // The path to the current executable file
+	requiredVersionOK  bool   // Whether the go.mod version check succeeded
+)
+
+func init() {
+	// Ensure we're using the correct version of the tooling...
+	if err := ensure.RequiredVersion(); err != nil {
+		log.Debugf("Failed to detect required version fo orchestrion from go.mod: %v\n", err)
+	} else {
+		requiredVersionOK = true
+	}
+
+	var err error
+	if orchestrionBinPath, err = os.Executable(); err != nil {
+		if orchestrionBinPath, err = filepath.Abs(os.Args[0]); err != nil {
+			orchestrionBinPath = os.Args[0]
+		}
+	}
+	orchestrionBinPath = path.Clean(orchestrionBinPath)
 }

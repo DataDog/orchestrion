@@ -137,7 +137,7 @@ func TestRequiredVersion(t *testing.T) {
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}
 			mockGetenv := func(name string) string {
-				require.Equal(t, name, envVarRespawned)
+				require.Equal(t, name, envVarRespawnedFor)
 				return tc.envVarRespawned
 			}
 			var syscallExecCalled atomic.Bool

@@ -14,6 +14,7 @@ orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright 
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
 orchestrion,github.com/dustin/go-humanize,MIT,Copyright (c) 2005-2008  Dustin Sallings <dustin@spy.net>
 orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
+orchestrion,github.com/fatih/color,MIT,Copyright (c) 2013 Fatih Arslan
 orchestrion,github.com/gabriel-vasile/mimetype,MIT,Copyright (c) 2018-2020 Gabriel Vasile
 orchestrion,github.com/gin-contrib/sse,MIT,Copyright (c) 2014 Manuel Martínez-Almeida
 orchestrion,github.com/gin-gonic/gin,MIT,Copyright (c) 2014 Manuel Martínez-Almeida

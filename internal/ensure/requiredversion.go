@@ -21,7 +21,8 @@ import (
 
 const (
 	orchestrionPkgPath    = "github.com/datadog/orchestrion"
-	envVarRespawned       = "DD_ORCHESTRION_RESPAWNED_FOR"
+	envVarRespawnedFor    = "DD_ORCHESTRION_RESPAWNED_FOR"
+	envVarStartupVersion  = "DD_ORCHESTRION_STARTUP_VERSION"
 	envValRespawnReplaced = "<replaced>"
 )
 
@@ -43,6 +44,17 @@ func RequiredVersion() error {
 	return requiredVersion(goModVersion, os.Getenv, syscall.Exec, os.Args)
 }
 
+// StartupVersion returns the version of Orchestrion that has started this process. If this is the
+// same as version.Tag, this process hasn't needed to be re-started. This is useful to provide
+// complete information about proxied executions (e.g: in the output of `orchestrion version`),
+// in cases where a "globally" installed binary substituted itself for a version from `go.mod`.
+func StartupVersion() string {
+	if env := os.Getenv(envVarStartupVersion); env != "" {
+		return env
+	}
+	return version.Tag
+}
+
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
 // syscall.Exec functions as arguments to allow for easier testing. Panics if `osArgs` is 0-length.
 func requiredVersion(
@@ -61,7 +73,7 @@ func requiredVersion(
 		return nil
 	}
 
-	if respawn := osGetenv(envVarRespawned); respawn != "" && respawn != envValRespawnReplaced {
+	if respawn := osGetenv(envVarRespawnedFor); respawn != "" && respawn != envValRespawnReplaced {
 		// We're already re-spawning for a non-local version, so we should not be re-spawning again...
 		// If that were the case, we'd likely end up in an infinite loop of re-spawning, which is very
 		// much undesirable.
@@ -98,7 +110,11 @@ func requiredVersion(
 	copy(args[3:], osArgs[1:])
 
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("%s=%s", envVarRespawned, rVersion))
+	env = append(
+		env,
+		fmt.Sprintf("%s=%s", envVarRespawnedFor, rVersion),
+		fmt.Sprintf("%s=%s", envVarStartupVersion, version.Tag),
+	)
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
