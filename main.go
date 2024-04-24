@@ -80,6 +80,10 @@ func main() {
 			}
 			defer file.Close()
 			if err := tools.Render(file); err != nil {
+				// Try to remove the file (it likely contains garbage, if anything...). Ignore errors here.
+				_ = file.Close() // Close before attempting to remove
+				_ = os.Remove("orchestrion.tool.go")
+
 				fmt.Fprintf(os.Stderr, "Unable to generate tools.go source code: %v\n", err)
 				os.Exit(1)
 			}
