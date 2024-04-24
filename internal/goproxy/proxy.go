@@ -71,33 +71,35 @@ func Run(goArgs []string, opts ...Option) error {
 		goArgs...,
 	)
 
-	// The command may not be at index 0, if the `-C` flag is used (it is REQUIRED to occur first
-	// before anything else on the go command)
-	cmdIdx := 1
-	for {
-		if cmdIdx+2 < len(argv) && argv[cmdIdx] == "-C" {
-			cmdIdx += 2
-		} else if cmdIdx+1 < len(argv) && strings.HasPrefix(argv[cmdIdx], "-C") {
-			cmdIdx++
-		} else {
-			break
+	if len(argv) > 1 {
+		// The command may not be at index 0, if the `-C` flag is used (it is REQUIRED to occur first
+		// before anything else on the go command)
+		cmdIdx := 1
+		for {
+			if cmdIdx+2 < len(argv) && argv[cmdIdx] == "-C" {
+				cmdIdx += 2
+			} else if cmdIdx+1 < len(argv) && strings.HasPrefix(argv[cmdIdx], "-C") {
+				cmdIdx++
+			} else {
+				break
+			}
 		}
-	}
 
-	switch cmd := argv[cmdIdx]; cmd {
-	// "go build" arguments are shared by build, clean, get, install, list, run, and test.
-	case "build", "clean", "get", "install", "list", "run", "test":
-		if cfg.toolexec != "" {
-			log.Debugf("Adding -toolexec=%q argument\n", cfg.toolexec)
+		switch cmd := argv[cmdIdx]; cmd {
+		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
+		case "build", "clean", "get", "install", "list", "run", "test":
+			if cfg.toolexec != "" {
+				log.Debugf("Adding -toolexec=%q argument\n", cfg.toolexec)
 
-			oldLen := len(argv)
-			// Add two slots to the argV array
-			argv = append(argv, "", "")
-			// Move all values after the cmdIdx 2 slots forward
-			copy(argv[cmdIdx+3:], argv[cmdIdx+1:oldLen])
-			// Fill in the two slots for toolexec.
-			argv[cmdIdx+1] = "-toolexec"
-			argv[cmdIdx+2] = cfg.toolexec
+				oldLen := len(argv)
+				// Add two slots to the argV array
+				argv = append(argv, "", "")
+				// Move all values after the cmdIdx 2 slots forward
+				copy(argv[cmdIdx+3:], argv[cmdIdx+1:oldLen])
+				// Fill in the two slots for toolexec.
+				argv[cmdIdx+1] = "-toolexec"
+				argv[cmdIdx+2] = cfg.toolexec
+			}
 		}
 	}
 
