@@ -153,7 +153,6 @@ func main() {
 
 		return
 	case "warmup":
-		autoPinOrchestrion()
 		goproxy.Run(
 			[]string{
 				"build",
