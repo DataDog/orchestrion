@@ -13,6 +13,7 @@ import (
 	_ "golang.org/x/tools/cmd/stringer"
 
 	// Instrumentation packages
+	_ "github.com/datadog/orchestrion/instrument"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
