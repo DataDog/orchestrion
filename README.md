@@ -72,6 +72,27 @@ will include support for OpenTelemetry tracing as well.
     $ orchestrion go build .
     $ orchestrion go test -race ./...
     ```
+
+    If you have not run `orchestrion pin`, you may see a message similar to the following appear, as `orchestrion pin`
+    is automatically executed:
+    ```
+    ╭──────────────────────────────────────────────────────────────────────────────╮
+    │                                                                              │
+    │  Warning: github.com/datadog/orchestrion is not present in your go.mod       │
+    │  file.                                                                       │
+    │  In order to ensure build reliability and reproductibility, orchestrion      │
+    │  will now add itself in your go.mod file by:                                 │
+    │                                                                              │
+    │      1. creating a new file named orchestrion.tool.go                        │
+    │      2. running go get github.com/datadog/orchestrion@v0.7.0-dev.2           │
+    │      3. running go mod tidy                                                  │
+    │                                                                              │
+    │  You should commit the resulting changes into your source control system.    │
+    │                                                                              │
+    ╰──────────────────────────────────────────────────────────────────────────────╯
+    ```
+
+
     <details><summary>Alternative</summary>
 
     > _Orchestrion_ at the core is a standard Go toolchain `-toolexec` proxy. Instead of using `orchestrion go`, you can
