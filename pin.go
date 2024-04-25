@@ -56,6 +56,10 @@ func autoPinOrchestrion() {
 		if w, _, err := term.GetSize(int(os.Stderr.Fd())); err == nil {
 			box.Width(w - box.GetHorizontalMargins() - box.GetHorizontalBorderSize())
 		}
+
+		stylePath = stylePath.Foreground(lipgloss.ANSIColor(4)).Underline(true)
+		styleFile = styleFile.Foreground(lipgloss.ANSIColor(2)).Underline(true)
+		styleCmd = styleCmd.Foreground(lipgloss.ANSIColor(5)).Bold(true).Underline(true)
 	} else {
 		fmt.Fprintf(os.Stderr, "Version check error: %v\n", requiredVersionError)
 	}
@@ -66,16 +70,16 @@ func autoPinOrchestrion() {
 	builder.WriteString(stylePath.Render(orchestrionImportPath))
 	builder.WriteString(" is not present in your ")
 	builder.WriteString(styleFile.Render("go.mod"))
-	builder.WriteString(" file. In order to ensure build reliability and reproductibility, orchestrion")
-	builder.WriteString(" will now create a new file named ")
-	builder.WriteString(styleFile.Render(orchestrionToolGo))
-	builder.WriteString(", run ")
-	builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
-	builder.WriteString(" and ")
-	builder.WriteString(styleCmd.Render("go mod tidy"))
-	builder.WriteString(" to register orchestrion in your ")
+	builder.WriteString(" file.\nIn order to ensure build reliability and reproductibility, orchestrion")
+	builder.WriteString(" will now add itself in your ")
 	builder.WriteString(styleFile.Render("go.mod"))
-	builder.WriteString(" file.")
+	builder.WriteString(" file by:\n\n\t1. creating a new file named ")
+	builder.WriteString(styleFile.Render(orchestrionToolGo))
+	builder.WriteString("\n\t2. running ")
+	builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
+	builder.WriteString("\n\t3. running ")
+	builder.WriteString(styleCmd.Render("go mod tidy"))
+	builder.WriteString("\n\nYou should commit the resulting changes into your source control system.")
 
 	message := builder.String()
 	fmt.Fprintln(os.Stderr, box.Render(message))
