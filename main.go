@@ -160,6 +160,7 @@ func main() {
 		}
 		defer os.RemoveAll(tmp)
 
+		log.Tracef("Initializing warm-up module in %q\n", tmp)
 		var stderr bytes.Buffer
 		cmd := exec.Command("go", "mod", "init", "orchestrion-warmup")
 		cmd.Dir = tmp
@@ -172,6 +173,7 @@ func main() {
 			os.Exit(1)
 		}
 
+		log.Tracef("Running 'orchestrion pin' in the temporary module...\n")
 		stderr.Reset()
 		cmd = exec.Command(orchestrionBinPath, "pin")
 		cmd.Dir = tmp
@@ -184,8 +186,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		stderr.Reset()
-		cmd = exec.Command(orchestrionBinPath, "go", "build",
+		log.Tracef("Running `go build -v <modules>` in the temporary module...\n")
+		buildArgs := make([]string, 0, 2+len(args)+11)
+		buildArgs = append(buildArgs, "go", "build")
+		buildArgs = append(buildArgs, args...)
+		buildArgs = append(buildArgs,
 			// All packages we may be instrumenting, plus the standard library.
 			"github.com/datadog/orchestrion/instrument",
 			"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
@@ -199,13 +204,12 @@ func main() {
 			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 			"std",
 		)
+		cmd = exec.Command(orchestrionBinPath, buildArgs...)
 		cmd.Dir = tmp
-		cmd.Stderr = &stderr
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Warm-up build failed: %v\n", err)
-			if stderr.Len() > 0 {
-				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
-			}
 			os.Exit(1)
 		}
 		return

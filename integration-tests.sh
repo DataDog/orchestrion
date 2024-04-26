@@ -81,7 +81,7 @@ docker run --rm -t --net="${network}"  --quiet                                  
         -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"            \
         -eGOPROXY="${GOPROXY}"                                                  \
         "${image}"                                                              \
-        "orchestrion" "warmup"
+        "orchestrion" "warmup" "-v"
 
 ## Run all the tests
 cd "${ROOT_DIR}/_integration-tests"
