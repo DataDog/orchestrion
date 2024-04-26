@@ -73,6 +73,16 @@ image=$(cat "${iid}")
 # Make all of GO environment variables available without shelling out to `go env` again...
 eval $(go env)
 
+# Warm up the go build artifact cache to speed up subsequent builds
+echo "Priming the go build cache with Orchestrion-ready objects..."
+docker run --rm -t --net="${network}"  --quiet                                  \
+        -v"${ROOT_DIR}:${ROOT_DIR}"                                             \
+        -v"${GOCACHE}:${GOCACHE}" -eGOCACHE="${GOCACHE}"                        \
+        -v"${GOMODCACHE}:${GOMODCACHE}" -eGOMODCACHE="${GOMODCACHE}"            \
+        -eGOPROXY="${GOPROXY}"                                                  \
+        "${image}"                                                              \
+        "orchestrion" "warmup"
+
 ## Run all the tests
 cd "${ROOT_DIR}/_integration-tests"
 for tdir in ./tests/*; do

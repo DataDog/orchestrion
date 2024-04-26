@@ -153,24 +153,62 @@ func main() {
 
 		return
 	case "warmup":
-		goproxy.Run(
-			[]string{
-				"build",
-				// All packages we may be instrumenting, plus the standard library.
-				"github.com/datadog/orchestrion/instrument",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
-				"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
-				"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
-				"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
-				"std",
-			},
-			goproxy.WithToolexec(orchestrionBinPath, "toolexec"),
+		tmp, err := os.MkdirTemp("", "orchestrion-warmup-*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to create temporary directory: %v\n", err)
+			os.Exit(1)
+		}
+		defer os.RemoveAll(tmp)
+
+		var stderr bytes.Buffer
+		cmd := exec.Command("go", "mod", "init", "orchestrion-warmup")
+		cmd.Dir = tmp
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to initialize temporary module: %v\n", err)
+			if stderr.Len() > 0 {
+				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+			}
+			os.Exit(1)
+		}
+
+		stderr.Reset()
+		cmd = exec.Command(orchestrionBinPath, "pin")
+		cmd.Dir = tmp
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module: %v\n", err)
+			if stderr.Len() > 0 {
+				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+			}
+			os.Exit(1)
+		}
+
+		stderr.Reset()
+		cmd = exec.Command(orchestrionBinPath, "go", "build",
+			// All packages we may be instrumenting, plus the standard library.
+			"github.com/datadog/orchestrion/instrument",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+			"std",
 		)
+		cmd.Dir = tmp
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warm-up build failed: %v\n", err)
+			if stderr.Len() > 0 {
+				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+			}
+			os.Exit(1)
+		}
+		return
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)
 		printUsage(os.Args[0])
