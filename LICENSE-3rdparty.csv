@@ -8,13 +8,14 @@ orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,"Copyright (c) 2014-2020 Prim
 orchestrion,github.com/DataDog/sketches-go/ddsketch,Apache-2.0,"Copyright 2021 DataDog, Inc. | Copyright 2021 Datadog, Inc."
 orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
 orchestrion,github.com/andybalholm/brotli,MIT,"Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors."
+orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
 orchestrion,github.com/cespare/xxhash/v2,MIT,Copyright (c) 2016 Caleb Spare
+orchestrion,github.com/charmbracelet/lipgloss,MIT,"Copyright (c) 2021-2023 Charmbracelet, Inc"
 orchestrion,github.com/datadog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
 orchestrion,github.com/dustin/go-humanize,MIT,Copyright (c) 2005-2008  Dustin Sallings <dustin@spy.net>
 orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
-orchestrion,github.com/fatih/color,MIT,Copyright (c) 2013 Fatih Arslan
 orchestrion,github.com/gabriel-vasile/mimetype,MIT,Copyright (c) 2018-2020 Gabriel Vasile
 orchestrion,github.com/gin-contrib/sse,MIT,Copyright (c) 2014 Manuel Martínez-Almeida
 orchestrion,github.com/gin-gonic/gin,MIT,Copyright (c) 2014 Manuel Martínez-Almeida
@@ -34,9 +35,12 @@ orchestrion,github.com/klauspost/compress,Apache-2.0,Copyright (c) 2012 The Go A
 orchestrion,github.com/labstack/echo/v4,MIT,Copyright (c) 2021 LabStack
 orchestrion,github.com/labstack/gommon,MIT,Copyright (c) 2018 labstack
 orchestrion,github.com/leodido/go-urn,MIT,Copyright (c) 2018 Leonardo Di Donato
+orchestrion,github.com/lucasb-eyer/go-colorful,MIT,Copyright (c) 2013 Lucas Beyer
 orchestrion,github.com/mattn/go-colorable,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
 orchestrion,github.com/mattn/go-isatty,MIT,unknown
 orchestrion,github.com/mattn/go-runewidth,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
+orchestrion,github.com/muesli/reflow,MIT,Copyright (c) 2019 Christian Muehlhaeuser
+orchestrion,github.com/muesli/termenv,MIT,Copyright (c) 2019 Christian Muehlhaeuser
 orchestrion,github.com/outcaste-io/ristretto,Apache-2.0,unknown
 orchestrion,github.com/outcaste-io/ristretto/z,MIT,unknown
 orchestrion,github.com/pelletier/go-toml/v2,MIT,"Copyright (c) 2013 - 2022 Thomas Pelletier, Eric Anderton"
@@ -62,6 +66,7 @@ orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright (c) 2009 The Go Autho
 orchestrion,golang.org/x/net,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/sys/unix,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/sys/windows,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
+orchestrion,golang.org/x/term,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/text,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/time/rate,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.

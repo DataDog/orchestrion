@@ -26,8 +26,6 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
-	"github.com/dave/jennifer/jen"
-	"github.com/fatih/color"
 )
 
 func main() {
@@ -46,15 +44,6 @@ func main() {
 		printUsage(os.Args[0])
 		return
 	case "version":
-		if !requiredVersionOK {
-			warn := color.New(color.BgYellow, color.FgBlack)
-			warn.Fprintln(os.Stderr, "╭────────────────────────────────────────────────────────────────────────────────────╮")
-			warn.Fprintln(os.Stderr, "│ Warning: github.com/datadog/orchestrion does not appear to be listed in the go.mod │")
-			warn.Fprintln(os.Stderr, "│ file. Tracking orchestrion in go.mod ensures consistent, reproductible builds.     │")
-			warn.Fprintln(os.Stderr, "│ Run `orchestrion pin` to automatically add orchestrion to your go.mod file.        │")
-			warn.Fprintln(os.Stderr, "╰────────────────────────────────────────────────────────────────────────────────────╯")
-		}
-
 		if startupVersion := ensure.StartupVersion(); startupVersion != version.Tag {
 			fmt.Printf("%s (started via %s)\n", version.Tag, startupVersion)
 		} else {
@@ -62,42 +51,13 @@ func main() {
 		}
 		return
 	case "pin":
-		if requiredVersionOK {
-			fmt.Fprintf(os.Stderr, "Orchestrion is already tracked in the go.mod file. Nothing to do!\n")
-			return
-		}
-
-		const orchestrionModule = "github.com/datadog/orchestrion"
-		func() {
-			tools := jen.NewFile("tools")
-			tools.HeaderComment("//go:build tools")
-			tools.Anon(orchestrionModule)
-
-			file, err := os.OpenFile("orchestrion.tool.go", os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o644)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to create tools.go file: %v\n", err)
-				os.Exit(1)
-			}
-			defer file.Close()
-			if err := tools.Render(file); err != nil {
-				// Try to remove the file (it likely contains garbage, if anything...). Ignore errors here.
-				_ = file.Close() // Close before attempting to remove
-				_ = os.Remove("orchestrion.tool.go")
-
-				fmt.Fprintf(os.Stderr, "Unable to generate tools.go source code: %v\n", err)
-				os.Exit(1)
-			}
-		}()
-
-		if err := exec.Command("go", "get", fmt.Sprintf("%s@%s", orchestrionModule, version.Tag)).Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error running `go get %s@%s`: %v\n", orchestrionModule, version.Tag, err)
+		if err := pinOrchestrion(); err != nil {
+			fmt.Fprintf(os.Stderr, "An error occurred: %v\n", err)
 			os.Exit(1)
 		}
-
-		fmt.Printf("Successfully added %s@%s to go.mod!", orchestrionModule, version.Tag)
-
 		return
 	case "go":
+		autoPinOrchestrion()
 		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrionBinPath, "toolexec")); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v", err)
 			os.Exit(1)
@@ -111,6 +71,14 @@ func main() {
 
 		proxyCmd := proxy.MustParseCommand(args)
 		defer proxyCmd.Close()
+		switch proxyCmd.Type() {
+		case proxy.CommandTypeCompile, proxy.CommandTypeLink:
+			// We only do `autoPinOrchestrion` in case the command is a "known" and interesting one. It is
+			// otherwise a waste of time and risks failing due to working directory issues. For example,
+			// the `asm` commands run with the current working directory set to the source tree of the
+			// package, whereas `compile` and `link` run in the directrory where the `go.mod` file is.
+			autoPinOrchestrion()
+		}
 
 		if proxyCmd.ShowVersion() {
 			log.Tracef("Toolexec version command: %q\n", proxyCmd.Args())
@@ -184,6 +152,67 @@ func main() {
 		proxy.MustRunCommand(proxyCmd)
 
 		return
+	case "warmup":
+		tmp, err := os.MkdirTemp("", "orchestrion-warmup-*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to create temporary directory: %v\n", err)
+			os.Exit(1)
+		}
+		defer os.RemoveAll(tmp)
+
+		log.Tracef("Initializing warm-up module in %q\n", tmp)
+		var stderr bytes.Buffer
+		cmd := exec.Command("go", "mod", "init", "orchestrion-warmup")
+		cmd.Dir = tmp
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to initialize temporary module (%q): %v\n", cmd.Args, err)
+			if stderr.Len() > 0 {
+				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+			}
+			os.Exit(1)
+		}
+
+		log.Tracef("Running 'orchestrion pin' in the temporary module...\n")
+		stderr.Reset()
+		cmd = exec.Command(orchestrionBinPath, "pin")
+		cmd.Dir = tmp
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module (%q): %v\n", cmd.Args, err)
+			if stderr.Len() > 0 {
+				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+			}
+			os.Exit(1)
+		}
+
+		log.Tracef("Running `go build -v <modules>` in the temporary module...\n")
+		buildArgs := make([]string, 0, 2+len(args)+11)
+		buildArgs = append(buildArgs, "go", "build")
+		buildArgs = append(buildArgs, args...)
+		buildArgs = append(buildArgs,
+			// All packages we may be instrumenting, plus the standard library.
+			"github.com/datadog/orchestrion/instrument",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
+			"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+			"std",
+		)
+		cmd = exec.Command(orchestrionBinPath, buildArgs...)
+		cmd.Dir = tmp
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warm-up build failed (%q): %v\n", cmd.Args, err)
+			os.Exit(1)
+		}
+		return
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)
 		printUsage(os.Args[0])
@@ -197,6 +226,7 @@ func printUsage(cmd string) {
 		"toolexec",
 		"version",
 		"pin",
+		"warmup",
 	}
 	fmt.Printf("Usage:\n    %s <command> [arguments]\n\n", cmd)
 	fmt.Println("Available commands:")
@@ -207,17 +237,9 @@ func printUsage(cmd string) {
 
 var (
 	orchestrionBinPath string // The path to the current executable file
-	requiredVersionOK  bool   // Whether the go.mod version check succeeded
 )
 
 func init() {
-	// Ensure we're using the correct version of the tooling...
-	if err := ensure.RequiredVersion(); err != nil {
-		log.Debugf("Failed to detect required version fo orchestrion from go.mod: %v\n", err)
-	} else {
-		requiredVersionOK = true
-	}
-
 	var err error
 	if orchestrionBinPath, err = os.Executable(); err != nil {
 		if orchestrionBinPath, err = filepath.Abs(os.Args[0]); err != nil {
