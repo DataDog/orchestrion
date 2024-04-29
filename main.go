@@ -166,7 +166,7 @@ func main() {
 		cmd.Dir = tmp
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to initialize temporary module: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Unable to initialize temporary module (%q): %v\n", cmd.Args, err)
 			if stderr.Len() > 0 {
 				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
 			}
@@ -179,7 +179,7 @@ func main() {
 		cmd.Dir = tmp
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module (%q): %v\n", cmd.Args, err)
 			if stderr.Len() > 0 {
 				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
 			}
@@ -209,7 +209,7 @@ func main() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warm-up build failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Warm-up build failed (%q): %v\n", cmd.Args, err)
 			os.Exit(1)
 		}
 		return
