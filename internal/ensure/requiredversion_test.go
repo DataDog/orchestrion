@@ -38,7 +38,7 @@ func TestGoModVersion(t *testing.T) {
 			goMod := []string{
 				"module test_case",
 				"",
-				"go 1.20",
+				"go 1.21",
 				"",
 			}
 			if test.version != "" {

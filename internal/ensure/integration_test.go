@@ -58,7 +58,7 @@ func Test(t *testing.T) {
 			goMod := []string{
 				"module integration_test_case",
 				"",
-				"go 1.20",
+				"go 1.21",
 				"",
 			}
 

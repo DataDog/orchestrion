@@ -1,6 +1,6 @@
 module github.com/datadog/orchestrion
 
-go 1.20
+go 1.21
 
 require (
 	github.com/charmbracelet/lipgloss v0.10.0

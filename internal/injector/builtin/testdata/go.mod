@@ -1,6 +1,6 @@
 module github.com/datadog/orchestrion/internal/injector/builtin/testdata
 
-go 1.20
+go 1.21
 
 require (
 	github.com/datadog/orchestrion v0.6.0
