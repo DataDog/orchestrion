@@ -4,6 +4,7 @@ orchestrion,github.com/DataDog/datadog-agent/pkg/obfuscate,Apache-2.0,"Copyright
 orchestrion,github.com/DataDog/datadog-agent/pkg/remoteconfig/state,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-go/v5/statsd,MIT,"Copyright (c) 2015 Datadog, Inc"
 orchestrion,github.com/DataDog/go-libddwaf/v2,Apache-2.0,"Copyright 2016-present Datadog, Inc."
+orchestrion,github.com/DataDog/go-sqllexer,MIT,"Copyright (c) 2023 Datadog, Inc."
 orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,"Copyright (c) 2014-2020 Prime Directive, Inc. All rights reserved."
 orchestrion,github.com/DataDog/sketches-go/ddsketch,Apache-2.0,"Copyright 2021 DataDog, Inc. | Copyright 2021 Datadog, Inc."
 orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
@@ -32,6 +33,8 @@ orchestrion,github.com/gorilla/mux,BSD-3-Clause,Copyright (c) 2023 The Gorilla A
 orchestrion,github.com/hashicorp/errwrap,MPL-2.0,unknown
 orchestrion,github.com/hashicorp/go-multierror,MPL-2.0,unknown
 orchestrion,github.com/klauspost/compress,Apache-2.0,Copyright (c) 2012 The Go Authors. All rights reserved. | Copyright (c) 2019 Klaus Post. All rights reserved. | Copyright 2016-2017 The New York Times Company | Copyright (c) 2015 Klaus Post | Copyright (c) 2011 The Snappy-Go Authors. All rights reserved. | Copyright 2016 The filepathx Authors
+orchestrion,github.com/klauspost/compress/internal/snapref,BSD-3-Clause,Copyright (c) 2011 The Snappy-Go Authors. All rights reserved.
+orchestrion,github.com/klauspost/compress/zstd/internal/xxhash,MIT,Copyright (c) 2016 Caleb Spare
 orchestrion,github.com/labstack/echo/v4,MIT,Copyright (c) 2021 LabStack
 orchestrion,github.com/labstack/gommon,MIT,Copyright (c) 2018 labstack
 orchestrion,github.com/leodido/go-urn,MIT,Copyright (c) 2018 Leonardo Di Donato
@@ -43,7 +46,7 @@ orchestrion,github.com/muesli/reflow,MIT,Copyright (c) 2019 Christian Muehlhaeus
 orchestrion,github.com/muesli/termenv,MIT,Copyright (c) 2019 Christian Muehlhaeuser
 orchestrion,github.com/outcaste-io/ristretto,Apache-2.0,unknown
 orchestrion,github.com/outcaste-io/ristretto/z,MIT,unknown
-orchestrion,github.com/pelletier/go-toml/v2,MIT,"Copyright (c) 2013 - 2022 Thomas Pelletier, Eric Anderton"
+orchestrion,github.com/pelletier/go-toml/v2,MIT,Copyright (c) 2021 - 2023 Thomas Pelletier
 orchestrion,github.com/philhofer/fwd,MIT,"Copyright (c) 2014-2015, Philip Hofer"
 orchestrion,github.com/pkg/errors,BSD-2-Clause,"Copyright (c) 2015, Dave Cheney <dave@cheney.net>"
 orchestrion,github.com/rivo/uniseg,MIT,Copyright (c) 2019 Oliver Kuederle
@@ -64,6 +67,7 @@ orchestrion,go.uber.org/atomic,MIT,"Copyright (c) 2016 Uber Technologies, Inc."
 orchestrion,golang.org/x/crypto,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/net,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
+orchestrion,golang.org/x/sync/errgroup,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/sys/unix,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/sys/windows,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,golang.org/x/term,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
