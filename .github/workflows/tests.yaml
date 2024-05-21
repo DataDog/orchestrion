@@ -33,6 +33,7 @@ jobs:
         run: ./tools/verify-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +47,7 @@ jobs:
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: go test -cover -covermode=atomic -race ./...
+
   integration-tests:
     runs-on: ubuntu-latest
     services:
@@ -84,6 +86,30 @@ jobs:
           path: _integration-tests/outputs
           if-no-files-found: error # That would be very unexpected
 
+  windows-tests:
+    runs-on: windows-latest
+    services:
+      testagent:
+        image: ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:v1.11.0
+        ports:
+          - 8126:8126
+        env:
+          # See documentation for configuration:
+          # https://github.com/DataDog/dd-apm-test-agent#environment-variables
+          ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
+          LOG_LEVEL: DEBUG
+          TRACE_LANGUAGE: golang
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: 'DataDog/orchestrion'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+          cache-dependency-path: "**/*.sum"
+      - name: Run Windows Tests
+        run: ./integration-tests.ps1
+
   # This is just a join point intended to simplify branch protection settings
   complete:
     runs-on: ubuntu-latest
@@ -91,6 +117,7 @@ jobs:
       - lint
       - unit-tests
       - integration-tests
+      - windows-tests
     steps:
       - name: Done
         run: echo "OK"
