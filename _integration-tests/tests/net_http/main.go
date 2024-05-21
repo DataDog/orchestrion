@@ -11,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"orchestrion/integration"
+	"os"
+	"syscall"
 	"time"
 )
 
@@ -30,6 +32,13 @@ func main() {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/quit" {
+		log.Print("Shutdown requested...")
+		defer syscall.Kill(os.Getpid(), syscall.SIGTERM)
+		w.Write([]byte("Goodbye\n"))
+		return
+	}
+
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

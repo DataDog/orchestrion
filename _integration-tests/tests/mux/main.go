@@ -31,6 +31,15 @@ func main() {
 		Addr:    ":8088",
 		Handler: r,
 	}
+
+	r.HandleFunc("/quit",
+		//dd:ignore
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Print("Shutdown requested...")
+			defer s.Shutdown(context.Background())
+			w.Write([]byte(`{"message":"Goodbye"}\n`))
+		}).Methods("GET")
+
 	integration.OnSignal(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()

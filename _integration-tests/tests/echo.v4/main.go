@@ -22,6 +22,13 @@ func main() {
 			"message": "pong",
 		})
 	})
+	r.GET("/quit", func(c echo.Context) error {
+		log.Print("Shutdown requested...")
+		defer r.Shutdown(context.Background())
+		return c.JSON(http.StatusOK, map[string]any{
+			"message": "Goodbye",
+		})
+	})
 	integration.OnSignal(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()

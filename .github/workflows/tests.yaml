@@ -107,6 +107,8 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/*.sum"
+      - name: Setup python
+        uses: actions/setup-python@v5
       - name: Run Windows Tests
         run: ./integration-tests.ps1
 

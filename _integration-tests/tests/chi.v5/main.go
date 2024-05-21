@@ -17,15 +17,23 @@ import (
 
 func main() {
 	router := chi.NewRouter()
-	router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte("Hello World!\n"))
-	})
-
 	//dd:ignore
 	s := &http.Server{
 		Addr:    ":8080",
 		Handler: router,
 	}
+
+	router.Get("/quit",
+		//dd:ignore
+		func(w http.ResponseWriter, _ *http.Request) {
+			log.Println("Shutdown requested...")
+			defer s.Shutdown(context.Background())
+			w.Write([]byte("Goodbye\n"))
+		})
+	router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte("Hello World!\n"))
+	})
+
 	integration.OnSignal(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()

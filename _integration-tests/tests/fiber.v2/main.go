@@ -19,6 +19,13 @@ func main() {
 			"message": "pong",
 		})
 	})
+	r.Get("/quit", func(c *fiber.Ctx) error {
+		log.Print("Shutdown requested...")
+		defer r.Shutdown()
+		return c.JSON(map[string]any{
+			"message": "Goodbye",
+		})
+	})
 	integration.OnSignal(func() {
 		r.Shutdown()
 	})
