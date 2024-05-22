@@ -104,7 +104,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     $bin = Join-Path $outDir "$($name)$($BinExt)"
     try
     {
-      $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" "\$PID.log"
+      $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" '$PID.log'
       $env:ORCHESTRION_LOG_LEVEL = "TRACE"
       $env:GOTMPDIR = Join-Path $outDir "tmp"
 
