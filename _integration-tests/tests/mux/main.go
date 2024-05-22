@@ -35,7 +35,7 @@ func main() {
 	r.HandleFunc("/quit",
 		//dd:ignore
 		func(w http.ResponseWriter, r *http.Request) {
-			log.Print("Shutdown requested...")
+			log.Println("Shutdown requested...")
 			defer s.Shutdown(context.Background())
 			w.Write([]byte(`{"message":"Goodbye"}\n`))
 		}).Methods("GET")

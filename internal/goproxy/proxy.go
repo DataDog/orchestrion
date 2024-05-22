@@ -104,7 +104,7 @@ func Run(goArgs []string, opts ...Option) error {
 	}
 
 	log.Tracef("exec: %q\n", argv)
-	return syscall.Exec(argv[0], argv, env)
+	return fmt.Errorf("exec: %w", syscall.Exec(argv[0], argv, env))
 }
 
 var goBinPath string

@@ -33,7 +33,7 @@ func main() {
 
 func handle(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/quit" {
-		log.Print("Shutdown requested...")
+		log.Println("Shutdown requested...")
 		defer syscall.Kill(os.Getpid(), syscall.SIGTERM)
 		w.Write([]byte("Goodbye\n"))
 		return

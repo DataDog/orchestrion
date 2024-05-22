@@ -23,7 +23,7 @@ func main() {
 		})
 	})
 	r.GET("/quit", func(c echo.Context) error {
-		log.Print("Shutdown requested...")
+		log.Println("Shutdown requested...")
 		defer r.Shutdown(context.Background())
 		return c.JSON(http.StatusOK, map[string]any{
 			"message": "Goodbye",

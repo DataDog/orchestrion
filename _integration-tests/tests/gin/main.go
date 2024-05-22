@@ -30,7 +30,7 @@ func main() {
 		})
 	})
 	r.GET("/quit", func(c *gin.Context) {
-		log.Print("Shutdown requested...")
+		log.Println("Shutdown requested...")
 		defer s.Shutdown(context.Background())
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Goodbye",

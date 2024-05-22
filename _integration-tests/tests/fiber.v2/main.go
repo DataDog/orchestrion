@@ -20,7 +20,7 @@ func main() {
 		})
 	})
 	r.Get("/quit", func(c *fiber.Ctx) error {
-		log.Print("Shutdown requested...")
+		log.Println("Shutdown requested...")
 		defer r.Shutdown()
 		return c.JSON(map[string]any{
 			"message": "Goodbye",
