@@ -12,7 +12,10 @@ $TmpDir = New-TemporaryDirectory
 try
 {
   $outputs = Join-Path (Get-Location) "_integration-tests" "outputs"
-  Remove-Item -Path $outputs -Recurse -Force
+  if (Test-Path $outputs)
+  {
+    Remove-Item -Path $outputs -Recurse -Force
+  }
   $null = New-Item -ItemType Directory -Path $outputs
   "*" >(Join-Path $outputs ".gitignore") # So git never considers that content.
 
