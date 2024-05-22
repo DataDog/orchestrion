@@ -12,6 +12,9 @@ $TmpDir = New-TemporaryDirectory
 try
 {
   $outputs = Join-Path (Get-Location) "_integration-tests" "outputs"
+  Remove-Item -Path $outputs -Recurse -Force
+  $null = New-Item -ItemType Directory -Path $outputs
+  "*" >(Join-Path $outputs ".gitignore") # So git never considers that content.
 
   # Build orchestrion
   Write-Progress -Activity "Preparation" -Status "Building orchestrion" -PercentComplete 0
@@ -67,6 +70,8 @@ try
 
       # Build test case
       $outDir = Join-Path $outputs $name
+      $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
+
       $bin = Join-Path $outDir "$($name)"
       if ($IsWindows)
       {
