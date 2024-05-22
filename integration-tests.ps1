@@ -1,5 +1,36 @@
 #!/usr/bin/env pwsh
 
+$integ = Join-Path (Get-Location) "_integration-tests"
+$tests = Get-ChildItem -Path (Join-Path $integ "tests") -Name
+
+if ($Args.Length -gt 0)
+{
+  $filtered = @()
+  foreach ($a in $Args)
+  {
+    $found = $false
+    foreach ($t in $tests)
+    {
+      if ($t -eq $a)
+      {
+        $filtered += $t
+        $found = $true
+        break
+      }
+    }
+    if (!$found)
+    {
+      Write-Host "Test case '$($a)' does not exit" -ForegroundColor "Red"
+    }
+  }
+  $tests = $filtered
+}
+if ($tests.Length -eq 0)
+{
+  Write-Host "No test cases selected, exiting immediately!" -ForegroundColor "Red"
+  exit 1
+}
+
 function New-TemporaryDirectory {
   $parent = [System.IO.Path]::GetTempPath()
   $name = [System.IO.Path]::GetRandomFileName()
@@ -47,6 +78,8 @@ try
   {
     throw "Failed to create python virtual environment"
   }
+  Write-Progress -Activity "Preparation" -Status "Install test agent" -PercentComplete 85
+
   $scripts = "bin"
   if ($IsWindows)
   {
@@ -64,8 +97,6 @@ try
 
   # Running test cases
   Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
-  $integ = Join-Path (Get-Location) "_integration-tests"
-  $tests = Get-ChildItem -Path (Join-Path $integ "tests") -Name
   for ($i = 0 ; $i -lt $tests.Length ; $i++)
   {
     $name = $tests[$i]
@@ -236,16 +267,22 @@ finally
   Remove-Item -Recurse -Force $TmpDir
 }
 
-if ($Failed.Length -gt 0)
+Write-Host ""
+Write-Host "###########################" -ForegroundColor "Blue"
+Write-Host "Summary:" -ForegroundColor "Blue"
+foreach ($t in $tests)
 {
-  Write-Host "###########################" -ForegroundColor "Red"
-  Write-Host "Some tests failed:" -ForegroundColor "Red"
-  foreach ($f in $Failed.GetEnumerator())
+  $color = "Green"
+  $status = "✅ Success"
+  if ($null -ne $Failed.$t)
   {
-    Write-Host "- $($f.Name): $($f.Value)" -ForegroundColor "Red"
+    $color = "Red"
+    $status = "💥 $($Failed.$t)"
   }
-  exit 1
+  Write-Host "- $($t): $($status)" -ForegroundColor $color
 }
 
-Write-Host "###########################" -ForegroundColor "Green"
-Write-Host "All tests were successful!" -ForegroundColor "Green"
+if ($Failed.Count -gt 0)
+{
+  exit 1
+}

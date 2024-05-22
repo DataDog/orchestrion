@@ -28,7 +28,7 @@ func main() {
 
 	//dd:ignore
 	s := &http.Server{
-		Addr:    ":8088",
+		Addr:    "127.0.0.1:8088",
 		Handler: r,
 	}
 

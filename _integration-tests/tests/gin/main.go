@@ -20,7 +20,7 @@ func main() {
 	r := gin.Default()
 	//dd:ignore
 	s := &http.Server{
-		Addr:    ":8082",
+		Addr:    "127.0.0.1:8082",
 		Handler: r.Handler(),
 	}
 

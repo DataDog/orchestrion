@@ -11,10 +11,18 @@ Each test is a directory within the `tests` directory. This directory must conta
 Tests can be run locally by running the `integration-tests.ps1` script in the repository root. This requires a recent
 PowerShell interpreter to be available.
 
-```
+```console
 $ ./integration-tests.ps1
 ... Runs all integration tests
 ```
+
+Optionally, you may specify one or more specific tests to execute by passing their name (case-sensitive) to the script:
+
+```console
+$ ./integration-tests.ps1 chi.v5 mux
+... Runs only the chi.v5 and mux tests
+```
+
 
 ## Creating a New Test
 

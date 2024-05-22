@@ -21,7 +21,7 @@ func main() {
 	defer log.Printf("Server shutting down gracefully.")
 
 	s := &http.Server{
-		Addr:    ":8086",
+		Addr:    "127.0.0.1:8086",
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {

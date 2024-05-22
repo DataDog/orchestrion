@@ -29,5 +29,5 @@ func main() {
 	integration.OnSignal(func() {
 		r.Shutdown()
 	})
-	log.Print(r.Listen(":8089"))
+	log.Print(r.Listen("127.0.0.1:8089"))
 }

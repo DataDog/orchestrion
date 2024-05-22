@@ -320,7 +320,8 @@ func compare(valid, fake []kv, prefix string, indent int, d *diff) {
 						indent+1, d)
 				}
 			} else {
-				if vkv.v != fkv.v {
+				// The inferred service name may include a `.exe` suffix on Windows!
+				if vkv.v != fkv.v && (runtime.GOOS != "windows" || vkv.k != "service" || fmt.Sprintf("%v.exe", vkv.v) != fkv.v) {
 					d.AddDifference("validation: %v.%v:%v\nfake agent: %v.%v:%v\n",
 						prefix, vkv.k, vkv.v, prefix, fkv.k, fkv.v)
 				}

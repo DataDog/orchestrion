@@ -20,7 +20,7 @@ func main() {
 	go runServer()
 
 	s := &http.Server{
-		Addr:    ":8083",
+		Addr:    "127.0.0.1:8083",
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {

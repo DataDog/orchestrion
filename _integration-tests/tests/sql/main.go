@@ -54,7 +54,7 @@ func main() {
 
 	//dd:ignore
 	s := &http.Server{
-		Addr:    ":8087",
+		Addr:    "127.0.0.1:8087",
 		Handler: mux,
 	}
 
