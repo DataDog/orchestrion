@@ -11,7 +11,7 @@ if ($IsWindows) {
   $BinExt = ".exe"
 }
 
-$Failed = @()
+$Failed = @{}
 $TmpDir = New-TemporaryDirectory
 try
 {
@@ -225,7 +225,7 @@ try
     catch
     {
       Write-Host "[$($name)]: Failed: $($_)" -ForegroundColor "Red"
-      $Failed += $name
+      $Failed.$name = $_
     }
   }
   Write-Progress -Activity "Testing" -Completed
@@ -240,9 +240,9 @@ if ($Failed.Length -gt 0)
 {
   Write-Host "###########################" -ForegroundColor "Red"
   Write-Host "Some tests failed:" -ForegroundColor "Red"
-  foreach ($name in $Failed)
+  foreach ($f in $Failed.GetEnumerator())
   {
-    Write-Host "- $($name)" -ForegroundColor "Red"
+    Write-Host "- $($f.Name): $($f.Value)" -ForegroundColor "Red"
   }
   exit 1
 }
