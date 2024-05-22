@@ -115,7 +115,8 @@ try
       {
         $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" "\$PID.log"
         $env:ORCHESTRION_LOG_LEVEL = "TRACE"
-        & $orchestrion go -C $integ build -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+        $env:GOTMPDIR = Join-Path $outputs "tmp"
+        & $orchestrion go -C $integ build -w -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
         if ($LastExitCode -ne 0)
         {
           throw "Failed to build test case"
@@ -123,8 +124,9 @@ try
       }
       finally
       {
-        $env:ORCHESTRION_LOG_LEVEL = ""
-        $env:ORCHESTRION_LOG_FILE = ""
+        $env:GOTMPDIR = $null
+        $env:ORCHESTRION_LOG_LEVEL = $null
+        $env:ORCHESTRION_LOG_FILE = $null
       }
 
       # Run test case
