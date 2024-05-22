@@ -116,6 +116,10 @@ try
         {
           try
           {
+            if ($agent.State -ne "Running")
+            {
+              throw "Agent is no longer running (state: $($agent.State))"
+            }
             $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 10 -RetryIntervalSec 1
             break # Invoke-WebRequest returns IIF the response had a successful status code
           }

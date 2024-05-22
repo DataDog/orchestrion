@@ -52,7 +52,7 @@ jobs:
       - name: Run unit tests
         run: go test -cover -covermode=atomic -race ./...
 
-  integration-tests:
+  containerized-tests:
     runs-on: ubuntu-latest
     services:
       testagent:
@@ -69,7 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version: ['1.21', '1.22']
-    name: Integration tests (go${{ matrix.go-version }})
+    name: Linux tests (go${{ matrix.go-version }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,13 +95,14 @@ jobs:
           path: _integration-tests/outputs
           if-no-files-found: error # That would be very unexpected
 
-  windows-tests:
-    runs-on: windows-latest
+  bare-metal-tests:
     strategy:
       fail-fast: false
       matrix:
+        runs-on: [macos-latest, ubuntu-latest, windows-latest]
         go-version: ['1.21', '1.22']
-    name: Windows tests (go${{ matrix.go-version }})
+    runs-on: ${{ matrix.runs-on }}
+    name: Bare metal tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -119,7 +120,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-test-${{ matrix.go-version }}-output
+          name: ${{ matrix.runs-on }}-test-${{ matrix.go-version }}-output
           path: _integration-tests/outputs
           if-no-files-found: error # That would be very unexpected
 
@@ -129,8 +130,8 @@ jobs:
     needs:
       - lint
       - unit-tests
-      - integration-tests
-      # - windows-tests # Currently broken!
+      - containerized-tests
+      - bare-metal-tests
     steps:
       - name: Done
         run: echo "OK"
