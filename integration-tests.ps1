@@ -6,6 +6,10 @@ function New-TemporaryDirectory {
   New-Item -ItemType Directory -Path (Join-Path $parent $name)
 }
 
+$BinExt = ""
+if ($IsWindows) {
+  $BinExt = ".exe"
+}
 
 $Failed = @()
 $TmpDir = New-TemporaryDirectory
@@ -21,7 +25,7 @@ try
 
   # Build orchestrion
   Write-Progress -Activity "Preparation" -Status "Building orchestrion" -PercentComplete 0
-  $orchestrion = Join-Path $outputs "orchestrion.exe"
+  $orchestrion = Join-Path $outputs "orchestrion$($BinExt)"
   go build -o $orchestrion .
   if ($LastExitCode -ne 0)
   {
@@ -75,12 +79,7 @@ try
       $outDir = Join-Path $outputs $name
       $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
 
-      $bin = Join-Path $outDir "$($name)"
-      if ($IsWindows)
-      {
-        # Correctly have the extension...
-        $bin += ".exe"
-      }
+      $bin = Join-Path $outDir "$($name)$($BinExt)"
       try
       {
         $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" "\$PID.log"
