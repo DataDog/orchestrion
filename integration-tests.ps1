@@ -103,7 +103,7 @@ try
       $env:TRACE_LANGUAGE = 'golang'
       $env:LOG_LEVEL = 'DEBUG'
       $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
-      $agent = (& (Join-Path $venv "bin" "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
+      $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
       try {
         if ($job.State -ne "Running")
         {
