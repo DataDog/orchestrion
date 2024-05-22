@@ -53,7 +53,7 @@ try
     # On Windows, the venv binaries directory is called "Scripts" for some reason.
     $scripts = "Scripts"
   }
-  . (Join-Path $venv $scripts "activate.ps1")
+  . (Join-Path $venv $scripts "Activate.ps1")
   pip install "ddapm-test-agent" 2>&1 1> (Join-Path $outputs "pip.log")
   if ($LastExitCode -ne 0)
   {
