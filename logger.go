@@ -8,7 +8,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/datadog/orchestrion/internal/log"
@@ -24,10 +24,10 @@ const (
 func init() {
 	var omitPidContext bool
 	if logFile := os.Getenv(envVarOrchestrionLogFile); logFile != "" {
-		if !path.IsAbs(logFile) {
+		if !filepath.IsAbs(logFile) {
 			// If the path is not absolute, make it absolute w/r/t the current working directory.
 			if wd, err := os.Getwd(); err == nil {
-				logFile = path.Join(wd, logFile)
+				logFile = filepath.Join(wd, logFile)
 				// Update the environment variable to reflect the absolute path, so
 				// child processes don't have to go through this ordeal again, and so
 				// they use the same file even if they have a different current working
@@ -46,7 +46,7 @@ func init() {
 			}
 		})
 
-		if dir := path.Dir(filename); dir != "" {
+		if dir := filepath.Dir(filename); dir != "" {
 			// Try to create the parent directory, but ignore errors, if any.
 			_ = os.MkdirAll(dir, 0o755)
 		}

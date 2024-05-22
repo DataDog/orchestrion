@@ -118,6 +118,9 @@ func Run(goArgs []string, opts ...Option) error {
 			}
 			return fmt.Errorf("exec[windows]: %w", err)
 		}
+		// We emulate the behavior of `syscall.Exec`, which only returns if there is an error. In
+		// success cases, the process has been replaced and this code no longer exists.
+		os.Exit(0) // We were successful at this point!
 	}
 
 	// `syscall.Exec` only returns if unsuccessful (then `err` is not nil).

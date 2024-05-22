@@ -13,7 +13,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -246,5 +245,5 @@ func init() {
 			orchestrionBinPath = os.Args[0]
 		}
 	}
-	orchestrionBinPath = path.Clean(orchestrionBinPath)
+	orchestrionBinPath = filepath.Clean(orchestrionBinPath)
 }

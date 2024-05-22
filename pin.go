@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -121,8 +121,8 @@ func pinOrchestrion() error {
 
 	// We write into a temporary file, and then rename it in place. This reduces the risk of
 	// concurrent calls resulting in partial writes, etc...
-	toolFile := path.Join(goMod, "..", orchestrionToolGo)
-	tmpFile, err := os.CreateTemp(path.Dir(toolFile), "orchestrion.tool.go.*")
+	toolFile := filepath.Join(goMod, "..", orchestrionToolGo)
+	tmpFile, err := os.CreateTemp(filepath.Dir(toolFile), "orchestrion.tool.go.*")
 	if err != nil {
 		return fmt.Errorf("creating temporary %q: %w", tmpFile.Name(), err)
 	}
