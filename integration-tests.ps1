@@ -31,139 +31,162 @@ if ($tests.Length -eq 0)
   exit 1
 }
 
-function New-TemporaryDirectory {
-  $parent = [System.IO.Path]::GetTempPath()
-  $name = [System.IO.Path]::GetRandomFileName()
-  New-Item -ItemType Directory -Path (Join-Path $parent $name)
-}
-
 $BinExt = ""
 if ($IsWindows) {
   $BinExt = ".exe"
 }
 
 $Failed = @{}
-$TmpDir = New-TemporaryDirectory
-try
+$outputs = Join-Path (Get-Location) "_integration-tests" "outputs"
+if (Test-Path $outputs)
 {
-  $outputs = Join-Path (Get-Location) "_integration-tests" "outputs"
-  if (Test-Path $outputs)
-  {
-    Remove-Item -Path $outputs -Recurse -Force
-  }
-  $null = New-Item -ItemType Directory -Path $outputs
-  "*" >(Join-Path $outputs ".gitignore") # So git never considers that content.
+  Remove-Item -Path $outputs -Recurse -Force
+}
+$null = New-Item -ItemType Directory -Path $outputs
+"*" >(Join-Path $outputs ".gitignore") # So git never considers that content.
 
-  # Build orchestrion
-  Write-Progress -Activity "Preparation" -Status "Building orchestrion" -PercentComplete 0
-  $orchestrion = Join-Path $outputs "orchestrion$($BinExt)"
-  go build -o $orchestrion .
-  if ($LastExitCode -ne 0)
-  {
-    throw "Failed to build orchestrion"
-  }
+# Build orchestrion
+Write-Progress -Activity "Preparation" -Status "Building orchestrion" -PercentComplete 0
+$orchestrion = Join-Path $outputs "orchestrion$($BinExt)"
+go build -o $orchestrion .
+if ($LastExitCode -ne 0)
+{
+  throw "Failed to build orchestrion"
+}
 
-  # Warm up orchestrion
-  Write-Progress -Activity "Preparation" -Status "Warming up" -PercentComplete 50
-  & $orchestrion warmup
-  if ($LastExitCode -ne 0)
-  {
-    throw "Failed to warm up orchestrion"
-  }
+# Warm up orchestrion
+Write-Progress -Activity "Preparation" -Status "Warming up" -PercentComplete 50
+& $orchestrion warmup
+if ($LastExitCode -ne 0)
+{
+  throw "Failed to warm up orchestrion"
+}
 
-  Write-Progress -Activity "Preparation" -Status "Install test agent" -PercentComplete 75
-  $venv = $(Join-Path $TmpDir "venv")
-  python -m venv $venv 2>&1 1> (Join-Path $outputs "python-venv.log")
-  if ($LastExitCode -ne 0)
-  {
-    throw "Failed to create python virtual environment"
-  }
-  Write-Progress -Activity "Preparation" -Status "Install test agent" -PercentComplete 85
+Write-Progress -Activity "Preparation" -Status "Install test agent" -PercentComplete 75
+$venv = $(Join-Path $outputs "venv")
+python -m venv $venv 2>&1 1> (Join-Path $outputs "python-venv.log")
+if ($LastExitCode -ne 0)
+{
+  throw "Failed to create python virtual environment"
+}
+Write-Progress -Activity "Preparation" -Status "Install test agent" -PercentComplete 85
 
-  $scripts = "bin"
-  if ($IsWindows)
-  {
-    # On Windows, the venv binaries directory is called "Scripts" for some reason.
-    $scripts = "Scripts"
-  }
-  . (Join-Path $venv $scripts "Activate.ps1")
-  pip install "ddapm-test-agent" 2>&1 1> (Join-Path $outputs "pip.log")
-  if ($LastExitCode -ne 0)
-  {
-    throw "Failed to pip install ddapm-test-agent"
-  }
+$scripts = "bin"
+if ($IsWindows)
+{
+  # On Windows, the venv binaries directory is called "Scripts" for some reason.
+  $scripts = "Scripts"
+}
+. (Join-Path $venv $scripts "Activate.ps1")
+pip install "ddapm-test-agent" 2>&1 1> (Join-Path $outputs "pip.log")
+if ($LastExitCode -ne 0)
+{
+  throw "Failed to pip install ddapm-test-agent"
+}
 
-  Write-Progress -Activity "Preparation" -Completed
+Write-Progress -Activity "Preparation" -Completed
 
-  # Running test cases
-  Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
-  for ($i = 0 ; $i -lt $tests.Length ; $i++)
-  {
-    $name = $tests[$i]
-    Write-Progress -Activity "Testing" -Status "$($name) ($($i+1) of $($tests.Length))" -PercentComplete (100 * $i / $tests.Length)
+# Running test cases
+Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
+for ($i = 0 ; $i -lt $tests.Length ; $i++)
+{
+  $name = $tests[$i]
+  Write-Progress -Activity "Testing" -Status "$($name) ($($i+1) of $($tests.Length))" -PercentComplete (100 * $i / $tests.Length)
+  try {
+    # Parse validator instructions
+    $vfile = Join-Path $integ "tests" $name "validation.json"
+    $json = Get-Content -Raw $vfile | ConvertFrom-Json
+
+    # Build test case
+    $outDir = Join-Path $outputs $name
+    $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
+
+    $bin = Join-Path $outDir "$($name)$($BinExt)"
+    try
+    {
+      $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" "\$PID.log"
+      $env:ORCHESTRION_LOG_LEVEL = "TRACE"
+      $env:GOTMPDIR = Join-Path $outDir "tmp"
+
+      $null = New-Item -ItemType Directory -Path $env:GOTMPDIR # The directory must exist...
+      & $orchestrion go -C $integ build -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+      if ($LastExitCode -ne 0)
+      {
+        throw "Failed to build test case"
+      }
+    }
+    finally
+    {
+      $env:GOTMPDIR = $null
+      $env:ORCHESTRION_LOG_LEVEL = $null
+      $env:ORCHESTRION_LOG_FILE = $null
+    }
+
+    # Run test case
+    $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
+
+    $env:TRACE_LANGUAGE = 'golang'
+    $env:LOG_LEVEL = 'DEBUG'
+    $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
+    $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
     try {
-      # Parse validator instructions
-      $vfile = Join-Path $integ "tests" $name "validation.json"
-      $json = Get-Content -Raw $vfile | ConvertFrom-Json
-
-      # Build test case
-      $outDir = Join-Path $outputs $name
-      $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
-
-      $bin = Join-Path $outDir "$($name)$($BinExt)"
-      try
+      if ($job.State -ne "Running")
       {
-        $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" "\$PID.log"
-        $env:ORCHESTRION_LOG_LEVEL = "TRACE"
-        $env:GOTMPDIR = Join-Path $outputs "tmp"
-        & $orchestrion go -C $integ build -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
-        if ($LastExitCode -ne 0)
-        {
-          throw "Failed to build test case"
-        }
-      }
-      finally
-      {
-        $env:GOTMPDIR = $null
-        $env:ORCHESTRION_LOG_LEVEL = $null
-        $env:ORCHESTRION_LOG_FILE = $null
+        throw "Failed to run test case (state is $($job.State))"
       }
 
-      # Run test case
-      $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
-
-      $env:TRACE_LANGUAGE = 'golang'
-      $env:LOG_LEVEL = 'DEBUG'
-      $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
-      $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
-      try {
-        if ($job.State -ne "Running")
+      $token = New-Guid
+      $attemptsLeft = 10
+      for (;;)
+      {
+        try
         {
-          throw "Failed to run test case (state is $($job.State))"
+          if ($agent.State -ne "Running")
+          {
+            throw "Agent is no longer running (state: $($agent.State))"
+          }
+          $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 10 -RetryIntervalSec 1
+          break # Invoke-WebRequest returns IIF the response had a successful status code
         }
+        catch [System.Net.Http.HttpRequestException]
+        {
+          if ($null -ne $_.Exception.Response.StatusCode)
+          {
+            throw "Failed to start test session: HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
+          }
+          elseif ($attemptsLeft -le 0)
+          {
+            throw "Failed to start test session: Failed and all attempts are exhaused. Last error: $($_)"
+          }
+          else
+          {
+            $attemptsLeft--
+            Start-Sleep -Milliseconds 150
+          }
+        }
+      }
 
-        $token = New-Guid
-        $attemptsLeft = 10
+      # Perform validations
+      if ($null -ne $json.url)
+      {
+        Write-Output "[$($name)]: Validating using: GET $($json.url)"
+        $attemptsLeft = 5
         for (;;)
         {
           try
           {
-            if ($agent.State -ne "Running")
-            {
-              throw "Agent is no longer running (state: $($agent.State))"
-            }
-            $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 10 -RetryIntervalSec 1
+            $null = Invoke-WebRequest -Uri $json.url -MaximumRetryCount 5 -RetryIntervalSec 1
             break # Invoke-WebRequest returns IIF the response had a successful status code
           }
           catch [System.Net.Http.HttpRequestException]
           {
             if ($null -ne $_.Exception.Response.StatusCode)
             {
-              throw "Failed to start test session: HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
+              throw "GET $($json.url) => HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
             }
             elseif ($attemptsLeft -le 0)
             {
-              throw "Failed to start test session: Failed and all attempts are exhaused. Last error: $($_)"
+              throw "GET $($json.url) => Failed and all attempts are exhaused. Last error: $($_)"
             }
             else
             {
@@ -172,102 +195,66 @@ try
             }
           }
         }
-
-        # Perform validations
-        if ($null -ne $json.url)
+      }
+      elseif ($null -ne $json.curl)
+      {
+        Write-Output "[$($name)]: Validating using: $($json.curl)"
+        Invoke-Expression "$($json.curl) --retry 5 --retry-all-errors --retry-max-time 30 2>&1 1>$(Join-Path $outDir "curl.log")"
+        if ($LastExitCode -ne 0)
         {
-          Write-Output "[$($name)]: Validating using: GET $($json.url)"
-          $attemptsLeft = 5
-          for (;;)
-          {
-            try
-            {
-              $null = Invoke-WebRequest -Uri $json.url -MaximumRetryCount 5 -RetryIntervalSec 1
-              break # Invoke-WebRequest returns IIF the response had a successful status code
-            }
-            catch [System.Net.Http.HttpRequestException]
-            {
-              if ($null -ne $_.Exception.Response.StatusCode)
-              {
-                throw "GET $($json.url) => HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
-              }
-              elseif ($attemptsLeft -le 0)
-              {
-                throw "GET $($json.url) => Failed and all attempts are exhaused. Last error: $($_)"
-              }
-              else
-              {
-                $attemptsLeft--
-                Start-Sleep -Milliseconds 150
-              }
-            }
-          }
+          throw "Validation failed: $($json.curl)"
         }
-        elseif ($null -ne $json.curl)
+      }
+      else
+      {
+        throw "No validation instructions found!"
+      }
+
+      Write-Output "[$($name)]: Validation was successful"
+      try
+      {
+        $null = Invoke-WebRequest -Uri $json.quit -MaximumRetryCount 5 -RetryIntervalSec 1
+      }
+      catch
+      {
+        $null = $_ # Swallow the exception
+      }
+
+      $null = Wait-Job -Job $job -Timeout 15
+      for (;;)
+      {
+        $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
+        $data = $resp.Content | ConvertFrom-Json
+        if ($data.Length -ne 0)
         {
-          Write-Output "[$($name)]: Validating using: $($json.curl)"
-          Invoke-Expression "$($json.curl) --retry 5 --retry-all-errors --retry-max-time 30 2>&1 1>$(Join-Path $outDir "curl.log")"
+          Write-Output "[$($name)]: Collected $($data.Length) traces"
+          $tracesFile = Join-Path $outDir "traces.json"
+          $resp.Content > $($tracesFile)
+
+          go -C $integ run ./validator -tname $name -vfile $vfile -surl "file:///$($tracesFile -replace '\\', '/')" 2>&1 | Write-Host
           if ($LastExitCode -ne 0)
           {
-            throw "Validation failed: $($json.curl)"
+            throw "Validation of traces failed"
           }
-        }
-        else
-        {
-          throw "No validation instructions found!"
-        }
 
-        Write-Output "[$($name)]: Validation was successful"
-        try
-        {
-          $null = Invoke-WebRequest -Uri $json.quit -MaximumRetryCount 5 -RetryIntervalSec 1
+          Write-Host "[$($name)]: Success!" -ForegroundColor "Green"
+          break
         }
-        catch
-        {
-          $null = $_ # Swallow the exception
-        }
-
-        $null = Wait-Job -Job $job -Timeout 15
-        for (;;)
-        {
-          $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
-          $data = $resp.Content | ConvertFrom-Json
-          if ($data.Length -ne 0)
-          {
-            Write-Output "[$($name)]: Collected $($data.Length) traces"
-            $tracesFile = Join-Path $outDir "traces.json"
-            $resp.Content > $($tracesFile)
-
-            go -C $integ run ./validator -tname $name -vfile $vfile -surl "file:///$($tracesFile -replace '\\', '/')" 2>&1 | Write-Host
-            if ($LastExitCode -ne 0)
-            {
-              throw "Validation of traces failed"
-            }
-
-            Write-Host "[$($name)]: Success!" -ForegroundColor "Green"
-            break
-          }
-        }
-      }
-      finally
-      {
-        Remove-Job -Job $job -Force
-        Remove-Job -Job $agent -Force
       }
     }
-    catch
+    finally
     {
-      Write-Host "[$($name)]: Failed: $($_)" -ForegroundColor "Red"
-      $Failed.$name = $_
+      Remove-Job -Job $job -Force
+      Remove-Job -Job $agent -Force
     }
   }
-  Write-Progress -Activity "Testing" -Completed
+  catch
+  {
+    Write-Host "[$($name)]: Failed: $($_)" -ForegroundColor "Red"
+    $Failed.$name = $_
+  }
 }
-finally
-{
-  # Clean up the temporary directory
-  Remove-Item -Recurse -Force $TmpDir
-}
+Write-Progress -Activity "Testing" -Completed
 
 Write-Host ""
 Write-Host "###########################" -ForegroundColor "Blue"
