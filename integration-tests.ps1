@@ -37,7 +37,13 @@ try
   {
     throw "Failed to create python virtual environment"
   }
-  . (Join-Path $venv "bin" "activate.ps1")
+  $scripts = "bin"
+  if ($IsWindows)
+  {
+    # On Windows, the venv binaries directory is called "Scripts" for some reason.
+    $scripts = "Scripts"
+  }
+  . (Join-Path $venv $scripts "activate.ps1")
   pip install "ddapm-test-agent" 2>&1 1> (Join-Path $outputs "pip.log")
   if ($LastExitCode -ne 0)
   {
