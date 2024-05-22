@@ -6,8 +6,6 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +14,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/datadog/orchestrion/internal/ensure"
+	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/version"
 	"github.com/dave/jennifer/jen"
@@ -30,7 +29,6 @@ const (
 )
 
 var (
-	errNoGoMod           = errors.New("`go mod GOMOD` returned a blank string")
 	requiredVersionError error // Whether the go.mod version check succeeded
 )
 
@@ -93,19 +91,9 @@ func autoPinOrchestrion() {
 }
 
 func pinOrchestrion() error {
-	goMod := os.Getenv("GOMOD")
-	if goMod == "" {
-		cmd := exec.Command("go", "env", "GOMOD")
-		var stdout bytes.Buffer
-		cmd.Stdout = &stdout
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("runnning %q: %w", cmd.Args, err)
-		}
-		goMod = strings.TrimSpace(stdout.String())
-	}
-	if goMod == "" {
-		wd, _ := os.Getwd()
-		return fmt.Errorf("in %q: %w", wd, errNoGoMod)
+	goMod, err := goenv.GOMOD()
+	if err != nil {
+		return fmt.Errorf("getting GOMOD: %w", err)
 	}
 
 	code := jen.NewFile("tools")

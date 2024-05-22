@@ -58,10 +58,23 @@ if ($LastExitCode -ne 0)
 
 # Warm up orchestrion
 Write-Progress -Activity "Preparation" -Status "Warming up" -PercentComplete 50
-& $orchestrion warmup
-if ($LastExitCode -ne 0)
+try
 {
-  throw "Failed to warm up orchestrion"
+  $env:ORCHESTRION_LOG_FILE = Join-Path $outputs "warmup" "orchestrion" '$PID.log'
+  $env:ORCHESTRION_LOG_LEVEL = "TRACE"
+  $env:GOTMPDIR = Join-Path $outputs "warmup" "tmp"
+  $null = New-Item -ItemType Directory -Path $env:GOTMPDIR # The directory must exist...
+  & $orchestrion warmup -work 2>&1 1>(Join-Path $outputs "warmup" "output.log")
+  if ($LastExitCode -ne 0)
+  {
+    throw "Failed to warm up orchestrion"
+  }
+}
+finally
+{
+  $env:GOTMPDIR = $null
+  $env:ORCHESTRION_LOG_LEVEL = $null
+  $env:ORCHESTRION_LOG_FILE = $null
 }
 
 Write-Progress -Activity "Preparation" -Status "Install test agent" -PercentComplete 75
@@ -100,7 +113,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     $json = Get-Content -Raw $vfile | ConvertFrom-Json
 
     # Build test case
-    $outDir = Join-Path $outputs $name
+    $outDir = Join-Path $outputs "tests" $name
     $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
 
     $bin = Join-Path $outDir "$($name)$($BinExt)"
@@ -147,7 +160,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
           {
             throw "Agent is no longer running (state: $($agent.State))"
           }
-          $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 10 -RetryIntervalSec 1
+          $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 15 -RetryIntervalSec 1
           break # Invoke-WebRequest returns IIF the response had a successful status code
         }
         catch [System.Net.Http.HttpRequestException]
