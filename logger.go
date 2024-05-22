@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/version"
@@ -55,6 +56,7 @@ func init() {
 		if err != nil {
 			panic(fmt.Errorf("unable to open log file %q: %w", filename, err))
 		}
+		syscall.CloseOnExec(int(file.Fd())) // Don't pass this FD to child processes, it's not useful.
 		log.SetLevel(log.LevelWarn)
 		log.SetOutput(file)
 	}
