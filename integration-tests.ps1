@@ -116,7 +116,7 @@ try
         $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" "\$PID.log"
         $env:ORCHESTRION_LOG_LEVEL = "TRACE"
         $env:GOTMPDIR = Join-Path $outputs "tmp"
-        & $orchestrion go -C $integ build -w -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+        & $orchestrion go -C $integ build -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
         if ($LastExitCode -ne 0)
         {
           throw "Failed to build test case"
@@ -275,13 +275,15 @@ Write-Host "Summary:" -ForegroundColor "Blue"
 foreach ($t in $tests)
 {
   $color = "Green"
-  $status = "✅ Success"
+  $icon = "✅"
+  $status = "Success"
   if ($null -ne $Failed.$t)
   {
     $color = "Red"
-    $status = "💥 $($Failed.$t)"
+    $icon = "💥"
+    $status = $Failed.$t
   }
-  Write-Host "- $($t): $($status)" -ForegroundColor $color
+  Write-Host "- $($icon) $($t): $($status)" -ForegroundColor $color
 }
 
 if ($Failed.Count -gt 0)
