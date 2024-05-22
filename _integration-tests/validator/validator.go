@@ -13,7 +13,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -159,7 +161,11 @@ func main() {
 
 	var fakeTraces []map[string]any
 	if url, err := url.Parse(*surl); err == nil && url.Scheme == "file" {
-		file, err := os.Open(url.Path)
+		filename := url.Path
+		if runtime.GOOS == "windows" {
+			filename = filepath.FromSlash(filename[1:]) // The Path would include a leading `/`
+		}
+		file, err := os.Open(filename)
 		if err != nil {
 			fmt.Printf("Failed to open traces file %q: %v", url.Path, err)
 			os.Exit(1)
