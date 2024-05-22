@@ -11,15 +11,15 @@ import (
 	"log"
 	"net/http"
 	"orchestrion/integration"
-	"os"
-	"syscall"
 	"time"
 )
+
+var s *http.Server
 
 func main() {
 	defer log.Printf("Server shutting down gracefully.")
 
-	s := &http.Server{
+	s = &http.Server{
 		Addr:    "127.0.0.1:8085",
 		Handler: http.HandlerFunc(handle),
 	}
@@ -34,7 +34,7 @@ func main() {
 func handle(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/quit" {
 		log.Println("Shutdown requested...")
-		defer syscall.Kill(os.Getpid(), syscall.SIGTERM)
+		defer s.Shutdown(context.Background())
 		w.Write([]byte("Goodbye\n"))
 		return
 	}

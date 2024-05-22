@@ -44,6 +44,8 @@ if (Test-Path $outputs)
 }
 $null = New-Item -ItemType Directory -Path $outputs
 "*" >(Join-Path $outputs ".gitignore") # So git never considers that content.
+"module github.com/datadog/orchestrion/_integration-tests/outputs" >(Join-Path $outputs "go.mod")
+"go 1.12" >>(Join-Path $outputs "go.mod")
 
 # Build orchestrion
 Write-Progress -Activity "Preparation" -Status "Building orchestrion" -PercentComplete 0
