@@ -187,23 +187,12 @@ func main() {
 		}
 
 		log.Tracef("Running `go build -v <modules>` in the temporary module...\n")
-		buildArgs := make([]string, 0, 2+len(args)+11)
+		buildArgs := make([]string, 0, 3+len(args)+len(builtin.InjectedPaths))
 		buildArgs = append(buildArgs, "go", "build")
 		buildArgs = append(buildArgs, args...)
-		buildArgs = append(buildArgs,
-			// All packages we may be instrumenting, plus the standard library.
-			"github.com/datadog/orchestrion/instrument",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
-			"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
-			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
-			"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
-			"std",
-		)
+		// All packages we may be instrumenting, plus the standard library.
+		buildArgs = append(buildArgs, "std")
+		buildArgs = append(buildArgs, builtin.InjectedPaths[:]...)
 		cmd = exec.Command(orchestrionBinPath, buildArgs...)
 		cmd.Dir = tmp
 		cmd.Stdout = os.Stdout

@@ -21,6 +21,7 @@ const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/advice"
 // injections.
 type Advice interface {
 	code.AsCode
+	code.ImportAdder
 
 	// Apply performs the necessary AST changes on the supplied node. It returns a
 	// boolean indicating whether the node was modified or not (some actions may

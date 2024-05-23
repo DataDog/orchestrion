@@ -54,6 +54,13 @@ func (a *addStuctField) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "AddStructField").Call(jen.Lit(a.fieldName), a.fieldType.AsCode())
 }
 
+func (a *addStuctField) AddedImports() []string {
+	if path := a.fieldType.ImportPath(); path != "" {
+		return []string{path}
+	}
+	return nil
+}
+
 func init() {
 	unmarshalers["add-struct-field"] = func(node *yaml.Node) (Advice, error) {
 		var spec struct {

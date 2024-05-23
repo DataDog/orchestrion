@@ -36,6 +36,13 @@ func (a *Aspect) AsCode() (jp, adv jen.Code) {
 	return
 }
 
+func (a *Aspect) AddedImports() (imports []string) {
+	for _, adv := range a.Advice {
+		imports = append(imports, adv.AddedImports()...)
+	}
+	return
+}
+
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
 		JoinPoint yaml.Node            `yaml:"join-point"`

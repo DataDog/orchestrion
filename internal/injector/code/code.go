@@ -8,5 +8,12 @@ package code
 import "github.com/dave/jennifer/jen"
 
 type AsCode interface {
+	// AsCode produces a jen.Code representation of the receiver.
 	AsCode() jen.Code
+}
+
+type ImportAdder interface {
+	// AddedImports returns the list of import paths the receiver may introduce in
+	// modified code.
+	AddedImports() []string
 }

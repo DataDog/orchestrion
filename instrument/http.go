@@ -32,11 +32,9 @@ func doThing(w http.ResponseWriter, r *http.Request) {
 
 to this:
 func doThing(w http.ResponseWriter, r *http.Request) {
-	//dd:startinstrument
 	r = HandleHeader(r)
 	Report(r.Context(), EventStart, "name", "doThing", "verb", r.Method)
 	defer Report(r.Context(), EventEnd, "name", "doThing", "verb", r.Method)
-	//dd:endinstrument
 	// stuff here
 }
 
@@ -59,13 +57,11 @@ convert this:
 
 to this:
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "localhost:8080", strings.NewReader(os.Args[1]))
-	//dd:startinstrument
 	if req != nil {
 		req = InsertHeader(req)
 		Report(req.Context(), EventCall, "url", req.URL, "method", req.Method)
 		defer Report(req.Context(), EventReturn, "url", req.URL, "method", req.Method)
 	}
-	//dd:endinstrument
 	if err != nil {
 		panic(err)
 	}

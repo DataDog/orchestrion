@@ -13,14 +13,5 @@ import (
 	_ "golang.org/x/tools/cmd/stringer"
 
 	// Instrumentation packages
-	_ "github.com/datadog/orchestrion/instrument"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	_ "github.com/datadog/orchestrion/internal/injector/builtin"
 )

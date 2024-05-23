@@ -111,6 +111,15 @@ func (a *appendArgs) AsCode() jen.Code {
 	})
 }
 
+func (a *appendArgs) AddedImports() []string {
+	imports := make([]string, 0, len(a.templates)+1)
+	imports = append(imports, a.typeName.ImportPath())
+	for _, t := range a.templates {
+		imports = append(imports, t.AddedImports()...)
+	}
+	return imports
+}
+
 func init() {
 	unmarshalers["append-args"] = func(node *yaml.Node) (Advice, error) {
 		var args struct {

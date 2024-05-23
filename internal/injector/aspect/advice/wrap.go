@@ -55,6 +55,10 @@ func (a *wrapExpression) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "WrapExpression").Call(a.template.AsCode())
 }
 
+func (a *wrapExpression) AddedImports() []string {
+	return a.template.AddedImports()
+}
+
 func init() {
 	unmarshalers["wrap-expression"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template

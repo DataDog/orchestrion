@@ -85,6 +85,10 @@ func (a injectSourceFile) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "InjectSourceFile").Call(jen.Lit(string(a)))
 }
 
+func (a injectSourceFile) AddedImports() []string {
+	return nil
+}
+
 func init() {
 	unmarshalers["inject-source-file"] = func(node *yaml.Node) (Advice, error) {
 		var text string
