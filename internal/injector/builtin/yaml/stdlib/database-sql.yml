@@ -5,6 +5,17 @@
 %YAML 1.1
 ---
 - join-point:
+    function-call: database/sql.Register
+  advice:
+    - wrap-expression:
+        imports:
+          sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+        template: |-
+          sqltrace.Register(
+            {{range .AST.Args}}{{.}},
+          {{end}})
+
+- join-point:
     function-call: database/sql.Open
   advice:
     - wrap-expression:

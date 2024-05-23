@@ -1,0 +1,65 @@
+package main
+
+import (
+	"log"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+//line <generated>:1
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+)
+
+//line samples/server/sqlx.go:11
+func init() {
+//line <generated>:1
+	sql.Register(
+//line samples/server/sqlx.go:12
+		"postgres", &pq.Driver{})
+}
+
+//line samples/server/sqlx.go:15
+func sqlxConnectWithExplicitDriver() {
+	db, err := sqlx.Connect("postgres", "postgres://pgotest:password@localhost?sslmode=disable")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	sqlxUseDb(db)
+}
+
+func sqlxConnectWithNoDriver() {
+	db := sqlx.MustConnect("postgres", "postgres://pgotest:password@localhost?sslmode=disable")
+	defer db.Close()
+	sqlxUseDb(db)
+}
+
+func sqlxOpenWithExplicitDriver() {
+	db, err := sqlx.Open("postgres", "postgres://pgotest:password@localhost?sslmode=disable")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	sqlxUseDb(db)
+}
+
+func sqlxOpenWithNoDriver() {
+	db := sqlx.MustOpen("postgres", "postgres://pgotest:password@localhost?sslmode=disable")
+	defer db.Close()
+	sqlxUseDb(db)
+}
+
+func sqlxUseDb(db *sqlx.DB) {
+	query, args, err := sqlx.In("SELECT * FROM users WHERE level IN (?)", []int{4, 6, 7})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query = db.Rebind(query)
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+}

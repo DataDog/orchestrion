@@ -33,29 +33,6 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
-	// From yaml/database-sql.yml
-	{
-		JoinPoint: join.FunctionCall("database/sql.Open"),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
-		},
-	},
-	{
-		JoinPoint: join.FunctionCall("database/sql.OpenDB"),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.OpenDB(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
-		},
-	},
 	// From yaml/dd-span.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
@@ -150,14 +127,6 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
-	// From yaml/go-runtime.yml
-	{
-		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
-		Advice: []advice.Advice{
-			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
-			advice.InjectSourceFile("package runtime\n\nimport (\n  _ \"unsafe\" // for go:linkname\n)\n\n//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nfunc __dd_orchestrion_gls_get() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nfunc __dd_orchestrion_gls_set(val any) {\n  getg().m.curg.__dd_gls = val\n}"),
-		},
-	},
 	// From yaml/gorilla.yml
 	{
 		JoinPoint: join.FunctionCall("github.com/gorilla/mux.NewRouter"),
@@ -215,7 +184,41 @@ var Aspects = [...]aspect.Aspect{
 			),
 		},
 	},
-	// From yaml/net-http.yml
+	// From yaml/stdlib/database-sql.yml
+	{
+		JoinPoint: join.FunctionCall("database/sql.Register"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"sqltrace.Register(\n  {{range .AST.Args}}{{.}},\n{{end}})",
+				map[string]string{
+					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("database/sql.Open"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"sqltrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
+				map[string]string{
+					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("database/sql.OpenDB"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"sqltrace.OpenDB(\n  {{range .AST.Args}}{{.}},\n{{end}})",
+				map[string]string{
+					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+				},
+			)),
+		},
+	},
+	// From yaml/stdlib/net-http.yml
 	{
 		JoinPoint: join.AllOf(
 			join.Configuration(map[string]string{
@@ -285,6 +288,14 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From yaml/stdlib/runtime.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
+		Advice: []advice.Advice{
+			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
+			advice.InjectSourceFile("package runtime\n\nimport (\n  _ \"unsafe\" // for go:linkname\n)\n\n//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nfunc __dd_orchestrion_gls_get() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nfunc __dd_orchestrion_gls_set(val any) {\n  getg().m.curg.__dd_gls = val\n}"),
+		},
+	},
 }
 
 // RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess
@@ -313,4 +324,4 @@ var RestorerMap = map[string]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:K7Wx44EoT37GaznSSDHXAR6eaC+/xX8MucoH5IqZb+TPM5JyMPKMe573l9jI9B9GVkY2sEULLqwqcGsH013BGQ=="
+const Checksum = "sha512:kETk0x5NqUPFPSmSkupCniP6Wt1oTzzUIb911kYTZbiH+bkYCIqB3HI0SFSWFByVSL2XVJpuFb70+HALyfdX6A=="

@@ -11,7 +11,9 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/google/go-licenses v1.6.0
 	github.com/gorilla/mux v1.8.1
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/labstack/echo/v4 v4.12.0
+	github.com/lib/pq v1.10.2
 	github.com/shirou/gopsutil/v3 v3.24.4
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/term v0.20.0

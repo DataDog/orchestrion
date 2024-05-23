@@ -136,6 +136,10 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 			return res, err
 		}
 		for node, name := range i.decorator.Filenames {
+			if name == "" {
+				// A bunch of synthetic nodes won't have a file name.
+				continue
+			}
 			s, err := os.Stat(name)
 			if err != nil {
 				continue

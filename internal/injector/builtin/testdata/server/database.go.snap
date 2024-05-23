@@ -17,9 +17,13 @@ import (
 
 //line samples/server/database.go:16
 func init() {
-	sql.Register("test", &testDriver{})
+//line <generated>:1
+	sql1.Register(
+//line samples/server/database.go:17
+		"test", &testDriver{})
 }
 
+//line samples/server/database.go:20
 type testDriver struct{}
 
 func (t *testDriver) Open(name string) (driver.Conn, error) {
