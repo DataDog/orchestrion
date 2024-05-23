@@ -23,28 +23,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type globs []string
+
 func main() {
 	var (
 		pkg    string
-		glob   string
+		glob   globs
 		output string
 	)
 
 	flag.StringVar(&pkg, "p", "", "package name")
-	flag.StringVar(&glob, "i", "", "input files (glob syntax)")
+	flag.Var(&glob, "i", "input files (glob syntax, can be set multiple times)")
 	flag.StringVar(&output, "o", "", "output file")
 	flag.Parse()
 
-	matches, err := filepath.Glob(glob)
-	if err != nil {
-		log.Fatalf("failed to process glob pattern %q: %v\n", glob, err)
+	if len(glob) == 0 {
+		log.Fatalln("Missing -i option!")
 	}
 
-	if len(matches) == 0 {
-		log.Fatalf("no files matched pattern %q\n", glob)
+	matches, err := glob.glob()
+	if err != nil {
+		log.Fatalf("failed to process glob pattern(s) %s: %v\n", glob, err)
 	}
-	// Ensure the files are sorted for determinism.
-	sort.Strings(matches)
 
 	file := jen.NewFile(pkg)
 	file.HeaderComment("Unless explicitly stated otherwise all files in this repository are licensed")
@@ -148,4 +148,39 @@ func writeAll(w io.Writer, data []byte) {
 
 func init() {
 	log.SetPrefix("github.com/DataDog/orchestrion/internal/injector/builtin/generate: ")
+}
+
+func (g *globs) Set(value string) error {
+	*g = append(*g, value)
+	return nil
+}
+
+func (g *globs) String() string {
+	return strings.Join(*g, " ")
+}
+
+func (g *globs) glob() (files []string, err error) {
+	unique := make(map[string]struct{})
+	for _, pattern := range *g {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return nil, err
+		}
+		for _, match := range matches {
+			if _, found := unique[match]; found {
+				continue
+			}
+			unique[match] = struct{}{}
+			files = append(files, match)
+		}
+	}
+
+	if len(files) == 0 {
+		err = fmt.Errorf("no files matched pattern(s) %s", g)
+	}
+
+	// Ensure output is sorted for determinism...
+	sort.Strings(files)
+
+	return
 }
