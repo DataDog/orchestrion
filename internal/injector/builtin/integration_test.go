@@ -8,6 +8,7 @@ package builtin_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +57,7 @@ func Test(t *testing.T) {
 					res, err := inj.InjectFile(filename, map[string]string{"httpmode": "wrap"})
 					require.NoError(t, err)
 
-					referenceFile := path.Join(referenceDir, dir, path.Base(filename))
+					referenceFile := path.Join(referenceDir, dir, path.Base(filename)) + ".snap"
 					if !res.Modified {
 						_, err := os.Stat(referenceFile)
 						if updateSnapshots && err == nil {
@@ -69,6 +71,7 @@ func Test(t *testing.T) {
 					require.NoError(t, err)
 
 					data = bytes.ReplaceAll(data, []byte(samplesDir), []byte("samples"))
+					data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag)), []byte("\"<version.Tag>\""))
 
 					reference, err := os.ReadFile(referenceFile)
 					if updateSnapshots && errors.Is(err, os.ErrNotExist) {

@@ -18,7 +18,7 @@ jobs:
           repository: 'DataDog/orchestrion'
       - uses: actions/setup-go@v5
         with:
-          go-version: "stable"
+          go-version: '1.21'
           cache-dependency-path: "**/*.sum"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
@@ -42,7 +42,7 @@ jobs:
       - name: Checkout Go
         uses: actions/setup-go@v5
         with:
-          go-version: "stable"
+          go-version: '1.21'
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: go test -cover -covermode=atomic -race ./...
@@ -65,7 +65,7 @@ jobs:
           repository: 'DataDog/orchestrion'
       - uses: actions/setup-go@v5
         with:
-          go-version: "stable"
+          go-version: '1.21'
           cache-dependency-path: "**/*.sum"
       - name: Run Integration Tests
         run: ./integration-tests.sh
