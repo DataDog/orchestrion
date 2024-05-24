@@ -11,12 +11,13 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/gorilla/mux v1.8.1
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/mattn/go-sqlite3 v1.14.22
 	google.golang.org/grpc v1.64.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/DataDog/appsec-internal-go v1.5.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.52.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.52.1 // indirect
@@ -36,6 +37,7 @@ require (
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/dave/dst v0.27.3 // indirect
 	github.com/dave/jennifer v1.7.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -46,6 +48,8 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
+	github.com/go-redis/redis/v7 v7.4.1 // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
