@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -38,26 +37,26 @@ func Test(t *testing.T) {
 		t.Run(dir, func(t *testing.T) {
 			t.Parallel()
 
-			pkgDir := path.Join(samplesDir, dir)
+			pkgDir := filepath.Join(samplesDir, dir)
 
 			tmp := t.TempDir()
 			inj, err := injector.New(pkgDir, injector.Options{
 				Aspects: builtin.Aspects[:],
 				ModifiedFile: func(filename string) string {
-					return path.Join(tmp, path.Base(filename))
+					return filepath.Join(tmp, filepath.Base(filename))
 				},
 				PreserveLineInfo: true,
 			})
 			require.NoError(t, err)
 
-			files, err := filepath.Glob(path.Join(pkgDir, "*.go"))
+			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
 			for _, filename := range files {
-				t.Run(path.Base(filename), func(t *testing.T) {
+				t.Run(filepath.Base(filename), func(t *testing.T) {
 					res, err := inj.InjectFile(filename, map[string]string{"httpmode": "wrap"})
 					require.NoError(t, err)
 
-					referenceFile := path.Join(referenceDir, dir, path.Base(filename)) + ".snap"
+					referenceFile := filepath.Join(referenceDir, dir, filepath.Base(filename)) + ".snap"
 					if !res.Modified {
 						_, err := os.Stat(referenceFile)
 						if updateSnapshots && err == nil {
@@ -75,7 +74,7 @@ func Test(t *testing.T) {
 
 					reference, err := os.ReadFile(referenceFile)
 					if updateSnapshots && errors.Is(err, os.ErrNotExist) {
-						require.NoError(t, os.MkdirAll(path.Dir(referenceFile), 0o755))
+						require.NoError(t, os.MkdirAll(filepath.Dir(referenceFile), 0o755))
 						require.NoError(t, os.WriteFile(referenceFile, data, 0o644))
 					}
 					require.NoError(t, err)
@@ -91,8 +90,8 @@ func Test(t *testing.T) {
 
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
-	samplesDir = path.Join(path.Dir(path.Dir(path.Dir(path.Dir(filename)))), "samples")
-	referenceDir = path.Join(path.Dir(filename), "testdata")
+	samplesDir = filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(filename)))), "samples")
+	referenceDir = filepath.Join(filepath.Dir(filename), "testdata")
 
 	updateSnapshots = os.Getenv("UPDATE_SNAPSHOTS") != ""
 }
