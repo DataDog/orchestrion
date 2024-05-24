@@ -324,7 +324,6 @@ var RestorerMap = map[string]string{
 var InjectedPaths = [...]string{
 	"github.com/datadog/orchestrion/instrument",
 	"github.com/datadog/orchestrion/instrument/event",
-	"google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",

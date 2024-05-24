@@ -20,6 +20,10 @@ func AssignmentOf(value Point) *assignmentOf {
 	return &assignmentOf{value: value}
 }
 
+func (i *assignmentOf) ImpliesImported() []string {
+	return i.value.ImpliesImported()
+}
+
 func (i *assignmentOf) Matches(chain *node.Chain) bool {
 	stmt, ok := node.As[*dst.AssignStmt](chain)
 	if !ok {

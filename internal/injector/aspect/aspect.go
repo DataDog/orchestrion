@@ -37,8 +37,18 @@ func (a *Aspect) AsCode() (jp, adv jen.Code) {
 }
 
 func (a *Aspect) AddedImports() (imports []string) {
+	implied := make(map[string]struct{})
+	for _, path := range a.JoinPoint.ImpliesImported() {
+		implied[path] = struct{}{}
+	}
+
 	for _, adv := range a.Advice {
-		imports = append(imports, adv.AddedImports()...)
+		for _, path := range adv.AddedImports() {
+			if _, implied := implied[path]; implied {
+				continue
+			}
+			imports = append(imports, path)
+		}
 	}
 	return
 }

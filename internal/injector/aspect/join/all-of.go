@@ -17,6 +17,13 @@ func AllOf(requirements ...Point) allOf {
 	return requirements
 }
 
+func (o allOf) ImpliesImported() (list []string) {
+	for _, jp := range o {
+		list = append(list, jp.ImpliesImported()...)
+	}
+	return
+}
+
 func (o allOf) Matches(node *node.Chain) bool {
 	for _, candidate := range o {
 		if !candidate.Matches(node) {

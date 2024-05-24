@@ -34,6 +34,10 @@ func Test(t *testing.T) {
 	dirs, err := os.ReadDir(samplesDir)
 	require.NoError(t, err)
 	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+
 		dir := dir.Name()
 		t.Run(dir, func(t *testing.T) {
 			t.Parallel()

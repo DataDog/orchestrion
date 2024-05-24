@@ -59,6 +59,7 @@ type (
 func New(pkgDir string, opts Options) (*Injector, error) {
 	fileset := token.NewFileSet()
 	cfg := &packages.Config{
+		Dir:  pkgDir,
 		Fset: fileset,
 		Mode: packages.NeedName |
 			packages.NeedFiles |

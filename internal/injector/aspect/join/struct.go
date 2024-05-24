@@ -25,6 +25,13 @@ func StructDefinition(typeName TypeName) *structDefinition {
 	}
 }
 
+func (s *structDefinition) ImpliesImported() []string {
+	if path := s.typeName.ImportPath(); path != "" {
+		return []string{path}
+	}
+	return nil
+}
+
 func (s *structDefinition) Matches(chain *node.Chain) bool {
 	if s.typeName.pointer {
 		// We can't ever match a pointer definition
@@ -57,6 +64,13 @@ func StructLiteral(typeName TypeName, field string) *structLiteral {
 		typeName: typeName,
 		field:    field,
 	}
+}
+
+func (s *structLiteral) ImpliesImported() []string {
+	if path := s.typeName.ImportPath(); path != "" {
+		return []string{path}
+	}
+	return nil
 }
 
 func (s *structLiteral) Matches(chain *node.Chain) bool {

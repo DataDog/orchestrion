@@ -18,6 +18,10 @@ func ImportPath(name string) importPath {
 	return importPath(name)
 }
 
+func (p importPath) ImpliesImported() []string {
+	return []string{string(p)} // Technically the current package in this instance
+}
+
 func (p importPath) Matches(chain *node.Chain) bool {
 	return chain.ImportPath() == string(p)
 }
@@ -30,6 +34,10 @@ type packageName string
 
 func PackageName(name string) packageName {
 	return packageName(name)
+}
+
+func (packageName) ImpliesImported() []string {
+	return nil // Can't assume anything here...
 }
 
 func (p packageName) Matches(chain *node.Chain) bool {

@@ -19,6 +19,10 @@ func Configuration(requirements map[string]string) configuration {
 	return configuration(requirements)
 }
 
+func (configuration) ImpliesImported() []string {
+	return nil
+}
+
 func (jp configuration) Matches(chain *node.Chain) bool {
 	for k, v := range jp {
 		cfg, found := chain.Config(k)

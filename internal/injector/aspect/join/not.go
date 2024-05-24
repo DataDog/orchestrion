@@ -19,6 +19,10 @@ func Not(jp Point) not {
 	return not{jp}
 }
 
+func (not) ImpliesImported() []string {
+	return nil
+}
+
 func (n not) Matches(node *node.Chain) bool {
 	return !n.jp.Matches(node)
 }
