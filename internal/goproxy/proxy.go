@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -104,7 +105,26 @@ func Run(goArgs []string, opts ...Option) error {
 	}
 
 	log.Tracef("exec: %q\n", argv)
-	return syscall.Exec(argv[0], argv, env)
+	if runtime.GOOS == "windows" {
+		// Windows *has* the `syscall.Exec` function, but it only returns `EWINDOWS` instead of actually
+		// doing the job. So we won't do process substitution on Windows...
+		cmd := exec.Command(argv[0], argv[1:]...)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			if err, ok := err.(*exec.ExitError); ok {
+				os.Exit(err.ExitCode())
+			}
+			return fmt.Errorf("exec[windows]: %w", err)
+		}
+		// We emulate the behavior of `syscall.Exec`, which only returns if there is an error. In
+		// success cases, the process has been replaced and this code no longer exists.
+		os.Exit(0) // We were successful at this point!
+	}
+
+	// `syscall.Exec` only returns if unsuccessful (then `err` is not nil).
+	return fmt.Errorf("execve: %w", syscall.Exec(argv[0], argv, env))
 }
 
 var goBinPath string

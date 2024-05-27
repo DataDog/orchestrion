@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -27,8 +27,8 @@ func main() {
 	flag.StringVar(&outputFile, "output", "LICENSE-3rdparty.csv", "output file to write")
 	flag.Parse()
 
-	licensesDir = path.Clean(licensesDir)
-	outputFile = path.Clean(outputFile)
+	licensesDir = filepath.Clean(licensesDir)
+	outputFile = filepath.Clean(outputFile)
 
 	var store Licenses
 	for _, filename := range flag.Args() {
@@ -122,7 +122,7 @@ func (l *Licenses) LoadFile(filename string) error {
 func (l *Licenses) AddCopyrights(pkgDir string) {
 	for _, compData := range l.data {
 		for origin, license := range compData {
-			license.copyright = scanPkg(path.Join(pkgDir, origin))
+			license.copyright = scanPkg(filepath.Join(pkgDir, origin))
 		}
 	}
 }
@@ -184,7 +184,7 @@ func scanPkg(pkg string) string {
 		if entry.IsDir() {
 			continue
 		}
-		c := scanFile(path.Join(pkg, entry.Name()))
+		c := scanFile(filepath.Join(pkg, entry.Name()))
 		for _, c := range c {
 			if _, dup := dedup[c]; dup {
 				continue
