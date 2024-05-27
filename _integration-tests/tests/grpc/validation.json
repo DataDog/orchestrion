@@ -1,5 +1,6 @@
 {
     "url": "http://localhost:8083",
+    "quit": "http://localhost:8083/quit",
     "output": [
 	{
 	    "name": "grpc.client",

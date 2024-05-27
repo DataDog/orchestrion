@@ -1,5 +1,6 @@
 {
     "url": "http://localhost:8088/ping",
+    "quit": "http://localhost:8088/quit",
     "output": [
 	{
 	    "name": "http.request",
