@@ -17,13 +17,9 @@ import (
 
 //line samples/server/database.go:16
 func init() {
-//line <generated>:1
-	sql1.Register(
-//line samples/server/database.go:17
-		"test", &testDriver{})
+	sql1.Register("test", &testDriver{})
 }
 
-//line samples/server/database.go:20
 type testDriver struct{}
 
 func (t *testDriver) Open(name string) (driver.Conn, error) {
@@ -55,31 +51,14 @@ func (t *testConnector) Driver() driver.Driver {
 }
 
 func openDatabase() (*sql.DB, error) {
-	_, err :=
-//line <generated>:1
-		sql1.Open(
-//line samples/server/database.go:51
-			"test", "mypath")
-//line samples/server/database.go:52
+	_, err := sql1.Open("test", "mypath")
 	if err != nil {
 		log.Printf("Some error: %v", err)
 	}
-	return sql1. //line <generated>:1
-			Open(
-//line samples/server/database.go:55
-			"test", "mypath")
+	return sql1.Open("test", "mypath")
 }
 
-//line samples/server/database.go:58
 func openDatabase2() *sql.DB {
-	_ =
-//line <generated>:1
-		sql1.OpenDB(
-//line samples/server/database.go:59
-			&testConnector{})
-//line samples/server/database.go:60
-	return sql1. //line <generated>:1
-			OpenDB(
-//line samples/server/database.go:60
-			&testConnector{})
+	_ = sql1.OpenDB(&testConnector{})
+	return sql1.OpenDB(&testConnector{})
 }
