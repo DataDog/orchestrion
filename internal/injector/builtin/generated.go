@@ -57,7 +57,13 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("github.com/jinzhu/gorm.Open"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm", "Open"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (*gorm.DB, error) {\n  db, err := {{.}}\n  if err != nil {\n    return nil, err\n  }\n  return gormtrace.WithCallbacks(db), err\n}()",
+				map[string]string{
+					"gorm":      "github.com/jinzhu/gorm",
+					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+				},
+			)),
 		},
 	},
 	// From yaml/databases/redigo.yml
@@ -415,4 +421,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:KDXlxiYrrR2Ii4fNgoUsdRHidmqrnVEIDAD+W+g171srUCH92OSr3WP8uPSIu4NDa2avGx32BrU1YAfqjK4QMQ=="
+const Checksum = "sha512:oKkHjIFTKd1xA+1tAuFezR2trEwqRt+npSBK1L/VVIq8xcJi/zDeQJaalE/Gk+iO+g2ZxnujiXZduqDpEcUXdg=="

@@ -36,7 +36,19 @@ func gormClient() {
 
 func jinzhuGormClient() {
 	sql.Register("pgx", &stdlib.Driver{})
-	db, err := gorm1.Open("pgx", "postgres://localhost:5432")
+	db, err :=
+//line <generated>:1
+		func() (*jinzhu.DB, error) {
+			db, err :=
+//line samples/client/gorm.go:35
+				jinzhu.Open("pgx", "postgres://localhost:5432")
+//line <generated>:1
+			if err != nil {
+				return nil, err
+			}
+			return gorm1.WithCallbacks(db), err
+		}()
+//line samples/client/gorm.go:36
 	if err != nil {
 		log.Fatal(err)
 	}

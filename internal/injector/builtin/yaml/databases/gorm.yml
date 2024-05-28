@@ -16,4 +16,15 @@
 - join-point:
     function-call: github.com/jinzhu/gorm.Open
   advice:
-    - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm.Open
+    - wrap-expression:
+        imports:
+          gorm: github.com/jinzhu/gorm
+          gormtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm
+        template: |-
+          func() (*gorm.DB, error) {
+            db, err := {{ . }}
+            if err != nil {
+              return nil, err
+            }
+            return gormtrace.WithCallbacks(db), err
+          }()
