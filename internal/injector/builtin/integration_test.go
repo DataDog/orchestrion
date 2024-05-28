@@ -33,6 +33,10 @@ func Test(t *testing.T) {
 	dirs, err := os.ReadDir(samplesDir)
 	require.NoError(t, err)
 	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+
 		dir := dir.Name()
 		t.Run(dir, func(t *testing.T) {
 			t.Parallel()
@@ -42,6 +46,7 @@ func Test(t *testing.T) {
 			tmp := t.TempDir()
 			inj, err := injector.New(pkgDir, injector.Options{
 				Aspects: builtin.Aspects[:],
+				Dir:     pkgDir,
 				ModifiedFile: func(filename string) string {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},

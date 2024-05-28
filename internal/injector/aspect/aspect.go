@@ -36,6 +36,23 @@ func (a *Aspect) AsCode() (jp, adv jen.Code) {
 	return
 }
 
+func (a *Aspect) AddedImports() (imports []string) {
+	implied := make(map[string]struct{})
+	for _, path := range a.JoinPoint.ImpliesImported() {
+		implied[path] = struct{}{}
+	}
+
+	for _, adv := range a.Advice {
+		for _, path := range adv.AddedImports() {
+			if _, implied := implied[path]; implied {
+				continue
+			}
+			imports = append(imports, path)
+		}
+	}
+	return
+}
+
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
 		JoinPoint yaml.Node            `yaml:"join-point"`

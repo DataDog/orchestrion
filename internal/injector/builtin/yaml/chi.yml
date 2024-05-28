@@ -14,7 +14,6 @@
       - not:
           import-path: github.com/go-chi/chi/v5/middleware
   advice:
-    - add-comment: //dd:instrumented
     - append-statements:
         imports:
           chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5

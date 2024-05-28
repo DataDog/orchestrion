@@ -19,7 +19,7 @@ import (
 type (
 	FunctionOption interface {
 		code.AsCode
-
+		impliesImported() []string
 		evaluate(string, *dst.FuncType, ...*dst.NodeDecs) bool
 	}
 
@@ -32,6 +32,13 @@ type (
 // their signature.
 func Function(opts ...FunctionOption) *funcDecl {
 	return &funcDecl{opts: opts}
+}
+
+func (s *funcDecl) ImpliesImported() (list []string) {
+	for _, opt := range s.opts {
+		list = append(list, opt.impliesImported()...)
+	}
+	return
 }
 
 func (s *funcDecl) Matches(chain *node.Chain) bool {
@@ -77,6 +84,10 @@ func Name(name string) FunctionOption {
 	return funcName(name)
 }
 
+func (fo funcName) impliesImported() []string {
+	return nil
+}
+
 func (fo funcName) evaluate(name string, _ *dst.FuncType, _ ...*dst.NodeDecs) bool {
 	return name == string(fo)
 }
@@ -94,6 +105,20 @@ type signature struct {
 // value types.
 func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{args: args, returns: ret}
+}
+
+func (fo *signature) impliesImported() (list []string) {
+	for _, tn := range fo.args {
+		if path := tn.ImportPath(); path != "" {
+			list = append(list, path)
+		}
+	}
+	for _, tn := range fo.returns {
+		if path := tn.ImportPath(); path != "" {
+			list = append(list, path)
+		}
+	}
+	return
 }
 
 func (fo *signature) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
@@ -162,6 +187,10 @@ func Directive(name string) FunctionOption {
 	return &directive{name}
 }
 
+func (*directive) impliesImported() []string {
+	return nil
+}
+
 func (fo *directive) evaluate(_ string, _ *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
 	for _, decs := range allDecs {
 		for _, dec := range decs.Start {
@@ -181,7 +210,25 @@ type oneOfFunctions []FunctionOption
 
 func OneOfFunctions(opts ...FunctionOption) oneOfFunctions {
 	return oneOfFunctions(opts)
+}
 
+func (fo oneOfFunctions) impliesImported() (list []string) {
+	// We can only assume a package is imported if all candidates imply it.
+	counts := make(map[string]uint)
+	for _, opt := range fo {
+		for _, path := range opt.impliesImported() {
+			counts[path]++
+		}
+	}
+
+	total := uint(len(fo))
+	list = make([]string, 0, len(counts))
+	for path, count := range counts {
+		if count == total {
+			list = append(list, path)
+		}
+	}
+	return
 }
 
 func (fo oneOfFunctions) evaluate(name string, fnType *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
@@ -214,6 +261,13 @@ func Receives(typeName TypeName) FunctionOption {
 	return &receives{typeName}
 }
 
+func (fo *receives) impliesImported() []string {
+	if path := fo.typeName.ImportPath(); path != "" {
+		return []string{path}
+	}
+	return nil
+}
+
 func (fo *receives) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
 	for _, param := range fnType.Params.List {
 		if fo.typeName.Matches(param.Type) {
@@ -237,6 +291,10 @@ func FunctionBody(up *funcDecl) *funcBody {
 		panic("upstream FunctionDeclaration InjectionPoint cannot be nil")
 	}
 	return &funcBody{up: up}
+}
+
+func (s *funcBody) ImpliesImported() []string {
+	return s.up.ImpliesImported()
 }
 
 func (s *funcBody) Matches(chain *node.Chain) bool {

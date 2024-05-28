@@ -111,12 +111,10 @@ func buildHandlers() {
 //dd:span foo:bar type:potato
 func myFunc(ctx context.Context, name string) {
 //line <generated>:1
-	//dd:startinstrument
 	{
 		ctx = instrument.Report(ctx, event.EventStart, "function-name", "myFunc", "foo", "bar", "type", "potato")
 		defer instrument.Report(ctx, event.EventEnd, "function-name", "myFunc", "foo", "bar", "type", "potato")
 	}
-	//dd:endinstrument
 //line samples/server/other_handlers.go:77
 	fmt.Println(name)
 }
@@ -124,12 +122,10 @@ func myFunc(ctx context.Context, name string) {
 //dd:span foo2:bar2 type:request
 func myFunc2(name string, req *http.Request) {
 //line <generated>:1
-	//dd:startinstrument
 	{
 		req = req.WithContext(instrument.Report(req.Context(), event.EventStart, "function-name", "myFunc2", "foo2", "bar2", "type", "request"))
 		defer instrument.Report(req.Context(), event.EventEnd, "function-name", "myFunc2", "foo2", "bar2", "type", "request")
 	}
-	//dd:endinstrument
 //line samples/server/other_handlers.go:82
 	fmt.Println(name)
 }

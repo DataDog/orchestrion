@@ -64,13 +64,7 @@ func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.Blo
 	if err != nil {
 		return nil, err
 	}
-
-	block := &dst.BlockStmt{List: stmts}
-	block.Decs.Before = dst.NewLine
-	block.Decs.Start.Prepend("//dd:startinstrument")
-	block.Decs.End.Append("\n", "//dd:endinstrument")
-
-	return block, nil
+	return &dst.BlockStmt{List: stmts}, nil
 }
 
 // CompileExpression generates new source based on this Template and extracts
@@ -193,6 +187,14 @@ func (t *Template) AsCode() jen.Code {
 		}),
 		jen.Empty().Line(),
 	)
+}
+
+func (t *Template) AddedImports() []string {
+	imports := make([]string, 0, len(t.imports))
+	for _, path := range t.imports {
+		imports = append(imports, path)
+	}
+	return imports
 }
 
 func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {

@@ -20,12 +20,10 @@ import (
 //line samples/client/main.go:18
 func main() {
 //line <generated>:1
-	//dd:startinstrument
 	{
 		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 		defer tracer.Stop()
 	}
-	//dd:endinstrument
 //line samples/client/main.go:19
 	if len(os.Args) < 2 {
 		return

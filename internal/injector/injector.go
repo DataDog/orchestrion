@@ -45,6 +45,9 @@ type (
 	Options struct {
 		// Aspects is the set of configured injections to attempt.
 		Aspects []aspect.Aspect
+		// Dir is the working directory to use for resolving dependencies, etc... If blank, the current working directory is
+		// used.
+		Dir string
 		// ModifiedFile is called to obtain the file name to use when writing a modified file. If nil, the original file is
 		// overwritten in-place.
 		ModifiedFile ModifiedFileFn
@@ -59,6 +62,7 @@ type (
 func New(pkgDir string, opts Options) (*Injector, error) {
 	fileset := token.NewFileSet()
 	cfg := &packages.Config{
+		Dir:  opts.Dir,
 		Fset: fileset,
 		Mode: packages.NeedName |
 			packages.NeedFiles |

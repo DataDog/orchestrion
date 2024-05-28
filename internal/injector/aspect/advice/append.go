@@ -37,6 +37,10 @@ func (a *appendStatements) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "AppendStatements").Call(a.template.AsCode())
 }
 
+func (a *appendStatements) AddedImports() []string {
+	return a.template.AddedImports()
+}
+
 func init() {
 	unmarshalers["append-statements"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template

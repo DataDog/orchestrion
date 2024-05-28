@@ -51,6 +51,10 @@ func (a *blockStmts) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "PrependStmts").Call(a.template.AsCode())
 }
 
+func (a *blockStmts) AddedImports() []string {
+	return a.template.AddedImports()
+}
+
 func init() {
 	unmarshalers["prepend-statements"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template

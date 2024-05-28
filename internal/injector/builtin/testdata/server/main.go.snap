@@ -17,12 +17,10 @@ import (
 //line samples/server/main.go:14
 func main() {
 //line <generated>:1
-	//dd:startinstrument
 	{
 		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 		defer tracer.Stop()
 	}
-	//dd:endinstrument
 //line samples/server/main.go:15
 	s := &http.Server{
 		Addr: ":8080",

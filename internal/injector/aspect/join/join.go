@@ -25,6 +25,10 @@ const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/join"
 type Point interface {
 	code.AsCode
 
+	// ImpliesImported returns a list of import paths that are known to already be
+	// imported if the join point matches.
+	ImpliesImported() []string
+
 	// Matches determines whether the injection should be performed on the given
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.

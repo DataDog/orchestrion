@@ -86,13 +86,11 @@ http-default:
       }
 
       func handle(w http.ResponseWriter, r *http.Request) {
-        //dd:startinstrument
         {
           r = instrument.HandleHeader(r)
           instrument.Report(r.Context(), event.EventStart, "name", "handle", "http.method", r.Method)
           defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "http.method", r.Method)
         }
-        //dd:endinstrument
         data, err := io.ReadAll(r.Body)
         if err != nil {
           w.WriteHeader(http.StatusBadRequest)
@@ -160,13 +158,11 @@ http-anonymous-handler:
         s := &http.Server{
           Addr: ":8085",
           Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            //dd:startinstrument
             {
               r = instrument.HandleHeader(r)
               instrument.Report(r.Context(), event.EventStart, "http.method", r.Method)
               defer instrument.Report(r.Context(), event.EventEnd, "http.method", r.Method)
             }
-            //dd:endinstrument
             data, err := io.ReadAll(r.Body)
             if err != nil {
               w.WriteHeader(http.StatusBadRequest)
@@ -239,13 +235,11 @@ http-no-arg-name:
       }
 
       func handle(_ http.ResponseWriter, __argument__1 *http.Request) {
-        //dd:startinstrument
         {
           __argument__1 = instrument.HandleHeader(__argument__1)
           instrument.Report(__argument__1.Context(), event.EventStart, "name", "handle", "http.method", __argument__1.Method)
           defer instrument.Report(__argument__1.Context(), event.EventEnd, "name", "handle", "http.method", __argument__1.Method)
         }
-        //dd:endinstrument
       }
 
 http-lineInfo:
@@ -285,13 +279,11 @@ http-lineInfo:
 
       func handle(w http.ResponseWriter, r *http.Request) {
       //line <generated>:1
-        //dd:startinstrument
         {
           r = instrument.HandleHeader(r)
           instrument.Report(r.Context(), event.EventStart, "name", "handle", "http.method", r.Method)
           defer instrument.Report(r.Context(), event.EventEnd, "name", "handle", "http.method", r.Method)
         }
-        //dd:endinstrument
       //line input.go:24
         data, err := io.ReadAll(r.Body)
         if err != nil {
@@ -455,7 +447,6 @@ change-return-value:
       )
 
       func test() (_ interface{}, __returns__1 error) {
-        //dd:startinstrument
         {
           defer func() {
             if __returns__1 != nil {
@@ -463,7 +454,6 @@ change-return-value:
             }
           }()
         }
-        //dd:endinstrument
         log.Println("Running test function...")
         return nil, errors.ErrUnsupported
       }
@@ -476,7 +466,6 @@ chi5-newroute:
           assignment-of:
             function-call: github.com/go-chi/chi/v5.NewRouter
         advice:
-          - add-comment: '//dd:instrumented'
           - append-statements:
               template: '{{.Assignment.LHS}}.Use(instrument.ChiV5Middleware())'
               imports:
@@ -530,14 +519,11 @@ chi5-newroute:
 
       //line input.go:13
       func main() {
-        //dd:instrumented
         router := chi.NewRouter()
       //line <generated>:1
-        //dd:startinstrument
         {
           router.Use(instrument.ChiV5Middleware())
         }
-        //dd:endinstrument
       //line input.go:15
         router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
           w.Write([]byte("Hello World!"))
@@ -561,7 +547,6 @@ chi5-newroute-dotimport:
           assignment-of:
             function-call: github.com/go-chi/chi/v5.NewRouter
         advice:
-          - add-comment: '//dd:instrumented'
           - append-statements:
               template: '{{.Assignment.LHS}}.Use(instrument.ChiV5Middleware())'
               imports:
@@ -617,14 +602,11 @@ chi5-newroute-dotimport:
 
       //line input.go:14
       func main() {
-        //dd:instrumented
         router := NewRouter()
       //line <generated>:1
-        //dd:startinstrument
         {
           router.Use(instrument.ChiV5Middleware())
         }
-        //dd:endinstrument
       //line input.go:16
         router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
           w.Write([]byte("Hello World!"))
@@ -699,22 +681,18 @@ directive:
       //line input.go:8
       func outer(ctx context.Context) {
       //line <generated>:1
-        //dd:startinstrument
         {
           instrument.Report(ctx, event.EventStart, "name", "outer", "foo", "bar", "baz", "qux")
           defer instrument.Report(ctx, event.EventEnd, "name", "outer", "foo", "bar", "baz", "qux")
         }
-        //dd:endinstrument
         //dd:span
       //line input.go:10
         inner := func(c context.Context) {
       //line <generated>:1
-          //dd:startinstrument
           {
             instrument.Report(c, event.EventStart)
             defer instrument.Report(c, event.EventEnd)
           }
-          //dd:endinstrument
       //line input.go:11
           panic("Not implemented")
         }

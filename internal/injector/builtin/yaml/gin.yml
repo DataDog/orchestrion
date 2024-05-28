@@ -10,7 +10,6 @@
         - function-call: github.com/gin-gonic/gin.Default
         - function-call: github.com/gin-gonic/gin.New
   advice:
-    - add-comment: //dd:instrumented
     - append-statements:
         imports:
           gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin

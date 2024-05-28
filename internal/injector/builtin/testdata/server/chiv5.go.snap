@@ -16,14 +16,11 @@ import (
 
 //line samples/server/chiv5.go:14
 func chiV5Server() {
-	//dd:instrumented
 	router := chi.NewRouter()
 //line <generated>:1
-	//dd:startinstrument
 	{
 		router.Use(chi1.Middleware())
 	}
-	//dd:endinstrument
 //line samples/server/chiv5.go:16
 	router.Get("/",
 //line <generated>:1

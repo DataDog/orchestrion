@@ -17,6 +17,25 @@ func OneOf(candidates ...Point) oneOf {
 	return candidates
 }
 
+func (o oneOf) ImpliesImported() []string {
+	// We can only assume a package is imported if all candidates imply it.
+	counts := make(map[string]uint)
+	for _, jp := range o {
+		for _, path := range jp.ImpliesImported() {
+			counts[path]++
+		}
+	}
+
+	total := uint(len(o))
+	list := make([]string, 0, len(counts))
+	for path, count := range counts {
+		if count == total {
+			list = append(list, path)
+		}
+	}
+	return list
+}
+
 func (o oneOf) Matches(node *node.Chain) bool {
 	for _, candidate := range o {
 		if candidate.Matches(node) {

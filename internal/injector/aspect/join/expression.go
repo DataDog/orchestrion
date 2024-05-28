@@ -29,6 +29,10 @@ func FunctionCall(pattern string) *functionCall {
 	return &functionCall{path: matches[1], name: matches[2]}
 }
 
+func (i *functionCall) ImpliesImported() []string {
+	return []string{i.path}
+}
+
 func (i *functionCall) Matches(chain *node.Chain) bool {
 	call, ok := node.As[*dst.CallExpr](chain)
 	if !ok {

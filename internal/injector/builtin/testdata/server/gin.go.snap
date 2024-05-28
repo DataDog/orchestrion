@@ -15,14 +15,11 @@ import (
 
 //line samples/server/gin.go:14
 func ginServer() {
-	//dd:instrumented
 	r := gin.Default()
 //line <generated>:1
-	//dd:startinstrument
 	{
 		r.Use(gin1.Middleware(""))
 	}
-	//dd:endinstrument
 //line samples/server/gin.go:16
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
