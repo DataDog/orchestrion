@@ -1,3 +1,8 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 package main
 
 import (
@@ -13,7 +18,7 @@ import (
 	gorm1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 )
 
-//line samples/client/gorm.go:13
+//line samples/client/gorm.go:18
 func gormClient() {
 	sql.Register("pgx", &stdlib.Driver{})
 	sqlDB, err := sql.Open("pgx", "postgres://localhost:5432")
@@ -40,7 +45,7 @@ func jinzhuGormClient() {
 //line <generated>:1
 		func() (*jinzhu.DB, error) {
 			db, err :=
-//line samples/client/gorm.go:35
+//line samples/client/gorm.go:40
 				jinzhu.Open("pgx", "postgres://localhost:5432")
 //line <generated>:1
 			if err != nil {
@@ -48,7 +53,7 @@ func jinzhuGormClient() {
 			}
 			return gorm1.WithCallbacks(db), err
 		}()
-//line samples/client/gorm.go:36
+//line samples/client/gorm.go:41
 	if err != nil {
 		log.Fatal(err)
 	}
