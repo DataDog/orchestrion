@@ -197,7 +197,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
           {
             if ($null -ne $_.Exception.Response.StatusCode)
             {
-              throw "GET $($json.url) => HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
+              throw "GET $($json.url) => HTTP $([int]$_.Exception.Response.StatusCode) ($($_.Exception.Response.StatusCode))"
             }
             elseif ($attemptsLeft -le 0)
             {
