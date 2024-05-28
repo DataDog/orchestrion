@@ -273,34 +273,19 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("database/sql.Register"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.Register(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Register"),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("database/sql.Open"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Open"),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("database/sql.OpenDB"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.OpenDB(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "OpenDB"),
 		},
 	},
 	// From yaml/stdlib/net-http.yml
@@ -430,4 +415,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:N9GYX6sroTrlJogpa9xGOfCa2bdUFyphIj5uzIhpw9fnvjqNXI8fBFPmnoBhYPYc/WeQ2Y2J9q07aVoPMKgCVA=="
+const Checksum = "sha512:KDXlxiYrrR2Ii4fNgoUsdRHidmqrnVEIDAD+W+g171srUCH92OSr3WP8uPSIu4NDa2avGx32BrU1YAfqjK4QMQ=="

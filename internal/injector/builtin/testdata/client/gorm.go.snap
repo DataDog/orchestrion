@@ -15,17 +15,8 @@ import (
 
 //line samples/client/gorm.go:13
 func gormClient() {
-//line <generated>:1
-	sql.Register(
-//line samples/client/gorm.go:14
-		"pgx", &stdlib.Driver{})
-//line samples/client/gorm.go:15
-	sqlDB, err :=
-//line <generated>:1
-		sql.Open(
-//line samples/client/gorm.go:15
-			"pgx", "postgres://localhost:5432")
-//line samples/client/gorm.go:16
+	sql.Register("pgx", &stdlib.Driver{})
+	sqlDB, err := sql.Open("pgx", "postgres://localhost:5432")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,11 +35,7 @@ func gormClient() {
 }
 
 func jinzhuGormClient() {
-//line <generated>:1
-	sql.Register(
-//line samples/client/gorm.go:34
-		"pgx", &stdlib.Driver{})
-//line samples/client/gorm.go:35
+	sql.Register("pgx", &stdlib.Driver{})
 	db, err := gorm1.Open("pgx", "postgres://localhost:5432")
 	if err != nil {
 		log.Fatal(err)
