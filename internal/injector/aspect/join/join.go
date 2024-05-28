@@ -71,6 +71,16 @@ func (n *TypeName) ImportPath() string {
 	return n.path
 }
 
+// Name returns the unqualified name of this type.
+func (n *TypeName) Name() string {
+	return n.name
+}
+
+// Pointer returns whether this is a pointer type.
+func (n *TypeName) Pointer() bool {
+	return n.pointer
+}
+
 func (n *TypeName) Matches(node dst.Expr) bool {
 	switch node := node.(type) {
 	case *dst.Ident:
