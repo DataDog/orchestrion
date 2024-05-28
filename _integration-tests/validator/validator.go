@@ -13,7 +13,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -159,7 +161,11 @@ func main() {
 
 	var fakeTraces []map[string]any
 	if url, err := url.Parse(*surl); err == nil && url.Scheme == "file" {
-		file, err := os.Open(url.Path)
+		filename := url.Path
+		if runtime.GOOS == "windows" {
+			filename = filepath.FromSlash(filename[1:]) // The Path would include a leading `/`
+		}
+		file, err := os.Open(filename)
 		if err != nil {
 			fmt.Printf("Failed to open traces file %q: %v", url.Path, err)
 			os.Exit(1)
@@ -314,7 +320,8 @@ func compare(valid, fake []kv, prefix string, indent int, d *diff) {
 						indent+1, d)
 				}
 			} else {
-				if vkv.v != fkv.v {
+				// The inferred service name may include a `.exe` suffix on Windows!
+				if vkv.v != fkv.v && (runtime.GOOS != "windows" || vkv.k != "service" || fmt.Sprintf("%v.exe", vkv.v) != fkv.v) {
 					d.AddDifference("validation: %v.%v:%v\nfake agent: %v.%v:%v\n",
 						prefix, vkv.k, vkv.v, prefix, fkv.k, fkv.v)
 				}

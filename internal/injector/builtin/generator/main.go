@@ -48,6 +48,12 @@ func main() {
 		log.Fatalf("failed to process glob pattern(s) %s: %v\n", glob, err)
 	}
 
+	if len(matches) == 0 {
+		log.Fatalf("no files matched pattern %q\n", glob)
+	}
+	// Ensure the files are sorted for determinism.
+	sort.Strings(matches)
+
 	var (
 		depsFile      *jen.File
 		injectedPaths = make(map[string]struct{})

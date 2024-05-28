@@ -35,6 +35,7 @@ var (
 		"-msan":       {}, // Enable memory sanitizer
 		"-race":       {}, // Enable data race detection
 		"-trimpath":   {}, // Remove all file system paths from the resulting executable
+		"-work":       {}, // Keep working temporary directory instead of deleting it
 	}
 	longFlags = map[string]struct{}{
 		"-asmflags":   {}, // Flags passed through to the assembly

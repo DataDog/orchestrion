@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"syscall"
 
@@ -153,5 +153,5 @@ func goModVersion(dir string) (moduleVersion string, moduleDir string, err error
 
 func init() {
 	_, file, _, _ := runtime.Caller(0)
-	orchestrionSrcDir = path.Dir(path.Dir(path.Dir(file)))
+	orchestrionSrcDir = filepath.Dir(filepath.Dir(filepath.Dir(file)))
 }

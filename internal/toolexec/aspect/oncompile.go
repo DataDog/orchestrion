@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/datadog/orchestrion/internal/injector"
@@ -40,11 +40,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		}
 	}
 
-	orchestrionDir := path.Join(path.Dir(cmd.Flags.Output), "orchestrion")
+	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	injector, err := injector.New(cmd.SourceDir, injector.Options{
 		Aspects: builtin.Aspects[:],
 		ModifiedFile: func(file string) string {
-			return path.Join(orchestrionDir, "src", path.Base(file))
+			return filepath.Join(orchestrionDir, "src", filepath.Base(file))
 		},
 		PreserveLineInfo: true,
 	})
@@ -125,7 +125,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	}
 
 	// Write the link.deps file and add it to the output object once the compilation has completed.
-	linkDepsFile := path.Join(orchestrionDir, linkdeps.LinkDepsFilename)
+	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.LinkDepsFilename)
 	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
 		return fmt.Errorf("writing %s file: %w", linkdeps.LinkDepsFilename, err)
 	}
@@ -146,7 +146,7 @@ func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err 
 
 	log.Tracef("Backing up original %q\n", filename)
 	if err := os.Rename(filename, filename+dotOriginal); err != nil {
-		return fmt.Errorf("renaming to %q: %w", path.Base(filename)+dotOriginal, err)
+		return fmt.Errorf("renaming to %q: %w", filepath.Base(filename)+dotOriginal, err)
 	}
 
 	log.Debugf("Writing updated %q\n", filename)

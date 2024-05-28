@@ -1,21 +1,23 @@
 {
-    "url": "http://localhost:8086",
-    "output": [
-	{
-	"name": "http.request",
-	"service": "net_http_ddspan",
-	"resource": "GET /",
-	"type": "web",
-	"_children": [
-	    {
-		"name": "subfn",
-		"service": "net_http_ddspan",
-		"resource": "subfn",
-		"meta": {
-		    "test1": "subfn",
-		    "function-name": "subfn"
+	"url": "http://localhost:8086",
+	"quit": "http://localhost:8086/quit",
+	"output": [
+		{
+			"name": "http.request",
+			"service": "net_http_ddspan",
+			"resource": "GET /",
+			"type": "web",
+			"_children": [
+				{
+					"name": "subfn",
+					"service": "net_http_ddspan",
+					"resource": "subfn",
+					"meta": {
+						"test1": "subfn",
+						"function-name": "subfn"
+					}
+				}
+			]
 		}
-	    }
 	]
-    }]
 }
