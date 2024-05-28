@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -25,7 +25,7 @@ func Test(t *testing.T) {
 	require.NoError(t, err, "failed to create temporary working directory")
 	defer os.RemoveAll(tmp)
 
-	testMain := path.Join(tmp, "bin", "test_main")
+	testMain := filepath.Join(tmp, "bin", "test_main")
 
 	_, err = shell(ensureDir, "go", "build", "-o", testMain, "./integration")
 	require.NoError(t, err, "failed to build test_main helper")
@@ -52,7 +52,7 @@ func Test(t *testing.T) {
 		"none":     {fails: true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			wd := path.Join(tmp, name)
+			wd := filepath.Join(tmp, name)
 			require.NoError(t, os.Mkdir(wd, 0750), "failed to create test working directory")
 
 			goMod := []string{
@@ -67,7 +67,7 @@ func Test(t *testing.T) {
 
 				// So that "go mod tidy" does not remove the requirement...
 				require.NoError(t,
-					os.WriteFile(path.Join(wd, "tools.go"), []byte(strings.Join([]string{
+					os.WriteFile(filepath.Join(wd, "tools.go"), []byte(strings.Join([]string{
 						"//go:build tools",
 						"package tools",
 						"",
@@ -77,11 +77,11 @@ func Test(t *testing.T) {
 				)
 			}
 			if test.replaces {
-				goMod = append(goMod, fmt.Sprintf("replace github.com/datadog/orchestrion => %s", path.Dir(path.Dir(ensureDir))), "")
+				goMod = append(goMod, fmt.Sprintf("replace github.com/datadog/orchestrion => %s", filepath.Dir(filepath.Dir(ensureDir))), "")
 			}
 
 			require.NoError(t,
-				os.WriteFile(path.Join(wd, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o644),
+				os.WriteFile(filepath.Join(wd, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o644),
 				"failed to create go.mod file",
 			)
 
@@ -113,5 +113,5 @@ func shell(dir, cmd string, args ...string) (string, error) {
 
 func init() {
 	_, file, _, _ := runtime.Caller(0)
-	ensureDir = path.Dir(file)
+	ensureDir = filepath.Dir(file)
 }

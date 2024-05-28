@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"orchestrion/integration"
+	"os"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -22,6 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to open the notes database: %v", err)
 	}
+	defer os.Remove("./notedb.sqlite")
 
 	// set up database
 	_, err = db.ExecContext(context.Background(),
@@ -52,7 +54,7 @@ func main() {
 
 	//dd:ignore
 	s := &http.Server{
-		Addr:    ":8087",
+		Addr:    "127.0.0.1:8087",
 		Handler: mux,
 	}
 
@@ -71,6 +73,14 @@ VALUES (?, ?, datetime('now'));`, userid, content)
 			http.Error(w, fmt.Sprintf("Failed to insert: %v", err), http.StatusInternalServerError)
 		}
 	})
+
+	mux.HandleFunc("/quit",
+		//dd:ignore
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Println("Shutdown requested...")
+			defer s.Shutdown(context.Background())
+			w.Write([]byte("Goodbye\n"))
+		})
 
 	integration.OnSignal(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

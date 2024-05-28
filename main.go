@@ -13,12 +13,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/ensure"
+	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/log"
@@ -59,7 +59,7 @@ func main() {
 	case "go":
 		autoPinOrchestrion()
 		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrionBinPath, "toolexec")); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 		return
@@ -125,8 +125,9 @@ func main() {
 					}
 				}
 			}
-			log.Tracef("Appending orchestrion information to output: orchestrion@%s,%s\n", versionString.String(), builtin.Checksum)
-			fmt.Printf("%s:orchestrion@%s,%s\n", strings.TrimSpace(stdout.String()), versionString.String(), builtin.Checksum)
+			fullVersion := fmt.Sprintf("%s:%s,%s", strings.TrimSpace(stdout.String()), versionString.String(), builtin.Checksum)
+			log.Tracef("Complete version output: %s\n", fullVersion)
+			fmt.Println(fullVersion)
 			return
 		}
 
@@ -153,53 +154,58 @@ func main() {
 
 		return
 	case "warmup":
-		tmp, err := os.MkdirTemp("", "orchestrion-warmup-*")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to create temporary directory: %v\n", err)
-			os.Exit(1)
-		}
-		defer os.RemoveAll(tmp)
-
-		log.Tracef("Initializing warm-up module in %q\n", tmp)
-		var stderr bytes.Buffer
-		cmd := exec.Command("go", "mod", "init", "orchestrion-warmup")
-		cmd.Dir = tmp
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to initialize temporary module (%q): %v\n", cmd.Args, err)
-			if stderr.Len() > 0 {
-				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+		if goMod, err := goenv.GOMOD(); err == nil && goMod != "" {
+			// Ensure Orchestrion is pinned here...
+			autoPinOrchestrion()
+			log.Tracef("Warming up in the current module (%q)\n", goMod)
+		} else {
+			tmp, err := os.MkdirTemp("", "orchestrion-warmup-*")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to create temporary directory: %v\n", err)
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
-
-		log.Tracef("Running 'orchestrion pin' in the temporary module...\n")
-		stderr.Reset()
-		cmd = exec.Command(orchestrionBinPath, "pin")
-		cmd.Dir = tmp
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module (%q): %v\n", cmd.Args, err)
-			if stderr.Len() > 0 {
-				fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+			defer os.RemoveAll(tmp)
+			log.Tracef("Initializing warm-up module in %q\n", tmp)
+			var stderr bytes.Buffer
+			cmd := exec.Command("go", "mod", "init", "orchestrion-warmup")
+			cmd.Dir = tmp
+			cmd.Stderr = &stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to initialize temporary module (%q): %v\n", cmd.Args, err)
+				if stderr.Len() > 0 {
+					fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		log.Tracef("Running `go build -v <modules>` in the temporary module...\n")
-		buildArgs := make([]string, 0, 3+len(args)+len(builtin.InjectedPaths))
-		buildArgs = append(buildArgs, "go", "build")
-		buildArgs = append(buildArgs, args...)
-		// All packages we may be instrumenting, plus the standard library.
-		buildArgs = append(buildArgs, "std")
-		buildArgs = append(buildArgs, builtin.InjectedPaths[:]...)
-		cmd = exec.Command(orchestrionBinPath, buildArgs...)
-		cmd.Dir = tmp
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Warm-up build failed (%q): %v\n", cmd.Args, err)
-			os.Exit(1)
+			log.Tracef("Running 'orchestrion pin' in the temporary module...\n")
+			stderr.Reset()
+			cmd = exec.Command(orchestrionBinPath, "pin")
+			cmd.Dir = tmp
+			cmd.Stderr = &stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module (%q): %v\n", cmd.Args, err)
+				if stderr.Len() > 0 {
+					fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
+				}
+				os.Exit(1)
+			}
+
+			log.Tracef("Running `go build -v <modules>` in the temporary module...\n")
+			buildArgs := make([]string, 0, 3+len(args)+len(builtin.InjectedPaths))
+			buildArgs = append(buildArgs, "go", "build")
+			buildArgs = append(buildArgs, args...)
+			// All packages we may be instrumenting, plus the standard library.
+			buildArgs = append(buildArgs, "std")
+			buildArgs = append(buildArgs, builtin.InjectedPaths[:]...)
+			cmd = exec.Command(orchestrionBinPath, buildArgs...)
+			cmd.Dir = tmp
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Warm-up build failed (%q): %v\n", cmd.Args, err)
+				os.Exit(1)
+			}
 		}
 		return
 	default:
@@ -235,5 +241,5 @@ func init() {
 			orchestrionBinPath = os.Args[0]
 		}
 	}
-	orchestrionBinPath = path.Clean(orchestrionBinPath)
+	orchestrionBinPath = filepath.Clean(orchestrionBinPath)
 }

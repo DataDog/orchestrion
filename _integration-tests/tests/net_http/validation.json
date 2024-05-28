@@ -1,14 +1,16 @@
 {
-    "url": "http://localhost:8085",
-    "output": [
-	{
-	    "name": "http.request",
-	    "service": "net_http",
-	    "resource": "GET /",
-	    "type": "web",
-		"meta": {
-			"component": "net/http",
-			"span.kind": "server"
+	"url": "http://localhost:8085",
+	"quit": "http://localhost:8085/quit",
+	"output": [
+		{
+			"name": "http.request",
+			"service": "net_http",
+			"resource": "GET /",
+			"type": "web",
+			"meta": {
+				"component": "net/http",
+				"span.kind": "server"
+			}
 		}
-	}]
+	]
 }
