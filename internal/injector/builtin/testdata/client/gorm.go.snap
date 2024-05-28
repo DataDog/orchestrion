@@ -1,0 +1,73 @@
+package main
+
+import (
+	"log"
+
+	"github.com/jackc/pgx/stdlib"
+	jinzhu "github.com/jinzhu/gorm"
+	"gorm.io/driver/postgres"
+	gorm2 "gorm.io/gorm"
+//line <generated>:1
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
+	gorm1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
+)
+
+//line samples/client/gorm.go:13
+func gormClient() {
+//line <generated>:1
+	sql.Register(
+//line samples/client/gorm.go:14
+		"pgx", &stdlib.Driver{})
+//line samples/client/gorm.go:15
+	sqlDB, err :=
+//line <generated>:1
+		sql.Open(
+//line samples/client/gorm.go:15
+			"pgx", "postgres://localhost:5432")
+//line samples/client/gorm.go:16
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	db, err :=
+//line <generated>:1
+		gorm.Open(
+//line samples/client/gorm.go:21
+			postgres.New(postgres.Config{Conn: sqlDB}), &gorm2.Config{})
+//line samples/client/gorm.go:22
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var user struct {
+		gorm2.Model
+		Name string
+	}
+	db.Where("name = ?", "gorm.io").First(&user)
+}
+
+func jinzhuGormClient() {
+//line <generated>:1
+	sql.Register(
+//line samples/client/gorm.go:34
+		"pgx", &stdlib.Driver{})
+//line samples/client/gorm.go:35
+	db, err :=
+//line <generated>:1
+		gorm1.Open(
+//line samples/client/gorm.go:35
+			"pgx", "postgres://localhost:5432")
+//line samples/client/gorm.go:36
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var user struct {
+		jinzhu.Model
+		Name string
+	}
+	db.Where("name = ?", "jinzhu").First(&user)
+}

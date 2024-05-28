@@ -47,6 +47,29 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From yaml/databases/gorm.yml
+	{
+		JoinPoint: join.FunctionCall("gorm.io/gorm.Open"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"gormtrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
+				map[string]string{
+					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/jinzhu/gorm.Open"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"gormtrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
+				map[string]string{
+					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+				},
+			)),
+		},
+	},
 	// From yaml/databases/redigo.yml
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
@@ -410,9 +433,11 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:VhyFHmM2Qf4cAa/ZTMoilLQFDu7rioEHBmWQfXnyyuaWc67X+/RbK8PuBMYUBLJBE5zSqQXl8PnGPs8jcwahBg=="
+const Checksum = "sha512:n/p3qxPUOTGaxmh4lktug2wOPZui91jfUpHXLv5ICz51+wwjqoiLcXxUjzi9SFlZnefJeChdcVgMyzhiSS2tiw=="
