@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"syscall"
 )
 
 var (
@@ -102,8 +101,8 @@ func write(at Level, format string, args ...any) {
 	// We flock the output file to ensure lines don't get mangled by concurrent access. On Windows
 	// with NTFS, if the log file is a O_APPEND file, this also has the benefit of preventing further
 	// data corruption, as NTFS tries its best to emulate O_APPEND, but this is brittle.
-	syscall.Flock(int(writer.Fd()), syscall.LOCK_EX)
-	defer syscall.Flock(int(writer.Fd()), syscall.LOCK_UN)
+	Flock(writer)
+	defer FUnlock(writer)
 
 	fmt.Fprintf(writer, "[%-7s", at)
 

@@ -14,11 +14,13 @@ import (
 	"orchestrion/integration"
 )
 
+var s *http.Server
+
 func main() {
 	go runServer()
 
-	s := &http.Server{
-		Addr:    ":8083",
+	s = &http.Server{
+		Addr:    "127.0.0.1:8083",
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {
@@ -30,6 +32,13 @@ func main() {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/quit" {
+		log.Println("Shutdown requested...")
+		defer s.Shutdown(context.Background())
+		w.Write([]byte("Goodbye\n"))
+		return
+	}
+
 	runClient()
 	w.WriteHeader(http.StatusOK)
 }

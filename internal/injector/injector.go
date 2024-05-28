@@ -15,7 +15,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect"
@@ -178,7 +178,7 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 		}
 
 		res.Filename = i.outputFileFor(filename)
-		if err := os.MkdirAll(path.Dir(res.Filename), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(res.Filename), 0o755); err != nil {
 			return res, err
 		}
 		err = os.WriteFile(res.Filename, postProcess(buf.Bytes()), 0o644)
