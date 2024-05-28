@@ -1,5 +1,6 @@
 {
   "curl": "curl \"http://localhost:8087/new\" -X POST -H \"Content-Type: application/x-www-form-urlencoded\" -d \"userid=1&content=new%20note\"",
+  "quit": "http://localhost:8087/quit",
   "output": [
     {
       "resource": "Connect",

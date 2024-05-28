@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -44,7 +44,7 @@ func TestGoModVersion(t *testing.T) {
 			if test.version != "" {
 				goMod = append(goMod, fmt.Sprintf("require %s %s", orchestrionPkgPath, test.version), "")
 				require.NoError(t,
-					os.WriteFile(path.Join(tmp, "tools.go"), []byte(fmt.Sprintf("//go:build tools\npackage tools\n\nimport _ %q\n", orchestrionPkgPath)), 0o644),
+					os.WriteFile(filepath.Join(tmp, "tools.go"), []byte(fmt.Sprintf("//go:build tools\npackage tools\n\nimport _ %q\n", orchestrionPkgPath)), 0o644),
 					"failed to write tools.go",
 				)
 			}
@@ -52,7 +52,7 @@ func TestGoModVersion(t *testing.T) {
 				goMod = append(goMod, fmt.Sprintf("replace %s => %s", orchestrionPkgPath, orchestrionSrcDir), "")
 			}
 
-			require.NoError(t, os.WriteFile(path.Join(tmp, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o644), "failed to write go.mod file")
+			require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.mod"), []byte(strings.Join(goMod, "\n")), 0o644), "failed to write go.mod file")
 
 			child := exec.Command("go", "mod", "tidy")
 			child.Dir = tmp

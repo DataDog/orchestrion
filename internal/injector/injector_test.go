@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -28,7 +27,7 @@ var injectorTestdata []byte
 
 func TestInjector(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	orchestrionPath := path.Dir(path.Dir(path.Dir(filename)))
+	orchestrionPath := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
 
 	var goModFile = []byte(strings.Join([]string{
 		"module dummy/test/module",
@@ -42,7 +41,7 @@ func TestInjector(t *testing.T) {
 		")",
 		"replace (",
 		fmt.Sprintf("\tgithub.com/datadog/orchestrion => %q", orchestrionPath),
-		fmt.Sprintf("\torchestrion/integration => %q", path.Join(orchestrionPath, "_integration-tests")),
+		fmt.Sprintf("\torchestrion/integration => %q", filepath.Join(orchestrionPath, "_integration-tests")),
 		")",
 	}, "\n"))
 	type testCase struct {
@@ -73,12 +72,12 @@ func TestInjector(t *testing.T) {
 			dir, err = filepath.EvalSymlinks(dir)
 			require.NoError(t, err, "failed to resolve canonical temporary directory")
 
-			require.NoError(t, os.WriteFile(path.Join(dir, "go.mod"), goModFile, 0o644), "failed to write go.mod file")
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), goModFile, 0o644), "failed to write go.mod file")
 
-			require.NoError(t, os.Mkdir(path.Join(dir, "main"), 0o755), "failed to create main directory")
-			require.NoError(t, os.WriteFile(path.Join(dir, "tools.go"), []byte("//go:build tools\npackage tools\nimport _ \"github.com/datadog/orchestrion/instrument\""), 0o644), "failed to write tools.go file")
+			require.NoError(t, os.Mkdir(filepath.Join(dir, "main"), 0o755), "failed to create main directory")
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "tools.go"), []byte("//go:build tools\npackage tools\nimport _ \"github.com/datadog/orchestrion/instrument\""), 0o644), "failed to write tools.go file")
 
-			filename := path.Join(dir, "main", "input.go")
+			filename := filepath.Join(dir, "main", "input.go")
 			require.NoError(t, os.WriteFile(filename, []byte(tc.Source), 0o644), "failed to write injection input file")
 
 			run := func(cmd string, args ...string) error {
@@ -99,7 +98,7 @@ func TestInjector(t *testing.T) {
 			}
 			require.NoError(t, os.Chdir(dir))
 
-			injector, err := injector.New(path.Dir(filename), tc.Options)
+			injector, err := injector.New(filepath.Dir(filename), tc.Options)
 			require.NoError(t, err)
 			res, err := injector.InjectFile(filename, nil)
 			require.NoError(t, err)

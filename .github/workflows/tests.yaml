@@ -13,10 +13,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: 'DataDog/orchestrion'
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache-dependency-path: "**/*.sum"
@@ -33,54 +33,53 @@ jobs:
         run: ./tools/verify-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
+
   unit-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+       go-version: ['1.21', '1.22']
+    name: Unit tests (go${{ matrix.go-version }})
     steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: 'DataDog/orchestrion'
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Checkout Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: go test -cover -covermode=atomic -race ./...
+
   integration-tests:
-    runs-on: ubuntu-latest
-    services:
-      testagent:
-        image: ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:v1.11.0
-        ports:
-          - 8126:8126
-        env:
-          # See documentation for configuration:
-          # https://github.com/DataDog/dd-apm-test-agent#environment-variables
-          ENABLED_CHECKS: trace_stall,trace_count_header,trace_peer_service,trace_dd_service
-          LOG_LEVEL: DEBUG
-          TRACE_LANGUAGE: golang
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [macos, ubuntu, windows]
+        go-version: ['1.21', '1.22']
+    runs-on: ${{ matrix.runs-on }}-latest
+    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup go
+        uses: actions/setup-go@v5
         with:
-          repository: 'DataDog/orchestrion'
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
+          go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/*.sum"
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
-        run: ./integration-tests.sh
-        env:
-          TMPDIR: ${{ runner.temp }}
-      # Docker will leave stuff owned by root and the upload-artifact action
-      # will fail to scan the directories unless we do this...
-      - name: Fix output files ownership
-        run: sudo chown -R $USER _integration-tests/outputs
+        run: ./integration-tests.ps1
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-test-output
+          name: ${{ matrix.runs-on }}-tests-${{ matrix.go-version }}-output
           path: _integration-tests/outputs
           if-no-files-found: error # That would be very unexpected
 

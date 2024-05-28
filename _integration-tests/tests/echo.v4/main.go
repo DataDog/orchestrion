@@ -22,10 +22,17 @@ func main() {
 			"message": "pong",
 		})
 	})
+	r.GET("/quit", func(c echo.Context) error {
+		log.Println("Shutdown requested...")
+		defer r.Shutdown(context.Background())
+		return c.JSON(http.StatusOK, map[string]any{
+			"message": "Goodbye",
+		})
+	})
 	integration.OnSignal(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		r.Shutdown(ctx)
 	})
-	log.Print(r.Start(":8081"))
+	log.Print(r.Start("127.0.0.1:8081"))
 }

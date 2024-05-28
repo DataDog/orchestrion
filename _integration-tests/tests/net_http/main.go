@@ -14,11 +14,13 @@ import (
 	"time"
 )
 
+var s *http.Server
+
 func main() {
 	defer log.Printf("Server shutting down gracefully.")
 
-	s := &http.Server{
-		Addr:    ":8085",
+	s = &http.Server{
+		Addr:    "127.0.0.1:8085",
 		Handler: http.HandlerFunc(handle),
 	}
 	integration.OnSignal(func() {
@@ -30,6 +32,13 @@ func main() {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/quit" {
+		log.Println("Shutdown requested...")
+		defer s.Shutdown(context.Background())
+		w.Write([]byte("Goodbye\n"))
+		return
+	}
+
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
