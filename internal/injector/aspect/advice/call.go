@@ -8,6 +8,7 @@ package advice
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/aspect/join"
@@ -120,6 +121,53 @@ func (a *appendArgs) AddedImports() []string {
 	return imports
 }
 
+type replaceFunction struct {
+	path string
+	name string
+}
+
+// ReplaceFunction replaces the called function with the provided drop-in replacement. The signature
+// must be compatible with the original function (it may accept a new variadic argument).
+func ReplaceFunction(path, name string) *replaceFunction {
+	return &replaceFunction{path, name}
+}
+
+func (r *replaceFunction) Apply(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (bool, error) {
+	file, hasFile := node.Find[*dst.File](chain)
+
+	node, ok := chain.Node.(*dst.CallExpr)
+	if !ok {
+		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", chain.Node)
+	}
+
+	if id, ok := node.Fun.(*dst.Ident); ok {
+		id.Path = r.path
+		id.Name = r.name
+		id.Obj = nil // Just in case
+	} else {
+		node.Fun = &dst.Ident{Path: r.path, Name: r.name}
+	}
+
+	if r.path != "" && hasFile {
+		if refMap, found := typed.ContextValue[*typed.ReferenceMap](ctx); found {
+			refMap.AddImport(file, r.path)
+		}
+	}
+
+	return true, nil
+}
+
+func (r *replaceFunction) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "ReplaceFunction").Call(jen.Lit(r.path), jen.Lit(r.name))
+}
+
+func (r *replaceFunction) AddedImports() []string {
+	if r.path != "" {
+		return []string{r.path}
+	}
+	return nil
+}
+
 func init() {
 	unmarshalers["append-args"] = func(node *yaml.Node) (Advice, error) {
 		var args struct {
@@ -137,5 +185,24 @@ func init() {
 		}
 
 		return AppendArgs(tn, args.Values...), nil
+	}
+	unmarshalers["replace-function"] = func(node *yaml.Node) (Advice, error) {
+		var fqn string
+		if err := node.Decode(&fqn); err != nil {
+			return nil, err
+		}
+
+		var (
+			path string
+			name string
+		)
+		if idx := strings.LastIndex(fqn, "."); idx >= 0 {
+			path = fqn[:idx]
+			name = fqn[idx+1:]
+		} else {
+			name = fqn // Built-in function, function from the same package
+		}
+
+		return ReplaceFunction(path, name), nil
 	}
 }
