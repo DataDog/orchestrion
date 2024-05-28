@@ -51,23 +51,13 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("gorm.io/gorm.Open"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"gormtrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1", "Open"),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("github.com/jinzhu/gorm.Open"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"gormtrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm", "Open"),
 		},
 	},
 	// From yaml/databases/redigo.yml
@@ -440,4 +430,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:n/p3qxPUOTGaxmh4lktug2wOPZui91jfUpHXLv5ICz51+wwjqoiLcXxUjzi9SFlZnefJeChdcVgMyzhiSS2tiw=="
+const Checksum = "sha512:N9GYX6sroTrlJogpa9xGOfCa2bdUFyphIj5uzIhpw9fnvjqNXI8fBFPmnoBhYPYc/WeQ2Y2J9q07aVoPMKgCVA=="
