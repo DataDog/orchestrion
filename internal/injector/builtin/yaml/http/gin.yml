@@ -5,12 +5,17 @@
 %YAML 1.1
 ---
 - join-point:
-    assignment-of:
-      one-of:
-        - function-call: github.com/gin-gonic/gin.Default
-        - function-call: github.com/gin-gonic/gin.New
+    one-of:
+      - function-call: github.com/gin-gonic/gin.Default
+      - function-call: github.com/gin-gonic/gin.New
   advice:
-    - append-statements:
+    - wrap-expression:
         imports:
+          gin: github.com/gin-gonic/gin
           gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
-        template: '{{.Assignment.LHS}}.Use(gintrace.Middleware(""))'
+        template: |-
+          func() *gin.Engine {
+            e := {{ . }}
+            e.Use(gintrace.Middleware(""))
+            return e
+          }()
