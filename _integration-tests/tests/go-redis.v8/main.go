@@ -16,13 +16,24 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/go-redis/redis/v8"
 )
 
 func main() {
 	ctx := context.Background()
-	server, err := testredis.RunContainer(ctx, testcontainers.WithImage("redis:7"), testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}))
+	server, err := testredis.RunContainer(ctx,
+		testcontainers.WithImage("redis:7"),
+		testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForLog("* Ready to accept connections"),
+				wait.ForExposedPort(),
+				wait.ForListeningPort("6379/tcp"),
+			),
+		),
+	)
 	if err != nil {
 		log.Fatalf("Failed to start redis test container: %v\n", err)
 	}
@@ -39,14 +50,6 @@ func main() {
 	addr := redisURL.Host
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	defer client.Close()
-
-	for attempts := 50; attempts > 0; attempts-- { // Wait for up to 5 seconds at 100ms polling interval
-		_, err := client.Ping(ctx).Result()
-		if err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
 
 	if err := client.Set(ctx, "test_key", "test_value", 0).Err(); err != nil {
 		log.Fatalf("Failed to insert test data: %v", err)
