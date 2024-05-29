@@ -37,6 +37,10 @@ A test must consist of 2 things:
 	  ensuring all outstanding trace information is submitted to the agent.
 - A `validation.json` file, containing the URL that will trigger the trace generation, and a list of traces to be
   expected in the output.
+- Optionally, a `setup.ps1` PowerShell script, that'll be sourced prior to running the test. The script receives the
+  path to the scenario's output directory as the first (and only) argument. The last expression in the script must
+  produce a job value (usually from spawning a service as a background job). This is useful to spin up a local server
+  for scenarios that have such depenencies (e.g: redis clients, etc...).
 
 ### `validation.json` structure
 
