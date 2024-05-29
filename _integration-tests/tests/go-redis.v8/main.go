@@ -24,6 +24,7 @@ func main() {
 	}
 
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	defer client.Close()
 
 	func() {
 		if err := client.Set(context.Background(), "test_key", "test_value", 0).Err(); err != nil {
