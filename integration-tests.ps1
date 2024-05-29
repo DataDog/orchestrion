@@ -103,6 +103,8 @@ Write-Progress -Activity "Preparation" -Completed
 
 # Running test cases
 Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
+$env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
+$env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
 for ($i = 0 ; $i -lt $tests.Length ; $i++)
 {
   $name = $tests[$i]
@@ -142,13 +144,6 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     $env:LOG_LEVEL = 'DEBUG'
     $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
     $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
-
-    $setupPs1 = Join-Path $integ "tests" $name "setup.ps1"
-    $setup = $null
-    if (Test-Path -Path $setupPs1)
-    {
-      $setup = . $setupPs1 $outDir 2>&1 1>(Join-Path $outDir "setup.log")
-    }
 
     $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
     try {
@@ -192,12 +187,12 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
       if ($null -ne $json.url)
       {
         Write-Output "[$($name)]: Validating using: GET $($json.url)"
-        $attemptsLeft = 5
+        $attemptsLeft = 600 # 60 seconds with poll interval of 100ms
         for (;;)
         {
           try
           {
-            $null = Invoke-WebRequest -Uri $json.url -MaximumRetryCount 5 -RetryIntervalSec 1
+            $null = Invoke-WebRequest -Uri $json.url
             break # Invoke-WebRequest returns IIF the response had a successful status code
           }
           catch [System.Net.Http.HttpRequestException]
@@ -210,10 +205,14 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
             {
               throw "GET $($json.url) => Failed and all attempts are exhaused. Last error: $($_)"
             }
+            elseif ($job.State -ne "Running")
+            {
+              throw "GET $($json.url) => Failed and server is no longer running. Last error: $($_)"
+            }
             else
             {
               $attemptsLeft--
-              Start-Sleep -Milliseconds 150
+              Start-Sleep -Milliseconds 100
             }
           }
         }
@@ -267,10 +266,6 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     finally
     {
       Remove-Job -Job $job -Force
-      if ($null -ne $setup)
-      {
-        Remove-Job -Job $setup -Force
-      }
       Remove-Job -Job $agent -Force
     }
   }

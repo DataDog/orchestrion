@@ -10,33 +10,59 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"orchestrion/integration"
 	"time"
+
+	"github.com/testcontainers/testcontainers-go"
+	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 
 	"github.com/go-redis/redis/v8"
 )
 
 func main() {
+	ctx := context.Background()
+	server, err := testredis.RunContainer(ctx, testcontainers.WithImage("redis:7"), testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}))
+	if err != nil {
+		log.Fatalf("Failed to start redis test container: %v\n", err)
+	}
+	defer server.Terminate(ctx)
+
+	redisURI, err := server.ConnectionString(ctx)
+	if err != nil {
+		log.Fatalf("Failed to obtain connection string: %v\n", err)
+	}
+	redisURL, err := url.Parse(redisURI)
+	if err != nil {
+		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
+	}
+	addr := redisURL.Host
+	client := redis.NewClient(&redis.Options{Addr: addr})
+	defer client.Close()
+
+	for attempts := 50; attempts > 0; attempts-- { // Wait for up to 5 seconds at 100ms polling interval
+		_, err := client.Ping(ctx).Result()
+		if err == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if err := client.Set(ctx, "test_key", "test_value", 0).Err(); err != nil {
+		log.Fatalf("Failed to insert test data: %v", err)
+	}
+
 	mux := &http.ServeMux{}
 	s := &http.Server{
 		Addr:    "127.0.0.1:8091",
 		Handler: mux,
 	}
 
-	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	defer client.Close()
-
-	func() {
-		if err := client.Set(context.Background(), "test_key", "test_value", 0).Err(); err != nil {
-			log.Fatalf("Failed to insert test data: %v", err)
-		}
-	}()
-
 	mux.HandleFunc("/quit",
 		//dd:ignore
 		func(w http.ResponseWriter, r *http.Request) {
 			log.Println("Shutdown requested...")
-			defer s.Shutdown(context.Background())
+			defer s.Shutdown(ctx)
 			w.Write([]byte("Goodbye\n"))
 		})
 
