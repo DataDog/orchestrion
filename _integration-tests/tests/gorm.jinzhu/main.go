@@ -15,9 +15,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 )
 
 type Note struct {
@@ -66,10 +66,11 @@ func main() {
 		return func() error { return os.Remove("./notedb.sqlite") }
 	}()()
 
-	db, err := gorm.Open(sqlite.Open("./notedb.sqlite"), &gorm.Config{})
+	db, err := gorm.Open("sqlite3", "./notedb.sqlite")
 	if err != nil {
 		log.Fatalf("Failed to open GORM database: %v", err)
 	}
+	defer db.Close()
 
 	mux := &http.ServeMux{}
 	s := &http.Server{
@@ -88,8 +89,11 @@ func main() {
 	mux.HandleFunc("/",
 		//dd:ignore
 		func(w http.ResponseWriter, r *http.Request) {
+			// TODO: This should not be necessary (it's manual, and manual is yuck)
+			db := gormtrace.WithContext(r.Context(), db)
+
 			var note Note
-			if err := db.WithContext(r.Context()).Where("userid = ?", 2).First(&note).Error; err != nil {
+			if err := db.Where("userid = ?", 2).First(&note).Error; err != nil {
 				log.Printf("Error: %v\n", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprintf(w, "%v\n", err)

@@ -1,0 +1,26 @@
+{
+  "url": "http://localhost:8088",
+  "quit": "http://localhost:8088/quit",
+  "output": [
+    {
+      "resource": "GET /",
+      "type": "web",
+      "name": "http.request",
+      "service": "gorm.jinzhu",
+      "meta": {
+        "http.url": "http://localhost:8088/"
+      },
+      "_children": [
+        {
+          "resource": "SELECT * FROM \"notes\"  WHERE (userid = ?) ORDER BY \"notes\".\"id\" ASC LIMIT 1",
+          "type": "sql",
+          "name": "gorm.query",
+          "service": "gorm.db",
+          "meta": {
+            "component": "jinzhu/gorm"
+          }
+        }
+      ]
+    }
+  ]
+}
