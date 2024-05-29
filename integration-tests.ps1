@@ -138,12 +138,19 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     }
 
     # Run test case
-    $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
-
     $env:TRACE_LANGUAGE = 'golang'
     $env:LOG_LEVEL = 'DEBUG'
     $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
     $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
+
+    $setupPs1 = Join-Path $integ "tests" $name "setup.ps1"
+    $setup = $null
+    if (Test-Path -Path $setupPs1)
+    {
+      $setup = . $setupPs1 $outDir 2>&1 1>(Join-Path $outDir "setup.log")
+    }
+
+    $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
     try {
       if ($job.State -ne "Running")
       {
@@ -260,6 +267,10 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     finally
     {
       Remove-Job -Job $job -Force
+      if ($null -ne $setup)
+      {
+        Remove-Job -Job $setup -Force
+      }
       Remove-Job -Job $agent -Force
     }
   }
