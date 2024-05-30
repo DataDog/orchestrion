@@ -37,6 +37,7 @@ if ($IsWindows) {
 }
 
 $Failed = @{}
+$Skipped = @{}
 $outputs = Join-Path (Get-Location) "_integration-tests" "outputs"
 if (Test-Path $outputs)
 {
@@ -153,7 +154,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
     $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
 
-    $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
+    $server = Start-Process -FilePath $bin -RedirectStandardOutput (Join-Path $outDir "stdout.log") -RedirectStandardError (Join-Path $outDir "stderr.log") -PassThru
     try {
       $token = New-Guid
       $attemptsLeft = 10
@@ -187,6 +188,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
       }
 
       # Perform validations
+      $skip = false
       if ($null -ne $json.url)
       {
         Write-Output "[$($name)]: Validating using: GET $($json.url)"
@@ -208,9 +210,13 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
             {
               throw "GET $($json.url) => Failed and all attempts are exhaused. Last error: $($_)"
             }
-            elseif ($job.State -ne "Running")
+            elseif ($server.HasExited)
             {
-              Receive-Job -Job $job
+              if ($server.ExitCode -eq 42)
+              {
+                $skip = $true
+                break
+              }
               throw "GET $($json.url) => Failed and server is no longer running. Last error: $($_)"
             }
             else
@@ -235,41 +241,52 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
         throw "No validation instructions found!"
       }
 
-      Write-Output "[$($name)]: Validation was successful"
-      try
+      if ($skip)
       {
-        $null = Invoke-WebRequest -Uri $json.quit -MaximumRetryCount 5 -RetryIntervalSec 1
+        Write-Host "[$($name)]: Unsupported on this platform" -ForegroundColor "Yellow"
+        $Skipped.$name = $true
       }
-      catch
+      else
       {
-        $null = $_ # Swallow the exception
-      }
-
-      $null = Wait-Job -Job $job -Timeout 15
-      for (;;)
-      {
-        $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
-        $data = $resp.Content | ConvertFrom-Json
-        if ($data.Length -ne 0)
+        Write-Output "[$($name)]: Validation was successful"
+        try
         {
-          Write-Output "[$($name)]: Collected $($data.Length) traces"
-          $tracesFile = Join-Path $outDir "traces.json"
-          $resp.Content > $($tracesFile)
+          $null = Invoke-WebRequest -Uri $json.quit -MaximumRetryCount 5 -RetryIntervalSec 1
+        }
+        catch
+        {
+          $null = $_ # Swallow the exception
+        }
 
-          go -C $integ run ./validator -tname $name -vfile $vfile -surl "file:///$($tracesFile -replace '\\', '/')" 2>&1 | Write-Host
-          if ($LastExitCode -ne 0)
+        $null = Wait-Job -Job $server -Timeout 15
+        for (;;)
+        {
+          $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
+          $data = $resp.Content | ConvertFrom-Json
+          if ($data.Length -ne 0)
           {
-            throw "Validation of traces failed"
-          }
+            Write-Output "[$($name)]: Collected $($data.Length) traces"
+            $tracesFile = Join-Path $outDir "traces.json"
+            $resp.Content > $($tracesFile)
 
-          Write-Host "[$($name)]: Success!" -ForegroundColor "Green"
-          break
+            go -C $integ run ./validator -tname $name -vfile $vfile -surl "file:///$($tracesFile -replace '\\', '/')" 2>&1 | Write-Host
+            if ($LastExitCode -ne 0)
+            {
+              throw "Validation of traces failed"
+            }
+
+            Write-Host "[$($name)]: Success!" -ForegroundColor "Green"
+            break
+          }
         }
       }
     }
     finally
     {
-      Remove-Job -Job $job -Force
+      if (!$server.HasExited)
+      {
+        $server.Kill($true)
+      }
       Remove-Job -Job $agent -Force
     }
   }
@@ -294,6 +311,12 @@ foreach ($t in $tests)
     $color = "Red"
     $icon = "💥"
     $status = $Failed.$t
+  }
+  elseif ($null -ne $Skipped.$t)
+  {
+    $color = "Yellow"
+    $icon = "⚠️"
+    $status = "Skipped (unsupported on this platform)"
   }
   Write-Host "- $($icon) $($t): $($status)" -ForegroundColor $color
 }
