@@ -14,6 +14,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.31.0
 	google.golang.org/grpc v1.64.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
@@ -113,7 +114,6 @@ require (
 	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/src-d/gcfg v1.4.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.31.0 // indirect
 	github.com/tinylib/msgp v1.1.9 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
