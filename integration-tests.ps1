@@ -258,7 +258,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
           $null = $_ # Swallow the exception
         }
 
-        $null = Wait-Job -Job $server -Timeout 15
+        $server.WaitForExit()
         for (;;)
         {
           $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
