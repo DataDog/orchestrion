@@ -65,7 +65,7 @@ jobs:
       - name: Setup Docker (on macOS)
         if: runner.os == 'macos'
         run: |-
-          brew install docker
+          brew install colima docker
           colima start
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
       - name: Checkout
