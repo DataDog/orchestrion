@@ -6,6 +6,7 @@ replace github.com/datadog/orchestrion => ../
 
 require (
 	github.com/datadog/orchestrion v0.0.0-00010101000000-000000000000
+	github.com/docker/docker v25.0.5+incompatible
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-redis/redis/v7 v7.4.1
@@ -49,7 +50,6 @@ require (
 	github.com/dave/jennifer v1.7.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/docker v25.0.5+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
