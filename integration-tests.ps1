@@ -103,8 +103,16 @@ Write-Progress -Activity "Preparation" -Completed
 
 # Running test cases
 Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
+try
+{
 $env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
 $env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
+}
+catch
+{
+  Write-Host "Docker is not available, skipping tests that require it" -ForegroundColor "Yellow"
+  $env:DOCKER_NOT_AVAILABLE = 'true'
+}
 for ($i = 0 ; $i -lt $tests.Length ; $i++)
 {
   $name = $tests[$i]
@@ -149,6 +157,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     try {
       if ($job.State -ne "Running")
       {
+        Receive-Job -Job $job
         throw "Failed to run test case (state is $($job.State))"
       }
 

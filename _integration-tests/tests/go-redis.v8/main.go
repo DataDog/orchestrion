@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"orchestrion/integration"
+	"os"
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
@@ -22,6 +23,11 @@ import (
 )
 
 func main() {
+	if os.Getenv("DOCKER_NOT_AVAILABLE") != "" {
+		log.Println("Docker is required to run this test. Exiting with status code 42!")
+		os.Exit(42)
+	}
+
 	ctx := context.Background()
 	server, err := testredis.RunContainer(ctx,
 		testcontainers.WithImage("redis:7"),
