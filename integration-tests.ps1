@@ -155,12 +155,6 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
 
     $job = (& $bin 2>&1 1>(Join-Path $outDir "output.log")) &
     try {
-      if ($job.State -ne "Running")
-      {
-        Receive-Job -Job $job
-        throw "Failed to run test case (state is $($job.State))"
-      }
-
       $token = New-Guid
       $attemptsLeft = 10
       for (;;)
@@ -216,6 +210,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
             }
             elseif ($job.State -ne "Running")
             {
+              Receive-Job -Job $job
               throw "GET $($json.url) => Failed and server is no longer running. Last error: $($_)"
             }
             else
