@@ -13,8 +13,11 @@ import (
 	"net/url"
 	"orchestrion/integration"
 	"os"
+	"runtime"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -32,6 +35,11 @@ func main() {
 	server, err := testredis.RunContainer(ctx,
 		testcontainers.WithImage("redis:7"),
 		testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}),
+		testcontainers.WithHostConfigModifier(func(config *container.HostConfig) {
+			if runtime.GOOS == "windows" {
+				config.NetworkMode = network.NetworkNat
+			}
+		}),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
 				wait.ForLog("* Ready to accept connections"),
