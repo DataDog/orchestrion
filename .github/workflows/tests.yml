@@ -61,13 +61,6 @@ jobs:
     runs-on: ${{ matrix.runs-on }}-latest
     name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
-      # Docker is not baked into macOS runners because of licensing issues (https://github.com/actions/runner-images/issues/17)
-      - name: Setup Docker (on macOS)
-        if: runner.os == 'macos'
-        run: |-
-          brew install colima docker
-          colima start --runtime docker --vm-type vz
-          sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup go
