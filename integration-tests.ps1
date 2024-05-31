@@ -123,7 +123,7 @@ try
 }
 catch
 {
-  Write-Host "Docker is not available, skipping tests that require it" -ForegroundColor "Yellow"
+  Write-Host "Docker is not available ($($_.Exception)), skipping tests that require it" -ForegroundColor "Yellow"
   $env:DOCKER_NOT_AVAILABLE = 'true'
 }
 for ($i = 0 ; $i -lt $tests.Length ; $i++)
