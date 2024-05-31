@@ -113,7 +113,7 @@ try
   }
   elseif ($IsWindows)
   {
-    docker context ls
+    DockerCli -SwitchDaemon -SwitchLinuxEngine 2>&1 | Write-Output
 
     # On Windows, create a network named "bridge" using the NAT driver, as Windows does not support
     # the bridge driver, but testcontainers will try to use it to create a new network unless a
