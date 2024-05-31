@@ -109,7 +109,13 @@ try
   $env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
   $env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
 
-  docker network ls
+  if ($IsWindows)
+  {
+    # On Windows, create a network named "bridge" using the NAT driver, as Windows does not support
+    # the bridge driver, but testcontainers will try to use it to create a new network unless a
+    # "bridge" network exists.
+    $null = docker network create --driver=nat --attachable bridge
+  }
 }
 catch
 {

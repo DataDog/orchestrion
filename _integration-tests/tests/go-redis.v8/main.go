@@ -13,12 +13,10 @@ import (
 	"net/url"
 	"orchestrion/integration"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
-	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/go-redis/redis/v8"
@@ -31,7 +29,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	opts := []testcontainers.ContainerCustomizer{
+	server, err := testredis.RunContainer(ctx,
 		testcontainers.WithImage("redis:7"),
 		testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}),
 		testcontainers.WithWaitStrategy(
@@ -41,16 +39,7 @@ func main() {
 				wait.ForListeningPort("6379/tcp"),
 			),
 		),
-	}
-	if runtime.GOOS == "windows" {
-		if net, err := network.New(ctx, network.WithDriver("nat")); err != nil {
-			log.Fatalf("Failed to create NAT network: %v\n", err)
-		} else {
-			opts = append(opts, network.WithNetwork([]string{net.Name}, net))
-			defer net.Remove(ctx)
-		}
-	}
-	server, err := testredis.RunContainer(ctx, opts...)
+	)
 	if err != nil {
 		log.Fatalf("Failed to start redis test container: %v\n", err)
 	}
