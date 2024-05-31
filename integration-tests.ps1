@@ -113,12 +113,12 @@ try
   }
   elseif ($IsWindows)
   {
+    docker context ls
+
     # On Windows, create a network named "bridge" using the NAT driver, as Windows does not support
     # the bridge driver, but testcontainers will try to use it to create a new network unless a
     # "bridge" network exists.
     $null = docker network create --driver=nat --attachable bridge
-    $null = /c/Program\ Files/Docker/Docker/DockerCLI.exe -SwitchDaemon -SwitchLinuxEngine
-    $env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '//var/run/docker.sock'
   }
 }
 catch
