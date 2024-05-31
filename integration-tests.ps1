@@ -113,8 +113,14 @@ try
   }
   elseif ($IsWindows)
   {
-    DockerCli -SwitchDaemon -SwitchLinuxEngine 2>&1 | Write-Output
+    if ("linux" -ne (docker info --format '{{ .OSType }}'))
+    {
+      Write-Output "Switching Docker to Linux engine..."
+      # Switch daemons if we're not in Linux mode
+      & $Env:ProgramFiles\Docker\Docker\DockerCli.exe -SwitchLinuxEngine 2>&1 | Write-Output
+    }
 
+    Write-Output "Creating new 'bridge' network..."
     # On Windows, create a network named "bridge" using the NAT driver, as Windows does not support
     # the bridge driver, but testcontainers will try to use it to create a new network unless a
     # "bridge" network exists.
