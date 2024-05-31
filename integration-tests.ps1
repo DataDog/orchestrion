@@ -106,10 +106,12 @@ Write-Progress -Activity "Preparation" -Completed
 Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
 try
 {
-  $env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
-  $env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
-
-  if ($IsWindows)
+  if ((docker context inspect --format '{{ .Name }}') -eq "colima")
+  {
+    $env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
+    $env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
+  }
+  elseif ($IsWindows)
   {
     # On Windows, create a network named "bridge" using the NAT driver, as Windows does not support
     # the bridge driver, but testcontainers will try to use it to create a new network unless a
