@@ -106,8 +106,10 @@ Write-Progress -Activity "Preparation" -Completed
 Write-Progress -Activity "Testing" -Status "Initialization" -PercentComplete 0
 try
 {
-$env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
-$env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
+  $env:DOCKER_HOST = docker context inspect --format '{{ .Endpoints.docker.Host }}'
+  $env:TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = '/var/run/docker.sock'
+
+  docker network ls
 }
 catch
 {
