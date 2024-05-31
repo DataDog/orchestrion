@@ -4,6 +4,51 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
+################################################################################
+# Client
+
+# References to the DefaultClient will cause an init function to be added to the
+# stack, which automatically wraps it.
+- join-point:
+    all-of:
+      - not:
+          # We don't want to instrument in net/http, it'd create a circular dependency!
+          import-path: net/http
+      - reference: net/http.DefaultClient
+  advice:
+    - add-blank-import: github.com/datadog/orchestrion/instrument/net/http
+
+# If there is an explicit Transport, we'll wrap it using the tracer API.
+- join-point:
+    all-of:
+      - not:
+          # We don't want to instrument in net/http, it'd create a circular dependency!
+          import-path: net/http
+      - struct-literal:
+          type: net/http.Client
+          field: Transport
+  advice:
+    - wrap-expression:
+        imports:
+          tracer: gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http
+        template: tracer.WrapRoundTripper({{ . }})
+
+# If there is no Transport key, we just use the init method, as the default net/http.RoutTripper
+# will be used in this case.
+- join-point:
+    all-of:
+      - not:
+          # We don't want to instrument in net/http, it'd create a circular dependency!
+          import-path: net/http
+      - struct-literal:
+          type: net/http.Client
+          field: -Transport
+  advice:
+    - add-blank-import: github.com/datadog/orchestrion/instrument/net/http
+
+################################################################################
+# Server
+
 # When httpmode is "wrap"
 - join-point:
     all-of:

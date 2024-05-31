@@ -217,6 +217,38 @@ var Aspects = [...]aspect.Aspect{
 	// From yaml/stdlib/net-http.yml
 	{
 		JoinPoint: join.AllOf(
+			join.Not(join.ImportPath("net/http")),
+			join.Reference("net/http", "DefaultClient"),
+		),
+		Advice: []advice.Advice{
+			advice.AddBlankImport("github.com/datadog/orchestrion/instrument/net/http"),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.Not(join.ImportPath("net/http")),
+			join.StructLiteral(join.MustTypeName("net/http.Client"), "Transport"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"tracer.WrapRoundTripper({{.}})",
+				map[string]string{
+					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.Not(join.ImportPath("net/http")),
+			join.StructLiteral(join.MustTypeName("net/http.Client"), "-Transport"),
+		),
+		Advice: []advice.Advice{
+			advice.AddBlankImport("github.com/datadog/orchestrion/instrument/net/http"),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
 			join.Configuration(map[string]string{
 				"httpmode": "wrap",
 			}),
@@ -324,6 +356,7 @@ var RestorerMap = map[string]string{
 var InjectedPaths = [...]string{
 	"github.com/datadog/orchestrion/instrument",
 	"github.com/datadog/orchestrion/instrument/event",
+	"github.com/datadog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
@@ -331,8 +364,9 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:VPkYq0KYIdGaM9waRS/faiiMbe8ghZ6qcYG1YSGVcQLPLQNSxUJYPQI4EgSwEEsj7dQ6hRvQw9ErfTBh7qq6dQ=="
+const Checksum = "sha512:9ZNGSIGtKNOpUOInfZhASEP9oflPNqpLIYIBgiQdyIaauzqtvNbpxlxy5L13HhXGxhbvuYWm4kCbnUmI9Mc3pA=="

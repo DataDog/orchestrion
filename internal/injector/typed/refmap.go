@@ -63,7 +63,7 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 		if kind != ImportStatement {
 			continue
 		}
-		toAdd = append(toAdd, &dst.ImportSpec{Path: &dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", path)}})
+		toAdd = append(toAdd, &dst.ImportSpec{Path: &dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", path)}, Name: dst.NewIdent("_")})
 	}
 
 	if len(toAdd) == 0 {

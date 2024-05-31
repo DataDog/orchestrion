@@ -12,6 +12,7 @@ package builtin
 import (
 	_ "github.com/datadog/orchestrion/instrument"
 	_ "github.com/datadog/orchestrion/instrument/event"
+	_ "github.com/datadog/orchestrion/instrument/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
@@ -19,5 +20,6 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )

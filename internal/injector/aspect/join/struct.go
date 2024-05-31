@@ -7,6 +7,7 @@ package join
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
@@ -76,6 +77,30 @@ func (s *structLiteral) ImpliesImported() []string {
 func (s *structLiteral) Matches(chain *node.Chain) bool {
 	if s.field == "" {
 		return s.matchesLiteral(chain)
+	}
+
+	if strings.HasPrefix(s.field, "-") {
+		if !s.matchesLiteral(chain) {
+			return false
+		}
+
+		// If `matchesLiteral` is true, this is guaranteed to be a *dst.CompositeLit
+		lit := chain.Node.(*dst.CompositeLit)
+		for _, elt := range lit.Elts {
+			kve, ok := elt.(*dst.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kve.Key.(*dst.Ident)
+			if !ok {
+				continue
+			}
+			if key.Name == s.field[1:] {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	kve, ok := node.As[*dst.KeyValueExpr](chain)
