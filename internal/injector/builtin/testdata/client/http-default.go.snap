@@ -9,11 +9,13 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 //line <generated>:1
-	_ "github.com/datadog/orchestrion/instrument/net/http"
+	http1 "github.com/datadog/orchestrion/instrument/net/http"
 )
 
-//line samples/client/http-default.go:14
+//line samples/client/http-default.go:16
 func useDefaultClient(ctx context.Context) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:8080", nil)
 	if err != nil {
@@ -26,4 +28,104 @@ func useDefaultClient(ctx context.Context) {
 	defer resp.Body.Close()
 
 	log.Println("HTTP", resp.StatusCode)
+}
+
+func shortHandsWithContext(ctx context.Context) {
+	resp, err :=
+//line <generated>:1
+		http1.Get(
+			ctx,
+//line samples/client/http-default.go:31
+			"http://localhost:8080")
+//line samples/client/http-default.go:32
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Head(
+			ctx,
+//line samples/client/http-default.go:37
+			"http://localhost:8080")
+//line samples/client/http-default.go:38
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Post(
+			ctx,
+//line samples/client/http-default.go:43
+			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
+//line samples/client/http-default.go:44
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.PostForm(
+			ctx,
+//line samples/client/http-default.go:49
+			"http://localhost:8080", url.Values{"key": {"value"}})
+//line samples/client/http-default.go:50
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+}
+
+func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
+	resp, err :=
+//line <generated>:1
+		http1.Get(
+			_arg_0.Context(),
+//line samples/client/http-default.go:57
+			"http://localhost:8080")
+//line samples/client/http-default.go:58
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Head(
+			_arg_0.Context(),
+//line samples/client/http-default.go:63
+			"http://localhost:8080")
+//line samples/client/http-default.go:64
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Post(
+			_arg_0.Context(),
+//line samples/client/http-default.go:69
+			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
+//line samples/client/http-default.go:70
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.PostForm(
+			_arg_0.Context(),
+//line samples/client/http-default.go:75
+			"http://localhost:8080", url.Values{"key": {"value"}})
+//line samples/client/http-default.go:76
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
 }

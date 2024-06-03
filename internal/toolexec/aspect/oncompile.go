@@ -23,8 +23,9 @@ import (
 
 var (
 	weavingDenyList = []*regexp.Regexp{
-		regexp.MustCompile("^github.com/datadog/orchestrion(?:/.+)?$"),
-		regexp.MustCompile("^gopkg.in/DataDog/dd-trace-go.v1(?:/.+)?$"),
+		regexp.MustCompile(`^github\.com/datadog/orchestrion(?:/.+)?$`),
+		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`),
+		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`),
 	}
 )
 

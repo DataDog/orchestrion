@@ -9,6 +9,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 func useDefaultClient(ctx context.Context) {
@@ -23,4 +25,56 @@ func useDefaultClient(ctx context.Context) {
 	defer resp.Body.Close()
 
 	log.Println("HTTP", resp.StatusCode)
+}
+
+func shortHandsWithContext(ctx context.Context) {
+	resp, err := http.Get("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err = http.Head("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err = http.Post("http://localhost:8080", "text/plain", strings.NewReader("Body"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err = http.PostForm("http://localhost:8080", url.Values{"key": {"value"}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+}
+
+func shortHandsWithRequest(_ *http.Request /* for context */) {
+	resp, err := http.Get("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err = http.Head("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err = http.Post("http://localhost:8080", "text/plain", strings.NewReader("Body"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err = http.PostForm("http://localhost:8080", url.Values{"key": {"value"}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
 }

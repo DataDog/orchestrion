@@ -6,11 +6,44 @@
 package http
 
 import (
+	"context"
+	"io"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/datadog/orchestrion/instrument"
 )
 
 func init() {
 	instrument.WrapHTTPClient(http.DefaultClient)
+}
+
+func Get(ctx context.Context, url string) (resp *http.Response, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func Head(ctx context.Context, url string) (resp *http.Response, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *http.Response, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	return http.DefaultClient.Do(req)
+}
+
+func PostForm(ctx context.Context, url string, data url.Values) (resp *http.Response, err error) {
+	return Post(ctx, url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 }

@@ -249,6 +249,26 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
+			join.Not(join.ImportPath("net/http")),
+			join.OneOf(
+				join.FunctionCall("net/http.Get"),
+				join.FunctionCall("net/http.Head"),
+				join.FunctionCall("net/http.Post"),
+				join.FunctionCall("net/http.PostForm"),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.AddBlankImport("github.com/datadog/orchestrion/instrument/net/http"),
+			advice.WrapExpression(code.MustTemplate(
+				"{{$ctx := .FindArgument \"context.Context\"}}{{$req := .FindArgument \"*net/http.Request\"}}{{if $ctx}}instrument.{{.AST.Fun.Name}}(\n    {{$ctx}},\n    {{range .AST.Args}}{{.}},\n    {{end}}\n  ){{else}}{{if $req}}instrument.{{.AST.Fun.Name}}(\n    {{$req}}.Context(),\n    {{range .AST.Args}}{{.}},\n    {{end}}\n  ){{else}}{{.}}{{end}}{{end}}",
+				map[string]string{
+					"instrument": "github.com/datadog/orchestrion/instrument/net/http",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
 			join.Configuration(map[string]string{
 				"httpmode": "wrap",
 			}),
@@ -369,4 +389,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:9ZNGSIGtKNOpUOInfZhASEP9oflPNqpLIYIBgiQdyIaauzqtvNbpxlxy5L13HhXGxhbvuYWm4kCbnUmI9Mc3pA=="
+const Checksum = "sha512:xlTYAyaesFiYQ/ClhOPnad0R7eDM7LA8HAjP/WW4JJSLgCsKv2ZK2kbF26mHAtiSldD1p+Z22MnC3XZO8hfVZA=="
