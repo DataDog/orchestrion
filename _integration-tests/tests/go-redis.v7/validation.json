@@ -24,8 +24,7 @@
             "span.kind": "client",
             "db.system": "redis",
             "redis.raw_command": "get test_key: ",
-            "out.host": "localhost",
-            "out.port": "6379"
+            "out.host": "localhost"
           }
         }
       ]
