@@ -21,7 +21,6 @@
             "db.system": "redis",
             "component": "gomodule/redigo",
             "out.network": "tcp",
-            "out.port": "6379",
             "out.host": "localhost",
             "redis.args_length": "1",
             "span.kind": "client"
@@ -37,7 +36,6 @@
       "meta": {
         "component": "gomodule/redigo",
         "out.network": "tcp",
-        "out.port": "6379",
         "out.host": "localhost",
         "redis.args_length": "0",
         "db.system": "redis",

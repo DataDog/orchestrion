@@ -267,7 +267,8 @@ func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstu
 // within a `<generated>` pseudo-file.
 func (i *Injector) addLineDirectives(file *dst.File) {
 	var (
-		inGen = false // Whether we are in generated code or not
+		// Whether we are in generated code or not
+		inGen = false
 		// Force emitting a generated code line directive even if we are already in generated code. This
 		// is necessary when original AST nodes are inlined within generated code (usually by
 		// a wrap-expression advice), so we appropriately resume generated code tagging afterwards.
