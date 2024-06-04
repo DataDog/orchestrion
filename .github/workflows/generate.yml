@@ -25,7 +25,7 @@ jobs:
       - name: Run 'go generate ./...'
         run: go generate ./...
       - name: Run 'go mod tidy'
-        run: find . -iname go.mod | xargs dirname | xargs -I DIR go -C DIR mod tidy
+        run: find . -iname go.mod -execdir go mod tidy \;
       - name: Check if working tree is dirty
         id: is-tree-dirty
         run: |-
