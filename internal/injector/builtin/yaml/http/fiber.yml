@@ -5,10 +5,15 @@
 %YAML 1.1
 ---
 - join-point:
-    assignment-of:
-      function-call: github.com/gofiber/fiber/v2.New
+    function-call: github.com/gofiber/fiber/v2.New
   advice:
-    - append-statements:
+    - wrap-expression:
         imports:
+          fiber: github.com/gofiber/fiber/v2
           fibertrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
-        template: '{{.Assignment.LHS}}.Use(fibertrace.Middleware())'
+        template: |-
+          func() *fiber.App {
+            app := {{ . }}
+            app.Use(fibertrace.Middleware())
+            return app
+          }()

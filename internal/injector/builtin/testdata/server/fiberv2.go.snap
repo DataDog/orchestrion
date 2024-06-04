@@ -13,11 +13,16 @@ import (
 
 //line samples/server/fiberv2.go:12
 func fiberV2Server() {
-	r := fiber.New()
+	r :=
 //line <generated>:1
-	{
-		r.Use(fiber1.Middleware())
-	}
+		func() *fiber.App {
+			app :=
+//line samples/server/fiberv2.go:13
+				fiber.New()
+//line <generated>:1
+			app.Use(fiber1.Middleware())
+			return app
+		}()
 //line samples/server/fiberv2.go:14
 	r.Get("/ping", func(c *fiber.Ctx) error {
 		return c.JSON(map[string]any{
