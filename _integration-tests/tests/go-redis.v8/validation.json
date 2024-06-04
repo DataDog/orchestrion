@@ -1,0 +1,33 @@
+{
+  "url": "http://127.0.0.1:8091",
+  "quit": "http://127.0.0.1:8091/quit",
+  "output": [
+    {
+      "name": "http.request",
+      "service": "go-redis.v8",
+      "resource": "GET /",
+      "type": "web",
+      "meta": {
+        "component": "net/http",
+        "http.url": "http://127.0.0.1:8091/"
+      },
+      "_children": [
+        {
+          "name": "redis.command",
+          "service": "redis.client",
+          "resource": "get",
+          "type": "redis",
+          "meta": {
+            "redis.args_length": "2",
+            "component": "go-redis/redis.v8",
+            "out.db": "0",
+            "span.kind": "client",
+            "db.system": "redis",
+            "redis.raw_command": "get test_key:",
+            "out.host": "localhost"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -67,9 +67,14 @@ func parseCompileCommand(args []string) (Command, error) {
 	cmd := CompileCommand{command: NewCommand(args)}
 	parseFlags(&cmd.Flags, args[1:])
 	files := cmd.GoFiles()
+
 	// Some commands just print the tool version, in which case no go file will be provided as arg
-	if len(files) > 0 {
-		cmd.SourceDir = filepath.Dir(files[0])
+	stageDir := filepath.Dir(cmd.Flags.Output)
+	for _, f := range files {
+		if dir := filepath.Dir(f); dir != stageDir {
+			cmd.SourceDir = dir
+			break
+		}
 	}
 	return &cmd, nil
 }

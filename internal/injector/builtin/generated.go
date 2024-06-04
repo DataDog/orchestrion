@@ -32,6 +32,37 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From yaml/databases/go-redis.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/go-redis/redis/v7.NewClient"),
+			join.FunctionCall("github.com/go-redis/redis/v7.NewFailoverClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{.}}\n  trace.WrapClient(client)\n  return\n}()",
+				map[string]string{
+					"redis": "github.com/go-redis/redis/v7",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/go-redis/redis/v8.NewClient"),
+			join.FunctionCall("github.com/go-redis/redis/v8.NewFailoverClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{.}}\n  trace.WrapClient(client)\n  return\n}()",
+				map[string]string{
+					"redis": "github.com/go-redis/redis/v8",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
+				},
+			)),
+		},
+	},
 	// From yaml/dd-span.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
@@ -327,6 +358,8 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
@@ -335,4 +368,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:VPkYq0KYIdGaM9waRS/faiiMbe8ghZ6qcYG1YSGVcQLPLQNSxUJYPQI4EgSwEEsj7dQ6hRvQw9ErfTBh7qq6dQ=="
+const Checksum = "sha512:r8VxyI+tJ1slcw5fQAOsUwClbcDYX9rPC4sC+apJmPNU5biBcjdakB1cu6DLA6ptijvfgmq/nv371eVMOVaDIw=="

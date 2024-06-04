@@ -25,10 +25,21 @@ func TestParseCompile(t *testing.T) {
 			stage: ".",
 		},
 		"compile": {
+			input:     []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-importcfg", "/buildDir/b002/importcfg", "/source/dir/main.go", "/source/dir/file1.go"},
+			stage:     "b002",
+			sourceDir: "/source/dir",
+			goFiles:   []string{"/source/dir/main.go", "/source/dir/file1.go"},
+			flags: compileFlagSet{
+				Package:   "mypackage",
+				ImportCfg: "/buildDir/b002/importcfg",
+				Output:    "/buildDir/b002/a.out",
+			},
+		},
+		"compile-no-source-dir": {
 			input:     []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-importcfg", "/buildDir/b002/importcfg", "/buildDir/b002/main.go", "/buildDir/b002/file1.go"},
 			stage:     "b002",
-			sourceDir: "/buildDir/b002",
-			goFiles:   []string{"/buildDir/b002/main.go", "/buildDir/b002/file1.go"},
+			sourceDir: "",
+			goFiles:   []string{"/source/dir/main.go", "/source/dir/file1.go"},
 			flags: compileFlagSet{
 				Package:   "mypackage",
 				ImportCfg: "/buildDir/b002/importcfg",
