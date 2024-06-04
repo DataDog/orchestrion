@@ -266,19 +266,33 @@ func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstu
 // necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
 // within a `<generated>` pseudo-file.
 func (i *Injector) addLineDirectives(file *dst.File) {
-	inGen := false
+	var (
+		// Whether we are in generated code or not
+		inGen = false
+		// Force emitting a generated code line directive even if we are already in generated code. This
+		// is necessary when original AST nodes are inlined within generated code (usually by
+		// a wrap-expression advice), so we appropriately resume generated code tagging afterwards.
+		forceGen = false
+	)
+
 	var stack []bool
 	dst.Inspect(file, func(node dst.Node) bool {
 		if node == nil {
 			if len(stack) == 0 {
 				panic("popping empty stack")
 			}
+			forceGen = !inGen && stack[len(stack)-1]
 			inGen, stack = inGen || stack[len(stack)-1], stack[:len(stack)-1]
 			return true
 		}
 
 		// Push the current node onto the stack
-		defer func() { stack = append(stack, inGen) }()
+		defer func() {
+			stack = append(stack, inGen)
+			// The forceGen flag is reset after any node is processed, as at this stage we have resumed
+			// normal operations.
+			forceGen = false
+		}()
 
 		ast := i.decorator.Ast.Nodes[node]
 		if ast != nil {
@@ -289,7 +303,9 @@ func (i *Injector) addLineDirectives(file *dst.File) {
 				if inGen {
 					// We need to properly re-position this node (previous node was synthetic)
 					deco := node.Decorations()
-					deco.Before = dst.NewLine
+					if deco.Before == dst.None {
+						deco.Before = dst.NewLine
+					}
 					deco.Start.Append(fmt.Sprintf("//line %s:%d", position.Filename, position.Line))
 					inGen = false
 				}
@@ -297,9 +313,11 @@ func (i *Injector) addLineDirectives(file *dst.File) {
 			}
 		}
 
-		if !inGen {
+		if !inGen || forceGen {
 			deco := node.Decorations()
-			deco.Before = dst.NewLine
+			if deco.Before == dst.None {
+				deco.Before = dst.NewLine
+			}
 			deco.Start.Prepend("//line <generated>:1")
 			inGen = true
 		}
