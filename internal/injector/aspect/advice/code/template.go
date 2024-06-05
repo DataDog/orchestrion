@@ -227,8 +227,15 @@ func (t *Template) ToHTML() string {
 
 	if len(t.imports) > 0 {
 		buf.WriteString("\n\nIdentifier | Import Path\n---|---\n")
-		for name, path := range t.imports {
-			buf.WriteString(fmt.Sprintf(`<code>%[1]s</code>|<a href="http://pkg.go.dev/%[2]s" target="_blank" rel="noopener"><code>%[2]q</code></a>`, name, path))
+
+		keys := make([]string, 0, len(t.imports))
+		for name := range t.imports {
+			keys = append(keys, name)
+		}
+		sort.Strings(keys)
+
+		for _, name := range keys {
+			buf.WriteString(fmt.Sprintf(`<code>%[1]s</code>|<a href="http://pkg.go.dev/%[2]s" target="_blank" rel="noopener"><code>%[2]q</code></a>`, name, t.imports[name]))
 			buf.WriteByte('\n')
 		}
 	}
