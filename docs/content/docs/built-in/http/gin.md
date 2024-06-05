@@ -16,24 +16,29 @@ Gin is a web framework written in Go.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Assignment of: <div><strong>One of</strong> the following:
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>One of</strong> the following:
 <ul>
 <li>Call to <a href="https://pkg.go.dev/github.com/gin-gonic/gin#Default" target="_blank" rel="noopener"><code>github.com/gin-gonic/gin.Default</code></a></li><li>Call to <a href="https://pkg.go.dev/github.com/gin-gonic/gin#New" target="_blank" rel="noopener"><code>github.com/gin-gonic/gin.New</code></a></li></ul>
-</div></div>
+</div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Append statements after the join point: 
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
 
 Identifier | Import Path
 ---|---
+<code>gin</code>|<a href="http://pkg.go.dev/github.com/gin-gonic/gin" target="_blank" rel="noopener"><code>"github.com/gin-gonic/gin"</code></a>
 <code>gintrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"</code></a>
 
 
 ```go-template
-{{.Assignment.LHS}}.Use(gintrace.Middleware(""))
+func() *gin.Engine {
+  e := {{ . }}
+  e.Use(gintrace.Middleware(""))
+  return e
+}()
 ```
 
 </div>

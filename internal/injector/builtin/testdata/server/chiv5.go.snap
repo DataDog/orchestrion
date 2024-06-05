@@ -16,11 +16,16 @@ import (
 
 //line samples/server/chiv5.go:14
 func chiV5Server() {
-	router := chi.NewRouter()
+	router :=
 //line <generated>:1
-	{
-		router.Use(chi1.Middleware())
-	}
+		func() *chi.Mux {
+			mux :=
+//line samples/server/chiv5.go:15
+				chi.NewRouter()
+//line <generated>:1
+			mux.Use(chi1.Middleware())
+			return mux
+		}()
 //line samples/server/chiv5.go:16
 	router.Get("/",
 //line <generated>:1

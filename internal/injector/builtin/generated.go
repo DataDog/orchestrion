@@ -16,20 +16,33 @@ import (
 
 // Aspects is the list of built-in aspects.
 var Aspects = [...]aspect.Aspect{
-	// From chi.yml
+	// From databases/go-redis.yml
 	{
-		JoinPoint: join.AllOf(
-			join.AssignmentOf(join.FunctionCall("github.com/go-chi/chi/v5.NewRouter")),
-			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-			)),
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/go-redis/redis/v7.NewClient"),
+			join.FunctionCall("github.com/go-redis/redis/v7.NewFailoverClient"),
 		),
 		Advice: []advice.Advice{
-			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}}.Use(chitrace.Middleware())",
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{ . }}\n  trace.WrapClient(client)\n  return\n}()",
 				map[string]string{
-					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+					"redis": "github.com/go-redis/redis/v7",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/go-redis/redis/v8.NewClient"),
+			join.FunctionCall("github.com/go-redis/redis/v8.NewFailoverClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{ . }}\n  trace.WrapClient(client)\n  return\n}()",
+				map[string]string{
+					"redis": "github.com/go-redis/redis/v8",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 				},
 			)),
 		},
@@ -65,45 +78,6 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
-	// From echo.yml
-	{
-		JoinPoint: join.AssignmentOf(join.FunctionCall("github.com/labstack/echo/v4.New")),
-		Advice: []advice.Advice{
-			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}}.Use(echotrace.Middleware())",
-				map[string]string{
-					"echotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
-				},
-			)),
-		},
-	},
-	// From fiber.yml
-	{
-		JoinPoint: join.AssignmentOf(join.FunctionCall("github.com/gofiber/fiber/v2.New")),
-		Advice: []advice.Advice{
-			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}}.Use(fibertrace.Middleware())",
-				map[string]string{
-					"fibertrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
-				},
-			)),
-		},
-	},
-	// From gin.yml
-	{
-		JoinPoint: join.AssignmentOf(join.OneOf(
-			join.FunctionCall("github.com/gin-gonic/gin.Default"),
-			join.FunctionCall("github.com/gin-gonic/gin.New"),
-		)),
-		Advice: []advice.Advice{
-			advice.AppendStatements(code.MustTemplate(
-				"{{.Assignment.LHS}}.Use(gintrace.Middleware(\"\"))",
-				map[string]string{
-					"gintrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
-				},
-			)),
-		},
-	},
 	// From go-main.yml
 	{
 		JoinPoint: join.AllOf(
@@ -121,18 +95,6 @@ var Aspects = [...]aspect.Aspect{
 				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()",
 				map[string]string{
 					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
-				},
-			)),
-		},
-	},
-	// From gorilla.yml
-	{
-		JoinPoint: join.FunctionCall("github.com/gorilla/mux.NewRouter"),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"muxtrace.WrapRouter({{.}})",
-				map[string]string{
-					"muxtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
 				},
 			)),
 		},
@@ -184,6 +146,99 @@ var Aspects = [...]aspect.Aspect{
 					},
 				),
 			),
+		},
+	},
+	// From http/chi.yml
+	{
+		JoinPoint: join.AllOf(
+			join.OneOf(
+				join.FunctionCall("github.com/go-chi/chi.NewMux"),
+				join.FunctionCall("github.com/go-chi/chi.NewRouter"),
+			),
+			join.Not(join.ImportPath("github.com/go-chi/chi")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/middleware")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() *chi.Mux {\n  mux := {{ . }}\n  mux.Use(chitrace.Middleware())\n  return mux\n}()",
+				map[string]string{
+					"chi":      "github.com/go-chi/chi",
+					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.OneOf(
+				join.FunctionCall("github.com/go-chi/chi/v5.NewMux"),
+				join.FunctionCall("github.com/go-chi/chi/v5.NewRouter"),
+			),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5")),
+			join.Not(join.ImportPath("github.com/go-chi/chi/v5/middleware")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() *chi.Mux {\n  mux := {{ . }}\n  mux.Use(chitrace.Middleware())\n  return mux\n}()",
+				map[string]string{
+					"chi":      "github.com/go-chi/chi/v5",
+					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+				},
+			)),
+		},
+	},
+	// From http/echo.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/labstack/echo/v4.New"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() *echo.Echo {\n  e := {{ . }}\n  e.Use(echotrace.Middleware())\n  return e\n}()",
+				map[string]string{
+					"echo":      "github.com/labstack/echo/v4",
+					"echotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+				},
+			)),
+		},
+	},
+	// From http/fiber.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/gofiber/fiber/v2.New"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() *fiber.App {\n  app := {{ . }}\n  app.Use(fibertrace.Middleware())\n  return app\n}()",
+				map[string]string{
+					"fiber":      "github.com/gofiber/fiber/v2",
+					"fibertrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
+				},
+			)),
+		},
+	},
+	// From http/gin.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/gin-gonic/gin.Default"),
+			join.FunctionCall("github.com/gin-gonic/gin.New"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() *gin.Engine {\n  e := {{ . }}\n  e.Use(gintrace.Middleware(\"\"))\n  return e\n}()",
+				map[string]string{
+					"gin":      "github.com/gin-gonic/gin",
+					"gintrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
+				},
+			)),
+		},
+	},
+	// From http/gorilla.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/gorilla/mux.NewRouter"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"muxtrace.WrapRouter({{.}})",
+				map[string]string{
+					"muxtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
+				},
+			)),
 		},
 	},
 	// From stdlib/database-sql.yml
@@ -338,7 +393,10 @@ var InjectedPaths = [...]string{
 	"github.com/datadog/orchestrion/instrument/event",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
@@ -347,4 +405,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:LtvKJPiVsUSnjjGYWLWb7e8HCN9j+E6S0J5bTfeIcxhU/kspTJNKIVKKQXlugj8GVwnFXhFX4tbv/yg4LBj7jg=="
+const Checksum = "sha512:tNNgZkNjNulTIc0p8ZAYFqQnqWYTJ/0orQ/m6ZcWSf+beaW2eoIAg/cElzgRSON/i2KQ9elKlncj+QII45wOJQ=="

@@ -16,21 +16,26 @@ An Express inspired web framework built on Fasthttp, the fastest HTTP engine for
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Assignment of: <div>Call to <a href="https://pkg.go.dev/github.com/gofiber/fiber/v2#New" target="_blank" rel="noopener"><code>github.com/gofiber/fiber/v2.New</code></a></div></div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/github.com/gofiber/fiber/v2#New" target="_blank" rel="noopener"><code>github.com/gofiber/fiber/v2.New</code></a></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Append statements after the join point: 
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
 
 Identifier | Import Path
 ---|---
+<code>fiber</code>|<a href="http://pkg.go.dev/github.com/gofiber/fiber/v2" target="_blank" rel="noopener"><code>"github.com/gofiber/fiber/v2"</code></a>
 <code>fibertrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"</code></a>
 
 
 ```go-template
-{{.Assignment.LHS}}.Use(fibertrace.Middleware())
+func() *fiber.App {
+  app := {{ . }}
+  app.Use(fibertrace.Middleware())
+  return app
+}()
 ```
 
 </div>

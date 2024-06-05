@@ -24,6 +24,8 @@ jobs:
           cache-dependency-path: '**/*.sum'
       - name: Run 'go generate ./...'
         run: go generate ./...
+      - name: Run 'go mod tidy'
+        run: find . -iname go.mod -execdir go mod tidy \;
       - name: Check if working tree is dirty
         id: is-tree-dirty
         run: |-

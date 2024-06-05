@@ -10,10 +10,15 @@ meta:
   icon: at-symbol
 aspects:
   - join-point:
-      assignment-of:
-        function-call: github.com/labstack/echo/v4.New
+      function-call: github.com/labstack/echo/v4.New
     advice:
-      - append-statements:
+      - wrap-expression:
           imports:
+            echo: github.com/labstack/echo/v4
             echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
-          template: '{{.Assignment.LHS}}.Use(echotrace.Middleware())'
+          template: |-
+            func() *echo.Echo {
+              e := {{ . }}
+              e.Use(echotrace.Middleware())
+              return e
+            }()
