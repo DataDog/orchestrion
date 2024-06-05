@@ -29,8 +29,8 @@ Redis client for Go.
 
 Identifier | Import Path
 ---|---
-<code>redis</code>|<a href="http://pkg.go.dev/github.com/go-redis/redis/v7" target="_blank" rel="noopener"><code>"github.com/go-redis/redis/v7"</code></a>
 <code>trace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"</code></a>
+<code>redis</code>|<a href="http://pkg.go.dev/github.com/go-redis/redis/v7" target="_blank" rel="noopener"><code>"github.com/go-redis/redis/v7"</code></a>
 
 
 ```go-template

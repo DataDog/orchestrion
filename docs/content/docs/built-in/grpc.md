@@ -31,8 +31,8 @@ The Go implementation of gRPC.
 
 Identifier | Import Path
 ---|---
-<code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
 <code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
+<code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
 
 
 ```go-template
@@ -71,8 +71,8 @@ grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
 
 Identifier | Import Path
 ---|---
-<code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
 <code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
+<code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
 
 
 ```go-template
