@@ -1,0 +1,66 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"log"
+
+	jinzhu "github.com/jinzhu/gorm"
+	"gorm.io/driver/postgres"
+	gorm2 "gorm.io/gorm"
+
+	_ "github.com/mattn/go-sqlite3"
+//line <generated>:1
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
+	gorm1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
+)
+
+//line samples/client/gorm.go:19
+func gormClient() {
+	sqlDB, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm2.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var user struct {
+		gorm2.Model
+		Name string
+	}
+	db.Where("name = ?", "gorm.io").First(&user)
+}
+
+func jinzhuGormClient() {
+	db, err :=
+//line <generated>:1
+		func() (*jinzhu.DB, error) {
+			db, err :=
+//line samples/client/gorm.go:39
+				jinzhu.Open("sqlite3", "file::memory:?cache=shared")
+//line <generated>:1
+			if err != nil {
+				return nil, err
+			}
+			return gorm1.WithCallbacks(db), err
+		}()
+//line samples/client/gorm.go:40
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var user struct {
+		jinzhu.Model
+		Name string
+	}
+	db.Where("name = ?", "jinzhu").First(&user)
+}

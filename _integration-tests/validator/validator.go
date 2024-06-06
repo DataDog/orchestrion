@@ -42,11 +42,12 @@ func assembleTraces(r io.Reader) ([]map[string]interface{}, error) {
 	}
 
 	// Build the entire map of SpanID -> *Span in spans, and the map of roots.
-	for i := range dec {
-		for j := range dec[i] {
-			span := dec[i][j]
-			var parentID uint64
-			var spanID uint64
+	for _, decSpans := range dec {
+		for _, span := range decSpans {
+			var (
+				parentID uint64
+				spanID   uint64
+			)
 			if pid, ok := span["parent_id"]; ok {
 				npid, ok := pid.(json.Number)
 				if !ok {
@@ -311,11 +312,12 @@ func compare(valid, fake []kv, prefix string, indent int, d *diff) {
 				if len(vcs) != len(fcs) {
 					d.AddDifference("%s._children (valid) count(%d) != %s._children (fake agent) count(%d)\n", prefix, len(vcs), prefix, len(fcs))
 				}
-				for i := range vcs {
+				for i, vc := range vcs {
 					if len(fcs) <= i {
 						d.AddDifference("%s._children[%d] != nil, but %s._children[%d] == nil\n", prefix, i, prefix, i)
+						break
 					}
-					compare(vcs[i], fcs[i],
+					compare(vc, fcs[i],
 						fmt.Sprintf("%s._children[%d]", prefix, i),
 						indent+1, d)
 				}
@@ -396,6 +398,20 @@ func (k byResource) Less(i, j int) bool {
 	if k2 == nil {
 		return false
 	}
+
+	if k1 == k2 {
+		// If they are equal, we'll sort them by "start" if present...
+		s1, s1ok := getKey("start", k[i]).(json.Number)
+		s2, s2ok := getKey("start", k[j]).(json.Number)
+		if s1ok && s2ok {
+			s1, s1err := s1.Float64()
+			s2, s2err := s2.Float64()
+			if s1err == nil && s2err == nil {
+				return s1 < s2
+			}
+		}
+	}
+
 	return k1.(string) < k2.(string)
 }
 

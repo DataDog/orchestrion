@@ -22,6 +22,8 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
