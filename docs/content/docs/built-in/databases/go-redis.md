@@ -4,12 +4,7 @@ title: "github.com/go-redis/redis"
 subtitle: "Redis client for Go."
 icon: "database"
 ---
-
-
 Redis client for Go.
-
-
-
 
 ## Wrap V7 client
 
@@ -86,4 +81,3 @@ func() (client *redis.Client) {
     </div>
   </div>
 </div>
-

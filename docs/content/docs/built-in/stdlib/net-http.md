@@ -4,12 +4,7 @@ title: "net/http"
 subtitle: "HTTP client and server implementations."
 icon: "at-symbol"
 ---
-
-
 HTTP client and server implementations.
-
-
-
 
 ## Wrap http.Server.Handler
 
@@ -172,4 +167,3 @@ defer instrument.Report(
     </div>
   </div>
 </div>
-

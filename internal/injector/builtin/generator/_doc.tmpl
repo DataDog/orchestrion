@@ -4,16 +4,13 @@ title: {{ printf "%q" .Metadata.Name}}
 subtitle: {{ printf "%q" .Metadata.Description }}
 icon: {{ printf "%q" (or .Metadata.Icon "book-open") }}
 ---
-
-
 {{ .Metadata.Description }}
 
-{{ with .Metadata.Caveats -}}
+{{- with .Metadata.Caveats -}}
 {{ `{{<callout type="warning">}}` }}
   {{ . }}
 {{ `{{</callout>}}` }}
 {{- end }}
-
 {{ range .Aspects }}
 ## {{ or .ID "Aspect" }}
 
@@ -39,4 +36,4 @@ icon: {{ printf "%q" (or .Metadata.Icon "book-open") }}
     {{- end }}
   </div>
 </div>
-{{ end }}
+{{ end -}}

@@ -4,12 +4,7 @@ title: "github.com/go-chi/chi"
 subtitle: "chi is a lightweight, idiomatic and composable router for building Go HTTP services."
 icon: "at-symbol"
 ---
-
-
 chi is a lightweight, idiomatic and composable router for building Go HTTP services.
-
-
-
 
 ## Use V1 tracer middleware
 
@@ -102,4 +97,3 @@ func() *chi.Mux {
     </div>
   </div>
 </div>
-

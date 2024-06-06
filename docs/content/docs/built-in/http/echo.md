@@ -4,12 +4,7 @@ title: "github.com/labstack/echo"
 subtitle: "High performance, extensible, minimalist Go web framework."
 icon: "at-symbol"
 ---
-
-
 High performance, extensible, minimalist Go web framework.
-
-
-
 
 ## Use tracer middleware
 
@@ -45,4 +40,3 @@ func() *echo.Echo {
     </div>
   </div>
 </div>
-

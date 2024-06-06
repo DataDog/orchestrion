@@ -4,12 +4,7 @@ title: "//dd:span"
 subtitle: "Monitor a function using a custom span."
 icon: "cog"
 ---
-
-
 Monitor a function using a custom span.
-
-
-
 
 ## Using context.Context
 
@@ -104,4 +99,3 @@ defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "funct
     </div>
   </div>
 </div>
-

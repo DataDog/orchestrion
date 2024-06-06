@@ -4,12 +4,7 @@ title: "github.com/gofiber/fiber"
 subtitle: "An Express inspired web framework built on Fasthttp, the fastest HTTP engine for Go."
 icon: "at-symbol"
 ---
-
-
 An Express inspired web framework built on Fasthttp, the fastest HTTP engine for Go.
-
-
-
 
 ## Use tracer middleware
 
@@ -45,4 +40,3 @@ func() *fiber.App {
     </div>
   </div>
 </div>
-

@@ -4,12 +4,7 @@ title: "func main()"
 subtitle: "The entry point of a Go program."
 icon: "play"
 ---
-
-
 The entry point of a Go program.
-
-
-
 
 ## Start Datadog Tracer
 
@@ -49,4 +44,3 @@ defer tracer.Stop()
     </div>
   </div>
 </div>
-

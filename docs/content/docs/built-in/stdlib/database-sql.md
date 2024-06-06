@@ -4,12 +4,7 @@ title: "database/sql"
 subtitle: "A generic interface around SQL (or SQL-like) databases."
 icon: "database"
 ---
-
-
 A generic interface around SQL (or SQL-like) databases.
-
-
-
 
 ## Register
 
@@ -106,4 +101,3 @@ sqltrace.OpenDB(
     </div>
   </div>
 </div>
-

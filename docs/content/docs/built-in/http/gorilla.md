@@ -4,18 +4,13 @@ title: "github.com/gorilla/mux"
 subtitle: "Package gorilla/mux implements a request router and dispatcher for matching incoming requests to their respective handler."
 icon: "at-symbol"
 ---
-
-
-Package gorilla/mux implements a request router and dispatcher for matching incoming requests to their respective handler.
-
-{{<callout type="warning">}}
+Package gorilla/mux implements a request router and dispatcher for matching incoming requests to their respective handler.{{<callout type="warning">}}
   The instrumentation changes the type of the value returned by {{<godoc "github.com/gorilla/mux" "NewRouter">}}, and
 may as a result cause compilation errors to appear; for example in cases where the value is assigned to an
 explicitly typed variable, or if it is later re-assigned a {{<godoc "github.com/gorilla/mux" "Router">}} value.
 
 This issue is tracked by [`DataDog/orchestrion#86`](https://github.com/DataDog/orchestrion/issues/86).
 {{</callout>}}
-
 
 ## Wrap router with tracer
 
@@ -46,4 +41,3 @@ muxtrace.WrapRouter({{.}})
     </div>
   </div>
 </div>
-

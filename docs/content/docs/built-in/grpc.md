@@ -4,12 +4,7 @@ title: "google.golang.org/grpc"
 subtitle: "The Go implementation of gRPC."
 icon: "at-symbol"
 ---
-
-
 The Go implementation of gRPC.
-
-
-
 
 ## Add gRPC client interceptors
 
@@ -101,4 +96,3 @@ grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
     </div>
   </div>
 </div>
-

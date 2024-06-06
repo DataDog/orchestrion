@@ -4,12 +4,7 @@ title: "github.com/gin-gonic/gin"
 subtitle: "Gin is a web framework written in Go."
 icon: "at-symbol"
 ---
-
-
 Gin is a web framework written in Go.
-
-
-
 
 ## Use tracer middleware
 
@@ -48,4 +43,3 @@ func() *gin.Engine {
     </div>
   </div>
 </div>
-

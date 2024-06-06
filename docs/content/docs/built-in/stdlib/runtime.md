@@ -4,17 +4,12 @@ title: "runtime"
 subtitle: "Operations that interact with Go's runtime system."
 icon: "cog"
 ---
-
-
-Operations that interact with Go's runtime system.
-
-{{<callout type="warning">}}
+Operations that interact with Go's runtime system.{{<callout type="warning">}}
   This configuration introduces a way to access the Goroutine Local Storage (GLS), which is not
 meant to be used directly by end-users. This is intended to be used only by tracer internals to
 enable trace context forwarding in places where a {{<godoc "context" "Context">}} value is not
 available.
 {{</callout>}}
-
 
 ## Insert Goroutine Local Storage (GLS) accessors
 
@@ -58,4 +53,3 @@ func __dd_orchestrion_gls_set(val any) {
     </div>
   </div>
 </div>
-
