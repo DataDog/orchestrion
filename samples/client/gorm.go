@@ -17,7 +17,7 @@ import (
 )
 
 func gormClient() {
-	sqlDB, err := sql.Open("sqlite", "database.db")
+	sqlDB, err := sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func gormClient() {
 }
 
 func jinzhuGormClient() {
-	db, err := jinzhu.Open("sqlite", "database.db")
+	db, err := jinzhu.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		log.Fatal(err)
 	}

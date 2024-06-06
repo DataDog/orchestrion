@@ -7,12 +7,10 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"orchestrion/integration"
-	"os"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -21,56 +19,29 @@ import (
 )
 
 type Note struct {
-	ID        int
-	UserID    int `gorm:"column:userid"`
-	Content   string
-	CreatedAt string `gorm:"column:created"`
+	gorm.Model
+	UserID  int
+	Content string
 }
 
 func main() {
-	//dd:ignore
-	defer func() func() error {
-		db, err := sql.Open("sqlite3", "./notedb.sqlite")
-		if err != nil {
-			log.Fatalf("Failed to open the notes database: %v", err)
-		}
-		defer func() {
-			if err := recover(); err != nil {
-				os.Remove("./notedb.sqlite")
-				panic(err)
-			}
-		}()
-
-		if _, err := db.ExecContext(context.Background(),
-			`CREATE TABLE IF NOT EXISTS notes (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			userid INTEGER NOT NULL,
-			content STRING NOT NULL,
-			created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);`); err != nil {
-			log.Fatalf("Failed to create table: %v", err)
-		}
-
-		if _, err := db.ExecContext(context.Background(),
-			`INSERT OR REPLACE INTO notes(userid, content, created)
-			VALUES (1, 'Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.', datetime('now')),
-			(1, 'Hey, remember to mow the lawn.', datetime('now')),
-			(2, 'Reminder to submit that report by Thursday.', datetime('now')),
-			(2, 'Opportunities don''t happen, you create them.', datetime('now')),
-			(3, 'Pick up cabbage from the store on the way home.', datetime('now')),
-			(3, 'Review PR #1138', datetime('now')
-		);`); err != nil {
-			log.Fatalf("Failed to insert test data: %v", err)
-		}
-
-		return func() error { return os.Remove("./notedb.sqlite") }
-	}()()
-
-	db, err := gorm.Open("sqlite3", "./notedb.sqlite")
+	db, err := gorm.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		log.Fatalf("Failed to open GORM database: %v", err)
 	}
 	defer db.Close()
+
+	db.AutoMigrate(&Note{})
+	for _, note := range []*Note{
+		{UserID: 1, Content: `Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.`},
+		{UserID: 1, Content: `Hey, remember to mow the lawn.`},
+		{UserID: 2, Content: `Reminder to submit that report by Thursday.`},
+		{UserID: 2, Content: `Opportunities don't happen, you create them.`},
+		{UserID: 3, Content: `Pick up cabbage from the store on the way home.`},
+		{UserID: 3, Content: `Review PR #1138`},
+	} {
+		db.Create(note)
+	}
 
 	mux := &http.ServeMux{}
 	s := &http.Server{
@@ -93,7 +64,7 @@ func main() {
 			db := gormtrace.WithContext(r.Context(), db)
 
 			var note Note
-			if err := db.Where("userid = ?", 2).First(&note).Error; err != nil {
+			if err := db.Where("user_id = ?", 2).First(&note).Error; err != nil {
 				log.Printf("Error: %v\n", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprintf(w, "%v\n", err)
