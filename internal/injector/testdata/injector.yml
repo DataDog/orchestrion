@@ -903,3 +903,110 @@ database-sql:
       //line input.go:18
         defer db2.Close()
       }
+
+redigo:
+  options:
+    preservelineinfo: true
+    aspects:
+      - join-point:
+          function-call: github.com/gomodule/redigo/redis.Dial
+        advice:
+          - replace-function:
+              gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
+      - join-point:
+          function-call: github.com/gomodule/redigo/redis.DialContext
+        advice:
+          - replace-function:
+              gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+      - join-point:
+          function-call: github.com/gomodule/redigo/redis.DialURL
+        advice:
+          - replace-function:
+              gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
+  source: |
+    package main
+
+    import (
+      "context"
+
+      "github.com/gomodule/redigo/redis"
+    )
+
+    func dial(net, address string) error {
+      c, err := redis.Dial(net, address)
+      if err != nil {
+        return err
+      }
+      defer c.Close()
+      return use(c)
+    }
+
+    func dialContext(ctx context.Context, net, address string) error {
+      c, err := redis.DialContext(ctx, net, address)
+      if err != nil {
+        return err
+      }
+      defer c.Close()
+      return use(c)
+    }
+
+    func dialURL(url string) error {
+      c, err := redis.DialURL(url)
+      if err != nil {
+        return err
+      }
+      defer c.Close()
+      return use(c)
+    }
+
+    func use(c redis.Conn) error {
+      _, err := c.Do("SET", "test", "success")
+      return err
+    }
+  expected:
+    modified: true
+    references:
+      gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
+    source: |
+      package main
+
+      import (
+        "context"
+
+        "github.com/gomodule/redigo/redis"
+      //line <generated>:1
+        "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
+      )
+
+      //line input.go:9
+      func dial(net, address string) error {
+        c, err := redigo.Dial(net, address)
+        if err != nil {
+          return err
+        }
+        defer c.Close()
+        return use(c)
+      }
+
+      func dialContext(ctx context.Context, net, address string) error {
+        c, err := redigo.DialContext(ctx, net, address)
+        if err != nil {
+          return err
+        }
+        defer c.Close()
+        return use(c)
+      }
+
+      func dialURL(url string) error {
+        c, err := redigo.DialURL(url)
+        if err != nil {
+          return err
+        }
+        defer c.Close()
+        return use(c)
+      }
+
+      func use(c redis.Conn) error {
+        _, err := c.Do("SET", "test", "success")
+        return err
+      }
