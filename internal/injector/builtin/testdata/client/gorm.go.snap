@@ -8,20 +8,20 @@ package main
 import (
 	"log"
 
-	"github.com/jackc/pgx/stdlib"
 	jinzhu "github.com/jinzhu/gorm"
 	"gorm.io/driver/postgres"
 	gorm2 "gorm.io/gorm"
+
+	_ "github.com/mattn/go-sqlite3"
 //line <generated>:1
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	gorm1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 )
 
-//line samples/client/gorm.go:18
+//line samples/client/gorm.go:19
 func gormClient() {
-	sql.Register("pgx", &stdlib.Driver{})
-	sqlDB, err := sql.Open("pgx", "postgres://localhost:5432")
+	sqlDB, err := sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,20 +40,19 @@ func gormClient() {
 }
 
 func jinzhuGormClient() {
-	sql.Register("pgx", &stdlib.Driver{})
 	db, err :=
 //line <generated>:1
 		func() (*jinzhu.DB, error) {
 			db, err :=
-//line samples/client/gorm.go:40
-				jinzhu.Open("pgx", "postgres://localhost:5432")
+//line samples/client/gorm.go:39
+				jinzhu.Open("sqlite3", "file::memory:?cache=shared")
 //line <generated>:1
 			if err != nil {
 				return nil, err
 			}
 			return gorm1.WithCallbacks(db), err
 		}()
-//line samples/client/gorm.go:41
+//line samples/client/gorm.go:40
 	if err != nil {
 		log.Fatal(err)
 	}
