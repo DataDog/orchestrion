@@ -9,15 +9,15 @@ import (
 	"database/sql"
 	"log"
 
-	"github.com/jackc/pgx/stdlib"
 	jinzhu "github.com/jinzhu/gorm"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func gormClient() {
-	sql.Register("pgx", &stdlib.Driver{})
-	sqlDB, err := sql.Open("pgx", "postgres://localhost:5432")
+	sqlDB, err := sql.Open("sqlite", "database.db")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,8 +36,7 @@ func gormClient() {
 }
 
 func jinzhuGormClient() {
-	sql.Register("pgx", &stdlib.Driver{})
-	db, err := jinzhu.Open("pgx", "postgres://localhost:5432")
+	db, err := jinzhu.Open("sqlite", "database.db")
 	if err != nil {
 		log.Fatal(err)
 	}
