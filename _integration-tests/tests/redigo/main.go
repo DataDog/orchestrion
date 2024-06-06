@@ -11,11 +11,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"orchestrion/integration"
 	"os"
 	"runtime"
 	"time"
 
+	"orchestrion/integration"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/gomodule/redigo/redis"
