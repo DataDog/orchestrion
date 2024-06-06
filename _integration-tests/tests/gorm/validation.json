@@ -14,7 +14,8 @@
           "name": "sqlite3.query",
           "service": "sqlite3.db",
           "meta": {
-            "component": "database/sql"
+            "component": "database/sql",
+            "span.kind": "client"
           }
         },
         {

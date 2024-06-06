@@ -25,19 +25,10 @@ type Note struct {
 }
 
 func main() {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := setup(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to open GORM database: %v", err)
 	}
-	db.AutoMigrate(&Note{})
-	db.CreateInBatches([]Note{
-		{UserID: 1, Content: `Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.`},
-		{UserID: 1, Content: `Hey, remember to mow the lawn.`},
-		{UserID: 2, Content: `Reminder to submit that report by Thursday.`},
-		{UserID: 2, Content: `Opportunities don't happen, you create them.`},
-		{UserID: 3, Content: `Pick up cabbage from the store on the way home.`},
-		{UserID: 3, Content: `Review PR #1138`},
-	}, 10)
 
 	mux := &http.ServeMux{}
 	s := &http.Server{
@@ -73,4 +64,29 @@ func main() {
 	})
 
 	log.Print(s.ListenAndServe())
+}
+
+//dd:span
+func setup(ctx context.Context) (*gorm.DB, error) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := db.WithContext(ctx).AutoMigrate(&Note{}); err != nil {
+		return nil, err
+	}
+
+	if err := db.WithContext(ctx).CreateInBatches([]Note{
+		{UserID: 1, Content: `Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.`},
+		{UserID: 1, Content: `Hey, remember to mow the lawn.`},
+		{UserID: 2, Content: `Reminder to submit that report by Thursday.`},
+		{UserID: 2, Content: `Opportunities don't happen, you create them.`},
+		{UserID: 3, Content: `Pick up cabbage from the store on the way home.`},
+		{UserID: 3, Content: `Review PR #1138`},
+	}, 10).Error; err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
