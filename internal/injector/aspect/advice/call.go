@@ -187,15 +187,15 @@ func init() {
 		return AppendArgs(tn, args.Values...), nil
 	}
 	unmarshalers["replace-function"] = func(node *yaml.Node) (Advice, error) {
-		var fqn string
+		var (
+			fqn  string
+			path string
+			name string
+		)
 		if err := node.Decode(&fqn); err != nil {
 			return nil, err
 		}
 
-		var (
-			path string
-			name string
-		)
 		if idx := strings.LastIndex(fqn, "."); idx >= 0 {
 			path = fqn[:idx]
 			name = fqn[idx+1:]
