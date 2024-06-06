@@ -398,6 +398,20 @@ func (k byResource) Less(i, j int) bool {
 	if k2 == nil {
 		return false
 	}
+
+	if k1 == k2 {
+		// If they are equal, we'll sort them by "start" if present...
+		s1, s1ok := getKey("start", k[i]).(json.Number)
+		s2, s2ok := getKey("start", k[j]).(json.Number)
+		if s1ok && s2ok {
+			s1, s1err := s1.Float64()
+			s2, s2err := s2.Float64()
+			if s1err == nil && s2err == nil {
+				return s1 < s2
+			}
+		}
+	}
+
 	return k1.(string) < k2.(string)
 }
 
