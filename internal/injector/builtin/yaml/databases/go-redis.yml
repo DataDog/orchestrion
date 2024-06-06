@@ -11,7 +11,8 @@ meta:
 aspects:
   ################################################################################
   # V7
-  - join-point:
+  - id: Wrap V7 client
+    join-point:
       one-of:
         - function-call: github.com/go-redis/redis/v7.NewClient
         - function-call: github.com/go-redis/redis/v7.NewFailoverClient
@@ -29,7 +30,8 @@ aspects:
 
   ################################################################################
   # V8
-  - join-point:
+  - id: Wrap V8 client
+    join-point:
       one-of:
         - function-call: github.com/go-redis/redis/v8.NewClient
         - function-call: github.com/go-redis/redis/v8.NewFailoverClient

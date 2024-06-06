@@ -8,9 +8,15 @@ meta:
   name: runtime
   description: Operations that interact with Go's runtime system.
   icon: cog
+  caveats: |-
+    This configuration introduces a way to access the Goroutine Local Storage (GLS), which is not
+    meant to be used directly by end-users. This is intended to be used only by tracer internals to
+    enable trace context forwarding in places where a {{<godoc "context" "Context">}} value is not
+    available.
 aspects:
   # Provides access to the Goroutine Local Storage (GLS) for other aspects to use.
-  - join-point:
+  - id: Insert Goroutine Local Storage (GLS) accessors
+    join-point:
       struct-definition: runtime.g
     advice:
       - add-struct-field:

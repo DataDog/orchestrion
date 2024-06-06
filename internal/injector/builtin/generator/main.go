@@ -122,12 +122,12 @@ func main() {
 				}
 			}
 
-			for i, aspect := range config.Aspects {
+			for i, entry := range config.Aspects {
 				item := g.Line()
 				if i == 0 {
 					item = item.Commentf("From %s", chomped).Line()
 				}
-				jp, adv := aspect.AsCode()
+				jp, adv := entry.Aspect.AsCode()
 				item.Values(
 					jen.Line().Id("JoinPoint").Op(":").Add(jp),
 					jen.Line().Id("Advice").Op(":").Add(adv),
@@ -136,7 +136,7 @@ func main() {
 
 				if depsFile != nil {
 					// Make sure all necessary packages are tracked
-					imports := aspect.AddedImports()
+					imports := entry.Aspect.AddedImports()
 					depsFile.Anon(imports...)
 					for _, path := range imports {
 						injectedPaths[path] = struct{}{}

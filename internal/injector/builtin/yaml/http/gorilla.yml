@@ -15,7 +15,8 @@ meta:
 
     This issue is tracked by [`DataDog/orchestrion#86`](https://github.com/DataDog/orchestrion/issues/86).
 aspects:
-  - join-point:
+  - id: Wrap router with tracer
+    join-point:
       function-call: github.com/gorilla/mux.NewRouter
     advice:
       - wrap-expression:

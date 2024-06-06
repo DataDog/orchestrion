@@ -10,6 +10,9 @@ An Express inspired web framework built on Fasthttp, the fastest HTTP engine for
 
 
 
+
+## Use tracer middleware
+
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
@@ -42,3 +45,4 @@ func() *fiber.App {
     </div>
   </div>
 </div>
+

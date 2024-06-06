@@ -10,6 +10,9 @@ HTTP client and server implementations.
 
 
 
+
+## Wrap http.Server.Handler
+
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
@@ -51,7 +54,11 @@ instrument.WrapHandler({{.}})
 </div>
     </div>
   </div>
-</div><div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
+</div>
+
+## Wrap http.HandlerFunc
+
+<div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
@@ -95,7 +102,11 @@ instrument.WrapHandlerFunc({{.}})
 </div>
     </div>
   </div>
-</div><div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
+</div>
+
+## Report http.HandlerFunc calls
+
+<div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
@@ -161,3 +172,4 @@ defer instrument.Report(
     </div>
   </div>
 </div>
+

@@ -9,7 +9,8 @@ meta:
   description: Monitor a function using a custom span.
   icon: cog
 aspects:
-  - join-point:
+  - id: Using context.Context
+    join-point:
       function-body:
         function:
           - directive: 'dd:span'
@@ -31,7 +32,8 @@ aspects:
             , {{printf "%q" .Key}}, {{printf "%q" .Value}}
           {{- end -}})
 
-  - join-point:
+  - id: Using *http.Request
+    join-point:
       function-body:
         function:
           - directive: 'dd:span'

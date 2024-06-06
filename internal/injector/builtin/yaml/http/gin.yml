@@ -9,7 +9,8 @@ meta:
   description: Gin is a web framework written in Go.
   icon: at-symbol
 aspects:
-  - join-point:
+  - id: Use tracer middleware
+    join-point:
       one-of:
         - function-call: github.com/gin-gonic/gin.Default
         - function-call: github.com/gin-gonic/gin.New

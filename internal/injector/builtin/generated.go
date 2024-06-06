@@ -155,8 +155,10 @@ var Aspects = [...]aspect.Aspect{
 				join.FunctionCall("github.com/go-chi/chi.NewMux"),
 				join.FunctionCall("github.com/go-chi/chi.NewRouter"),
 			),
-			join.Not(join.ImportPath("github.com/go-chi/chi")),
-			join.Not(join.ImportPath("github.com/go-chi/chi/middleware")),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/go-chi/chi"),
+				join.ImportPath("github.com/go-chi/chi/middleware"),
+			)),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -174,8 +176,10 @@ var Aspects = [...]aspect.Aspect{
 				join.FunctionCall("github.com/go-chi/chi/v5.NewMux"),
 				join.FunctionCall("github.com/go-chi/chi/v5.NewRouter"),
 			),
-			join.Not(join.ImportPath("github.com/go-chi/chi/v5")),
-			join.Not(join.ImportPath("github.com/go-chi/chi/v5/middleware")),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/go-chi/chi/v5"),
+				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
+			)),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -405,4 +409,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:tNNgZkNjNulTIc0p8ZAYFqQnqWYTJ/0orQ/m6ZcWSf+beaW2eoIAg/cElzgRSON/i2KQ9elKlncj+QII45wOJQ=="
+const Checksum = "sha512:54yd/kDq0O4NyHl5GOhp7V+tOQQEZ5AFDYRwKz5ozCdi6ydIcwE2g9iU8rhRXbbD4PaxJ12EmzzsJyejRUwNQg=="

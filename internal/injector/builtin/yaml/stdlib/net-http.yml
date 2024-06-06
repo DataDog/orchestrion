@@ -10,7 +10,8 @@ meta:
   icon: at-symbol
 aspects:
   # When httpmode is "wrap"
-  - join-point:
+  - id: Wrap http.Server.Handler
+    join-point:
       all-of:
         - configuration:
             httpmode: wrap
@@ -31,7 +32,8 @@ aspects:
             //dd:startwrap
             instrument.WrapHandler({{.}})
             //dd:endwrap
-  - join-point:
+  - id: Wrap http.HandlerFunc
+    join-point:
       all-of:
         - configuration:
             httpmode: wrap
@@ -54,7 +56,8 @@ aspects:
             instrument.WrapHandlerFunc({{.}})
 
   # When httpmode is "report"
-  - join-point:
+  - id: Report http.HandlerFunc calls
+    join-point:
       all-of:
         - configuration:
             httpmode: report

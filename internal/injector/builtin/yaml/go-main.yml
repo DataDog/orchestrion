@@ -9,7 +9,8 @@ meta:
   description: The entry point of a Go program.
   icon: play
 aspects:
-  - join-point:
+  - id: Start Datadog Tracer
+    join-point:
       all-of:
         - package-name: main
         - function-body:

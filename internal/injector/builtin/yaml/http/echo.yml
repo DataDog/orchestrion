@@ -9,7 +9,8 @@ meta:
   description: High performance, extensible, minimalist Go web framework.
   icon: at-symbol
 aspects:
-  - join-point:
+  - id: Use tracer middleware
+    join-point:
       function-call: github.com/labstack/echo/v4.New
     advice:
       - wrap-expression:

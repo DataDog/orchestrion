@@ -10,6 +10,9 @@ chi is a lightweight, idiomatic and composable router for building Go HTTP servi
 
 
 
+
+## Use V1 tracer middleware
+
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
@@ -21,7 +24,12 @@ chi is a lightweight, idiomatic and composable router for building Go HTTP servi
 <li><strong>One of</strong> the following:
 <ul>
 <li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi#NewMux" target="_blank" rel="noopener"><code>github.com/go-chi/chi.NewMux</code></a></li><li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi#NewRouter" target="_blank" rel="noopener"><code>github.com/go-chi/chi.NewRouter</code></a></li></ul>
-</li><li><strong>Not</strong>:<div>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi" target="_blank" rel="noopener"><code>github.com/go-chi/chi</code></a></div></li><li><strong>Not</strong>:<div>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/middleware</code></a></div></li></ul>
+</li><li><strong>None of</strong> the following:
+<ul>
+<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi" target="_blank" rel="noopener"><code>github.com/go-chi/chi</code></a></li>
+<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/middleware</code></a></li>
+</ul>
+</li></ul>
 </div>
     </div>
     <div class="hx-border-t">
@@ -47,7 +55,11 @@ func() *chi.Mux {
 </div>
     </div>
   </div>
-</div><div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
+</div>
+
+## Use V5 tracer middleware
+
+<div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
@@ -58,7 +70,12 @@ func() *chi.Mux {
 <li><strong>One of</strong> the following:
 <ul>
 <li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi/v5#NewMux" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5.NewMux</code></a></li><li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi/v5#NewRouter" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5.NewRouter</code></a></li></ul>
-</li><li><strong>Not</strong>:<div>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5</code></a></div></li><li><strong>Not</strong>:<div>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5/middleware</code></a></div></li></ul>
+</li><li><strong>None of</strong> the following:
+<ul>
+<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5</code></a></li>
+<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5/middleware</code></a></li>
+</ul>
+</li></ul>
 </div>
     </div>
     <div class="hx-border-t">
@@ -85,3 +102,4 @@ func() *chi.Mux {
     </div>
   </div>
 </div>
+

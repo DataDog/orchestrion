@@ -8,7 +8,15 @@ icon: cog
 
 Operations that interact with Go's runtime system.
 
+{{<callout type="warning">}}
+  This configuration introduces a way to access the Goroutine Local Storage (GLS), which is not
+meant to be used directly by end-users. This is intended to be used only by tracer internals to
+enable trace context forwarding in places where a {{<godoc "context" "Context">}} value is not
+available.
+{{</callout>}}
 
+
+## Insert Goroutine Local Storage (GLS) accessors
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
@@ -50,3 +58,4 @@ func __dd_orchestrion_gls_set(val any) {
     </div>
   </div>
 </div>
+

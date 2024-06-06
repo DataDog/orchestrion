@@ -10,7 +10,8 @@ meta:
   icon: at-symbol
 aspects:
   # Client Instrumentation
-  - join-point:
+  - id: Add gRPC client interceptors
+    join-point:
       one-of:
         - function-call: google.golang.org/grpc.Dial
         - function-call: google.golang.org/grpc.DialContext
@@ -27,7 +28,8 @@ aspects:
               template: grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
 
   # Server Instrumentation
-  - join-point:
+  - id: Add gRPC server interceptors
+    join-point:
       function-call: google.golang.org/grpc.NewServer
     advice:
       - append-args:

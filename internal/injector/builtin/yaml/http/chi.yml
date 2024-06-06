@@ -11,16 +11,17 @@ meta:
 aspects:
   ################################################################################
   # V1
-  - join-point:
+  - id: Use V1 tracer middleware
+    join-point:
       all-of:
         - one-of:
             - function-call: github.com/go-chi/chi.NewMux
             - function-call: github.com/go-chi/chi.NewRouter
         # No instrumenting github.com/go-chi/chi as this causes a circular dependency.
         - not:
-            import-path: github.com/go-chi/chi
-        - not:
-            import-path: github.com/go-chi/chi/middleware
+            one-of:
+              - import-path: github.com/go-chi/chi
+              - import-path: github.com/go-chi/chi/middleware
     advice:
       - wrap-expression:
           imports:
@@ -35,16 +36,17 @@ aspects:
 
   ################################################################################
   # V5
-  - join-point:
+  - id: Use V5 tracer middleware
+    join-point:
       all-of:
         - one-of:
             - function-call: github.com/go-chi/chi/v5.NewMux
             - function-call: github.com/go-chi/chi/v5.NewRouter
         # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
         - not:
-            import-path: github.com/go-chi/chi/v5
-        - not:
-            import-path: github.com/go-chi/chi/v5/middleware
+            one-of:
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
     advice:
       - wrap-expression:
           imports:

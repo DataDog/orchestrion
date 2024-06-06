@@ -7,8 +7,6 @@ package aspect
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice"
 	"github.com/datadog/orchestrion/internal/injector/aspect/join"
@@ -55,9 +53,8 @@ func (a *Aspect) AddedImports() (imports []string) {
 
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
-		JoinPoint yaml.Node            `yaml:"join-point"`
-		Advice    yaml.Node            `yaml:"advice"`
-		Extra     map[string]yaml.Node `yaml:",inline"`
+		JoinPoint yaml.Node `yaml:"join-point"`
+		Advice    yaml.Node `yaml:"advice"`
 	}
 	if err := node.Decode(&ti); err != nil {
 		return err
@@ -68,13 +65,6 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	}
 	if ti.Advice.Kind == 0 {
 		return errors.New("missing required key 'advice'")
-	}
-	if len(ti.Extra) != 0 {
-		keys := make([]string, 0, len(ti.Extra))
-		for key, val := range ti.Extra {
-			keys = append(keys, fmt.Sprintf("%q (line %d)", key, val.Line))
-		}
-		return fmt.Errorf("unexpected keys: %s", strings.Join(keys, ", "))
 	}
 
 	var err error
