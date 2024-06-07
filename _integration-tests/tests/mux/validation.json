@@ -1,14 +1,15 @@
 {
-    "url": "http://localhost:8088/ping",
-    "quit": "http://localhost:8088/quit",
-    "output": [
-	{
-	    "name": "http.request",
-	    "service": "mux.router",
-	    "resource": "GET /ping",
-	    "type": "web",
-	    "meta": {
-		"http.url": "http://localhost:8088/ping"
-	    }
-	}]
+	"url": "http://localhost:8088/ping",
+	"quit": "http://localhost:8088/quit",
+	"output": [
+		{
+			"name": "http.request",
+			"service": "mux",
+			"resource": "GET /ping",
+			"type": "web",
+			"meta": {
+				"http.url": "http://localhost:8088/ping"
+			}
+		}
+	]
 }

@@ -14,6 +14,9 @@ import (
 
 type (
 	function interface {
+		// Receiver returns the name of the receiver of this methid. Fails if the current function is
+		// not a method.
+		Receiver() (string, error)
 		// Name returns the name of this function, or an empty string if it is a function literal.
 		Name() (string, error)
 		// Argument returns the name of the argument at the given index in this function's type, returning
@@ -35,6 +38,8 @@ type (
 	noFunc struct{}
 )
 
+var errNotMethod = errors.New("the function in this context is not a method")
+
 func (d *dot) Function() function {
 	for curr := d.node; curr != nil; curr = curr.Parent() {
 		switch node := curr.Node.(type) {
@@ -45,6 +50,13 @@ func (d *dot) Function() function {
 		}
 	}
 	return &noFunc{}
+}
+
+func (f *declaredFunc) Receiver() (string, error) {
+	if f.Decl.Recv == nil {
+		return "", errNotMethod
+	}
+	return fieldAt(f.Decl.Recv, 0, "receiver")
 }
 
 func (f *declaredFunc) Name() (string, error) {
@@ -59,6 +71,10 @@ func (f *declaredFunc) Argument(index int) (name string, err error) {
 func (f *declaredFunc) Returns(index int) (name string, err error) {
 	name, err = returns(f.Decl.Type, index)
 	return
+}
+
+func (f *literalFunc) Receiver() (string, error) {
+	return "", errNotMethod
 }
 
 func (f *literalFunc) Name() (string, error) {
@@ -76,6 +92,10 @@ func (f *literalFunc) Returns(index int) (name string, err error) {
 }
 
 var errNoFunction = errors.New("no function is present in this node chain")
+
+func (f *noFunc) Receiver() (string, error) {
+	return "", errNoFunction
+}
 
 func (f *noFunc) Name() (string, error) {
 	return "", errNoFunction
