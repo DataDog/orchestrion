@@ -1,0 +1,29 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+%YAML 1.1
+---
+################################################################################
+# Dial
+- join-point:
+    function-call: github.com/gomodule/redigo/redis.Dial
+  advice:
+    - replace-function:
+        gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
+
+################################################################################
+# DialContext
+- join-point:
+    function-call: github.com/gomodule/redigo/redis.DialContext
+  advice:
+    - replace-function:
+        gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+
+################################################################################
+# DialURL
+- join-point:
+    function-call: github.com/gomodule/redigo/redis.DialURL
+  advice:
+    - replace-function:
+        gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL

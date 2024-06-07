@@ -15,11 +15,16 @@ import (
 
 //line samples/server/gin.go:14
 func ginServer() {
-	r := gin.Default()
+	r :=
 //line <generated>:1
-	{
-		r.Use(gin1.Middleware(""))
-	}
+		func() *gin.Engine {
+			e :=
+//line samples/server/gin.go:15
+				gin.Default()
+//line <generated>:1
+			e.Use(gin1.Middleware(""))
+			return e
+		}()
 //line samples/server/gin.go:16
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

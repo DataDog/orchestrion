@@ -463,13 +463,18 @@ chi5-newroute:
     preservelineinfo: true
     aspects:
       - join-point:
-          assignment-of:
-            function-call: github.com/go-chi/chi/v5.NewRouter
+          function-call: github.com/go-chi/chi/v5.NewRouter
         advice:
-          - append-statements:
-              template: '{{.Assignment.LHS}}.Use(instrument.ChiV5Middleware())'
+          - wrap-expression:
               imports:
-                instrument: github.com/datadog/orchestrion/instrument
+                chi: github.com/go-chi/chi/v5
+                chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
+              template: |-
+                func() *chi.Mux {
+                  mux := {{ . }}
+                  mux.Use(chitrace.Middleware())
+                  return mux
+                }()
   source: |
     package main
 
@@ -501,7 +506,7 @@ chi5-newroute:
   expected:
     modified: true
     references:
-      github.com/datadog/orchestrion/instrument: true
+      gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5: true
     source: |
       package main
 
@@ -514,16 +519,21 @@ chi5-newroute:
         "github.com/go-chi/chi/v5"
         "orchestrion/integration"
       //line <generated>:1
-        "github.com/datadog/orchestrion/instrument"
+        chi1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
       )
 
       //line input.go:13
       func main() {
-        router := chi.NewRouter()
+        router :=
       //line <generated>:1
-        {
-          router.Use(instrument.ChiV5Middleware())
-        }
+          func() *chi.Mux {
+            mux :=
+      //line input.go:14
+              chi.NewRouter()
+      //line <generated>:1
+            mux.Use(chi1.Middleware())
+            return mux
+          }()
       //line input.go:15
         router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
           w.Write([]byte("Hello World!"))
@@ -544,13 +554,18 @@ chi5-newroute-dotimport:
     preservelineinfo: true
     aspects:
       - join-point:
-          assignment-of:
-            function-call: github.com/go-chi/chi/v5.NewRouter
+          function-call: github.com/go-chi/chi/v5.NewRouter
         advice:
-          - append-statements:
-              template: '{{.Assignment.LHS}}.Use(instrument.ChiV5Middleware())'
+          - wrap-expression:
               imports:
-                instrument: github.com/datadog/orchestrion/instrument
+                chi: github.com/go-chi/chi/v5
+                chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
+              template: |-
+                func() *chi.Mux {
+                  mux := {{ . }}
+                  mux.Use(chitrace.Middleware())
+                  return mux
+                }()
   source: |
     package main
 
@@ -583,7 +598,7 @@ chi5-newroute-dotimport:
   expected:
     modified: true
     references:
-      github.com/datadog/orchestrion/instrument: true
+      gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5: true
     source: |
       package main
 
@@ -597,16 +612,21 @@ chi5-newroute-dotimport:
 
         . "github.com/go-chi/chi/v5"
       //line <generated>:1
-        "github.com/datadog/orchestrion/instrument"
+        "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
       )
 
       //line input.go:14
       func main() {
-        router := NewRouter()
+        router :=
       //line <generated>:1
-        {
-          router.Use(instrument.ChiV5Middleware())
-        }
+          func() *Mux {
+            mux :=
+      //line input.go:15
+              NewRouter()
+      //line <generated>:1
+            mux.Use(chi.Middleware())
+            return mux
+          }()
       //line input.go:16
         router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
           w.Write([]byte("Hello World!"))
@@ -882,4 +902,111 @@ database-sql:
             conn)
       //line input.go:18
         defer db2.Close()
+      }
+
+redigo:
+  options:
+    preservelineinfo: true
+    aspects:
+      - join-point:
+          function-call: github.com/gomodule/redigo/redis.Dial
+        advice:
+          - replace-function:
+              gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
+      - join-point:
+          function-call: github.com/gomodule/redigo/redis.DialContext
+        advice:
+          - replace-function:
+              gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+      - join-point:
+          function-call: github.com/gomodule/redigo/redis.DialURL
+        advice:
+          - replace-function:
+              gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
+  source: |
+    package main
+
+    import (
+      "context"
+
+      "github.com/gomodule/redigo/redis"
+    )
+
+    func dial(net, address string) error {
+      c, err := redis.Dial(net, address)
+      if err != nil {
+        return err
+      }
+      defer c.Close()
+      return use(c)
+    }
+
+    func dialContext(ctx context.Context, net, address string) error {
+      c, err := redis.DialContext(ctx, net, address)
+      if err != nil {
+        return err
+      }
+      defer c.Close()
+      return use(c)
+    }
+
+    func dialURL(url string) error {
+      c, err := redis.DialURL(url)
+      if err != nil {
+        return err
+      }
+      defer c.Close()
+      return use(c)
+    }
+
+    func use(c redis.Conn) error {
+      _, err := c.Do("SET", "test", "success")
+      return err
+    }
+  expected:
+    modified: true
+    references:
+      gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
+    source: |
+      package main
+
+      import (
+        "context"
+
+        "github.com/gomodule/redigo/redis"
+      //line <generated>:1
+        "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
+      )
+
+      //line input.go:9
+      func dial(net, address string) error {
+        c, err := redigo.Dial(net, address)
+        if err != nil {
+          return err
+        }
+        defer c.Close()
+        return use(c)
+      }
+
+      func dialContext(ctx context.Context, net, address string) error {
+        c, err := redigo.DialContext(ctx, net, address)
+        if err != nil {
+          return err
+        }
+        defer c.Close()
+        return use(c)
+      }
+
+      func dialURL(url string) error {
+        c, err := redigo.DialURL(url)
+        if err != nil {
+          return err
+        }
+        defer c.Close()
+        return use(c)
+      }
+
+      func use(c redis.Conn) error {
+        _, err := c.Do("SET", "test", "success")
+        return err
       }

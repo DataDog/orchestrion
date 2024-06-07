@@ -15,11 +15,16 @@ import (
 
 //line samples/server/echov4.go:14
 func echoV4Server() {
-	r := echo.New()
+	r :=
 //line <generated>:1
-	{
-		r.Use(echo1.Middleware())
-	}
+		func() *echo.Echo {
+			e :=
+//line samples/server/echov4.go:15
+				echo.New()
+//line <generated>:1
+			e.Use(echo1.Middleware())
+			return e
+		}()
 //line samples/server/echov4.go:16
 	r.GET("/ping", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{
@@ -34,11 +39,16 @@ type api struct {
 }
 
 func (a *api) echoV4Server() {
-	a.srv = echo.New()
+	a.srv =
 //line <generated>:1
-	{
-		a.srv.Use(echo1.Middleware())
-	}
+		func() *echo.Echo {
+			e :=
+//line samples/server/echov4.go:29
+				echo.New()
+//line <generated>:1
+			e.Use(echo1.Middleware())
+			return e
+		}()
 //line samples/server/echov4.go:30
 	a.srv.GET("/ping", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{
