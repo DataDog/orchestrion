@@ -203,11 +203,11 @@ func main() {
 
 valid:
 	for _, v := range vkvs {
-		var (
-			closest      [][]kv
-			closestLen   int
-			closestDiffs []string
-		)
+		type diffRecord struct {
+			KVs  []kv
+			Diff diff
+		}
+		var diffs []diffRecord
 
 		for _, f := range fkvs {
 			var d diff
@@ -215,22 +215,20 @@ valid:
 			if d.Len() == 0 {
 				continue valid
 			}
-			if closestLen == 0 || d.Len() < closestLen {
-				closestLen = d.Len()
-				closest = [][]kv{f}
-				closestDiffs = []string{d.String()}
-			} else if closestLen == d.Len() {
-				closest = append(closest, f)
-				closestDiffs = append(closestDiffs, d.String())
-			}
+			diffs = append(diffs, diffRecord{f, d})
 		}
+		// Sort the differences by descending order of difference count...
+		sort.Slice(diffs, func(i, j int) bool {
+			return diffs[i].Diff.Len() > diffs[j].Diff.Len()
+		})
+
 		fmt.Fprintf(&failed, "Failed to validate Trace:\n")
 		DumpKV(&failed, v)
-		fmt.Fprintf(&failed, "\nClosest traces(%d) from fake agent:", len(closest))
-		for i := 0; i < len(closest); i++ {
+		fmt.Fprintf(&failed, "\nCompared to %d traces from fake agent (least likely to most likely):", len(diffs))
+		for i, diff := range diffs {
 			fmt.Fprintf(&failed, "\n\n#################### Candidate %d ####################\n", i)
-			DumpKV(&failed, closest[i])
-			fmt.Fprintf(&failed, "\nDiff between valid and candidate %d:\n%s", i, closestDiffs[i])
+			DumpKV(&failed, diff.KVs)
+			fmt.Fprintf(&failed, "\nDiff between valid and candidate %d:\n%s", i, diff.Diff.String())
 		}
 	}
 	faileds := failed.String()
@@ -400,9 +398,9 @@ func (k byResource) Less(i, j int) bool {
 	}
 
 	if k1 == k2 {
-		// If they are equal, we'll sort them by "start" if present...
-		s1, s1ok := getKey("start", k[i]).(json.Number)
-		s2, s2ok := getKey("start", k[j]).(json.Number)
+		// If they are equal, we'll sort them by "service" if present...
+		s1, s1ok := getKey("service", k[i]).(json.Number)
+		s2, s2ok := getKey("service", k[j]).(json.Number)
 		if s1ok && s2ok {
 			s1, s1err := s1.Float64()
 			s2, s2err := s2.Float64()
