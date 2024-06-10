@@ -13,21 +13,7 @@ import (
 	"strings"
 )
 
-func useDefaultClient(ctx context.Context) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:8080", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	log.Println("HTTP", resp.StatusCode)
-}
-
-func shortHandsWithContext(ctx context.Context) {
+func shortHandsWithContext(context.Context) {
 	resp, err := http.Get("http://localhost:8080")
 	if err != nil {
 		log.Fatal(err)

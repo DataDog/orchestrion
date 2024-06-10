@@ -15,29 +15,18 @@ import (
 	http1 "github.com/datadog/orchestrion/instrument/net/http"
 )
 
-//line samples/client/http-default.go:16
-func useDefaultClient(ctx context.Context) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:8080", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	log.Println("HTTP", resp.StatusCode)
-}
-
-func shortHandsWithContext(ctx context.Context) {
+//line samples/client/http.go:16
+func shortHandsWithContext(
+//line <generated>:1
+	_arg_0 context. //line samples/client/http.go:16
+			Context) {
 	resp, err :=
 //line <generated>:1
 		http1.Get(
-			ctx,
-//line samples/client/http-default.go:31
+			_arg_0,
+//line samples/client/http.go:17
 			"http://localhost:8080")
-//line samples/client/http-default.go:32
+//line samples/client/http.go:18
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,10 +35,10 @@ func shortHandsWithContext(ctx context.Context) {
 	resp, err =
 //line <generated>:1
 		http1.Head(
-			ctx,
-//line samples/client/http-default.go:37
+			_arg_0,
+//line samples/client/http.go:23
 			"http://localhost:8080")
-//line samples/client/http-default.go:38
+//line samples/client/http.go:24
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,10 +47,10 @@ func shortHandsWithContext(ctx context.Context) {
 	resp, err =
 //line <generated>:1
 		http1.Post(
-			ctx,
-//line samples/client/http-default.go:43
+			_arg_0,
+//line samples/client/http.go:29
 			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
-//line samples/client/http-default.go:44
+//line samples/client/http.go:30
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,10 +59,10 @@ func shortHandsWithContext(ctx context.Context) {
 	resp, err =
 //line <generated>:1
 		http1.PostForm(
-			ctx,
-//line samples/client/http-default.go:49
+			_arg_0,
+//line samples/client/http.go:35
 			"http://localhost:8080", url.Values{"key": {"value"}})
-//line samples/client/http-default.go:50
+//line samples/client/http.go:36
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,9 +74,9 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 //line <generated>:1
 		http1.Get(
 			_arg_0.Context(),
-//line samples/client/http-default.go:57
+//line samples/client/http.go:43
 			"http://localhost:8080")
-//line samples/client/http-default.go:58
+//line samples/client/http.go:44
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,9 +86,9 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 //line <generated>:1
 		http1.Head(
 			_arg_0.Context(),
-//line samples/client/http-default.go:63
+//line samples/client/http.go:49
 			"http://localhost:8080")
-//line samples/client/http-default.go:64
+//line samples/client/http.go:50
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,9 +98,9 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 //line <generated>:1
 		http1.Post(
 			_arg_0.Context(),
-//line samples/client/http-default.go:69
+//line samples/client/http.go:55
 			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
-//line samples/client/http-default.go:70
+//line samples/client/http.go:56
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,9 +110,9 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 //line <generated>:1
 		http1.PostForm(
 			_arg_0.Context(),
-//line samples/client/http-default.go:75
+//line samples/client/http.go:61
 			"http://localhost:8080", url.Values{"key": {"value"}})
-//line samples/client/http-default.go:76
+//line samples/client/http.go:62
 	if err != nil {
 		log.Fatal(err)
 	}
