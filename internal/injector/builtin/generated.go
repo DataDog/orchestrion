@@ -47,6 +47,44 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/gorm.yml
+	{
+		JoinPoint: join.FunctionCall("gorm.io/gorm.Open"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1", "Open"),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/jinzhu/gorm.Open"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (*gorm.DB, error) {\n  db, err := {{ . }}\n  if err != nil {\n    return nil, err\n  }\n  return gormtrace.WithCallbacks(db), err\n}()",
+				map[string]string{
+					"gorm":      "github.com/jinzhu/gorm",
+					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+				},
+			)),
+		},
+	},
+	// From databases/redigo.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "Dial"),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialContext"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialContext"),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialURL"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
+		},
+	},
 	// From dd-span.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
@@ -249,34 +287,19 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("database/sql.Register"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.Register(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Register"),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("database/sql.Open"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.Open(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Open"),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("database/sql.OpenDB"),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"sqltrace.OpenDB(\n  {{range .AST.Args}}{{.}},\n{{end}})",
-				map[string]string{
-					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
-				},
-			)),
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "OpenDB"),
 		},
 	},
 	// From stdlib/net-http.yml
@@ -402,11 +425,14 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:54yd/kDq0O4NyHl5GOhp7V+tOQQEZ5AFDYRwKz5ozCdi6ydIcwE2g9iU8rhRXbbD4PaxJ12EmzzsJyejRUwNQg=="
+const Checksum = "sha512:TkBWZY8boz6aqVd2pQNj3j55OzxAMhCDLQx3/DtUZ8vw33ICUD98EMiQ/7qjIl2mUGS/KNnVobQgHcpwgRX96A=="

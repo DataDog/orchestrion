@@ -206,6 +206,7 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 	if err = node.Decode(&cfg); err != nil {
 		return
 	}
+
 	*t, err = NewTemplate(cfg.Template, cfg.Imports)
 	return err
 }

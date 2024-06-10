@@ -3,7 +3,10 @@ module github.com/datadog/orchestrion
 go 1.21
 
 require (
+	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/charmbracelet/lipgloss v0.10.0
+	github.com/cloudwego/base64x v0.1.4 // indirect
+	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.0
 	github.com/gohugoio/hugo v0.126.3
@@ -80,12 +83,9 @@ require (
 	github.com/bep/simplecobra v0.4.0 // indirect
 	github.com/bep/tmc v0.5.1 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
-	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
-	github.com/cloudwego/base64x v0.1.4 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -128,6 +128,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/gomodule/redigo v1.8.9 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/licenseclassifier v0.0.0-20210722185704-3043a050f148 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -145,6 +146,9 @@ require (
 	github.com/invopop/yaml v0.2.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jdkato/prose v1.2.1 // indirect
+	github.com/jinzhu/gorm v1.9.16 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -167,6 +171,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
@@ -247,6 +252,7 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gorm.io/gorm v1.25.3 // indirect
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect

@@ -8,39 +8,22 @@ meta:
   name: database/sql
   description: A generic interface around SQL (or SQL-like) databases.
   icon: database
+
 aspects:
   - id: Register
     join-point:
       function-call: database/sql.Register
     advice:
-      - wrap-expression:
-          imports:
-            sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
-          template: |-
-            sqltrace.Register(
-              {{range .AST.Args}}{{.}},
-            {{end}})
+      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Register
 
   - id: Open
     join-point:
       function-call: database/sql.Open
     advice:
-      - wrap-expression:
-          imports:
-            sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
-          template: |-
-            sqltrace.Open(
-              {{range .AST.Args}}{{.}},
-            {{end}})
+      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Open
 
   - id: OpenDB
     join-point:
       function-call: database/sql.OpenDB
     advice:
-      - wrap-expression:
-          imports:
-            sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
-          template: |-
-            sqltrace.OpenDB(
-              {{range .AST.Args}}{{.}},
-            {{end}})
+      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.OpenDB

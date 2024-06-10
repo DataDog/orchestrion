@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -42,11 +43,12 @@ func assembleTraces(r io.Reader) ([]map[string]interface{}, error) {
 	}
 
 	// Build the entire map of SpanID -> *Span in spans, and the map of roots.
-	for i := range dec {
-		for j := range dec[i] {
-			span := dec[i][j]
-			var parentID uint64
-			var spanID uint64
+	for _, decSpans := range dec {
+		for _, span := range decSpans {
+			var (
+				parentID uint64
+				spanID   uint64
+			)
 			if pid, ok := span["parent_id"]; ok {
 				npid, ok := pid.(json.Number)
 				if !ok {
@@ -202,11 +204,11 @@ func main() {
 
 valid:
 	for _, v := range vkvs {
-		var (
-			closest      [][]kv
-			closestLen   int
-			closestDiffs []string
-		)
+		type diffRecord struct {
+			KVs  []kv
+			Diff diff
+		}
+		var diffs []diffRecord
 
 		for _, f := range fkvs {
 			var d diff
@@ -214,22 +216,20 @@ valid:
 			if d.Len() == 0 {
 				continue valid
 			}
-			if closestLen == 0 || d.Len() < closestLen {
-				closestLen = d.Len()
-				closest = [][]kv{f}
-				closestDiffs = []string{d.String()}
-			} else if closestLen == d.Len() {
-				closest = append(closest, f)
-				closestDiffs = append(closestDiffs, d.String())
-			}
+			diffs = append(diffs, diffRecord{f, d})
 		}
+		// Sort the differences by descending order of difference count...
+		sort.Slice(diffs, func(i, j int) bool {
+			return diffs[i].Diff.Len() > diffs[j].Diff.Len()
+		})
+
 		fmt.Fprintf(&failed, "Failed to validate Trace:\n")
 		DumpKV(&failed, v)
-		fmt.Fprintf(&failed, "\nClosest traces(%d) from fake agent:", len(closest))
-		for i := 0; i < len(closest); i++ {
+		fmt.Fprintf(&failed, "\nCompared to %d traces from fake agent (least likely to most likely):", len(diffs))
+		for i, diff := range diffs {
 			fmt.Fprintf(&failed, "\n\n#################### Candidate %d ####################\n", i)
-			DumpKV(&failed, closest[i])
-			fmt.Fprintf(&failed, "\nDiff between valid and candidate %d:\n%s", i, closestDiffs[i])
+			DumpKV(&failed, diff.KVs)
+			fmt.Fprintf(&failed, "\nDiff between valid and candidate %d:\n%s", i, diff.Diff.String())
 		}
 	}
 	faileds := failed.String()
@@ -311,11 +311,12 @@ func compare(valid, fake []kv, prefix string, indent int, d *diff) {
 				if len(vcs) != len(fcs) {
 					d.AddDifference("%s._children (valid) count(%d) != %s._children (fake agent) count(%d)\n", prefix, len(vcs), prefix, len(fcs))
 				}
-				for i := range vcs {
+				for i, vc := range vcs {
 					if len(fcs) <= i {
 						d.AddDifference("%s._children[%d] != nil, but %s._children[%d] == nil\n", prefix, i, prefix, i)
+						break
 					}
-					compare(vcs[i], fcs[i],
+					compare(vc, fcs[i],
 						fmt.Sprintf("%s._children[%d]", prefix, i),
 						indent+1, d)
 				}
@@ -356,13 +357,16 @@ type kv struct {
 }
 
 // getKey returns the value for some key in a slice of kv.
-func getKey(k string, kvs []kv) interface{} {
+func getUInt64(k string, kvs []kv) (uint64, error) {
 	for _, kv := range kvs {
 		if kv.k == k {
-			return kv.v
+			if v, ok := kv.v.(json.Number); ok {
+				return strconv.ParseUint(v.String(), 10, 64)
+			}
+			return 0, fmt.Errorf("value of %q is not a number: %T", k, kv.v)
 		}
 	}
-	return nil
+	return 0, fmt.Errorf("not found: %q", k)
 }
 
 // alphaKey implements the sort interface to sort a slice of kv by
@@ -380,26 +384,21 @@ func (k alphaKey) Swap(i, j int) {
 	k[i], k[j] = k[j], k[i]
 }
 
-// byResource sorts a slice of slice of kv (a slice of spans) by the value of the "resource"
-// key in each span. This is useful for sorting a slice of children.
-type byResource [][]kv
+// byStart sorts a slice of slice of kv (a slice of spans) by the value of the
+// "start" key in each span. This is useful for sorting a slice of children so
+// it is consistently ordered.
+type byStart [][]kv
 
-func (k byResource) Len() int {
+func (k byStart) Len() int {
 	return len(k)
 }
-func (k byResource) Less(i, j int) bool {
-	k1 := getKey("resource", k[i])
-	k2 := getKey("resource", k[j])
-	if k1 == nil {
-		return true
-	}
-	if k2 == nil {
-		return false
-	}
-	return k1.(string) < k2.(string)
+func (k byStart) Less(i, j int) bool {
+	s1, _ := getUInt64("start", k[i])
+	s2, _ := getUInt64("start", k[j])
+	return s1 < s2
 }
 
-func (k byResource) Swap(i, j int) {
+func (k byStart) Swap(i, j int) {
 	k[i], k[j] = k[j], k[i]
 }
 
@@ -412,10 +411,10 @@ func genKVs(validation map[string]interface{}) []kv {
 			mc := child.(map[string]interface{})
 			children = append(children, genKVs(mc))
 		}
-		sort.Sort(byResource(children))
+		sort.Sort(byStart(children))
 		validation["_children"] = children
-
 	}
+
 	if validation["meta"] != nil {
 		m := validation["meta"].(map[string]interface{})
 		var sorted []kv

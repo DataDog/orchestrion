@@ -1,0 +1,46 @@
+{
+  "url": "http://127.0.0.1:8089",
+  "quit": "http://127.0.0.1:8089/quit",
+  "output": [
+    {
+      "resource": "GET /",
+      "type": "web",
+      "name": "http.request",
+      "service": "redigo",
+      "meta": {
+        "component": "net/http"
+      },
+      "_children": [
+        {
+          "resource": "GET",
+          "type": "redis",
+          "name": "redis.command",
+          "service": "redis.conn",
+          "meta": {
+            "redis.raw_command": "GET test_key",
+            "db.system": "redis",
+            "component": "gomodule/redigo",
+            "out.network": "tcp",
+            "out.host": "localhost",
+            "redis.args_length": "1",
+            "span.kind": "client"
+          }
+        }
+      ]
+    },
+    {
+      "resource": "redigo.Conn.Flush",
+      "type": "redis",
+      "name": "redis.command",
+      "service": "redis.conn",
+      "meta": {
+        "component": "gomodule/redigo",
+        "out.network": "tcp",
+        "out.host": "localhost",
+        "redis.args_length": "0",
+        "db.system": "redis",
+        "span.kind": "client"
+      }
+    }
+  ]
+}
