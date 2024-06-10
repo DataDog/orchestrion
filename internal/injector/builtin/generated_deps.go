@@ -10,9 +10,11 @@
 package builtin
 
 import (
+	_ "fmt"
 	_ "github.com/datadog/orchestrion/instrument"
 	_ "github.com/datadog/orchestrion/instrument/event"
 	_ "github.com/datadog/orchestrion/instrument/net/http"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi"
@@ -26,6 +28,13 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
+	_ "os"
+	_ "strconv"
 )

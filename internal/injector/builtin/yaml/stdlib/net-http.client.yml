@@ -1,0 +1,120 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+%YAML 1.1
+---
+# Add tracing to the default http.RoundTripper implementation.
+- join-point:
+    method-definition:
+      receiver: '*net/http.Transport'
+      name: RoundTrip
+  advice:
+    - prepend-statements:
+        imports:
+          appsec: gopkg.in/DataDog/dd-trace-go.v1/internal/appsec
+          ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
+          events: gopkg.in/DataDog/dd-trace-go.v1/appsec/events
+          ext: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext
+          fmt: fmt
+          globalconfig: gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig
+          httpsec: gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec
+          namingschema: gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema
+          os: os
+          strconv: strconv
+          tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+        template: |-
+          {{- $req := .Function.Argument 0 -}}
+          {{- $res := .Function.Results 0 -}}
+          {{- $err := .Function.Results 1 -}}
+          resourceName := "http.request" // TODO: allow configuration
+          spanName := namingschema.OpName(namingschema.HTTPClient)
+          // Copy the URL so we don't modify the outgoing request
+          url := *{{ $req }}.URL
+          url.User = nil // Don't include userinfo in the http.url tag
+          opts := []ddtrace.StartSpanOption{
+            tracer.SpanType(ext.SpanTypeHTTP),
+            tracer.ResourceName(resourceName),
+            tracer.Tag(ext.HTTPMethod, {{ $req }}.Method),
+            tracer.Tag(ext.HTTPURL, url.String()),
+            tracer.Tag(ext.Component, "net/http"),
+            tracer.Tag(ext.SpanKind, ext.SpanKindClient),
+            tracer.Tag(ext.NetworkDestinationName, url.Hostname()),
+          }
+          if analyticsRate := globalconfig.AnalyticsRate(); !math.IsNaN(analyticsRate) {
+            opts = append(opts, tracer.Tag(ext.EventSampleRate, analyticsRate))
+          }
+          if port, err := strconv.Atoi(url.Port()); err == nil {
+            opts = append(opts, tracer.Tag(ext.NetworkDestinationPoirt, port))
+          }
+          span, ctx := tracer.StartSpanFromContext({{ $req }}.Context(), spanName, opts...)
+          {{ $req }} = {{ $req }}.Clone(ctx)
+          defer func() {
+            if !events.IsSecurityError({{ $err }}) {
+              span.Finish(tracer.WithError({{ $err }}))
+            } else {
+              span.Finish()
+            }
+          }()
+
+          if {{ $err }} = tracer.Inject(span.Context(), tracer.HTTPHeadersCarrier({{ $req }}.Header)); err != nil {
+            fmt.Fprintf(os.Stderr, "contrib/net/http.Roundtrip: failed to inject http headers: %v\n", err)
+          }
+
+          if appsec.RASPEnabled() {
+            if err := httpsec.ProtectRoundTrip(ctx, {{ $req }}.URL.String()); err != nil {
+              return nil, err
+            }
+          }
+
+          defer func() {
+            if {{ $err }} != nil {
+              span.SetTag("http.errors", {{ $err }}.Error())
+              span.SetTag(ext.Error, {{ $err }})
+            } else {
+              span.SetTag(ext.HTTPCode, strconv.Itoa({{ $res }}.StatusCode))
+              if {{ $res }}.StatusCode >= 500 && {{ $res}}.StatusCode < 600 {
+                // Treat HTTP 5XX as errors
+                span.SetTag("http.errors", {{ $res }}.Status)
+                span.SetTag(ext.Error, fmt.Errorf("%d: %s", {{ $res }}.StatusCode, StatusText({{ $res }}.StatusCode)))
+              }
+            }
+          }()
+
+# Replace the http.Get, http.Head, http.Post, and http.PostForm short-hands with the longer forms if
+# there is a context available from the surroundings.
+- join-point:
+    all-of:
+      - not:
+          # We don't want to instrument in net/http, it'd create a circular dependency!
+          import-path: net/http
+      - one-of:
+          - function-call: net/http.Get
+          - function-call: net/http.Head
+          - function-call: net/http.Post
+          - function-call: net/http.PostForm
+  advice:
+    # In case no context is available locally...
+    - add-blank-import: github.com/datadog/orchestrion/instrument/net/http
+    # Wire the context that is found to the handlers...
+    - wrap-expression:
+        imports:
+          instrument: github.com/datadog/orchestrion/instrument/net/http
+        template: |-
+          {{- $ctx := .FindArgument "context.Context" -}}
+          {{- $req := .FindArgument "*net/http.Request" }}
+          {{- if $ctx -}}
+            instrument.{{ .AST.Fun.Name }}(
+              {{ $ctx }},
+              {{ range .AST.Args }}{{ . }},
+              {{ end }}
+            )
+          {{- else if $req -}}
+            instrument.{{ .AST.Fun.Name }}(
+              {{ $req }}.Context(),
+              {{ range .AST.Args }}{{ . }},
+              {{ end }}
+            )
+          {{- else -}}
+            {{ . }}
+          {{- end -}}
