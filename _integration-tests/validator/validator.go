@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -356,13 +357,16 @@ type kv struct {
 }
 
 // getKey returns the value for some key in a slice of kv.
-func getKey(k string, kvs []kv) interface{} {
+func getUInt64(k string, kvs []kv) (uint64, error) {
 	for _, kv := range kvs {
 		if kv.k == k {
-			return kv.v
+			if v, ok := kv.v.(json.Number); ok {
+				return strconv.ParseUint(v.String(), 10, 64)
+			}
+			return 0, fmt.Errorf("value of %q is not a number: %T", k, kv.v)
 		}
 	}
-	return nil
+	return 0, fmt.Errorf("not found: %q", k)
 }
 
 // alphaKey implements the sort interface to sort a slice of kv by
@@ -380,40 +384,21 @@ func (k alphaKey) Swap(i, j int) {
 	k[i], k[j] = k[j], k[i]
 }
 
-// byResource sorts a slice of slice of kv (a slice of spans) by the value of the "resource"
-// key in each span. This is useful for sorting a slice of children.
-type byResource [][]kv
+// byStart sorts a slice of slice of kv (a slice of spans) by the value of the
+// "start" key in each span. This is useful for sorting a slice of children so
+// it is consistently ordered.
+type byStart [][]kv
 
-func (k byResource) Len() int {
+func (k byStart) Len() int {
 	return len(k)
 }
-func (k byResource) Less(i, j int) bool {
-	k1 := getKey("resource", k[i])
-	k2 := getKey("resource", k[j])
-	if k1 == nil {
-		return true
-	}
-	if k2 == nil {
-		return false
-	}
-
-	if k1 == k2 {
-		// If they are equal, we'll sort them by "service" if present...
-		s1, s1ok := getKey("service", k[i]).(json.Number)
-		s2, s2ok := getKey("service", k[j]).(json.Number)
-		if s1ok && s2ok {
-			s1, s1err := s1.Float64()
-			s2, s2err := s2.Float64()
-			if s1err == nil && s2err == nil {
-				return s1 < s2
-			}
-		}
-	}
-
-	return k1.(string) < k2.(string)
+func (k byStart) Less(i, j int) bool {
+	s1, _ := getUInt64("start", k[i])
+	s2, _ := getUInt64("start", k[j])
+	return s1 < s2
 }
 
-func (k byResource) Swap(i, j int) {
+func (k byStart) Swap(i, j int) {
 	k[i], k[j] = k[j], k[i]
 }
 
@@ -426,10 +411,10 @@ func genKVs(validation map[string]interface{}) []kv {
 			mc := child.(map[string]interface{})
 			children = append(children, genKVs(mc))
 		}
-		sort.Sort(byResource(children))
+		sort.Sort(byStart(children))
 		validation["_children"] = children
-
 	}
+
 	if validation["meta"] != nil {
 		m := validation["meta"].(map[string]interface{})
 		var sorted []kv
