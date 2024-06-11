@@ -6,9 +6,8 @@
 package join
 
 import (
-	"bytes"
-	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/jennifer/jen"
@@ -51,14 +50,25 @@ func (jp configuration) AsCode() jen.Code {
 	}))
 }
 
-func (jp configuration) ToHTML() string {
-	buf := &bytes.Buffer{}
-	buf.WriteString("Configuration includes:\n")
-	buf.WriteString("<ul>\n")
+func (jp configuration) RenderHTML() string {
+	var buf strings.Builder
+
+	buf.WriteString("<div class=\"join-point configuration\">\n")
+	buf.WriteString("  <span class=\"type pill\">Configuration</span>\n")
+	buf.WriteString("  <ul>\n")
 	for k, v := range jp {
-		fmt.Fprintf(buf, "<li><code>%s = %q</code></li>\n", k, v)
+		buf.WriteString("    <li class=\"flex\">\n")
+		buf.WriteString("      <span class=\"type\">")
+		buf.WriteString(k)
+		buf.WriteString("</span>\n")
+		buf.WriteString("      <code>\n")
+		buf.WriteString(v)
+		buf.WriteString("      </code>\n")
+		buf.WriteString("    </li>\n")
 	}
-	buf.WriteString("</ul>\n")
+	buf.WriteString("  </ul>\n")
+	buf.WriteString("</div>\n")
+
 	return buf.String()
 }
 

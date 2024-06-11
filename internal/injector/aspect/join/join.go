@@ -34,9 +34,9 @@ type Point interface {
 	// decisions based on parent nodes.
 	Matches(node *node.Chain) bool
 
-	// ToHTML renders an HTML block containing the join point's description for
-	// documentation purposes.
-	ToHTML() string
+	// RenderHTML renders an HTML block containing the join point's description
+	// for documentation purposes.
+	RenderHTML() string
 }
 
 type TypeName struct {
@@ -141,19 +141,10 @@ func (n *TypeName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
 }
 
-func (n *TypeName) ToHTML() string {
-	buf := &bytes.Buffer{}
+func (n *TypeName) RenderHTML() string {
+	var ptr string
 	if n.pointer {
-		buf.WriteByte('*')
+		ptr = "*"
 	}
-	if n.path != "" {
-		fmt.Fprintf(buf, `<a href="http://pkg.go.dev/%s#%s" target="_blank" rel="noopener">`, n.path, n.name)
-		buf.WriteString(n.path)
-		buf.WriteString("<wbr>.")
-	}
-	buf.WriteString(n.name)
-	if n.path != "" {
-		buf.WriteString("</a>")
-	}
-	return buf.String()
+	return fmt.Sprintf(`{{<godoc %q %q %q>}}`, n.path, n.name, ptr)
 }

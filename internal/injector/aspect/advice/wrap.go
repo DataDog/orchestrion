@@ -59,8 +59,8 @@ func (a *wrapExpression) AddedImports() []string {
 	return a.template.AddedImports()
 }
 
-func (a *wrapExpression) ToHTML() string {
-	return fmt.Sprintf("Wrap the expression using: %s\n", a.template.ToHTML())
+func (a *wrapExpression) RenderHTML() string {
+	return "wrap-expression"
 }
 
 func init() {

@@ -63,14 +63,21 @@ func (o oneOf) AsCode() jen.Code {
 	})
 }
 
-func (o oneOf) ToHTML() string {
-	buf := &strings.Builder{}
-	fmt.Fprintln(buf, "<strong>One of</strong> the following:")
-	fmt.Fprintln(buf, "<ul>")
+func (o oneOf) RenderHTML() string {
+	return fmt.Sprintf(`<div class="join-point one-of"><span class="type pill">One of</span>%s</div>`, o.renderCandidatesHTML())
+}
+
+func (o oneOf) renderCandidatesHTML() string {
+	var buf strings.Builder
+
+	buf.WriteString("<ul>\n")
 	for _, candidate := range o {
-		fmt.Fprintf(buf, "<li>%s</li>", candidate.ToHTML())
+		buf.WriteString("  <li class=\"candidate\">\n")
+		buf.WriteString(candidate.RenderHTML())
+		buf.WriteString("  </li>\n")
 	}
-	fmt.Fprintln(buf, "</ul>")
+	buf.WriteString("</ul>\n")
+
 	return buf.String()
 }
 

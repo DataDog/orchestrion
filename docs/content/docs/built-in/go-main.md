@@ -9,38 +9,41 @@ The entry point of a Go program.
 ## Start Datadog Tracer
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>All of</strong> the following:
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point all-of">  <span class="type pill">All of</span>  <ul>
+    <li class="candidate">
+<div class="flex join-point package-name"><span class="type">Package name</span><code>main</code></div>    </li>
+    <li class="candidate">
+<div class="join-point function-body"><span class="type pill">Function body</span><ul><li><div class="join-point function-declaratop,">
+  <span class="type pill">Function declaration</span>
+  <ul>
+    <li>
+<div class="join-point flex function-option fo-name"><span class="type">Function name</span><code>main</code></div>    </li>
+    <li>
+<div class="join-point function-option fo-signature">
+  <span class="type pill">Signature matches</span>
 <ul>
-<li>Package is named <code>main</code></li><li>Body of:<div>Function declaration where:
-<ul>
-<li>Named <code>main</code></li>
-<li>Has signature <code>func()</code></li>
+    <li class="flex"><span class="type">Arguments</span><span class="value">None</span></li>
+    <li class="flex"><span class="type">Return Values</span><span class="value">None</span></li>
 </ul>
-</div></li></ul>
+</div>
+    </li>
+  </ul>
+</div>
+</li></ul></div>    </li>
+  </ul>
+</div>
 </div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Prepend statements using: 
-
-Identifier | Import Path
----|---
-<code>tracer</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"</code></a>
-
-
-```go-template
-tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
-defer tracer.Stop()
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">prepend-statements</div>
     </div>
   </div>
 </div>

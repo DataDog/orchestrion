@@ -1,5 +1,12 @@
-<a href="https://pkg.go.dev/{{ .Get 0 }}{{ with .Get 1 }}#{{ . }}{{ end }}" target="_blank" rel="noopener"><code>
-  {{- .Get 0 -}}
-  {{- with .Get 1 }}<wbr>.{{ . }}{{ end -}}
-</code></a>
+<a href='https://pkg.go.dev/{{ or (.Get 0) "builtin" }}{{ with .Get 1 }}#{{ . }}{{ end }}" target="_blank" rel="noopener'>
+  <code>
+    {{- with .Get 2 -}}{{ . }}{{- end -}}
+    {{- if .Get 0 -}}
+      {{- .Get 0 -}}
+      {{- with .Get 1 }}<wbr>.{{ . }}{{ end -}}
+    {{- else -}}
+      {{ .Get 1 }}
+    {{- end -}}
+  </code>
+</a>
 {{- /* suppress trailing white space */ -}}

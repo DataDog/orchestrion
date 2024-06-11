@@ -9,46 +9,26 @@ The Go implementation of gRPC.
 ## Add gRPC client interceptors
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>One of</strong> the following:
-<ul>
-<li>Call to <a href="https://pkg.go.dev/google.golang.org/grpc#Dial" target="_blank" rel="noopener"><code>google.golang.org/grpc.Dial</code></a></li><li>Call to <a href="https://pkg.go.dev/google.golang.org/grpc#DialContext" target="_blank" rel="noopener"><code>google.golang.org/grpc.DialContext</code></a></li><li>Call to <a href="https://pkg.go.dev/google.golang.org/grpc#NewClient" target="_blank" rel="noopener"><code>google.golang.org/grpc.NewClient</code></a></li></ul>
-</div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point one-of"><span class="type pill">One of</span><ul>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "google.golang.org/grpc" "Dial">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "google.golang.org/grpc" "DialContext">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "google.golang.org/grpc" "NewClient">}}</div>  </li>
+</ul>
+</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Append <code><a href="http://pkg.go.dev/google.golang.org/grpc#DialOption" target="_blank" rel="noopener">google.golang.org/grpc<wbr>.DialOption</a></code> call arguments:
-<ol>
-<li>
-
-Identifier | Import Path
----|---
-<code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
-<code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
-
-
-```go-template
-grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
-```
-</li><li>
-
-Identifier | Import Path
----|---
-<code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
-<code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
-
-
-```go-template
-grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
-```
-</li></ol>
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">append-arguments</div>
     </div>
   </div>
 </div>
@@ -56,43 +36,18 @@ grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
 ## Add gRPC server interceptors
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/google.golang.org/grpc#NewServer" target="_blank" rel="noopener"><code>google.golang.org/grpc.NewServer</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "google.golang.org/grpc" "NewServer">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Append <code><a href="http://pkg.go.dev/google.golang.org/grpc#ServerOption" target="_blank" rel="noopener">google.golang.org/grpc<wbr>.ServerOption</a></code> call arguments:
-<ol>
-<li>
-
-Identifier | Import Path
----|---
-<code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
-<code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
-
-
-```go-template
-grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
-```
-</li><li>
-
-Identifier | Import Path
----|---
-<code>grpc</code>|<a href="http://pkg.go.dev/google.golang.org/grpc" target="_blank" rel="noopener"><code>"google.golang.org/grpc"</code></a>
-<code>grpctrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"</code></a>
-
-
-```go-template
-grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
-```
-</li></ol>
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">append-arguments</div>
     </div>
   </div>
 </div>

@@ -9,18 +9,18 @@ The fantastic ORM library for Golang.
 ## gorm.io/gorm
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/gorm.io/gorm#Open" target="_blank" rel="noopener"><code>gorm.io/gorm.Open</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "gorm.io/gorm" "Open">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Redirect call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1" "Open">}}</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
     </div>
   </div>
 </div>
@@ -28,36 +28,18 @@ The fantastic ORM library for Golang.
 ## jinzhu/gorm
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/github.com/jinzhu/gorm#Open" target="_blank" rel="noopener"><code>github.com/jinzhu/gorm.Open</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/jinzhu/gorm" "Open">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>gorm</code>|<a href="http://pkg.go.dev/github.com/jinzhu/gorm" target="_blank" rel="noopener"><code>"github.com/jinzhu/gorm"</code></a>
-<code>gormtrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"</code></a>
-
-
-```go-template
-func() (*gorm.DB, error) {
-  db, err := {{ . }}
-  if err != nil {
-    return nil, err
-  }
-  return gormtrace.WithCallbacks(db), err
-}()
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>

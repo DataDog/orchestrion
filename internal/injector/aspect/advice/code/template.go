@@ -223,21 +223,19 @@ func numberLines(text string) string {
 	return strings.Join(lines, "\n")
 }
 
-func (t *Template) ToHTML() string {
-	buf := bytes.NewBuffer(nil)
+func (t *Template) RenderHTML() string {
+	var buf strings.Builder
 
 	if len(t.imports) > 0 {
-		buf.WriteString("\n\nIdentifier | Import Path\n---|---\n")
-
 		keys := make([]string, 0, len(t.imports))
 		for name := range t.imports {
 			keys = append(keys, name)
 		}
 		sort.Strings(keys)
 
+		buf.WriteString("\n\nIdentifier | Import Path\n---|---\n")
 		for _, name := range keys {
-			buf.WriteString(fmt.Sprintf(`<code>%[1]s</code>|<a href="http://pkg.go.dev/%[2]s" target="_blank" rel="noopener"><code>%[2]q</code></a>`, name, t.imports[name]))
-			buf.WriteByte('\n')
+			fmt.Fprintf(&buf, "<code>%s</code> | {{<godoc %q>}}\n", name, t.imports[name])
 		}
 	}
 

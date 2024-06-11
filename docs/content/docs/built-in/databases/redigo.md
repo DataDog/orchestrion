@@ -9,18 +9,18 @@ Redigo is a Go client for the Redis database.
 ## Dial
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/github.com/gomodule/redigo/redis#Dial" target="_blank" rel="noopener"><code>github.com/gomodule/redigo/redis.Dial</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/gomodule/redigo/redis" "Dial">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Redirect call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo" "Dial">}}</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
     </div>
   </div>
 </div>
@@ -28,18 +28,18 @@ Redigo is a Go client for the Redis database.
 ## DialContext
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/github.com/gomodule/redigo/redis#DialContext" target="_blank" rel="noopener"><code>github.com/gomodule/redigo/redis.DialContext</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/gomodule/redigo/redis" "DialContext">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Redirect call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo" "DialContext">}}</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
     </div>
   </div>
 </div>
@@ -47,18 +47,18 @@ Redigo is a Go client for the Redis database.
 ## DialURL
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/github.com/gomodule/redigo/redis#DialURL" target="_blank" rel="noopener"><code>github.com/gomodule/redigo/redis.DialURL</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/gomodule/redigo/redis" "DialURL">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Redirect call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo" "DialURL">}}</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
     </div>
   </div>
 </div>

@@ -6,7 +6,6 @@
 package join
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -34,18 +33,11 @@ func (n not) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Not").Call(n.jp.AsCode())
 }
 
-func (n not) ToHTML() string {
-	if oneOf, ok := n.jp.(oneOf); ok {
-		buf := &bytes.Buffer{}
-		buf.WriteString("<strong>None of</strong> the following:\n")
-		buf.WriteString("<ul>\n")
-		for _, jp := range oneOf {
-			fmt.Fprintf(buf, "<li>%s</li>\n", jp.ToHTML())
-		}
-		buf.WriteString("</ul>\n")
-		return buf.String()
+func (n not) RenderHTML() string {
+	if jp, ok := n.jp.(oneOf); ok {
+		return fmt.Sprintf(`<div class="join-point none-of"><span class="type pill">None of</span>%s</div>`, jp.renderCandidatesHTML())
 	}
-	return fmt.Sprintf("<strong>Not</strong>:<div>%s</div>", n.jp.ToHTML())
+	return fmt.Sprintf(`<div class="join-point not"><span class="type pill">Not</span><ul><li>%s</li></ul></div>`, n.jp.RenderHTML())
 }
 
 func init() {

@@ -89,8 +89,8 @@ func (a injectSourceFile) AddedImports() []string {
 	return nil
 }
 
-func (a injectSourceFile) ToHTML() string {
-	return fmt.Sprintf("Inject new source file containing:\n\n```go\n%s\n```\n", string(a))
+func (a injectSourceFile) RenderHTML() string {
+	return "inject-source-file"
 }
 
 func init() {

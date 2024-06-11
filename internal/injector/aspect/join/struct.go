@@ -6,8 +6,8 @@
 package join
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
@@ -55,8 +55,8 @@ func (s *structDefinition) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructDefinition").Call(s.typeName.AsCode())
 }
 
-func (s *structDefinition) ToHTML() string {
-	return fmt.Sprintf("Definition of struct <code>%s</code>", s.typeName.ToHTML())
+func (s *structDefinition) RenderHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point struct-definition"><span class="type">Definition of</span>%s</div>`, s.typeName.RenderHTML())
 }
 
 type structLiteral struct {
@@ -112,11 +112,26 @@ func (s *structLiteral) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), jen.Lit(s.field))
 }
 
-func (s *structLiteral) ToHTML() string {
-	buf := &bytes.Buffer{}
-	buf.WriteString("Composite literal of type <code>")
-	buf.WriteString(s.typeName.ToHTML())
-	buf.WriteString("</code>")
+func (s *structLiteral) RenderHTML() string {
+	var buf strings.Builder
+
+	buf.WriteString("<div class=\"join-point struct-literal\">\n")
+	buf.WriteString("  <div class=\"flex\">\n")
+	buf.WriteString("    <span class=\"type\">Struct literal</span>\n")
+	buf.WriteString(s.typeName.RenderHTML())
+	buf.WriteString("\n  </div>\n")
+	if s.field != "" {
+		buf.WriteString("  <ul>\n")
+		buf.WriteString("    <li class=\"flex\">\n")
+		buf.WriteString("      <span class=\"type\">Including field</span>\n")
+		buf.WriteString("      <code>\n")
+		buf.WriteString(s.field)
+		buf.WriteString("\n      </code>\n")
+		buf.WriteString("    </li>\n")
+		buf.WriteString("  </ul>\n")
+	}
+	buf.WriteString("</div>\n")
+
 	return buf.String()
 }
 

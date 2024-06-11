@@ -29,7 +29,7 @@ type Advice interface {
 	// the import already exists).
 	Apply(context.Context, *node.Chain, *dstutil.Cursor) (bool, error)
 
-	// ToHTML returns a string representation of the advice in HTML format for
-	// documentation purposes.
-	ToHTML() string
+	// RenderHTML renders and HTML representation of this advice for documentation
+	// purposes.
+	RenderHTML() string
 }

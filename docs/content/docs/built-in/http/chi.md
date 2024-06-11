@@ -9,45 +9,37 @@ chi is a lightweight, idiomatic and composable router for building Go HTTP servi
 ## Use V1 tracer middleware
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>All of</strong> the following:
-<ul>
-<li><strong>One of</strong> the following:
-<ul>
-<li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi#NewMux" target="_blank" rel="noopener"><code>github.com/go-chi/chi.NewMux</code></a></li><li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi#NewRouter" target="_blank" rel="noopener"><code>github.com/go-chi/chi.NewRouter</code></a></li></ul>
-</li><li><strong>None of</strong> the following:
-<ul>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi" target="_blank" rel="noopener"><code>github.com/go-chi/chi</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/middleware</code></a></li>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point all-of">  <span class="type pill">All of</span>  <ul>
+    <li class="candidate">
+<div class="join-point one-of"><span class="type pill">One of</span><ul>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/go-chi/chi" "NewMux">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/go-chi/chi" "NewRouter">}}</div>  </li>
 </ul>
-</li></ul>
+</div>    </li>
+    <li class="candidate">
+<div class="join-point none-of"><span class="type pill">None of</span><ul>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/middleware">}}</div>  </li>
+</ul>
+</div>    </li>
+  </ul>
+</div>
 </div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>chi</code>|<a href="http://pkg.go.dev/github.com/go-chi/chi" target="_blank" rel="noopener"><code>"github.com/go-chi/chi"</code></a>
-<code>chitrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi"</code></a>
-
-
-```go-template
-func() *chi.Mux {
-  mux := {{ . }}
-  mux.Use(chitrace.Middleware())
-  return mux
-}()
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>
@@ -55,45 +47,37 @@ func() *chi.Mux {
 ## Use V5 tracer middleware
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>All of</strong> the following:
-<ul>
-<li><strong>One of</strong> the following:
-<ul>
-<li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi/v5#NewMux" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5.NewMux</code></a></li><li>Call to <a href="https://pkg.go.dev/github.com/go-chi/chi/v5#NewRouter" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5.NewRouter</code></a></li></ul>
-</li><li><strong>None of</strong> the following:
-<ul>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5/middleware</code></a></li>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point all-of">  <span class="type pill">All of</span>  <ul>
+    <li class="candidate">
+<div class="join-point one-of"><span class="type pill">One of</span><ul>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/go-chi/chi/v5" "NewMux">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/go-chi/chi/v5" "NewRouter">}}</div>  </li>
 </ul>
-</li></ul>
+</div>    </li>
+    <li class="candidate">
+<div class="join-point none-of"><span class="type pill">None of</span><ul>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5/middleware">}}</div>  </li>
+</ul>
+</div>    </li>
+  </ul>
+</div>
 </div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>chi</code>|<a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>"github.com/go-chi/chi/v5"</code></a>
-<code>chitrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"</code></a>
-
-
-```go-template
-func() *chi.Mux {
-  mux := {{ . }}
-  mux.Use(chitrace.Middleware())
-  return mux
-}()
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>

@@ -9,46 +9,27 @@ Monitor a function using a custom span.
 ## Using context.Context
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Body of:<div>Function declaration where:
-<ul>
-<li>Is annotated with <code>//dd:span</code>
-</li>
-<li>Receives an argument typed <code><a href="http://pkg.go.dev/context#Context" target="_blank" rel="noopener">context<wbr>.Context</a></code>
-</li>
-</ul>
-</div></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point function-body"><span class="type pill">Function body</span><ul><li><div class="join-point function-declaratop,">
+  <span class="type pill">Function declaration</span>
+  <ul>
+    <li>
+<div class="flex join-point function-option fo-directive"><span class="type">Has directive</span><code>//dd:span</code></div>    </li>
+    <li>
+<div class="flex join-point function-option fo-receives"><span class="type">Has parameter</span>{{<godoc "context" "Context" "">}}</div>    </li>
+  </ul>
+</div>
+</li></ul></div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Prepend statements using: 
-
-Identifier | Import Path
----|---
-<code>event</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument/event" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument/event"</code></a>
-<code>instrument</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument"</code></a>
-
-
-```go-template
-{{- $ctx := .FindArgument "context.Context" -}}
-{{- $name := .Function.Name -}}
-{{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-{{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-{{- end -}})
-defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-{{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-{{- end -}})
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">prepend-statements</div>
     </div>
   </div>
 </div>
@@ -56,46 +37,27 @@ defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name",
 ## Using *http.Request
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Body of:<div>Function declaration where:
-<ul>
-<li>Is annotated with <code>//dd:span</code>
-</li>
-<li>Receives an argument typed <code>*<a href="http://pkg.go.dev/net/http#Request" target="_blank" rel="noopener">net/http<wbr>.Request</a></code>
-</li>
-</ul>
-</div></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point function-body"><span class="type pill">Function body</span><ul><li><div class="join-point function-declaratop,">
+  <span class="type pill">Function declaration</span>
+  <ul>
+    <li>
+<div class="flex join-point function-option fo-directive"><span class="type">Has directive</span><code>//dd:span</code></div>    </li>
+    <li>
+<div class="flex join-point function-option fo-receives"><span class="type">Has parameter</span>{{<godoc "net/http" "Request" "*">}}</div>    </li>
+  </ul>
+</div>
+</li></ul></div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Prepend statements using: 
-
-Identifier | Import Path
----|---
-<code>event</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument/event" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument/event"</code></a>
-<code>instrument</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument"</code></a>
-
-
-```go-template
-{{- $req := .FindArgument "*net/http.Request" -}}
-{{- $name := .Function.Name -}}
-{{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-{{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-{{- end -}}))
-defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-{{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-{{- end -}})
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">prepend-statements</div>
     </div>
   </div>
 </div>

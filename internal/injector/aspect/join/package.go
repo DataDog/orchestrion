@@ -32,8 +32,8 @@ func (p importPath) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ImportPath").Call(jen.Lit(string(p)))
 }
 
-func (p importPath) ToHTML() string {
-	return fmt.Sprintf(`Import path is <a href="http://pkg.go.dev/%[1]s" target="_blank" rel="noopener"><code>%[1]s</code></a>`, p)
+func (p importPath) RenderHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc %q>}}</div>`, string(p))
 }
 
 type packageName string
@@ -55,8 +55,8 @@ func (p packageName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "PackageName").Call(jen.Lit(string(p)))
 }
 
-func (p packageName) ToHTML() string {
-	return fmt.Sprintf("Package is named <code>%s</code>", p)
+func (p packageName) RenderHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point package-name"><span class="type">Package name</span><code>%s</code></div>`, string(p))
 }
 
 func init() {

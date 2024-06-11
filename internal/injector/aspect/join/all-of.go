@@ -6,7 +6,6 @@
 package join
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -52,14 +51,18 @@ func (o allOf) AsCode() jen.Code {
 	})
 }
 
-func (o allOf) ToHTML() string {
-	buf := &strings.Builder{}
-	fmt.Fprintln(buf, "<strong>All of</strong> the following:")
-	fmt.Fprintln(buf, "<ul>")
+func (o allOf) RenderHTML() string {
+	var buf strings.Builder
+	buf.WriteString("<div class=\"join-point all-of\">")
+	buf.WriteString("  <span class=\"type pill\">All of</span>")
+	buf.WriteString("  <ul>\n")
 	for _, candidate := range o {
-		fmt.Fprintf(buf, "<li>%s</li>", candidate.ToHTML())
+		buf.WriteString("    <li class=\"candidate\">\n")
+		buf.WriteString(candidate.RenderHTML())
+		buf.WriteString("    </li>\n")
 	}
-	fmt.Fprintln(buf, "</ul>")
+	buf.WriteString("  </ul>\n")
+	buf.WriteString("</div>\n")
 	return buf.String()
 }
 

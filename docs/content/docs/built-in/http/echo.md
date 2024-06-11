@@ -9,34 +9,18 @@ High performance, extensible, minimalist Go web framework.
 ## Use tracer middleware
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Call to <a href="https://pkg.go.dev/github.com/labstack/echo/v4#New" target="_blank" rel="noopener"><code>github.com/labstack/echo/v4.New</code></a></div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/labstack/echo/v4" "New">}}</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>echo</code>|<a href="http://pkg.go.dev/github.com/labstack/echo/v4" target="_blank" rel="noopener"><code>"github.com/labstack/echo/v4"</code></a>
-<code>echotrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"</code></a>
-
-
-```go-template
-func() *echo.Echo {
-  e := {{ . }}
-  e.Use(echotrace.Middleware())
-  return e
-}()
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>

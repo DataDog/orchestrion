@@ -6,7 +6,6 @@
 package advice
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -122,16 +121,8 @@ func (a *appendArgs) AddedImports() []string {
 	return imports
 }
 
-func (a *appendArgs) ToHTML() string {
-	buf := &bytes.Buffer{}
-
-	fmt.Fprintf(buf, "Append <code>%s</code> call arguments:\n<ol>\n", a.typeName.ToHTML())
-	for _, arg := range a.templates {
-		fmt.Fprintf(buf, "<li>%s</li>", arg.ToHTML())
-	}
-	buf.WriteString("</ol>\n")
-
-	return buf.String()
+func (a *appendArgs) RenderHTML() string {
+	return "append-arguments"
 }
 
 type replaceFunction struct {
@@ -181,8 +172,8 @@ func (r *replaceFunction) AddedImports() []string {
 	return nil
 }
 
-func (a *replaceFunction) ToHTML() string {
-	return fmt.Sprintf("Redirect call to {{<godoc %q %q>}}", a.path, a.name)
+func (a *replaceFunction) RenderHTML() string {
+	return "redirect-call"
 }
 
 func init() {

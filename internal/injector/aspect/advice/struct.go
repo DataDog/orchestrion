@@ -61,8 +61,8 @@ func (a *addStuctField) AddedImports() []string {
 	return nil
 }
 
-func (a *addStuctField) ToHTML() string {
-	return fmt.Sprintf("Add field to struct: <code>%s: %s</code>", a.fieldName, a.fieldType.ToHTML())
+func (a *addStuctField) RenderHTML() string {
+	return "add-struct-field"
 }
 
 func init() {

@@ -9,37 +9,24 @@ Gin is a web framework written in Go.
 ## Use tracer middleware
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>One of</strong> the following:
-<ul>
-<li>Call to <a href="https://pkg.go.dev/github.com/gin-gonic/gin#Default" target="_blank" rel="noopener"><code>github.com/gin-gonic/gin.Default</code></a></li><li>Call to <a href="https://pkg.go.dev/github.com/gin-gonic/gin#New" target="_blank" rel="noopener"><code>github.com/gin-gonic/gin.New</code></a></li></ul>
-</div>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point one-of"><span class="type pill">One of</span><ul>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/gin-gonic/gin" "Default">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc "github.com/gin-gonic/gin" "New">}}</div>  </li>
+</ul>
+</div></div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>gin</code>|<a href="http://pkg.go.dev/github.com/gin-gonic/gin" target="_blank" rel="noopener"><code>"github.com/gin-gonic/gin"</code></a>
-<code>gintrace</code>|<a href="http://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin" target="_blank" rel="noopener"><code>"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"</code></a>
-
-
-```go-template
-func() *gin.Engine {
-  e := {{ . }}
-  e.Use(gintrace.Middleware(""))
-  return e
-}()
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>

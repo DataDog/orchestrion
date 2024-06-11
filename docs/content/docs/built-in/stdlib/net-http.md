@@ -9,44 +9,59 @@ HTTP client and server implementations.
 ## Wrap http.Server.Handler
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>All of</strong> the following:
-<ul>
-<li>Configuration includes:
-<ul>
-<li><code>httpmode = "wrap"</code></li>
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point all-of">  <span class="type pill">All of</span>  <ul>
+    <li class="candidate">
+<div class="join-point configuration">
+  <span class="type pill">Configuration</span>
+  <ul>
+    <li class="flex">
+      <span class="type">httpmode</span>
+      <code>
+wrap      </code>
+    </li>
+  </ul>
+</div>
+    </li>
+    <li class="candidate">
+<div class="join-point struct-literal">
+  <div class="flex">
+    <span class="type">Struct literal</span>
+{{<godoc "net/http" "Server" "">}}
+  </div>
+  <ul>
+    <li class="flex">
+      <span class="type">Including field</span>
+      <code>
+Handler
+      </code>
+    </li>
+  </ul>
+</div>
+    </li>
+    <li class="candidate">
+<div class="join-point none-of"><span class="type pill">None of</span><ul>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5/middleware">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "golang.org/x/net/http2">}}</div>  </li>
 </ul>
-</li><li>Composite literal of type <code><a href="http://pkg.go.dev/net/http#Server" target="_blank" rel="noopener">net/http<wbr>.Server</a></code></li><li><strong>None of</strong> the following:
-<ul>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5/middleware</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/golang.org/x/net/http2" target="_blank" rel="noopener"><code>golang.org/x/net/http2</code></a></li>
-</ul>
-</li></ul>
+</div>    </li>
+  </ul>
+</div>
 </div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>instrument</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument"</code></a>
-
-
-```go-template
-//dd:startwrap
-instrument.WrapHandler({{.}})
-//dd:endwrap
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>
@@ -54,47 +69,69 @@ instrument.WrapHandler({{.}})
 ## Wrap http.HandlerFunc
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>All of</strong> the following:
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point all-of">  <span class="type pill">All of</span>  <ul>
+    <li class="candidate">
+<div class="join-point configuration">
+  <span class="type pill">Configuration</span>
+  <ul>
+    <li class="flex">
+      <span class="type">httpmode</span>
+      <code>
+wrap      </code>
+    </li>
+  </ul>
+</div>
+    </li>
+    <li class="candidate">
+<div class="join-point function-declaratop,">
+  <span class="type pill">Function declaration</span>
+  <ul>
+    <li>
+<div class="join-point function-option fo-name"><span class="type pill">Function literal expression</span></div>    </li>
+    <li>
+<div class="join-point function-option fo-signature">
+  <span class="type pill">Signature matches</span>
 <ul>
-<li>Configuration includes:
-<ul>
-<li><code>httpmode = "wrap"</code></li>
+    <li>
+      <span class="type pill">Arguments</span>
+      <ol>
+        <li class="flex"><span class="id"></span>
+{{<godoc "net/http" "ResponseWriter" "">}}        </li>
+        <li class="flex"><span class="id"></span>
+{{<godoc "net/http" "Request" "*">}}        </li>
+      </ol>
+    </li>
+    <li class="flex"><span class="type">Return Values</span><span class="value">None</span></li>
 </ul>
-</li><li>Function declaration where:
-<ul>
-<li>Is a function literal expression</li>
-<li>Has signature <code>func(<a href="http://pkg.go.dev/net/http#ResponseWriter" target="_blank" rel="noopener">net/http<wbr>.ResponseWriter</a>, *<a href="http://pkg.go.dev/net/http#Request" target="_blank" rel="noopener">net/http<wbr>.Request</a>)</code></li>
+</div>
+    </li>
+  </ul>
+</div>
+    </li>
+    <li class="candidate">
+<div class="join-point none-of"><span class="type pill">None of</span><ul>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5/middleware">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "golang.org/x/net/http2">}}</div>  </li>
 </ul>
-</li><li><strong>None of</strong> the following:
-<ul>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5/middleware</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/golang.org/x/net/http2" target="_blank" rel="noopener"><code>golang.org/x/net/http2</code></a></li>
-</ul>
-</li></ul>
+</div>    </li>
+  </ul>
+</div>
 </div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Wrap the expression using: 
-
-Identifier | Import Path
----|---
-<code>instrument</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument"</code></a>
-
-
-```go-template
-instrument.WrapHandlerFunc({{.}})
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
     </div>
   </div>
 </div>
@@ -102,68 +139,67 @@ instrument.WrapHandlerFunc({{.}})
 ## Report http.HandlerFunc calls
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
-  <div class="hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
+  <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
     <div>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "search-circle">}} Join Point
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><strong>All of</strong> the following:
+      <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="join-point all-of">  <span class="type pill">All of</span>  <ul>
+    <li class="candidate">
+<div class="join-point configuration">
+  <span class="type pill">Configuration</span>
+  <ul>
+    <li class="flex">
+      <span class="type">httpmode</span>
+      <code>
+report      </code>
+    </li>
+  </ul>
+</div>
+    </li>
+    <li class="candidate">
+<div class="join-point function-body"><span class="type pill">Function body</span><ul><li><div class="join-point function-declaratop,">
+  <span class="type pill">Function declaration</span>
+  <ul>
+    <li>
+<div class="join-point function-option fo-signature">
+  <span class="type pill">Signature matches</span>
 <ul>
-<li>Configuration includes:
-<ul>
-<li><code>httpmode = "report"</code></li>
+    <li>
+      <span class="type pill">Arguments</span>
+      <ol>
+        <li class="flex"><span class="id"></span>
+{{<godoc "net/http" "ResponseWriter" "">}}        </li>
+        <li class="flex"><span class="id"></span>
+{{<godoc "net/http" "Request" "*">}}        </li>
+      </ol>
+    </li>
+    <li class="flex"><span class="type">Return Values</span><span class="value">None</span></li>
 </ul>
-</li><li>Body of:<div>Function declaration where:
-<ul>
-<li>Has signature <code>func(<a href="http://pkg.go.dev/net/http#ResponseWriter" target="_blank" rel="noopener">net/http<wbr>.ResponseWriter</a>, *<a href="http://pkg.go.dev/net/http#Request" target="_blank" rel="noopener">net/http<wbr>.Request</a>)</code></li>
+</div>
+    </li>
+  </ul>
+</div>
+</li></ul></div>    </li>
+    <li class="candidate">
+<div class="join-point none-of"><span class="type pill">None of</span><ul>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "github.com/go-chi/chi/v5/middleware">}}</div>  </li>
+  <li class="candidate">
+<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc "golang.org/x/net/http2">}}</div>  </li>
 </ul>
-</div></li><li><strong>None of</strong> the following:
-<ul>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/github.com/go-chi/chi/v5/middleware" target="_blank" rel="noopener"><code>github.com/go-chi/chi/v5/middleware</code></a></li>
-<li>Import path is <a href="http://pkg.go.dev/golang.org/x/net/http2" target="_blank" rel="noopener"><code>golang.org/x/net/http2</code></a></li>
-</ul>
-</li></ul>
+</div>    </li>
+  </ul>
+</div>
 </div>
     </div>
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">Prepend statements using: 
-
-Identifier | Import Path
----|---
-<code>event</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument/event" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument/event"</code></a>
-<code>instrument</code>|<a href="http://pkg.go.dev/github.com/datadog/orchestrion/instrument" target="_blank" rel="noopener"><code>"github.com/datadog/orchestrion/instrument"</code></a>
-
-
-```go-template
-{{- $arg := .Function.Argument 1 -}}
-{{- $name := .Function.Name -}}
-{{$arg}} = {{$arg}}.WithContext(instrument.Report(
-  {{$arg}}.Context(),
-  event.EventStart,
-  {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-  "span.kind", "server",
-  "http.method", {{$arg}}.Method,
-  "http.url", {{$arg}}.URL,
-  "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-  {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
-))
-defer instrument.Report(
-  {{$arg}}.Context(),
-  event.EventEnd,
-  {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-  "span.kind", "server",
-  "http.method", {{$arg}}.Method,
-  "http.url", {{$arg}}.URL,
-  "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-  {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
-)
-```
-
-</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">prepend-statements</div>
     </div>
   </div>
 </div>
