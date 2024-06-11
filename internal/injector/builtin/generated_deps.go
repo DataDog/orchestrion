@@ -35,6 +35,8 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
+	_ "math"
 	_ "os"
 	_ "strconv"
+	_ "unsafe"
 )

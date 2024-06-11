@@ -34,21 +34,37 @@ const (
 // available within the specified file. Returns true if that is the case. False if the import path
 // is already available within the file.
 func (r *ReferenceMap) AddImport(file *dst.File, path string) bool {
-	// Browse the current file to see if the import already exists...
-	for _, spec := range file.Imports {
-		specPath, err := basiclit.String(spec.Path)
-		if err != nil {
-			continue
-		}
-		if specPath == path {
-			return false
-		}
+	if hasImport(file, path) {
+		return false
 	}
 
 	// Register in this ReferenceMap
 	r.add(path, ImportStatement)
 
 	return true
+}
+
+func hasImport(file *dst.File, path string) bool {
+	for _, spec := range file.Imports {
+		specPath, err := basiclit.String(spec.Path)
+		if err != nil {
+			continue
+		}
+		if specPath == path {
+			return true
+		}
+	}
+	return false
+}
+
+// AddLink registers the provided path as a relocation target resolution source. If this path is
+// already registered as an import, this method does nothing and returns false.
+func (r *ReferenceMap) AddLink(file *dst.File, path string) bool {
+	if hasImport(file, path) {
+		return false
+	}
+
+	return r.add(path, RelocationTarget)
 }
 
 // AddSyntheticImports adds the registered imports to the provided *dst.File. This is not safe to
@@ -110,14 +126,17 @@ func (r *ReferenceMap) Merge(other ReferenceMap) {
 	}
 }
 
-func (r *ReferenceMap) add(path string, kind ReferenceKind) {
+func (r *ReferenceMap) add(path string, kind ReferenceKind) bool {
 	if *r == nil {
 		*r = ReferenceMap{path: kind}
+		return true
 	} else if old, found := (*r)[path]; !found || old != ImportStatement {
 		// If it was already in as an ImportStatement, we don't do anything, since that is the strongest
 		// kind of reference (imported implies relocatable, the reverse is not true).
 		(*r)[path] = kind
+		return true
 	}
+	return false
 }
 
 func (k ReferenceKind) String() string {

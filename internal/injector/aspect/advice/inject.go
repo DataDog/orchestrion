@@ -8,32 +8,32 @@ package advice
 import (
 	"context"
 	"errors"
-	"fmt"
-	"go/parser"
-	"go/token"
+	"sort"
 
-	"github.com/datadog/orchestrion/internal/injector/basiclit"
+	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
-type injectSourceFile []byte
-
-// InjectSourceFile merges all declarations in the provided source file into the current file. The package name of both
-// original & injected files must match.
-func InjectSourceFile(text string) injectSourceFile {
-	return injectSourceFile(text)
+type injectDeclarations struct {
+	template code.Template
+	links    []string
 }
 
-func (a injectSourceFile) Apply(ctx context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
-	dec, found := typed.ContextValue[*decorator.Decorator](ctx)
-	if !found {
-		return false, errors.New("cannot inject source file: no *decorator.Decorator in context")
+// InjectDeclarations merges all declarations in the provided source file into the current file. The package name of both
+// original & injected files must match.
+func InjectDeclarations(template code.Template, links []string) injectDeclarations {
+	return injectDeclarations{template, links}
+}
+
+func (a injectDeclarations) Apply(ctx context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
+	decls, err := a.template.CompileDeclarations(ctx, chain)
+	if err != nil {
+		return false, err
 	}
 
 	file, ok := node.Find[*dst.File](chain)
@@ -41,61 +41,48 @@ func (a injectSourceFile) Apply(ctx context.Context, chain *node.Chain, _ *dstut
 		return false, errors.New("cannot inject source file: no *dst.File in context")
 	}
 
-	newFile, err := dec.ParseFile("<generated>", []byte(a), parser.ParseComments)
-	if err != nil {
-		return false, fmt.Errorf("injecting new source file: %w", err)
-	}
+	file.Decls = append(file.Decls, decls...)
 
-	if file.Name.Name != newFile.Name.Name {
-		return false, fmt.Errorf("cannot inject source file: package names do not match (%s != %s)", file.Name.Name, newFile.Name.Name)
-	}
-
-	refMap, _ := typed.ContextValue[*typed.ReferenceMap](ctx)
-	if refMap == nil {
-		return false, fmt.Errorf("cannot inject source file: no *typed.ReferenceMap in context")
-	}
-
-	for _, decl := range newFile.Decls {
-		file.Decls, err = mergeDeclaration(file, refMap, file.Decls, decl)
-		if err != nil {
-			return false, err
+	if len(a.links) > 0 {
+		refMap, found := typed.ContextValue[*typed.ReferenceMap](ctx)
+		if !found {
+			return true, errors.New("unable to register link requirements, no *typed.ReferenceMap in context")
+		}
+		for _, link := range a.links {
+			refMap.AddLink(file, link)
 		}
 	}
 
 	return true, nil
 }
 
-func mergeDeclaration(file *dst.File, refs *typed.ReferenceMap, decls []dst.Decl, newDecl dst.Decl) ([]dst.Decl, error) {
-	if gen, ok := newDecl.(*dst.GenDecl); ok && gen.Tok == token.IMPORT {
-		for _, spec := range gen.Specs {
-			if imp, ok := spec.(*dst.ImportSpec); ok {
-				importPath, err := basiclit.String(imp.Path)
-				if err != nil {
-					return decls, err
-				}
-				refs.AddImport(file, importPath)
+func (a injectDeclarations) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "InjectDeclarations").Call(
+		a.template.AsCode(),
+		jen.Index().String().ValuesFunc(func(g *jen.Group) {
+			sort.Strings(a.links)
+			for _, link := range a.links {
+				g.Line().Lit(link)
 			}
-		}
-		return decls, nil
-	}
-	return append(decls, newDecl), nil
+			g.Line()
+		}),
+	)
 }
 
-func (a injectSourceFile) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "InjectSourceFile").Call(jen.Lit(string(a)))
-}
-
-func (a injectSourceFile) AddedImports() []string {
-	return nil
+func (a injectDeclarations) AddedImports() []string {
+	return a.links
 }
 
 func init() {
-	unmarshalers["inject-source-file"] = func(node *yaml.Node) (Advice, error) {
-		var text string
-		if err := node.Decode(&text); err != nil {
+	unmarshalers["inject-declarations"] = func(node *yaml.Node) (Advice, error) {
+		var config struct {
+			Template code.Template `yaml:",inline"`
+			Links    []string
+		}
+		if err := node.Decode(&config); err != nil {
 			return nil, err
 		}
 
-		return InjectSourceFile(text), nil
+		return InjectDeclarations(config.Template, config.Links), nil
 	}
 }

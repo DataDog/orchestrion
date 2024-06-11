@@ -11,13 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/datadog/orchestrion/instrument"
 )
-
-func init() {
-	instrument.WrapHTTPClient(http.DefaultClient)
-}
 
 func Get(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
