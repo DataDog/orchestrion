@@ -17,10 +17,17 @@ import (
 )
 
 type (
+	functionInformation struct {
+		ImportPath  string          // The import path of the package containing the function
+		Name        string          // The name of the function (blank for function literal expressions)
+		Type        *dst.FuncType   // The function's type signature
+		Decorations []*dst.NodeDecs // The function's decoration chain
+	}
+
 	FunctionOption interface {
 		code.AsCode
 		impliesImported() []string
-		evaluate(string, *dst.FuncType, ...*dst.NodeDecs) bool
+		evaluate(*functionInformation) bool
 	}
 
 	funcDecl struct {
@@ -42,26 +49,25 @@ func (s *funcDecl) ImpliesImported() (list []string) {
 }
 
 func (s *funcDecl) Matches(chain *node.Chain) bool {
-	var (
-		name     string
-		funcType *dst.FuncType
-		funcDecs = []*dst.NodeDecs{chain.Decorations(), nil}[0:1]
-	)
+	info := functionInformation{
+		ImportPath:  chain.ImportPath(),
+		Decorations: []*dst.NodeDecs{chain.Decorations()},
+	}
 
 	if decl, ok := node.As[*dst.FuncDecl](chain); ok {
-		name = decl.Name.Name
-		funcType = decl.Type
+		info.Name = decl.Name.Name
+		info.Type = decl.Type
 	} else if lit, ok := node.As[*dst.FuncLit](chain); ok {
-		funcType = lit.Type
+		info.Type = lit.Type
 		if parent, ok := node.As[*dst.AssignStmt](chain.Parent()); ok {
-			funcDecs = append(funcDecs, parent.Decorations())
+			info.Decorations = append(info.Decorations, parent.Decorations())
 		}
 	} else {
 		return false
 	}
 
 	for _, opt := range s.opts {
-		if !opt.evaluate(name, funcType, funcDecs...) {
+		if !opt.evaluate(&info) {
 			return false
 		}
 	}
@@ -88,8 +94,8 @@ func (fo funcName) impliesImported() []string {
 	return nil
 }
 
-func (fo funcName) evaluate(name string, _ *dst.FuncType, _ ...*dst.NodeDecs) bool {
-	return name == string(fo)
+func (fo funcName) evaluate(info *functionInformation) bool {
+	return info.Name == string(fo)
 }
 
 func (fo funcName) AsCode() jen.Code {
@@ -121,30 +127,30 @@ func (fo *signature) impliesImported() (list []string) {
 	return
 }
 
-func (fo *signature) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
-	if fnType.Results == nil || len(fnType.Results.List) == 0 {
+func (fo *signature) evaluate(info *functionInformation) bool {
+	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
 		if len(fo.returns) != 0 {
 			return false
 		}
-	} else if len(fnType.Results.List) != len(fo.returns) {
+	} else if len(info.Type.Results.List) != len(fo.returns) {
 		return false
 	} else {
 		for i := 0; i < len(fo.returns); i++ {
-			if !fo.returns[i].Matches(fnType.Results.List[i].Type) {
+			if !fo.returns[i].Matches(info.Type.Results.List[i].Type) {
 				return false
 			}
 		}
 	}
 
-	if fnType.Params == nil || len(fnType.Params.List) == 0 {
+	if info.Type.Params == nil || len(info.Type.Params.List) == 0 {
 		if len(fo.args) != 0 {
 			return false
 		}
-	} else if len(fnType.Params.List) != len(fo.args) {
+	} else if len(info.Type.Params.List) != len(fo.args) {
 		return false
 	} else {
 		for i := 0; i < len(fo.args); i++ {
-			if !fo.args[i].Matches(fnType.Params.List[i].Type) {
+			if !fo.args[i].Matches(info.Type.Params.List[i].Type) {
 				return false
 			}
 		}
@@ -191,8 +197,8 @@ func (*directive) impliesImported() []string {
 	return nil
 }
 
-func (fo *directive) evaluate(_ string, _ *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
-	for _, decs := range allDecs {
+func (fo *directive) evaluate(info *functionInformation) bool {
+	for _, decs := range info.Decorations {
 		for _, dec := range decs.Start {
 			if dec == "//"+fo.name || strings.HasPrefix(dec, "//"+fo.name+" ") {
 				return true
@@ -231,9 +237,9 @@ func (fo oneOfFunctions) impliesImported() (list []string) {
 	return
 }
 
-func (fo oneOfFunctions) evaluate(name string, fnType *dst.FuncType, allDecs ...*dst.NodeDecs) bool {
+func (fo oneOfFunctions) evaluate(info *functionInformation) bool {
 	for _, opt := range fo {
-		if opt.evaluate(name, fnType, allDecs...) {
+		if opt.evaluate(info) {
 			return true
 		}
 	}
@@ -268,8 +274,8 @@ func (fo *receives) impliesImported() []string {
 	return nil
 }
 
-func (fo *receives) evaluate(_ string, fnType *dst.FuncType, _ ...*dst.NodeDecs) bool {
-	for _, param := range fnType.Params.List {
+func (fo *receives) evaluate(info *functionInformation) bool {
+	for _, param := range info.Type.Params.List {
 		if fo.typeName.Matches(param.Type) {
 			return true
 		}
