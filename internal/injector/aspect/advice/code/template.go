@@ -233,14 +233,18 @@ func (t *Template) RenderHTML() string {
 		}
 		sort.Strings(keys)
 
-		buf.WriteString("\n\nIdentifier | Import Path\n---|---\n")
+		buf.WriteString("\n\n```go\n")
+		buf.WriteString("// Assuming the following imports:\n")
+		buf.WriteString("import (\n")
 		for _, name := range keys {
-			fmt.Fprintf(&buf, "<code>%s</code> | {{<godoc %q>}}\n", name, t.imports[name])
+			fmt.Fprintf(&buf, "\t%s %q\n", name, t.imports[name])
 		}
+		buf.WriteString(")\n```")
 	}
 
 	buf.WriteString("\n\n```go-template\n")
-	buf.WriteString(t.source)
+	// Render with tabs so it's more go-esque!
+	buf.WriteString(strings.ReplaceAll(t.source, "  ", "\t"))
 	buf.WriteString("\n```\n")
 
 	return buf.String()

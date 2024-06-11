@@ -41,17 +41,19 @@ chi is a lightweight, idiomatic and composable router for building Go HTTP servi
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>chi</code> | {{<godoc "github.com/go-chi/chi">}}
-<code>chitrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi">}}
-
+```go
+// Assuming the following imports:
+import (
+	chi "github.com/go-chi/chi"
+	chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi"
+)
+```
 
 ```go-template
 func() *chi.Mux {
-  mux := {{ . }}
-  mux.Use(chitrace.Middleware())
-  return mux
+	mux := {{ . }}
+	mux.Use(chitrace.Middleware())
+	return mux
 }()
 ```
 </div></div>
@@ -94,17 +96,19 @@ func() *chi.Mux {
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>chi</code> | {{<godoc "github.com/go-chi/chi/v5">}}
-<code>chitrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5">}}
-
+```go
+// Assuming the following imports:
+import (
+	chi "github.com/go-chi/chi/v5"
+	chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
+)
+```
 
 ```go-template
 func() *chi.Mux {
-  mux := {{ . }}
-  mux.Use(chitrace.Middleware())
-  return mux
+	mux := {{ . }}
+	mux.Use(chitrace.Middleware())
+	return mux
 }()
 ```
 </div></div>

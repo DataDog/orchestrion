@@ -33,11 +33,13 @@ The Go implementation of gRPC.
   <ol>
     <li>
 
-Identifier | Import Path
----|---
-<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
-<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
-
+```go
+// Assuming the following imports:
+import (
+	grpc "google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+)
+```
 
 ```go-template
 grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
@@ -45,11 +47,13 @@ grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
 </li>
     <li>
 
-Identifier | Import Path
----|---
-<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
-<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
-
+```go
+// Assuming the following imports:
+import (
+	grpc "google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+)
+```
 
 ```go-template
 grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
@@ -81,11 +85,13 @@ grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
   <ol>
     <li>
 
-Identifier | Import Path
----|---
-<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
-<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
-
+```go
+// Assuming the following imports:
+import (
+	grpc "google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+)
+```
 
 ```go-template
 grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
@@ -93,11 +99,13 @@ grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
 </li>
     <li>
 
-Identifier | Import Path
----|---
-<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
-<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
-
+```go
+// Assuming the following imports:
+import (
+	grpc "google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+)
+```
 
 ```go-template
 grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())

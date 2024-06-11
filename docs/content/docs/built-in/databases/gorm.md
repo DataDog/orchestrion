@@ -41,19 +41,21 @@ The fantastic ORM library for Golang.
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>gorm</code> | {{<godoc "github.com/jinzhu/gorm">}}
-<code>gormtrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm">}}
-
+```go
+// Assuming the following imports:
+import (
+	gorm "github.com/jinzhu/gorm"
+	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
+)
+```
 
 ```go-template
 func() (*gorm.DB, error) {
-  db, err := {{ . }}
-  if err != nil {
-    return nil, err
-  }
-  return gormtrace.WithCallbacks(db), err
+	db, err := {{ . }}
+	if err != nil {
+		return nil, err
+	}
+	return gormtrace.WithCallbacks(db), err
 }()
 ```
 </div></div>

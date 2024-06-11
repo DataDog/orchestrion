@@ -28,10 +28,12 @@ This issue is tracked by [`DataDog/orchestrion#86`](https://github.com/DataDog/o
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>muxtrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux">}}
-
+```go
+// Assuming the following imports:
+import (
+	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
+)
+```
 
 ```go-template
 muxtrace.WrapRouter({{.}})

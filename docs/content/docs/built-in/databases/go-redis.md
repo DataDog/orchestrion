@@ -28,17 +28,19 @@ Redis client for Go.
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>redis</code> | {{<godoc "github.com/go-redis/redis/v7">}}
-<code>trace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7">}}
-
+```go
+// Assuming the following imports:
+import (
+	redis "github.com/go-redis/redis/v7"
+	trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
+)
+```
 
 ```go-template
 func() (client *redis.Client) {
-  client = {{ . }}
-  trace.WrapClient(client)
-  return
+	client = {{ . }}
+	trace.WrapClient(client)
+	return
 }()
 ```
 </div></div>
@@ -68,17 +70,19 @@ func() (client *redis.Client) {
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>redis</code> | {{<godoc "github.com/go-redis/redis/v8">}}
-<code>trace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8">}}
-
+```go
+// Assuming the following imports:
+import (
+	redis "github.com/go-redis/redis/v8"
+	trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
+)
+```
 
 ```go-template
 func() (client *redis.Client) {
-  client = {{ . }}
-  trace.WrapClient(client)
-  return
+	client = {{ . }}
+	trace.WrapClient(client)
+	return
 }()
 ```
 </div></div>

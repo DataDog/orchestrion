@@ -28,17 +28,19 @@ Gin is a web framework written in Go.
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>gin</code> | {{<godoc "github.com/gin-gonic/gin">}}
-<code>gintrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin">}}
-
+```go
+// Assuming the following imports:
+import (
+	gin "github.com/gin-gonic/gin"
+	gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
+)
+```
 
 ```go-template
 func() *gin.Engine {
-  e := {{ . }}
-  e.Use(gintrace.Middleware(""))
-  return e
+	e := {{ . }}
+	e.Use(gintrace.Middleware(""))
+	return e
 }()
 ```
 </div></div>

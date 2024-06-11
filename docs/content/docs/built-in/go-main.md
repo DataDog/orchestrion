@@ -45,10 +45,12 @@ The entry point of a Go program.
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>
 
-Identifier | Import Path
----|---
-<code>tracer</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer">}}
-
+```go
+// Assuming the following imports:
+import (
+	tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+)
+```
 
 ```go-template
 tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))

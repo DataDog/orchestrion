@@ -22,17 +22,19 @@ An Express inspired web framework built on Fasthttp, the fastest HTTP engine for
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
 
-Identifier | Import Path
----|---
-<code>fiber</code> | {{<godoc "github.com/gofiber/fiber/v2">}}
-<code>fibertrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2">}}
-
+```go
+// Assuming the following imports:
+import (
+	fiber "github.com/gofiber/fiber/v2"
+	fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
+)
+```
 
 ```go-template
 func() *fiber.App {
-  app := {{ . }}
-  app.Use(fibertrace.Middleware())
-  return app
+	app := {{ . }}
+	app.Use(fibertrace.Middleware())
+	return app
 }()
 ```
 </div></div>

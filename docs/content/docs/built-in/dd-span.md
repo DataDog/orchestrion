@@ -31,22 +31,24 @@ Monitor a function using a custom span.
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>
 
-Identifier | Import Path
----|---
-<code>event</code> | {{<godoc "github.com/datadog/orchestrion/instrument/event">}}
-<code>instrument</code> | {{<godoc "github.com/datadog/orchestrion/instrument">}}
-
+```go
+// Assuming the following imports:
+import (
+	event "github.com/datadog/orchestrion/instrument/event"
+	instrument "github.com/datadog/orchestrion/instrument"
+)
+```
 
 ```go-template
 {{- $ctx := .FindArgument "context.Context" -}}
 {{- $name := .Function.Name -}}
 {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
 {{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+	, {{printf "%q" .Key}}, {{printf "%q" .Value}}
 {{- end -}})
 defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
 {{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+	, {{printf "%q" .Key}}, {{printf "%q" .Value}}
 {{- end -}})
 ```
 </div></div>
@@ -79,22 +81,24 @@ defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name",
       </span>
       <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>
 
-Identifier | Import Path
----|---
-<code>event</code> | {{<godoc "github.com/datadog/orchestrion/instrument/event">}}
-<code>instrument</code> | {{<godoc "github.com/datadog/orchestrion/instrument">}}
-
+```go
+// Assuming the following imports:
+import (
+	event "github.com/datadog/orchestrion/instrument/event"
+	instrument "github.com/datadog/orchestrion/instrument"
+)
+```
 
 ```go-template
 {{- $req := .FindArgument "*net/http.Request" -}}
 {{- $name := .Function.Name -}}
 {{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
 {{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+	, {{printf "%q" .Key}}, {{printf "%q" .Value}}
 {{- end -}}))
 defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
 {{- range .DirectiveArgs "dd:span" -}}
-  , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+	, {{printf "%q" .Key}}, {{printf "%q" .Value}}
 {{- end -}})
 ```
 </div></div>
