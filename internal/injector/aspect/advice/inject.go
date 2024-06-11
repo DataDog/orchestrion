@@ -48,6 +48,7 @@ func (a injectDeclarations) Apply(ctx context.Context, chain *node.Chain, _ *dst
 		if !found {
 			return true, errors.New("unable to register link requirements, no *typed.ReferenceMap in context")
 		}
+		refMap.AddImport(file, "unsafe") // We use go:linkname so we have an implicit dependency on unsafe.
 		for _, link := range a.links {
 			refMap.AddLink(file, link)
 		}

@@ -301,7 +301,6 @@ var Aspects = [...]aspect.Aspect{
 			join.Receiver(join.MustTypeName("*net/http.Transport")),
 		)),
 		Advice: []advice.Advice{
-			advice.AddBlankImport("unsafe"),
 			advice.InjectDeclarations(code.MustTemplate(
 				"//go:linkname __dd_appsec_RASPEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/appsec.RASPEnabled\nfunc __dd_appsec_RASPEnabled() bool\n\n//go:linkname __dd_httpsec_ProtectRoundTrip gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec.ProtectRoundTrip\nfunc __dd_httpsec_ProtectRoundTrip(context.Context, string) error\n\n//go:linkname __dd_tracer_SpanType gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.SpanType\nfunc __dd_tracer_SpanType(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_ResourceName gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.ResourceName\nfunc __dd_tracer_ResourceName(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_Tag gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Tag\nfunc __dd_tracer_Tag(string, any) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_StartSpanFromContext gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.StartSpanFromContext\nfunc __dd_tracer_StartSpanFromContext(context.Context, string, ...ddtrace.StartSpanOption) (ddtrace.Span, context.Context)\n\n//go:linkname __dd_tracer_WithError gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.WithError\nfunc __dd_tracer_WithError(error) ddtrace.FinishOption\n\n//go:linkname __dd_tracer_Inject gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Inject\nfunc __dd_tracer_Inject(ddtrace.SpanContext, any) error\n\ntype __dd_tracer_HTTPHeadersCarrier Header\nfunc (c __dd_tracer_HTTPHeadersCarrier) Set(key, val string) {\n  Header(c).Set(key, val)\n}",
 				map[string]string{
@@ -492,4 +491,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:UHwrK12zMt92tR/jbc1enn3vurNPtvf59ZMR5eUcCZ9joDItm4Ilu95J7x+p4eHNcMzxNYv/SlqRo1Q+c75QcA=="
+const Checksum = "sha512:Rvwb/fpzRNFVm94a+i+hfIoklLm7tsrfjzyc22yAihrobtu3pqooxeNX+PbNWqUyFbFwxBb2WP78WBcCK+/3WA=="

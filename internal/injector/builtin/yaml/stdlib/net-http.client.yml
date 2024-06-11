@@ -11,8 +11,9 @@
         - name: RoundTrip
         - receiver: '*net/http.Transport'
   advice:
-    - add-blank-import: unsafe
     - inject-declarations:
+        # We need to use go:linkname to refer to a number of declarations in order to avoid creating
+        # circular dependencies, as these features have transitive dependencies on `net/http`...
         imports:
           context: context
           ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
@@ -20,7 +21,6 @@
           - gopkg.in/DataDog/dd-trace-go.v1/internal/appsec
           - gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec
           - gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
-
         template: |-
           //go:linkname __dd_appsec_RASPEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/appsec.RASPEnabled
           func __dd_appsec_RASPEnabled() bool
@@ -63,6 +63,7 @@
           os: os
           strconv: strconv
         template: |-
+          {{- /* Largely copied from https://github.com/DataDog/dd-trace-go/blob/v1.65.0-rc.2/contrib/net/http/roundtripper.go#L28-L104 */ -}}
           {{- $req := .Function.Argument 0 -}}
           {{- $res := .Function.Returns 0 -}}
           {{- $err := .Function.Returns 1 -}}
