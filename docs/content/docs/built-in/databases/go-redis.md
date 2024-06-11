@@ -26,7 +26,22 @@ Redis client for Go.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
+
+Identifier | Import Path
+---|---
+<code>redis</code> | {{<godoc "github.com/go-redis/redis/v7">}}
+<code>trace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7">}}
+
+
+```go-template
+func() (client *redis.Client) {
+  client = {{ . }}
+  trace.WrapClient(client)
+  return
+}()
+```
+</div></div>
     </div>
   </div>
 </div>
@@ -51,7 +66,22 @@ Redis client for Go.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
+
+Identifier | Import Path
+---|---
+<code>redis</code> | {{<godoc "github.com/go-redis/redis/v8">}}
+<code>trace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8">}}
+
+
+```go-template
+func() (client *redis.Client) {
+  client = {{ . }}
+  trace.WrapClient(client)
+  return
+}()
+```
+</div></div>
     </div>
   </div>
 </div>

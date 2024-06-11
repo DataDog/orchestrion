@@ -60,7 +60,7 @@ func (a *wrapExpression) AddedImports() []string {
 }
 
 func (a *wrapExpression) RenderHTML() string {
-	return "wrap-expression"
+	return fmt.Sprintf(`<div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>%s</div>`, a.template.RenderHTML())
 }
 
 func init() {

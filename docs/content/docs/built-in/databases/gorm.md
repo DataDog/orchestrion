@@ -20,7 +20,7 @@ The fantastic ORM library for Golang.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice redirect-call"><div class="type">Redirect the call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1" "Open">}}.</div></div></div>
     </div>
   </div>
 </div>
@@ -39,7 +39,24 @@ The fantastic ORM library for Golang.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
+
+Identifier | Import Path
+---|---
+<code>gorm</code> | {{<godoc "github.com/jinzhu/gorm">}}
+<code>gormtrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm">}}
+
+
+```go-template
+func() (*gorm.DB, error) {
+  db, err := {{ . }}
+  if err != nil {
+    return nil, err
+  }
+  return gormtrace.WithCallbacks(db), err
+}()
+```
+</div></div>
     </div>
   </div>
 </div>

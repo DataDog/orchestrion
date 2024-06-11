@@ -20,7 +20,22 @@ High performance, extensible, minimalist Go web framework.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
+
+Identifier | Import Path
+---|---
+<code>echo</code> | {{<godoc "github.com/labstack/echo/v4">}}
+<code>echotrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4">}}
+
+
+```go-template
+func() *echo.Echo {
+  e := {{ . }}
+  e.Use(echotrace.Middleware())
+  return e
+}()
+```
+</div></div>
     </div>
   </div>
 </div>

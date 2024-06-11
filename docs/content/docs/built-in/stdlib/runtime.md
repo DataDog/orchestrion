@@ -25,12 +25,31 @@ available.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">add-struct-field</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice add-struct-field"><div class="type">Add new field named <code>__dd_gls</code> typed as {{<godoc "" "any" "">}}.</div></div>
     </div><div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">inject-source-file</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice inject-source-file"><div class="type">Introduce declarations from this pseudo-file:</div>
+
+```go
+package runtime
+
+import (
+  _ "unsafe" // for go:linkname
+)
+
+//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
+func __dd_orchestrion_gls_get() any {
+  return getg().m.curg.__dd_gls
+}
+
+//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set
+func __dd_orchestrion_gls_set(val any) {
+  getg().m.curg.__dd_gls = val
+}
+```
+</div></div>
     </div>
   </div>
 </div>

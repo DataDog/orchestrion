@@ -62,7 +62,7 @@ func (a *addStuctField) AddedImports() []string {
 }
 
 func (a *addStuctField) RenderHTML() string {
-	return "add-struct-field"
+	return fmt.Sprintf(`<div class="advice add-struct-field"><div class="type">Add new field named <code>%s</code> typed as %s.</div>`, a.fieldName, a.fieldType.RenderHTML())
 }
 
 func init() {

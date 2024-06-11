@@ -61,7 +61,19 @@ Handler
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
+
+Identifier | Import Path
+---|---
+<code>instrument</code> | {{<godoc "github.com/datadog/orchestrion/instrument">}}
+
+
+```go-template
+//dd:startwrap
+instrument.WrapHandler({{.}})
+//dd:endwrap
+```
+</div></div>
     </div>
   </div>
 </div>
@@ -131,7 +143,17 @@ wrap      </code>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">wrap-expression</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>
+
+Identifier | Import Path
+---|---
+<code>instrument</code> | {{<godoc "github.com/datadog/orchestrion/instrument">}}
+
+
+```go-template
+instrument.WrapHandlerFunc({{.}})
+```
+</div></div>
     </div>
   </div>
 </div>
@@ -199,7 +221,39 @@ report      </code>
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">prepend-statements</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>
+
+Identifier | Import Path
+---|---
+<code>event</code> | {{<godoc "github.com/datadog/orchestrion/instrument/event">}}
+<code>instrument</code> | {{<godoc "github.com/datadog/orchestrion/instrument">}}
+
+
+```go-template
+{{- $arg := .Function.Argument 1 -}}
+{{- $name := .Function.Name -}}
+{{$arg}} = {{$arg}}.WithContext(instrument.Report(
+  {{$arg}}.Context(),
+  event.EventStart,
+  {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+  "span.kind", "server",
+  "http.method", {{$arg}}.Method,
+  "http.url", {{$arg}}.URL,
+  "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+  {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
+))
+defer instrument.Report(
+  {{$arg}}.Context(),
+  event.EventEnd,
+  {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+  "span.kind", "server",
+  "http.method", {{$arg}}.Method,
+  "http.url", {{$arg}}.URL,
+  "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+  {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
+)
+```
+</div></div>
     </div>
   </div>
 </div>

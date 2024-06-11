@@ -56,7 +56,7 @@ func (a *prependStatements) AddedImports() []string {
 }
 
 func (a *prependStatements) RenderHTML() string {
-	return "prepend-statements"
+	return fmt.Sprintf(`<div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>%s</div>`, a.template.RenderHTML())
 }
 
 func init() {

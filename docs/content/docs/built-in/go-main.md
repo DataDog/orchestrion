@@ -43,7 +43,18 @@ The entry point of a Go program.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">prepend-statements</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>
+
+Identifier | Import Path
+---|---
+<code>tracer</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer">}}
+
+
+```go-template
+tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
+defer tracer.Stop()
+```
+</div></div>
     </div>
   </div>
 </div>

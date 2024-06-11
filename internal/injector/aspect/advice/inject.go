@@ -90,7 +90,7 @@ func (a injectSourceFile) AddedImports() []string {
 }
 
 func (a injectSourceFile) RenderHTML() string {
-	return "inject-source-file"
+	return fmt.Sprintf("<div class=\"advice inject-source-file\"><div class=\"type\">Introduce declarations from this pseudo-file:</div>\n\n```go\n%s\n```\n</div>", string(a))
 }
 
 func init() {

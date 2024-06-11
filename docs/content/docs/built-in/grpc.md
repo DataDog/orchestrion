@@ -28,7 +28,36 @@ The Go implementation of gRPC.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">append-arguments</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice append-arguments">
+  <div class="type">Append the following {{<godoc "google.golang.org/grpc" "DialOption" "">}} arguments to the function call:</div>
+  <ol>
+    <li>
+
+Identifier | Import Path
+---|---
+<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
+<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
+
+
+```go-template
+grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
+```
+</li>
+    <li>
+
+Identifier | Import Path
+---|---
+<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
+<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
+
+
+```go-template
+grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
+```
+</li>
+  </ol>
+</div>
+</div>
     </div>
   </div>
 </div>
@@ -47,7 +76,36 @@ The Go implementation of gRPC.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">append-arguments</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice append-arguments">
+  <div class="type">Append the following {{<godoc "google.golang.org/grpc" "ServerOption" "">}} arguments to the function call:</div>
+  <ol>
+    <li>
+
+Identifier | Import Path
+---|---
+<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
+<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
+
+
+```go-template
+grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
+```
+</li>
+    <li>
+
+Identifier | Import Path
+---|---
+<code>grpc</code> | {{<godoc "google.golang.org/grpc">}}
+<code>grpctrace</code> | {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc">}}
+
+
+```go-template
+grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
+```
+</li>
+  </ol>
+</div>
+</div>
     </div>
   </div>
 </div>

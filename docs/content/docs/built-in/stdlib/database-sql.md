@@ -20,7 +20,7 @@ A generic interface around SQL (or SQL-like) databases.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice redirect-call"><div class="type">Redirect the call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql" "Register">}}.</div></div></div>
     </div>
   </div>
 </div>
@@ -39,7 +39,7 @@ A generic interface around SQL (or SQL-like) databases.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice redirect-call"><div class="type">Redirect the call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql" "Open">}}.</div></div></div>
     </div>
   </div>
 </div>
@@ -58,7 +58,7 @@ A generic interface around SQL (or SQL-like) databases.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">redirect-call</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice redirect-call"><div class="type">Redirect the call to {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql" "OpenDB">}}.</div></div></div>
     </div>
   </div>
 </div>
