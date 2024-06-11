@@ -50,7 +50,10 @@ func (s *funcDecl) ImpliesImported() (list []string) {
 }
 
 func (s *funcDecl) Matches(chain *node.Chain) bool {
-	info := functionInformation{ImportPath: chain.ImportPath()}
+	info := functionInformation{
+		ImportPath:  chain.ImportPath(),
+		Decorations: []*dst.NodeDecs{chain.Decorations()},
+	}
 
 	if decl, ok := node.As[*dst.FuncDecl](chain); ok {
 		if decl.Recv != nil && len(decl.Recv.List) == 1 {
