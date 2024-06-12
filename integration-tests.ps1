@@ -280,7 +280,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
             $tracesFile = Join-Path $outDir "traces.json"
             $resp.Content > $($tracesFile)
 
-            go -C $integ run ./validator -tname $name -vfile $vfile -surl "file:///$($tracesFile -replace '\\', '/')" 2>&1 | Write-Host
+            go -C $integ run ./validator -name $name -validation $vfile -traces $tracesFile 2>&1 | Write-Host
             if ($LastExitCode -ne 0)
             {
               throw "Validation of traces failed"
