@@ -18,11 +18,11 @@ import (
 
 type (
 	functionInformation struct {
-		ImportPath  string
-		Receiver    dst.Expr
-		Name        string
-		Type        *dst.FuncType
-		Decorations []*dst.NodeDecs
+		ImportPath  string          // The import path of the package containing the function
+		Receiver    dst.Expr        // The receiver if this is a method declaration
+		Name        string          // The name of the function (blank for function literal expressions)
+		Type        *dst.FuncType   // The function's type signature
+		Decorations []*dst.NodeDecs // The function's decoration chain
 	}
 
 	FunctionOption interface {
