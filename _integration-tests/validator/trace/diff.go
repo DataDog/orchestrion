@@ -58,7 +58,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	for _, tag := range keys {
 		expected := span.Tags[tag]
 		actual := other.Tags[tag]
-		if expected != actual {
+		if expected != actual && (tag != "service" || fmt.Sprintf("%s.exe", expected) != actual) {
 			branch := diff.AddMetaBranch("±", tag)
 			branch.AddMetaNode("-", expected)
 			branch.AddMetaNode("+", actual)
