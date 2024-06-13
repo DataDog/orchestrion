@@ -19,9 +19,11 @@ import (
 )
 
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for
-// any linkdeps dependencies that are not yet satisfied by the importcfg file. This ensures that the
-// relevant packages' `init` (if any) are appropriately run, and that the linker automatically picks
-// up these dependencies when creating the full binary.
+// any linkdeps dependencies that are not yet satisfied by the importcfg file (this is the case for
+// link-time dependencies implied by use of the go:linkname directive, which are used to avoid
+// creating circular import dependencies).
+// This ensures that the relevant packages' `init` (if any) are appropriately run, and that the
+// linker automatically picks up these dependencies when creating the full binary.
 func (w Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 	if cmd.Flags.Package != "main" {
 		return nil
