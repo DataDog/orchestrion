@@ -94,7 +94,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		regUpdated bool
 	)
 	for depImportPath, kind := range references {
-		if _, ok := reg.PackageFile[depImportPath]; ok {
+		if _, ok := reg.PackageFile[depImportPath]; ok || depImportPath == "unsafe" {
 			// Already part of natural dependencies, nothing to do...
 			continue
 		}
