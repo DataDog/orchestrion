@@ -42,5 +42,4 @@ import (
 	_ "net/http"
 	_ "os"
 	_ "strconv"
-	_ "unsafe"
 )

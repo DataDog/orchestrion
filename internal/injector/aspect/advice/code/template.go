@@ -232,6 +232,7 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 	var cfg struct {
 		Template string
 		Imports  map[string]string
+		Links    []string
 	}
 	if err = node.Decode(&cfg); err != nil {
 		return

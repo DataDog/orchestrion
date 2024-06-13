@@ -10,7 +10,6 @@ package advice
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
@@ -37,7 +36,6 @@ func (a addBlankImport) Apply(ctx context.Context, chain *node.Chain, _ *dstutil
 		return false, errors.New("cannot add import: no *typed.ReferenceMap found in context")
 	}
 
-	fmt.Println("Adding import of", a)
 	refMap.AddImport(file, string(a))
 	return true, nil
 }

@@ -140,6 +140,13 @@ func main() {
 			}
 			utils.ExitIfError(err)
 		}
+		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompileMain); err != nil {
+			if errors.Is(err, proxy.ErrSkipCommand) {
+				log.Infof("SKIP: %q\n", proxyCmd.Args())
+				return
+			}
+			utils.ExitIfError(err)
+		}
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
 			if errors.Is(err, proxy.ErrSkipCommand) {
 				log.Infof("SKIP: %q\n", proxyCmd.Args())

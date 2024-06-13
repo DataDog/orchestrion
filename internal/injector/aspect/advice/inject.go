@@ -8,9 +8,11 @@ package advice
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
@@ -19,12 +21,13 @@ import (
 
 type injectDeclarations struct {
 	template code.Template
+	links    []string
 }
 
 // InjectDeclarations merges all declarations in the provided source file into the current file. The package name of both
 // original & injected files must match.
-func InjectDeclarations(template code.Template) injectDeclarations {
-	return injectDeclarations{template}
+func InjectDeclarations(template code.Template, links []string) injectDeclarations {
+	return injectDeclarations{template, links}
 }
 
 func (a injectDeclarations) Apply(ctx context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
@@ -40,24 +43,47 @@ func (a injectDeclarations) Apply(ctx context.Context, chain *node.Chain, _ *dst
 
 	file.Decls = append(file.Decls, decls...)
 
+	if len(a.links) > 0 {
+		refMap, found := typed.ContextValue[*typed.ReferenceMap](ctx)
+		if !found {
+			return true, errors.New("unable to register link requirements, no *typed.ReferenceMap in context")
+		}
+		refMap.AddImport(file, "unsafe") // We use go:linkname so we have an implicit dependency on unsafe.
+		for _, link := range a.links {
+			refMap.AddLink(file, link)
+		}
+	}
+
 	return true, nil
 }
 
 func (a injectDeclarations) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "InjectDeclarations").Call(a.template.AsCode())
+	return jen.Qual(pkgPath, "InjectDeclarations").Call(
+		a.template.AsCode(),
+		jen.Index().String().ValuesFunc(func(g *jen.Group) {
+			sort.Strings(a.links)
+			for _, link := range a.links {
+				g.Line().Lit(link)
+			}
+			g.Line()
+		}),
+	)
 }
 
 func (a injectDeclarations) AddedImports() []string {
-	return nil
+	return a.links
 }
 
 func init() {
 	unmarshalers["inject-declarations"] = func(node *yaml.Node) (Advice, error) {
-		var template code.Template
-		if err := node.Decode(&template); err != nil {
+		var config struct {
+			Template code.Template `yaml:",inline"`
+			Links    []string
+		}
+		if err := node.Decode(&config); err != nil {
 			return nil, err
 		}
 
-		return InjectDeclarations(template), nil
+		return InjectDeclarations(config.Template, config.Links), nil
 	}
 }

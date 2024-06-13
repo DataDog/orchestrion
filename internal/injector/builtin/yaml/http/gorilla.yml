@@ -93,9 +93,10 @@
           }()
 
 - join-point:
-    method-definition:
-      receiver: '*github.com/gorilla/mux.Router'
-      name: ServeHTTP
+    function-body:
+      function:
+        - receiver: '*github.com/gorilla/mux.Router'
+        - name: ServeHTTP
   advice:
     - prepend-statements:
         imports:
