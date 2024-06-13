@@ -45,8 +45,8 @@ func (cmd *CompileCommand) GoFiles() []string {
 // AddFiles adds the provided go files paths to the list of Go files passed
 // as arguments to cmd
 func (cmd *CompileCommand) AddFiles(files []string) {
-	paramIdx := len(cmd.paramPos)
-
+	paramIdx := len(cmd.args)
+	cmd.args = append(cmd.args, files...)
 	for i, f := range files {
 		cmd.paramPos[f] = paramIdx + i
 	}
