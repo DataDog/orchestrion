@@ -37,7 +37,8 @@ func (a *Aspect) AsCode() (jp, adv jen.Code) {
 }
 
 func (a *Aspect) AddedImports() (imports []string) {
-	implied := make(map[string]struct{})
+	// "unsafe" is always implied, because it's special-cased in the go toolchain, and is not a "normal" module.
+	implied := map[string]struct{}{"unsafe": {}}
 	for _, path := range a.JoinPoint.ImpliesImported() {
 		implied[path] = struct{}{}
 	}

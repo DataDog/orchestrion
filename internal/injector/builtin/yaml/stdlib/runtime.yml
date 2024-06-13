@@ -12,6 +12,7 @@
     - add-struct-field:
         name: __dd_gls
         type: any
+    - add-blank-import: unsafe # Needed for go:linkname
     - inject-declarations:
         template: |-
           //go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get

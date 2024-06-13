@@ -38,7 +38,7 @@ var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap
 {{- define "_statements_" -}}
 package _
 func _() {
-	{{template "code.Template" .}}
+	{{ template "code.Template" . }}
 }
 {{- end -}}
 {{- define "_declarations_" -}}

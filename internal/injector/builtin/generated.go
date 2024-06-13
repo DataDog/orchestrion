@@ -423,6 +423,7 @@ var Aspects = [...]aspect.Aspect{
 		Advice: []advice.Advice{
 			advice.AddBlankImport("unsafe"),
 			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
+			advice.AddBlankImport("unsafe"),
 			advice.InjectDeclarations(code.MustTemplate(
 				"//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nfunc __dd_orchestrion_gls_get() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nfunc __dd_orchestrion_gls_set(val any) {\n  getg().m.curg.__dd_gls = val\n}",
 				map[string]string{},
@@ -487,8 +488,7 @@ var InjectedPaths = [...]string{
 	"math",
 	"os",
 	"strconv",
-	"unsafe",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:Rvwb/fpzRNFVm94a+i+hfIoklLm7tsrfjzyc22yAihrobtu3pqooxeNX+PbNWqUyFbFwxBb2WP78WBcCK+/3WA=="
+const Checksum = "sha512:IMcJBXTnHIFnd9mj4PODD50yswK9ZhoIYzlJ5sF6H3xBFEHq35x6qrGZr7Vpd0SPkNdBo3yuFJ9fnahDM9hY4w=="

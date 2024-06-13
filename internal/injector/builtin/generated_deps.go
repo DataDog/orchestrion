@@ -38,5 +38,4 @@ import (
 	_ "math"
 	_ "os"
 	_ "strconv"
-	_ "unsafe"
 )
