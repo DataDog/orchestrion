@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go/token"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,7 +34,18 @@ type Template struct {
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
 	"Version": func() string { return version.Tag },
 }).Parse(
-	"{{define `_`}}package _\nfunc _() {\n{{template `code.Template` .}}\n}{{end}}",
+	`
+{{- define "_statements_" -}}
+package _
+func _() {
+	{{ template "code.Template" . }}
+}
+{{- end -}}
+{{- define "_declarations_" -}}
+package _
+{{ template "code.Template" . }}
+{{- end -}}}
+	`,
 ))
 
 // NewTemplate creates a new Template using the provided template string and
@@ -67,6 +79,12 @@ func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.Blo
 	return &dst.BlockStmt{List: stmts}, nil
 }
 
+// CompileDeclarations generates new source based on this Template and extracts
+// all produced declarations.
+func (t *Template) CompileDeclarations(ctx context.Context, node *node.Chain) ([]dst.Decl, error) {
+	return t.compileTemplate(ctx, "_declarations_", node)
+}
+
 // CompileExpression generates new source based on this Template and extracts
 // the produced dst.Expr node. The provided context.Context and *dstutil.Cursor
 // are used to supply context information to the template functions. The
@@ -98,6 +116,15 @@ func (t *Template) CompileExpression(ctx context.Context, node *node.Chain) (dst
 // compile generates new source based on this Template and returns a cloned
 // version of minimally post-processed dst.Stmt nodes this produced.
 func (t *Template) compile(ctx context.Context, chain *node.Chain) ([]dst.Stmt, error) {
+	decls, err := t.compileTemplate(ctx, "_statements_", chain)
+	if err != nil {
+		return nil, err
+	}
+
+	return decls[0].(*dst.FuncDecl).Body.List, nil
+}
+
+func (t *Template) compileTemplate(ctx context.Context, name string, chain *node.Chain) ([]dst.Decl, error) {
 	ctxFile, found := node.Find[*dst.File](chain)
 	if !found {
 		return nil, errors.New("no *dst.File was found in the node chain")
@@ -107,7 +134,7 @@ func (t *Template) compile(ctx context.Context, chain *node.Chain) ([]dst.Stmt, 
 
 	buf := bytes.NewBuffer(nil)
 	dot := &dot{node: chain}
-	if err := tmpl.ExecuteTemplate(buf, "_", dot); err != nil {
+	if err := tmpl.ExecuteTemplate(buf, name, dot); err != nil {
 		return nil, fmt.Errorf("while executing template: %w", err)
 	}
 
@@ -117,18 +144,22 @@ func (t *Template) compile(ctx context.Context, chain *node.Chain) ([]dst.Stmt, 
 	}
 	file, err := dec.Parse(buf.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("while parsing generated code: %w\n%q", err, numberLines(buf.String()))
+		return nil, fmt.Errorf("while parsing generated code: %w\n%s", err, numberLines(buf.String()))
 	}
 
-	body := file.Decls[0].(*dst.FuncDecl).Body
-	dot.placeholders.replaceAllIn(body)
-
-	list := body.List
-	stmts := make([]dst.Stmt, len(list))
-	for i, node := range list {
-		stmts[i] = t.processImports(ctx, ctxFile, node).(dst.Stmt)
+	decls := make([]dst.Decl, 0, len(file.Decls))
+	for _, decl := range file.Decls {
+		if decl, ok := decl.(*dst.GenDecl); ok && decl.Tok == token.IMPORT {
+			return nil, errors.New("code templates must not contain import declarations, use the imports map instead")
+		}
+		decls = append(decls, dot.placeholders.replaceAllIn(decl).(dst.Decl))
 	}
-	return stmts, nil
+
+	for i := range decls {
+		decls[i] = t.processImports(ctx, ctxFile, decls[i]).(dst.Decl)
+	}
+
+	return decls, nil
 }
 
 // processImports replaces all *dst.SelectorExpr based on one of the names
@@ -201,6 +232,7 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 	var cfg struct {
 		Template string
 		Imports  map[string]string
+		Links    []string
 	}
 	if err = node.Decode(&cfg); err != nil {
 		return
@@ -213,7 +245,7 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 func numberLines(text string) string {
 	lines := strings.Split(text, "\n")
 	width := len(strconv.FormatInt(int64(len(lines)), 10))
-	format := fmt.Sprintf("%% %dd | %%s", width)
+	format := fmt.Sprintf("%% %dd | %%s", width+1)
 
 	for i, line := range lines {
 		lines[i] = fmt.Sprintf(format, i+1, line)
