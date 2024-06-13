@@ -14,7 +14,7 @@ import (
 
 type (
 	function interface {
-		// Receiver returns the name of the receiver of this methid. Fails if the current function is
+		// Receiver returns the name of the receiver of this method. Fails if the current function is
 		// not a method.
 		Receiver() (string, error)
 		// Name returns the name of this function, or an empty string if it is a function literal.
