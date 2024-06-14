@@ -296,6 +296,31 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From yaml/stdlib/net-http.client.yml
 	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("net/http.Transport")),
+		Advice: []advice.Advice{
+			advice.AddStructField("DD__tracer_internal", join.MustTypeName("bool")),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("net/http.Transport"), ""),
+			join.OneOf(
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/hostname/httputils"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/remoteconfig"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/profiler"),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{.AST.Type}}{\n  DD__tracer_internal: true,\n  {{range .AST.Elts}}{{.}},\n  {{end}}\n}",
+				map[string]string{},
+			)),
+		},
+		TracerInternal: true,
+	},
+	{
 		JoinPoint: join.FunctionBody(join.Function(
 			join.Name("RoundTrip"),
 			join.Receiver(join.MustTypeName("*net/http.Transport")),
@@ -313,7 +338,7 @@ var Aspects = [...]aspect.Aspect{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
 			}),
 			advice.PrependStmts(code.MustTemplate(
-				"{{$req := .Function.Argument 0}}{{$res := .Function.Returns 0}}{{$err := .Function.Returns 1}}resourceName := fmt.Sprintf(\"%s %s\", {{$req}}.Method, {{$req}}.URL.Path)\nspanName := namingschema.OpName(namingschema.HTTPClient)\n// Copy the URL so we don't modify the outgoing request\nurl := *{{$req}}.URL\nurl.User = nil // Don't include userinfo in the http.url tag\nopts := []ddtrace.StartSpanOption{\n  __dd_tracer_SpanType(ext.SpanTypeHTTP),\n  __dd_tracer_ResourceName(resourceName),\n  __dd_tracer_Tag(ext.HTTPMethod, {{$req}}.Method),\n  __dd_tracer_Tag(ext.HTTPURL, url.String()),\n  __dd_tracer_Tag(ext.Component, \"net/http\"),\n  __dd_tracer_Tag(ext.SpanKind, ext.SpanKindClient),\n  __dd_tracer_Tag(ext.NetworkDestinationName, url.Hostname()),\n}\nif analyticsRate := globalconfig.AnalyticsRate(); !math.IsNaN(analyticsRate) {\n  opts = append(opts, __dd_tracer_Tag(ext.EventSampleRate, analyticsRate))\n}\nif port, err := strconv.Atoi(url.Port()); err == nil {\n  opts = append(opts, __dd_tracer_Tag(ext.NetworkDestinationPort, port))\n}\nspan, ctx := __dd_tracer_StartSpanFromContext({{$req}}.Context(), spanName, opts...)\n{{$req}} = {{$req}}.Clone(ctx)\ndefer func() {\n  if !events.IsSecurityError({{$err}}) {\n    span.Finish(__dd_tracer_WithError({{$err}}))\n  } else {\n    span.Finish()\n  }\n}()\n\nif {{$err}} = __dd_tracer_Inject(span.Context(), __dd_tracer_HTTPHeadersCarrier({{$req}}.Header)); {{$err}} != nil {\n  fmt.Fprintf(os.Stderr, \"contrib/net/http.Roundtrip: failed to inject http headers: %v\\n\", {{$err}})\n}\n\nif __dd_appsec_RASPEnabled() {\n  if err := __dd_httpsec_ProtectRoundTrip(ctx, {{$req}}.URL.String()); err != nil {\n    return nil, err\n  }\n}\n\ndefer func() {\n  if {{$err}} != nil {\n    span.SetTag(\"http.errors\", {{$err}}.Error())\n    span.SetTag(ext.Error, {{$err}})\n  } else {\n    span.SetTag(ext.HTTPCode, strconv.Itoa({{$res}}.StatusCode))\n    if {{$res}}.StatusCode >= 500 && {{$res}}.StatusCode < 600 {\n      // Treat HTTP 5XX as errors\n      span.SetTag(\"http.errors\", {{$res}}.Status)\n      span.SetTag(ext.Error, fmt.Errorf(\"%d: %s\", {{$res}}.StatusCode, StatusText({{$res}}.StatusCode)))\n    }\n  }\n}()",
+				"{{$t := .Function.Receiver}}{{$req := .Function.Argument 0}}{{$res := .Function.Returns 0}}{{$err := .Function.Returns 1}}if !{{$t}}.DD__tracer_internal {\n  resourceName := fmt.Sprintf(\"%s %s\", {{$req}}.Method, {{$req}}.URL.Path)\n  spanName := namingschema.OpName(namingschema.HTTPClient)\n  // Copy the URL so we don't modify the outgoing request\n  url := *{{$req}}.URL\n  url.User = nil // Don't include userinfo in the http.url tag\n  opts := []ddtrace.StartSpanOption{\n    __dd_tracer_SpanType(ext.SpanTypeHTTP),\n    __dd_tracer_ResourceName(resourceName),\n    __dd_tracer_Tag(ext.HTTPMethod, {{$req}}.Method),\n    __dd_tracer_Tag(ext.HTTPURL, url.String()),\n    __dd_tracer_Tag(ext.Component, \"net/http\"),\n    __dd_tracer_Tag(ext.SpanKind, ext.SpanKindClient),\n    __dd_tracer_Tag(ext.NetworkDestinationName, url.Hostname()),\n  }\n  if analyticsRate := globalconfig.AnalyticsRate(); !math.IsNaN(analyticsRate) {\n    opts = append(opts, __dd_tracer_Tag(ext.EventSampleRate, analyticsRate))\n  }\n  if port, err := strconv.Atoi(url.Port()); err == nil {\n    opts = append(opts, __dd_tracer_Tag(ext.NetworkDestinationPort, port))\n  }\n  span, ctx := __dd_tracer_StartSpanFromContext({{$req}}.Context(), spanName, opts...)\n  {{$req}} = {{$req}}.Clone(ctx)\n  defer func() {\n    if !events.IsSecurityError({{$err}}) {\n      span.Finish(__dd_tracer_WithError({{$err}}))\n    } else {\n      span.Finish()\n    }\n  }()\n\n  if {{$err}} = __dd_tracer_Inject(span.Context(), __dd_tracer_HTTPHeadersCarrier({{$req}}.Header)); {{$err}} != nil {\n    fmt.Fprintf(os.Stderr, \"contrib/net/http.Roundtrip: failed to inject http headers: %v\\n\", {{$err}})\n  }\n\n  if __dd_appsec_RASPEnabled() {\n    if err := __dd_httpsec_ProtectRoundTrip(ctx, {{$req}}.URL.String()); err != nil {\n      return nil, err\n    }\n  }\n\n  defer func() {\n    if {{$err}} != nil {\n      span.SetTag(\"http.errors\", {{$err}}.Error())\n      span.SetTag(ext.Error, {{$err}})\n    } else {\n      span.SetTag(ext.HTTPCode, strconv.Itoa({{$res}}.StatusCode))\n      if {{$res}}.StatusCode >= 500 && {{$res}}.StatusCode < 600 {\n        // Treat HTTP 5XX as errors\n        span.SetTag(\"http.errors\", {{$res}}.Status)\n        span.SetTag(ext.Error, fmt.Errorf(\"%d: %s\", {{$res}}.StatusCode, StatusText({{$res}}.StatusCode)))\n      }\n    }\n  }()\n}",
 				map[string]string{
 					"ddtrace":      "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 					"events":       "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
@@ -491,4 +516,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:IMcJBXTnHIFnd9mj4PODD50yswK9ZhoIYzlJ5sF6H3xBFEHq35x6qrGZr7Vpd0SPkNdBo3yuFJ9fnahDM9hY4w=="
+const Checksum = "sha512:eiT2+LzPXhQHSF++47BpRcjT+Xd6XY9jBF8La5kDHFvC+vbfkNsFMDlFnlfwWP3ZAXkCnoRWR8Rf82xp1OtGyA=="
