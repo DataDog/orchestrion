@@ -4,7 +4,7 @@
 	"output": [
 		{
 			"name": "http.request",
-			"service": "mux",
+			"service": "mux.router",
 			"resource": "GET /ping",
 			"type": "web",
 			"meta": {
