@@ -13,6 +13,7 @@ import (
 	"regexp"
 
 	"github.com/datadog/orchestrion/internal/injector"
+	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/datadog/orchestrion/internal/log"
@@ -21,11 +22,18 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
+type specialCaseBehavior int
+
+const (
+	neverWeave specialCaseBehavior = iota
+	weaveTracerInternal
+)
+
 var (
-	weavingDenyList = []*regexp.Regexp{
-		regexp.MustCompile(`^github\.com/datadog/orchestrion(?:/.+)?$`),
-		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`),
-		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`),
+	weavingSpecialCase = map[*regexp.Regexp]specialCaseBehavior{
+		regexp.MustCompile(`^github\.com/datadog/orchestrion(?:/.+)?$`):  neverWeave,
+		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`): weaveTracerInternal,
+		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):        neverWeave,
 	}
 )
 
@@ -33,11 +41,23 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	log.SetContext("PHASE", "compile")
 	defer log.SetContext("PHASE", "")
 
-	for _, deny := range weavingDenyList {
-		if deny.MatchString(w.ImportPath) {
-			log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
-			// No weaving in those packages!
-			return nil
+	aspects := builtin.Aspects[:]
+	for pattern, override := range weavingSpecialCase {
+		if pattern.MatchString(w.ImportPath) {
+			if override == neverWeave {
+				log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
+				// No weaving in those packages!
+				return nil
+			} else {
+				log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
+				shortList := make([]aspect.Aspect, 0, len(aspects))
+				for _, aspect := range aspects {
+					if aspect.TracerInternal {
+						shortList = append(shortList, aspect)
+					}
+				}
+				aspects = shortList
+			}
 		}
 	}
 
@@ -51,7 +71,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	injector, err := injector.New(cmd.SourceDir, injector.Options{
-		Aspects: builtin.Aspects[:],
+		Aspects: aspects,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", filepath.Base(file))
 		},
