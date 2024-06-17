@@ -104,11 +104,14 @@ func main() {
 					item = item.Commentf("From %s", match).Line()
 				}
 				jp, adv := aspect.AsCode()
-				item.Values(
-					jen.Line().Id("JoinPoint").Op(":").Add(jp),
-					jen.Line().Id("Advice").Op(":").Add(adv),
-					jen.Line().Empty(),
-				)
+				item.ValuesFunc(func(g *jen.Group) {
+					g.Line().Id("JoinPoint").Op(":").Add(jp)
+					g.Line().Id("Advice").Op(":").Add(adv)
+					if aspect.TracerInternal {
+						g.Line().Id("TracerInternal").Op(":").Add(jen.True())
+					}
+					g.Line().Empty()
+				})
 
 				if depsFile != nil {
 					// Make sure all necessary packages are tracked
