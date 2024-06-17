@@ -1,15 +1,15 @@
 {
-	"url": "http://localhost:8080",
-	"quit": "http://localhost:8080/quit",
-	"output": [
-		{
-			"name": "http.request",
-			"service": "chi.router",
-			"resource": "GET /",
-			"type": "web",
-			"meta": {
-				"http.url": "http://localhost:8080/"
-			}
-		}
-	]
+  "url": "http://localhost:8080",
+  "quit": "http://localhost:8080/quit",
+  "output": [
+    {
+      "name": "http.request",
+      "service": "chi.router",
+      "resource": "GET /",
+      "type": "web",
+      "meta": {
+        "http.url": "http://localhost:8080/"
+      }
+    }
+  ]
 }
