@@ -31,7 +31,7 @@ func PrependStmts(template code.Template) *prependStatements {
 func (a *prependStatements) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
 	block, ok := node.Node.(*dst.BlockStmt)
 	if !ok {
-		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", node)
+		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", node.Node)
 	}
 
 	stmts, err := a.template.CompileBlock(ctx, node)

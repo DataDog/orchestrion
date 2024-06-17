@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: ["**"]
   merge_group:
-    branches: ["main"]
+    branches: ['main']
   push:
     branches: ["main"]
 concurrency:
@@ -90,6 +90,14 @@ jobs:
       - lint
       - unit-tests
       - integration-tests
+    if: '!cancelled()'
     steps:
       - name: Done
+        if: needs.lint.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
         run: echo "OK"
+      - name: Done
+        if: needs.lint.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'
+        run: |-
+          echo "Failed!"
+          exit 1
+

@@ -80,7 +80,7 @@ func (s *structLiteral) ImpliesImported() []string {
 
 func (s *structLiteral) Matches(chain *node.Chain) bool {
 	if s.field == "" {
-		return s.matchesLiteral(chain)
+		return s.matchesLiteral(chain.Node)
 	}
 
 	kve, ok := node.As[*dst.KeyValueExpr](chain)

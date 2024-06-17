@@ -21,6 +21,8 @@ type Aspect struct {
 	JoinPoint join.Point
 	// Advice is the set of actions to use for performing the actual injection.
 	Advice []advice.Advice
+	// TracerInternal determines whether the aspect can be woven into the tracer's internal code.
+	TracerInternal bool
 }
 
 func (a *Aspect) AsCode() (jp, adv jen.Code) {
@@ -35,7 +37,8 @@ func (a *Aspect) AsCode() (jp, adv jen.Code) {
 }
 
 func (a *Aspect) AddedImports() (imports []string) {
-	implied := make(map[string]struct{})
+	// "unsafe" is always implied, because it's special-cased in the go toolchain, and is not a "normal" module.
+	implied := map[string]struct{}{"unsafe": {}}
 	for _, path := range a.JoinPoint.ImpliesImported() {
 		implied[path] = struct{}{}
 	}
@@ -53,8 +56,9 @@ func (a *Aspect) AddedImports() (imports []string) {
 
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
-		JoinPoint yaml.Node `yaml:"join-point"`
-		Advice    yaml.Node `yaml:"advice"`
+		JoinPoint      yaml.Node `yaml:"join-point"`
+		Advice         yaml.Node `yaml:"advice"`
+		TracerInternal bool      `yaml:"tracer-internal"`
 	}
 	if err := node.Decode(&ti); err != nil {
 		return err
@@ -66,6 +70,8 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	if ti.Advice.Kind == 0 {
 		return errors.New("missing required key 'advice'")
 	}
+
+	a.TracerInternal = ti.TracerInternal
 
 	var err error
 	if a.JoinPoint, err = join.FromYAML(&ti.JoinPoint); err != nil {

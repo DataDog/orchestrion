@@ -11,7 +11,7 @@ enable trace context forwarding in places where a {{<godoc "context" "Context">}
 available.
 {{</callout>}}
 
-## Insert Goroutine Local Storage (GLS) accessors
+## 
 
 <div class="hextra-cards hx-mt-4 hx-gap-4 hx-grid" style="--hextra-cards-grid-cols: 1;">
   <div class="aspect hextra-card hx-group hx-flex hx-flex-col hx-justify-start hx-overflow-hidden hx-rounded-lg hx-border hx-border-gray-200 hx-text-current hx-no-underline dark:hx-shadow-none hover:hx-shadow-gray-100 dark:hover:hx-shadow-none hx-shadow-gray-100 active:hx-shadow-sm active:hx-shadow-gray-200 hx-transition-all hx-duration-200">
@@ -30,26 +30,30 @@ available.
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{<iconSVG "chip">}} Advice
       </span>
-      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice inject-source-file"><div class="type">Introduce declarations from this pseudo-file:</div>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><span class="advice add-blank-import"><span class="type">Add blank import of </span>{{<godoc "unsafe">}}</span></div>
+    </div><div class="hx-border-t">
+      <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
+        {{<iconSVG "chip">}} Advice
+      </span>
+      <div class="hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2"><div class="advice inject-declarations">
+  <div class="type">Introduce new declarations:
 
-```go
-package runtime
 
-import (
-  _ "unsafe" // for go:linkname
-)
-
+```go-template
 //go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
 func __dd_orchestrion_gls_get() any {
-  return getg().m.curg.__dd_gls
+	return getg().m.curg.__dd_gls
 }
 
 //go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set
 func __dd_orchestrion_gls_set(val any) {
-  getg().m.curg.__dd_gls = val
+	getg().m.curg.__dd_gls = val
 }
 ```
-</div></div>
+
+  </div>
+</div>
+</div>
     </div>
   </div>
 </div>

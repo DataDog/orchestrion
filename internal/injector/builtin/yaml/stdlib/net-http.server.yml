@@ -5,8 +5,8 @@
 %YAML 1.1
 ---
 meta:
-  name: net/http
-  description: HTTP client and server implementations.
+  name: net/http.Server
+  description: HTTP server implementation.
   icon: at-symbol
 aspects:
   # When httpmode is "wrap"

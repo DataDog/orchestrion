@@ -89,6 +89,8 @@ func (n *TypeName) Pointer() bool {
 	return n.pointer
 }
 
+// Matches determines whether the provided node represents the same type as this
+// TypeName.
 func (n *TypeName) Matches(node dst.Expr) bool {
 	switch node := node.(type) {
 	case *dst.Ident:
@@ -116,6 +118,16 @@ func (n *TypeName) Matches(node dst.Expr) bool {
 	default:
 		return false
 	}
+}
+
+// MacthesDefinition determines whether the provided node matches the definition
+// of this TypeName. The `importPath` argument determines the context in which
+// the assertion is made.
+func (n *TypeName) MatchesDefinition(node dst.Expr, importPath string) bool {
+	if n.path != importPath {
+		return false
+	}
+	return (&TypeName{name: n.name, pointer: n.pointer}).Matches(node)
 }
 
 func (n *TypeName) AsNode() dst.Expr {
