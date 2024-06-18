@@ -82,6 +82,12 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         run: ./integration-tests.ps1
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.go-version }},integration
+          files: _integration-tests/outputs/coverage/*
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
