@@ -66,6 +66,14 @@ jobs:
       matrix:
         runs-on: [macos, ubuntu, windows]
         go-version: ['1.21', '1.22']
+        include:
+          # Alternate build modes (only on ubuntu, latest go; to save CI time)
+          - runs-on: ubuntu
+            go-version: '1.22'
+            build-mode: TOOLEXEC
+          - runs-on: ubuntu
+            go-version: '1.22'
+            build-mode: GOFLAGS
     runs-on: ${{ matrix.runs-on }}-latest
     name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
@@ -82,6 +90,8 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         run: ./integration-tests.ps1
+        env:
+          TESTCASE_BUILD_MODE: ${{ matrix.build-mode || 'DRIVER' }}
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
         with:

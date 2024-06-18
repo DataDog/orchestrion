@@ -147,9 +147,31 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
       $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" '$PID.log'
       $env:ORCHESTRION_LOG_LEVEL = "TRACE"
       $env:GOTMPDIR = Join-Path $outDir "tmp"
+      $oldGoFlags = $env:GOFLAGS
 
       $null = New-Item -ItemType Directory -Path $env:GOTMPDIR # The directory must exist...
-      & $orchestrion go -C $integ build -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+      switch ($env:TESTCASE_BUILD_MODE)
+      {
+        "TOOLEXEC"
+        {
+          Write-Output "[$($name)]: Building with manual -toolexec command"
+          go -C $integ build `
+            -toolexec "$($orchestrion) toolexec" `
+            -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+        }
+        "GOFLAGS"
+        {
+          Write-Output "[$($name)]: Building with GOFLAGS command"
+          $env:GOFLAGS = "$($oldGoFlags) '-toolexec=$($orchestrion) toolexec'"
+          go -C $integ build -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+        }
+        default
+        {
+          Write-Output "[$($name)]: Building with orchestrion driver command (TESTCASE_BUILD_MODE=$($env:TESTCASE_BUILD_MODE))"
+          & $orchestrion go -C $integ build `
+            -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+        }
+      }
       if ($LastExitCode -ne 0)
       {
         throw "Failed to build test case"
@@ -157,6 +179,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     }
     finally
     {
+      $env:GOFLAGS = $oldGoFlags
       $env:GOTMPDIR = $null
       $env:ORCHESTRION_LOG_LEVEL = $null
       $env:ORCHESTRION_LOG_FILE = $null
