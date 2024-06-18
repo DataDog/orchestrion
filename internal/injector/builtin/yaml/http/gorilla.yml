@@ -123,7 +123,7 @@
             spanOpts = append(spanOpts, httptraceinternal.HeaderTagsFromRequest({{ $req }}, {{ $r }}.__dd_config.headerTags))
             resource := {{ $r }}.__dd_config.resourceNamer({{ $r }}, {{ $req }})
 
-            // This is a temporary workaround/hack to prevent endless revursion via httptrace.TraceAndServe, which
+            // This is a temporary workaround/hack to prevent endless recursion via httptrace.TraceAndServe, which
             // basically implies passing a shallow copy of this router that ignores all requests down to
             // httptrace.TraceAndServe.
             var rCopy Router
