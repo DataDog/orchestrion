@@ -1,26 +1,26 @@
 {
-    "url": "http://localhost:8083",
-    "quit": "http://localhost:8083/quit",
-    "output": [
-	{
-	    "name": "grpc.client",
-	    "service": "grpc.client",
-	    "resource": "/helloworld.Greeter/SayHello",
-	    "type": "rpc",
-	    "_children": [
-		{
-		    "name": "grpc.server",
-		    "service": "grpc.server",
-		    "resource": "/helloworld.Greeter/SayHello",
-		    "type": "rpc"
-		}
-	    ]
-	},
-	{
-	    "name": "http.request",
-	    "resource": "GET /",
-	    "service": "grpc",
-	    "type": "web"
-	}
-    ]
+  "url": "http://localhost:8083",
+  "quit": "http://localhost:8083/quit",
+  "output": [
+    {
+      "name": "grpc.client",
+      "service": "grpc.client",
+      "resource": "/helloworld.Greeter/SayHello",
+      "type": "rpc",
+      "_children": [
+        {
+          "name": "grpc.server",
+          "service": "grpc.server",
+          "resource": "/helloworld.Greeter/SayHello",
+          "type": "rpc"
+        }
+      ]
+    },
+    {
+      "name": "http.request",
+      "resource": "GET /",
+      "service": "grpc",
+      "type": "web"
+    }
+  ]
 }
