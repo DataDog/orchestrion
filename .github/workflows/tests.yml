@@ -50,7 +50,15 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
-        run: go test -cover -covermode=atomic -race ./...
+        run: |-
+          mkdir -p coverage
+          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/report.out -race ./...
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.go-version }},unit
+          files: coverage/report.out
 
   integration-tests:
     strategy:
