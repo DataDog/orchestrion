@@ -57,7 +57,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ matrix.go-version }},unit
+          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},unit,unit.${{ runner.os }}-${{ runner.arch }}
           files: coverage/report.out
 
   integration-tests:
@@ -86,7 +86,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ matrix.go-version }},integration
+          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},integration,integration.${{ runner.os }}-${{ runner.arch }}
           files: _integration-tests/outputs/coverage/*
       - name: Upload artifact
         # We want this even if the tests failed
