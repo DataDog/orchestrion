@@ -1,0 +1,120 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"net/url"
+	"strings"
+//line <generated>:1
+	http1 "github.com/datadog/orchestrion/instrument/net/http"
+)
+
+//line samples/client/http.go:16
+func shortHandsWithContext(
+//line <generated>:1
+	_arg_0 context. //line samples/client/http.go:16
+			Context) {
+	resp, err :=
+//line <generated>:1
+		http1.Get(
+			_arg_0,
+//line samples/client/http.go:17
+			"http://localhost:8080")
+//line samples/client/http.go:18
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Head(
+			_arg_0,
+//line samples/client/http.go:23
+			"http://localhost:8080")
+//line samples/client/http.go:24
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Post(
+			_arg_0,
+//line samples/client/http.go:29
+			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
+//line samples/client/http.go:30
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.PostForm(
+			_arg_0,
+//line samples/client/http.go:35
+			"http://localhost:8080", url.Values{"key": {"value"}})
+//line samples/client/http.go:36
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+}
+
+func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
+	resp, err :=
+//line <generated>:1
+		http1.Get(
+			_arg_0.Context(),
+//line samples/client/http.go:43
+			"http://localhost:8080")
+//line samples/client/http.go:44
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Head(
+			_arg_0.Context(),
+//line samples/client/http.go:49
+			"http://localhost:8080")
+//line samples/client/http.go:50
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.Post(
+			_arg_0.Context(),
+//line samples/client/http.go:55
+			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
+//line samples/client/http.go:56
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+
+	resp, err =
+//line <generated>:1
+		http1.PostForm(
+			_arg_0.Context(),
+//line samples/client/http.go:61
+			"http://localhost:8080", url.Values{"key": {"value"}})
+//line samples/client/http.go:62
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.Body.Close()
+}

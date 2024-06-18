@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: ["**"]
   merge_group:
-    branches: ["main"]
+    branches: ['main']
   push:
     branches: ["main"]
 concurrency:

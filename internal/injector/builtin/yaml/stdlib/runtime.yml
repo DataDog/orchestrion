@@ -8,6 +8,7 @@
 - join-point:
     struct-definition: runtime.g
   advice:
+    - add-blank-import: unsafe
     - add-struct-field:
         name: __dd_gls
         type: any

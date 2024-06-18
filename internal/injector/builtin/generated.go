@@ -294,7 +294,85 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "OpenDB"),
 		},
 	},
-	// From yaml/stdlib/net-http.yml
+	// From yaml/stdlib/net-http.client.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("net/http.Transport")),
+		Advice: []advice.Advice{
+			advice.AddStructField("DD__tracer_internal", join.MustTypeName("bool")),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("net/http.Transport"), ""),
+			join.OneOf(
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/hostname/httputils"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/remoteconfig"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"),
+				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/profiler"),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{.AST.Type}}{\n  DD__tracer_internal: true,\n  {{range .AST.Elts}}{{.}},\n  {{end}}\n}",
+				map[string]string{},
+			)),
+		},
+		TracerInternal: true,
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Name("RoundTrip"),
+			join.Receiver(join.MustTypeName("*net/http.Transport")),
+		)),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"//go:linkname __dd_appsec_RASPEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/appsec.RASPEnabled\nfunc __dd_appsec_RASPEnabled() bool\n\n//go:linkname __dd_httpsec_ProtectRoundTrip gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec.ProtectRoundTrip\nfunc __dd_httpsec_ProtectRoundTrip(context.Context, string) error\n\n//go:linkname __dd_tracer_SpanType gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.SpanType\nfunc __dd_tracer_SpanType(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_ResourceName gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.ResourceName\nfunc __dd_tracer_ResourceName(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_Tag gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Tag\nfunc __dd_tracer_Tag(string, any) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_StartSpanFromContext gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.StartSpanFromContext\nfunc __dd_tracer_StartSpanFromContext(context.Context, string, ...ddtrace.StartSpanOption) (ddtrace.Span, context.Context)\n\n//go:linkname __dd_tracer_WithError gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.WithError\nfunc __dd_tracer_WithError(error) ddtrace.FinishOption\n\n//go:linkname __dd_tracer_Inject gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Inject\nfunc __dd_tracer_Inject(ddtrace.SpanContext, any) error\n\ntype __dd_tracer_HTTPHeadersCarrier Header\nfunc (c __dd_tracer_HTTPHeadersCarrier) Set(key, val string) {\n  Header(c).Set(key, val)\n}",
+				map[string]string{
+					"context": "context",
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+				},
+			), []string{
+				"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
+			}),
+			advice.PrependStmts(code.MustTemplate(
+				"{{$t := .Function.Receiver}}{{$req := .Function.Argument 0}}{{$res := .Function.Returns 0}}{{$err := .Function.Returns 1}}if !{{$t}}.DD__tracer_internal {\n  resourceName := fmt.Sprintf(\"%s %s\", {{$req}}.Method, {{$req}}.URL.Path)\n  spanName := namingschema.OpName(namingschema.HTTPClient)\n  // Copy the URL so we don't modify the outgoing request\n  url := *{{$req}}.URL\n  url.User = nil // Don't include userinfo in the http.url tag\n  opts := []ddtrace.StartSpanOption{\n    __dd_tracer_SpanType(ext.SpanTypeHTTP),\n    __dd_tracer_ResourceName(resourceName),\n    __dd_tracer_Tag(ext.HTTPMethod, {{$req}}.Method),\n    __dd_tracer_Tag(ext.HTTPURL, url.String()),\n    __dd_tracer_Tag(ext.Component, \"net/http\"),\n    __dd_tracer_Tag(ext.SpanKind, ext.SpanKindClient),\n    __dd_tracer_Tag(ext.NetworkDestinationName, url.Hostname()),\n  }\n  if analyticsRate := globalconfig.AnalyticsRate(); !math.IsNaN(analyticsRate) {\n    opts = append(opts, __dd_tracer_Tag(ext.EventSampleRate, analyticsRate))\n  }\n  if port, err := strconv.Atoi(url.Port()); err == nil {\n    opts = append(opts, __dd_tracer_Tag(ext.NetworkDestinationPort, port))\n  }\n  span, ctx := __dd_tracer_StartSpanFromContext({{$req}}.Context(), spanName, opts...)\n  {{$req}} = {{$req}}.Clone(ctx)\n  defer func() {\n    if !events.IsSecurityError({{$err}}) {\n      span.Finish(__dd_tracer_WithError({{$err}}))\n    } else {\n      span.Finish()\n    }\n  }()\n\n  if {{$err}} = __dd_tracer_Inject(span.Context(), __dd_tracer_HTTPHeadersCarrier({{$req}}.Header)); {{$err}} != nil {\n    fmt.Fprintf(os.Stderr, \"contrib/net/http.Roundtrip: failed to inject http headers: %v\\n\", {{$err}})\n  }\n\n  if __dd_appsec_RASPEnabled() {\n    if err := __dd_httpsec_ProtectRoundTrip(ctx, {{$req}}.URL.String()); err != nil {\n      return nil, err\n    }\n  }\n\n  defer func() {\n    if {{$err}} != nil {\n      span.SetTag(\"http.errors\", {{$err}}.Error())\n      span.SetTag(ext.Error, {{$err}})\n    } else {\n      span.SetTag(ext.HTTPCode, strconv.Itoa({{$res}}.StatusCode))\n      if {{$res}}.StatusCode >= 500 && {{$res}}.StatusCode < 600 {\n        // Treat HTTP 5XX as errors\n        span.SetTag(\"http.errors\", {{$res}}.Status)\n        span.SetTag(ext.Error, fmt.Errorf(\"%d: %s\", {{$res}}.StatusCode, StatusText({{$res}}.StatusCode)))\n      }\n    }\n  }()\n}",
+				map[string]string{
+					"ddtrace":      "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"events":       "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+					"ext":          "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+					"fmt":          "fmt",
+					"globalconfig": "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
+					"math":         "math",
+					"namingschema": "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+					"os":           "os",
+					"strconv":      "strconv",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.Not(join.ImportPath("net/http")),
+			join.OneOf(
+				join.FunctionCall("net/http.Get"),
+				join.FunctionCall("net/http.Head"),
+				join.FunctionCall("net/http.Post"),
+				join.FunctionCall("net/http.PostForm"),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{$ctx := .FindArgument \"context.Context\"}}{{$req := .FindArgument \"*net/http.Request\"}}{{if $ctx}}instrument.{{.AST.Fun.Name}}(\n    {{$ctx}},\n    {{range .AST.Args}}{{.}},\n    {{end}}\n  ){{else}}{{if $req}}instrument.{{.AST.Fun.Name}}(\n    {{$req}}.Context(),\n    {{range .AST.Args}}{{.}},\n    {{end}}\n  ){{else}}{{.}}{{end}}{{end}}",
+				map[string]string{
+					"instrument": "github.com/datadog/orchestrion/instrument/net/http",
+				},
+			)),
+		},
+	},
+	// From yaml/stdlib/net-http.server.yml
 	{
 		JoinPoint: join.AllOf(
 			join.Configuration(map[string]string{
@@ -368,6 +446,7 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
 		Advice: []advice.Advice{
+			advice.AddBlankImport("unsafe"),
 			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
 			advice.AddBlankImport("unsafe"),
 			advice.InjectDeclarations(code.MustTemplate(
@@ -406,8 +485,11 @@ var RestorerMap = map[string]string{
 // InjectedPaths is a set of import paths that may be injected by built-in aspects.
 // This list is used to ensure `orchestrion warmup` includes all interesting packages.
 var InjectedPaths = [...]string{
+	"fmt",
 	"github.com/datadog/orchestrion/instrument",
 	"github.com/datadog/orchestrion/instrument/event",
+	"github.com/datadog/orchestrion/instrument/net/http",
+	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -421,8 +503,17 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+	"math",
+	"os",
+	"strconv",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:EsbLG0HdCZydc/Mb4pR+QP1xTyEBtVYWX6R/GY6S0inz1LD+F/X7W31mg1GkCWy3khcC1/XqJ7BgU6TFIp0cDA=="
+const Checksum = "sha512:eiT2+LzPXhQHSF++47BpRcjT+Xd6XY9jBF8La5kDHFvC+vbfkNsFMDlFnlfwWP3ZAXkCnoRWR8Rf82xp1OtGyA=="

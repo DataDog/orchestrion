@@ -23,6 +23,8 @@ type Aspect struct {
 	JoinPoint join.Point
 	// Advice is the set of actions to use for performing the actual injection.
 	Advice []advice.Advice
+	// TracerInternal determines whether the aspect can be woven into the tracer's internal code.
+	TracerInternal bool
 }
 
 func (a *Aspect) AsCode() (jp, adv jen.Code) {
@@ -56,9 +58,10 @@ func (a *Aspect) AddedImports() (imports []string) {
 
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
-		JoinPoint yaml.Node            `yaml:"join-point"`
-		Advice    yaml.Node            `yaml:"advice"`
-		Extra     map[string]yaml.Node `yaml:",inline"`
+		JoinPoint      yaml.Node            `yaml:"join-point"`
+		Advice         yaml.Node            `yaml:"advice"`
+		TracerInternal bool                 `yaml:"tracer-internal"`
+		Extra          map[string]yaml.Node `yaml:",inline"`
 	}
 	if err := node.Decode(&ti); err != nil {
 		return err
@@ -77,6 +80,8 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 		}
 		return fmt.Errorf("unexpected keys: %s", strings.Join(keys, ", "))
 	}
+
+	a.TracerInternal = ti.TracerInternal
 
 	var err error
 	if a.JoinPoint, err = join.FromYAML(&ti.JoinPoint); err != nil {

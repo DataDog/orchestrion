@@ -10,7 +10,52 @@
       "meta": {
         "component": "net/http",
         "span.kind": "server"
-      }
+      },
+      "_children": [
+        {
+          "name": "http.request",
+          "service": "net_http",
+          "resource": "GET /",
+          "type": "web",
+          "meta": {
+            "component": "net/http",
+            "span.kind": "server"
+          },
+          "_children": [
+            {
+              "name": "http.request",
+              "service": "net_http",
+              "resource": "POST /hit",
+              "type": "http",
+              "meta": {
+                "http.url": "http://127.0.0.1:8085/hit",
+                "component": "net/http",
+                "span.kind": "client",
+                "network.destination.name": "127.0.0.1",
+                "http.status_code": "200",
+                "http.method": "POST"
+              },
+              "_children": [
+                {
+                  "name": "http.request",
+                  "service": "net_http",
+                  "resource": "POST /hit",
+                  "type": "web",
+                  "meta": {
+                    "http.useragent": "Go-http-client/1.1",
+                    "http.status_code": "200",
+                    "http.host": "127.0.0.1:8085",
+                    "component": "net/http",
+                    "http.url": "http://127.0.0.1:8085/hit",
+                    "http.method": "POST",
+                    "span.kind": "server"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

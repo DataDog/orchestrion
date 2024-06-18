@@ -19,6 +19,7 @@ import (
 type (
 	functionInformation struct {
 		ImportPath  string          // The import path of the package containing the function
+		Receiver    dst.Expr        // The receiver if this is a method declaration
 		Name        string          // The name of the function (blank for function literal expressions)
 		Type        *dst.FuncType   // The function's type signature
 		Decorations []*dst.NodeDecs // The function's decoration chain
@@ -55,6 +56,9 @@ func (s *funcDecl) Matches(chain *node.Chain) bool {
 	}
 
 	if decl, ok := node.As[*dst.FuncDecl](chain); ok {
+		if decl.Recv != nil && len(decl.Recv.List) == 1 {
+			info.Receiver = decl.Recv.List[0].Type
+		}
 		info.Name = decl.Name.Name
 		info.Type = decl.Type
 	} else if lit, ok := node.As[*dst.FuncLit](chain); ok {
@@ -287,6 +291,26 @@ func (fo *receives) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.AsCode())
 }
 
+type receiver struct {
+	typeName TypeName
+}
+
+func Receiver(typeName TypeName) FunctionOption {
+	return &receiver{typeName}
+}
+
+func (fo *receiver) evaluate(info *functionInformation) bool {
+	return info.Receiver != nil && fo.typeName.MatchesDefinition(info.Receiver, info.ImportPath)
+}
+
+func (fo *receiver) impliesImported() []string {
+	return nil
+}
+
+func (fo *receiver) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Receiver").Call(fo.typeName.AsCode())
+}
+
 type funcBody struct {
 	up *funcDecl
 }
@@ -389,6 +413,16 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			matchers[i] = opt.FunctionOption
 		}
 		o.FunctionOption = OneOfFunctions(matchers...)
+	case "receiver":
+		var arg string
+		if err := node.Content[1].Decode(&arg); err != nil {
+			return err
+		}
+		tn, err := NewTypeName(arg)
+		if err != nil {
+			return err
+		}
+		o.FunctionOption = Receiver(tn)
 	case "receives":
 		var arg string
 		if err := node.Content[1].Decode(&arg); err != nil {
