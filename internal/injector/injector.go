@@ -78,8 +78,11 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 			packages.NeedTypesInfo,
 	}
 	if flags, err := goflags.Flags(); err == nil {
-		// Honor other Go flags if we can identify them...
-		cfg.BuildFlags = append(cfg.BuildFlags, flags.Slice()...)
+		// Honor any `-tags`  flags provided by the user, as these may affect what
+		// is getting compiled or not.
+		if tags, hasTags := flags.Get("-tags"); hasTags {
+			cfg.BuildFlags = append(cfg.BuildFlags, fmt.Sprintf("-tags=%s", tags))
+		}
 	}
 
 	var (

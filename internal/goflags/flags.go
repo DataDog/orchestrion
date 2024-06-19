@@ -56,6 +56,13 @@ var (
 	}
 )
 
+// Get returns the value of the specified long-form flag if present. The name is
+// provided including the leading hyphen, e.g: "-tags".
+func (f CommandFlags) Get(flag string) (val string, found bool) {
+	val, found = f.Long[flag]
+	return
+}
+
 // Trim removes the specified flags and their value from the long and short flags
 func (f CommandFlags) Trim(flags ...string) {
 	for _, flag := range flags {
