@@ -266,7 +266,7 @@ func (t *Template) RenderHTML() string {
 		sort.Strings(keys)
 
 		buf.WriteString("\n\n```go\n")
-		buf.WriteString("// Assuming the following imports:\n")
+		buf.WriteString("// Using the following synthetic imports:\n")
 		buf.WriteString("import (\n")
 		for _, name := range keys {
 			fmt.Fprintf(&buf, "\t%s %q\n", name, t.imports[name])
