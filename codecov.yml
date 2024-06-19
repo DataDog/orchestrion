@@ -1,0 +1,40 @@
+---
+ignore:
+  - '**/generator/main.go' # Generators are not actually part of the product
+  - 'samples/**' # This is sample code for instrumentable things
+  - 'tools/**' # Repository maintenance tooling
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        informational: true
+    patch:
+      default:
+        target: auto
+        informational: true
+
+comment:
+  require_changes: true
+
+component_management:
+  individual_components:
+    - component_id: instruments
+      name: Instruments
+      paths: [instrument/**]
+    - component_id: go-driver
+      name: Go Driver
+      paths: [internal/go*/**]
+    - component_id: toolexec-driver
+      name: Toolexec Driver
+      paths: [internal/toolexec/**]
+    - component_id: aspects
+      name: Aspects
+      paths: [internal/injector/aspect/**]
+    - component_id: injector
+      name: Injector
+      paths: [internal/injector/**]
+    - component_id: test-harness
+      name: Test Harness
+      paths: [_integration-tests/**]

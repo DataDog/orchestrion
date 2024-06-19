@@ -51,11 +51,14 @@ $null = New-Item -ItemType Directory -Path $outputs
 # Build orchestrion
 Write-Progress -Activity "Preparation" -Status "Building orchestrion" -PercentComplete 0
 $orchestrion = Join-Path $outputs "orchestrion$($BinExt)"
-go build -o $orchestrion .
+go build -cover -covermode=atomic -coverpkg ./... -o $orchestrion .
 if ($LastExitCode -ne 0)
 {
   throw "Failed to build orchestrion"
 }
+
+$Env:GOCOVERDIR = Join-Path $outputs "coverage"
+$null = New-Item -ItemType Directory -Path $Env:GOCOVERDIR -Force
 
 # Warm up orchestrion
 Write-Progress -Activity "Preparation" -Status "Warming up" -PercentComplete 50

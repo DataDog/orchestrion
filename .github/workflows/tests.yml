@@ -50,7 +50,15 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
-        run: go test -cover -covermode=atomic -race ./...
+        run: |-
+          mkdir -p coverage
+          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/report.out -race ./...
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},unit,unit.${{ runner.os }}-${{ runner.arch }}
+          files: coverage/report.out
 
   integration-tests:
     strategy:
@@ -74,6 +82,12 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         run: ./integration-tests.ps1
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},integration,integration.${{ runner.os }}-${{ runner.arch }}
+          files: _integration-tests/outputs/coverage/*
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
