@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 run-name: |-
-  ${{ fromJSON('{"pull_request": "Tests (#${{ github.event.pull_request.number }})", "merge_group": "Pre-merge tests (#${{ github.event.pull_request.number }})", "push": "Tests (${{ github.sha }})"}')[github.event_name] }}
+  ${{ format(fromJSON('{"pull_request": "Tests (#{0})", "merge_group": "Pre-merge tests (#${0})", "push": "Tests (${1})"}')[github.event_name], github.event.pull_request.number, github.sha) }}
 
 jobs:
   lint:
