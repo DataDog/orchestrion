@@ -12,17 +12,11 @@ import (
 	"github.com/gorilla/mux"
 //line <generated>:1
 	"github.com/datadog/orchestrion/instrument"
-	mux1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
 //line samples/server/gorilla.go:15
 func gorillaMuxServer() {
-	r :=
-//line <generated>:1
-		mux1.WrapRouter(
-//line samples/server/gorilla.go:16
-			mux.NewRouter())
-//line samples/server/gorilla.go:17
+	r := mux.NewRouter()
 	ping :=
 //line <generated>:1
 		instrument.WrapHandlerFunc(
