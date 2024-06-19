@@ -2,7 +2,7 @@ module github.com/datadog/orchestrion/samples
 
 go 1.21
 
-replace github.com/datadog/orchestrion => ..
+replace github.com/datadog/orchestrion => ../
 
 require (
 	github.com/datadog/orchestrion v0.0.0-00010101000000-000000000000
