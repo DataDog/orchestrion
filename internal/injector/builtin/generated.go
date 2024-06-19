@@ -265,12 +265,57 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From yaml/http/gorilla.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/gorilla/mux.NewRouter"),
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/gorilla/mux.Router")),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"muxtrace.WrapRouter({{.}})",
+			advice.InjectDeclarations(code.MustTemplate(
+				"type ddRouterConfig struct {\n  ignoreRequest func(*http.Request) bool\n  headerTags    *internal.LockMap\n  resourceNamer func(*Router, *http.Request) string\n  serviceName   string\n  spanOpts      []ddtrace.StartSpanOption\n}\n\nfunc ddDefaultResourceNamer(router *Router, req *http.Request) string {\n  var (\n    match RouteMatch\n    route = \"unknown\"\n  )\n  if router.Match(req, &match) && match.Route != nil {\n    if r, err := match.Route.GetPathTemplate(); err == nil {\n      route = r\n    }\n  }\n  return fmt.Sprintf(\"%s %s\", req.Method, route)\n}\n\nfunc init() {\n  telemetry.LoadIntegration(\"gorilla/mux\")\n  tracer.MarkIntegrationImported(\"github.com/gorilla/mux\")\n}",
 				map[string]string{
-					"muxtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
+					"ddtrace":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"http":      "net/http",
+					"internal":  "gopkg.in/DataDog/dd-trace-go.v1/internal",
+					"telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
+					"tracer":    "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+			), []string{}),
+			advice.AddStructField("__dd_config", join.MustTypeName("ddRouterConfig")),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("github.com/gorilla/mux"),
+			join.FunctionBody(join.Function(
+				join.Name("NewRouter"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{$res := .Function.Returns 0}}defer func() {\n  var analyticsRate float64\n  if internal.BoolEnv(\"DD_TRACE_MUX_ANALYTICS_ENABLED\", false) {\n    analyticsRate = 1.0\n  } else {\n    analyticsRate = globalconfig.AnalyticsRate()\n  }\n\n  {{$res}}.__dd_config.headerTags = globalconfig.HeaderTagMap()\n  {{$res}}.__dd_config.ignoreRequest = func(*http.Request) bool { return false }\n  {{$res}}.__dd_config.resourceNamer = ddDefaultResourceNamer\n  {{$res}}.__dd_config.serviceName = namingschema.ServiceName(\"mux.router\")\n  {{$res}}.__dd_config.spanOpts = []ddtrace.StartSpanOption{\n    tracer.Tag(ext.Component, \"gorilla/mux\"),\n    tracer.Tag(ext.SpanKind, ext.SpanKindServer),\n  }\n  if !math.IsNaN(analyticsRate) {\n    {{$res}}.__dd_config.spanOpts = append(\n      {{$res}}.__dd_config.spanOpts,\n      tracer.Tag(ext.EventSampleRate, analyticsRate),\n    )\n  }\n}()",
+				map[string]string{
+					"ddtrace":      "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"ext":          "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+					"globalconfig": "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
+					"http":         "net/http",
+					"internal":     "gopkg.in/DataDog/dd-trace-go.v1/internal",
+					"math":         "math",
+					"namingschema": "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+					"tracer":       "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/gorilla/mux.Router")),
+			join.Name("ServeHTTP"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{$r := .Function.Receiver}}{{$w := .Function.Argument 0}}{{$req := .Function.Argument 1}}if !{{$r}}.__dd_config.ignoreRequest({{$req}}) {\n  var (\n    match    RouteMatch\n    route    string\n    spanOpts = options.Copy({{$r}}.__dd_config.spanOpts...)\n  )\n  if {{$r}}.Match({{$req}}, &match) && match.Route != nil {\n    if h, err := match.Route.GetHostTemplate(); err == nil {\n      spanOpts = append(spanOpts, tracer.Tag(\"mux.host\", h))\n    }\n    route, _ = match.Route.GetPathTemplate()\n  }\n  spanOpts = append(spanOpts, httptraceinternal.HeaderTagsFromRequest({{$req}}, {{$r}}.__dd_config.headerTags))\n  resource := {{$r}}.__dd_config.resourceNamer({{$r}}, {{$req}})\n\n  // This is a temporary workaround/hack to prevent endless recursion via httptrace.TraceAndServe, which\n  // basically implies passing a shallow copy of this router that ignores all requests down to\n  // httptrace.TraceAndServe.\n  var rCopy Router\n  rCopy = *{{$r}}\n  rCopy.__dd_config.ignoreRequest = func(*http.Request) bool { return true }\n\n  httptrace.TraceAndServe(&rCopy, {{$w}}, {{$req}}, &httptrace.ServeConfig{\n    Service: {{$r}}.__dd_config.serviceName,\n    Resource: resource,\n    SpanOpts: spanOpts,\n    RouteParams: match.Vars,\n    Route: route,\n  })\n  return\n}",
+				map[string]string{
+					"http":              "net/http",
+					"httptrace":         "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
+					"httptraceinternal": "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
+					"options":           "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 				},
 			)),
 		},
@@ -499,21 +544,25 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
 	"math",
+	"net/http",
 	"os",
 	"strconv",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:eiT2+LzPXhQHSF++47BpRcjT+Xd6XY9jBF8La5kDHFvC+vbfkNsFMDlFnlfwWP3ZAXkCnoRWR8Rf82xp1OtGyA=="
+const Checksum = "sha512:knp7PcdqK6KhQJuAIiKj59LAExOsk4obRw9yxdBMB87otChb7Grw2l04YGoeV+n0AT0F+qVtkSm0VLUlAKUDYQ=="
