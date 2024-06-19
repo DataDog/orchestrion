@@ -174,6 +174,7 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
       }
       if ($LastExitCode -ne 0)
       {
+        Get-Content -Path (Join-Path $outDir "build.log") | Write-Error
         throw "Failed to build test case"
       }
     }
