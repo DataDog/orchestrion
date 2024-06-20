@@ -23,9 +23,7 @@ type Option func(*config)
 // WithToolexec forces a call to Run() to build with the -toolexec option when
 // wrapping a build command
 func WithToolexec(bin string, args ...string) Option {
-	fmt.Println("WithToolexec!")
-
-	var buffer = strings.Builder{}
+	var buffer strings.Builder
 	if _, err := fmt.Fprintf(&buffer, "%q", bin); err != nil {
 		// This is expected to never happen (short of running OOM, maybe?)
 		panic(err)
@@ -52,8 +50,6 @@ func WithToolexec(bin string, args ...string) Option {
 // changes specified through opts to the command before running it in a
 // different process
 func Run(goArgs []string, opts ...Option) error {
-	fmt.Println("Run!")
-
 	var cfg config
 	for _, opt := range opts {
 		opt(&cfg)
