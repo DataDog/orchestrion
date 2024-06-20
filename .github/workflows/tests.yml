@@ -102,7 +102,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},integration,integration.${{ runner.os }}-${{ runner.arch }}
-          files: _integration-tests/outputs/coverage/*
+          directory: _integration-tests/outputs/coverage
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
