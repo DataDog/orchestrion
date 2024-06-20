@@ -61,7 +61,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},unit,unit.${{ runner.os }}-${{ runner.arch }}
-          files: coverage/report.out
+          file: ${{ github.workspace }}/coverage/report.out
 
   integration-tests:
     strategy:
@@ -95,6 +95,10 @@ jobs:
         run: ./integration-tests.ps1
         env:
           TESTCASE_BUILD_MODE: ${{ matrix.build-mode || 'DRIVER' }}
+      - name: Consolidate coverage data
+        if: always()
+        run: |-
+          go tool covdata merge -i ${{ github.workspace }}/_integration-tests/outputs/coverage -o ${{ github.workspace }}/coverage
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always()
@@ -102,7 +106,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},integration,integration.${{ runner.os }}-${{ runner.arch }}
-          directory: _integration-tests/outputs/coverage
+          directory: ${{ github.workspace }}/coverage
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
