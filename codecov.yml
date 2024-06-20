@@ -36,6 +36,3 @@ component_management:
     - component_id: injector
       name: Injector
       paths: [internal/injector/**]
-    - component_id: test-harness
-      name: Test Harness
-      paths: [_integration-tests/**]
