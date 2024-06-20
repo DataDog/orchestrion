@@ -30,7 +30,7 @@ func GOMOD() (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("runnning %q: %w", cmd.Args, err)
 	}
-	if goMod := strings.TrimSpace(stdout.String()); goMod != "" {
+	if goMod := strings.TrimSpace(stdout.String()); goMod != "" && goMod != os.DevNull {
 		return goMod, nil
 	}
 
