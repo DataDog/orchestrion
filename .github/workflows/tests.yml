@@ -60,8 +60,8 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},unit,unit.${{ runner.os }}-${{ runner.arch }}
-          file: ${{ github.workspace }}/coverage/report.out
+          flags: go${{ matrix.go-version }},${{ runner.os }},${{ runner.arch }},unit
+          file: ./coverage/report.out
 
   integration-tests:
     strategy:
@@ -95,19 +95,19 @@ jobs:
         run: ./integration-tests.ps1
         env:
           TESTCASE_BUILD_MODE: ${{ matrix.build-mode || 'DRIVER' }}
-      - name: Consolidate coverage data
+      - name: Consolidate coverage report
         if: always()
         run: |-
-          mkdir ${{ github.workspace }}/coverage
-          go tool covdata merge -i ${{ github.workspace }}/_integration-tests/outputs/coverage -o ${{ github.workspace }}/coverage
+          mkdir ./coverage
+          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/report.out
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always()
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},integration,integration.${{ runner.os }}-${{ runner.arch }}
-          directory: ${{ github.workspace }}/coverage
+          flags: go${{ matrix.go-version }},${{ runner.os }},${{ runner.arch }},integration
+          file: ./coverage/report.out
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
