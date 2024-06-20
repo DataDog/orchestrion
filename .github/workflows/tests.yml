@@ -53,7 +53,7 @@ jobs:
       - name: Run unit tests
         run: |-
           mkdir -p coverage
-          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/report.out -race ./...
+          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always()
@@ -61,7 +61,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ matrix.go-version }},${{ runner.os }},${{ runner.arch }},unit
-          file: ./coverage/report.out
+          file: ./coverage/unit.out
 
   integration-tests:
     strategy:
@@ -99,7 +99,7 @@ jobs:
         if: always()
         run: |-
           mkdir ./coverage
-          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/report.out
+          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always()
@@ -107,7 +107,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ matrix.go-version }},${{ runner.os }},${{ runner.arch }},integration
-          file: ./coverage/report.out
+          file: ./coverage/integration.out
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
