@@ -137,196 +137,218 @@ for ($i = 0 ; $i -lt $tests.Length ; $i++)
     $vfile = Join-Path $integ "tests" $name "validation.json"
     $json = Get-Content -Raw $vfile | ConvertFrom-Json
 
-    # Build test case
-    $outDir = Join-Path $outputs "tests" $name
-    $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
-
-    $bin = Join-Path $outDir "$($name)$($BinExt)"
-    try
+    # Create complete list of variants (the basic one being blank)
+    $variants = @{"" = @()}
+    if ($null -ne $json.variants)
     {
-      $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" '$PID.log'
-      $env:ORCHESTRION_LOG_LEVEL = "TRACE"
-      $env:GOTMPDIR = Join-Path $outDir "tmp"
-      $oldGoFlags = $env:GOFLAGS
-
-      $null = New-Item -ItemType Directory -Path $env:GOTMPDIR # The directory must exist...
-      switch ($env:TESTCASE_BUILD_MODE)
+      foreach ($v in $json.variants.PSObject.Properties)
       {
-        "TOOLEXEC"
-        {
-          Write-Output "[$($name)]: Building with manual -toolexec command"
-          go -C $integ build `
-            -toolexec "$($orchestrion) toolexec" `
-            -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
-        }
-        "GOFLAGS"
-        {
-          Write-Output "[$($name)]: Building with GOFLAGS command"
-          $env:GOFLAGS = "$($oldGoFlags) '-toolexec=$($orchestrion) toolexec'"
-          go -C $integ build -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
-        }
-        default
-        {
-          Write-Output "[$($name)]: Building with orchestrion driver command (TESTCASE_BUILD_MODE=$($env:TESTCASE_BUILD_MODE))"
-          & $orchestrion go -C $integ build `
-            -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
-        }
-      }
-      if ($LastExitCode -ne 0)
-      {
-        Write-Output "[$($name)] Build failed; output follows:"
-        Get-Content -Path (Join-Path $outDir "build.log") | Write-Output
-        throw "Failed to build test case"
+        $variants[$v.Name] = $v.Value.flags
       }
     }
-    finally
+
+    foreach ($var in $variants.GetEnumerator())
     {
-      $env:GOFLAGS = $oldGoFlags
-      $env:GOTMPDIR = $null
-      $env:ORCHESTRION_LOG_LEVEL = $null
-      $env:ORCHESTRION_LOG_FILE = $null
-    }
-
-    # Run test case
-    $env:TRACE_LANGUAGE = 'golang'
-    $env:LOG_LEVEL = 'DEBUG'
-    $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
-    $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
-
-    $server = Start-Process -FilePath $bin -RedirectStandardOutput (Join-Path $outDir "stdout.log") -RedirectStandardError (Join-Path $outDir "stderr.log") -PassThru
-    try {
-      $token = New-Guid
-      $attemptsLeft = 10
-      for (;;)
+      # Build test case
+      $outDir = Join-Path $outputs "tests" $name
+      $logName = $name
+      if ($var.Name -ne "")
       {
-        try
+        $outDir = "$($outDir)@$($var.Name)"
+        $logName = "$($logName)@$($var.Name)"
+      }
+      $extraArgs = $var.Value
+
+      $null = New-Item -ItemType Directory -Path $outDir # Ensure the directory exists
+
+      $bin = Join-Path $outDir "$($name)$($BinExt)"
+      try
+      {
+        $env:ORCHESTRION_LOG_FILE = Join-Path $outDir "orchestrion-log" '$PID.log'
+        $env:ORCHESTRION_LOG_LEVEL = "TRACE"
+        $env:GOTMPDIR = Join-Path $outDir "tmp"
+        $oldGoFlags = $env:GOFLAGS
+
+        $null = New-Item -ItemType Directory -Path $env:GOTMPDIR # The directory must exist...
+        switch ($env:TESTCASE_BUILD_MODE)
         {
-          if ($agent.State -ne "Running")
+          "TOOLEXEC"
           {
-            throw "Agent is no longer running (state: $($agent.State))"
+            Write-Output "[$($logName)]: Building with manual -toolexec command"
+            go -C $integ build @extraArgs `
+              -toolexec "$($orchestrion) toolexec" `
+              -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
           }
-          $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 15 -RetryIntervalSec 1
-          break # Invoke-WebRequest returns IIF the response had a successful status code
+          "GOFLAGS"
+          {
+            Write-Output "[$($logName)]: Building with GOFLAGS command"
+            $env:GOFLAGS = "$($oldGoFlags) '-toolexec=$($orchestrion) toolexec'"
+            go -C $integ build @extraArgs -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+          }
+          default
+          {
+            Write-Output "[$($logName)]: Building with orchestrion driver command (TESTCASE_BUILD_MODE=$($env:TESTCASE_BUILD_MODE))"
+            & $orchestrion go -C $integ build @extraArgs `
+              -work -o $bin "./tests/$($name)" 2>&1 1>(Join-Path $outDir "build.log")
+          }
         }
-        catch [System.Net.Http.HttpRequestException]
+        if ($LastExitCode -ne 0)
         {
-          if ($null -ne $_.Exception.Response.StatusCode)
-          {
-            throw "Failed to start test session: HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
-          }
-          elseif ($attemptsLeft -le 0)
-          {
-            throw "Failed to start test session: Failed and all attempts are exhaused. Last error: $($_)"
-          }
-          else
-          {
-            $attemptsLeft--
-            Start-Sleep -Milliseconds 150
-          }
+          Write-Output "[$($logName)] Build failed; output follows:"
+          Get-Content -Path (Join-Path $outDir "build.log") | Write-Output
+          throw "Failed to build test case"
         }
       }
-
-      # Perform validations
-      $skip = false
-      if ($null -ne $json.url)
+      finally
       {
-        Write-Output "[$($name)]: Validating using: GET $($json.url)"
-        $attemptsLeft = 600 # 60 seconds with poll interval of 100ms
+        $env:GOFLAGS = $oldGoFlags
+        $env:GOTMPDIR = $null
+        $env:ORCHESTRION_LOG_LEVEL = $null
+        $env:ORCHESTRION_LOG_FILE = $null
+      }
+
+      # Run test case
+      $env:TRACE_LANGUAGE = 'golang'
+      $env:LOG_LEVEL = 'DEBUG'
+      $env:ENABLED_CHECKS = 'trace_stall,trace_count_header,trace_peer_service,trace_dd_service'
+      $agent = (& (Join-Path $venv $scripts "ddapm-test-agent") 2>&1 1>(Join-Path $outDir "agent.log")) &
+
+      $server = Start-Process -FilePath $bin -RedirectStandardOutput (Join-Path $outDir "stdout.log") -RedirectStandardError (Join-Path $outDir "stderr.log") -PassThru
+      try
+      {
+        $token = New-Guid
+        $attemptsLeft = 10
         for (;;)
         {
           try
           {
-            $null = Invoke-WebRequest -Uri $json.url
+            if ($agent.State -ne "Running")
+            {
+              throw "Agent is no longer running (state: $($agent.State))"
+            }
+            $null = Invoke-WebRequest -Uri "http://localhost:8126/test/session/start?test_session_token=$($token)" -MaximumRetryCount 15 -RetryIntervalSec 1
             break # Invoke-WebRequest returns IIF the response had a successful status code
           }
           catch [System.Net.Http.HttpRequestException]
           {
             if ($null -ne $_.Exception.Response.StatusCode)
             {
-              throw "GET $($json.url) => HTTP $([int]$_.Exception.Response.StatusCode) ($($_.Exception.Response.StatusCode))"
+              throw "Failed to start test session: HTTP $($_.Exception.Response.StatusCode) - $($_.Exception.Response.StatusDescription)"
             }
             elseif ($attemptsLeft -le 0)
             {
-              throw "GET $($json.url) => Failed and all attempts are exhaused. Last error: $($_)"
-            }
-            elseif ($server.HasExited)
-            {
-              if ($server.ExitCode -eq 42)
-              {
-                $skip = $true
-                break
-              }
-              throw "GET $($json.url) => Failed and server is no longer running. Last error: $($_)"
+              throw "Failed to start test session: Failed and all attempts are exhaused. Last error: $($_)"
             }
             else
             {
               $attemptsLeft--
-              Start-Sleep -Milliseconds 100
+              Start-Sleep -Milliseconds 150
             }
           }
         }
-      }
-      elseif ($null -ne $json.curl)
-      {
-        Write-Output "[$($name)]: Validating using: $($json.curl)"
-        Invoke-Expression "$($json.curl) --retry 5 --retry-all-errors --retry-max-time 30 2>&1 1>$(Join-Path $outDir "curl.log")"
-        if ($LastExitCode -ne 0)
-        {
-          throw "Validation failed: $($json.curl)"
-        }
-      }
-      else
-      {
-        throw "No validation instructions found!"
-      }
 
-      if ($skip)
-      {
-        Write-Host "[$($name)]: Unsupported on this platform" -ForegroundColor "Yellow"
-        $Skipped.$name = $true
-      }
-      else
-      {
-        Write-Output "[$($name)]: Validation was successful"
-        try
+        # Perform validations
+        $skip = false
+        if ($null -ne $json.url)
         {
-          $null = Invoke-WebRequest -Uri $json.quit -MaximumRetryCount 5 -RetryIntervalSec 1
-        }
-        catch
-        {
-          $null = $_ # Swallow the exception
-        }
-
-        $server.WaitForExit()
-        for (;;)
-        {
-          $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
-          $data = $resp.Content | ConvertFrom-Json
-          if ($data.Length -ne 0)
+          Write-Output "[$($logName)]: Validating using: GET $($json.url)"
+          $attemptsLeft = 600 # 60 seconds with poll interval of 100ms
+          for (;;)
           {
-            Write-Output "[$($name)]: Collected $($data.Length) traces"
-            $tracesFile = Join-Path $outDir "traces.json"
-            $resp.Content > $($tracesFile)
-
-            go -C $integ run ./validator -name $name -validation $vfile -traces $tracesFile 2>&1 | Write-Host
-            if ($LastExitCode -ne 0)
+            try
             {
-              throw "Validation of traces failed"
+              $null = Invoke-WebRequest -Uri $json.url
+              break # Invoke-WebRequest returns IIF the response had a successful status code
             }
+            catch [System.Net.Http.HttpRequestException]
+            {
+              if ($null -ne $_.Exception.Response.StatusCode)
+              {
+                throw "GET $($json.url) => HTTP $([int]$_.Exception.Response.StatusCode) ($($_.Exception.Response.StatusCode))"
+              }
+              elseif ($attemptsLeft -le 0)
+              {
+                throw "GET $($json.url) => Failed and all attempts are exhaused. Last error: $($_)"
+              }
+              elseif ($server.HasExited)
+              {
+                if ($server.ExitCode -eq 42)
+                {
+                  $skip = $true
+                  break
+                }
+                throw "GET $($json.url) => Failed and server is no longer running. Last error: $($_)"
+              }
+              else
+              {
+                $attemptsLeft--
+                Start-Sleep -Milliseconds 100
+              }
+            }
+          }
+        }
+        elseif ($null -ne $json.curl)
+        {
+          Write-Output "[$($logName)]: Validating using: $($json.curl)"
+          Invoke-Expression "$($json.curl) --retry 5 --retry-all-errors --retry-max-time 30 2>&1 1>$(Join-Path $outDir "curl.log")"
+          if ($LastExitCode -ne 0)
+          {
+            throw "Validation failed: $($json.curl)"
+          }
+        }
+        else
+        {
+          throw "No validation instructions found!"
+        }
 
-            Write-Host "[$($name)]: Success!" -ForegroundColor "Green"
-            break
+        if ($skip)
+        {
+          Write-Host "[$($logName)]: Unsupported on this platform" -ForegroundColor "Yellow"
+          $Skipped.$name = $true
+        }
+        else
+        {
+          Write-Output "[$($logName)]: Validation was successful"
+          try
+          {
+            $null = Invoke-WebRequest -Uri $json.quit -MaximumRetryCount 5 -RetryIntervalSec 1
+          }
+          catch
+          {
+            $null = $_ # Swallow the exception
+          }
+
+          $server.WaitForExit()
+          for (;;)
+          {
+            $resp = Invoke-WebRequest -Uri "http://localhost:8126/test/session/traces?test_session_token=$($token)" -MaximumRetryCount 5 -RetryIntervalSec 1
+            $data = $resp.Content | ConvertFrom-Json
+            if ($data.Length -ne 0)
+            {
+              Write-Output "[$($logName)]: Collected $($data.Length) traces"
+              $tracesFile = Join-Path $outDir "traces.json"
+              $resp.Content > $($tracesFile)
+
+              go -C $integ run ./validator -name $name -variant $var.Name -validation $vfile -traces $tracesFile 2>&1 | Write-Host
+              if ($LastExitCode -ne 0)
+              {
+                throw "Validation of traces failed"
+              }
+
+              Write-Host "[$($logName)]: Success!" -ForegroundColor "Green"
+              break
+            }
           }
         }
       }
-    }
-    finally
-    {
-      if (!$server.HasExited)
+      finally
       {
-        $server.Kill($true)
+        if (!$server.HasExited)
+        {
+          $server.Kill($true)
+        }
+        Remove-Job -Job $agent -Force
       }
-      Remove-Job -Job $agent -Force
     }
   }
   catch

@@ -96,17 +96,26 @@ func ParseCommandFlags(args []string) CommandFlags {
 
 	for i := 0; i < len(args); i += 1 {
 		arg := args[i]
-		if isAssigned(arg) {
-			key, val, found := strings.Cut(arg, "=")
+
+		normArg := arg
+		if strings.HasPrefix(arg, "--") {
+			// The Go CLI accepts flags with two hyphens instead of one, but we want
+			// to normalize to a single hyphen here...
+			normArg = arg[1:]
+		}
+
+		if isAssigned(normArg) {
+			key, val, found := strings.Cut(normArg, "=")
 			if found {
 				flags.Long[key] = val
 			}
-		} else if isLong(arg) {
-			flags.Long[arg] = args[i+1]
+		} else if isLong(normArg) {
+			flags.Long[normArg] = args[i+1]
 			i++
-		} else if isShort(arg) {
-			flags.Short[arg] = struct{}{}
+		} else if isShort(normArg) {
+			flags.Short[normArg] = struct{}{}
 		} else {
+			// We intentionally keep the original arg value in this case instead of the normalized one.
 			flags.Unknown = append(flags.Unknown, arg)
 		}
 	}
@@ -123,6 +132,9 @@ func Flags() (CommandFlags, error) {
 }
 
 func isAssigned(str string) bool {
+	if !strings.HasPrefix(str, "-") {
+		return false
+	}
 	flag, _, ok := strings.Cut(str, "=")
 	// An assigned flag is a long flag using the '=' separator
 	return ok && isLong(flag)
