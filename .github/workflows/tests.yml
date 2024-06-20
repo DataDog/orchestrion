@@ -98,6 +98,7 @@ jobs:
       - name: Consolidate coverage data
         if: always()
         run: |-
+          mkdir ${{ github.workspace }}/coverage
           go tool covdata merge -i ${{ github.workspace }}/_integration-tests/outputs/coverage -o ${{ github.workspace }}/coverage
       - name: Upload coverage report
         # We want this even if the tests failed
