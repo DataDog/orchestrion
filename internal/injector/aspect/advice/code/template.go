@@ -156,7 +156,7 @@ func (t *Template) compileTemplate(ctx context.Context, name string, chain *node
 	}
 
 	for i := range decls {
-		decls[i] = t.processImports(ctx, ctxFile, decls[i]).(dst.Decl)
+		decls[i] = t.processImports(ctx, ctxFile, decls[i])
 	}
 
 	return decls, nil
@@ -166,7 +166,7 @@ func (t *Template) compileTemplate(ctx context.Context, name string, chain *node
 // present in the t.imports map with a qualified *dst.Ident node, so that the
 // import-enabled decorator.Restorer can emit the correct code, and knows not to
 // remove the inserted import statements.
-func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.Node) dst.Node {
+func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.Decl) dst.Decl {
 	if len(t.imports) == 0 {
 		return node
 	}
@@ -196,7 +196,7 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 		}
 
 		return true
-	}, nil)
+	}, nil).(dst.Decl)
 }
 
 func (t *Template) AsCode() jen.Code {
