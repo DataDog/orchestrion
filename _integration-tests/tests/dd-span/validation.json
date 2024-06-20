@@ -1,0 +1,93 @@
+{
+  "url": "http://localhost:8092",
+  "quit": "http://localhost:8092/quit",
+  "output": [
+    {
+      "name": "http.request",
+      "resource": "GET /",
+      "service": "dd-span",
+      "type": "web",
+      "meta": {
+        "component": "net/http",
+        "http.host": "localhost:8092",
+        "http.method": "GET",
+        "http.status_code": "200",
+        "http.url": "http://localhost:8092/",
+        "language": "go",
+        "span.kind": "server"
+      },
+      "_children": [
+        {
+          "name": "spanFromHttpRequest",
+          "resource": "spanFromHttpRequest",
+          "service": "dd-span",
+          "meta": {
+            "foo": "bar",
+            "function-name": "spanFromHttpRequest",
+            "language": "go"
+          },
+          "_children": [
+            {
+              "name": "tagSpecificSpan",
+              "resource": "tagSpecificSpan",
+              "service": "dd-span",
+              "meta": {
+                "function-name": "tagSpecificSpan",
+                "language": "go",
+                "variant": "notag"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variants": {
+    "tag": {
+      "flags": [
+        "-tags=buildtag"
+      ],
+      "output": [
+        {
+          "name": "http.request",
+          "resource": "GET /",
+          "service": "dd-span",
+          "type": "web",
+          "meta": {
+            "component": "net/http",
+            "http.host": "localhost:8092",
+            "http.method": "GET",
+            "http.status_code": "200",
+            "http.url": "http://localhost:8092/",
+            "language": "go",
+            "span.kind": "server"
+          },
+          "_children": [
+            {
+              "name": "spanFromHttpRequest",
+              "resource": "spanFromHttpRequest",
+              "service": "dd-span",
+              "meta": {
+                "foo": "bar",
+                "function-name": "spanFromHttpRequest",
+                "language": "go"
+              },
+              "_children": [
+                {
+                  "name": "tagSpecificSpan",
+                  "resource": "tagSpecificSpan",
+                  "service": "dd-span",
+                  "meta": {
+                    "function-name": "tagSpecificSpan",
+                    "language": "go",
+                    "variant": "tag"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

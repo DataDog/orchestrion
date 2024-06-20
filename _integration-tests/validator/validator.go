@@ -18,11 +18,13 @@ import (
 func main() {
 	var (
 		name           string
+		variant        string
 		validationFile string
 		tracesFile     string
 	)
 
 	flag.StringVar(&name, "name", "", "The name of the test case")
+	flag.StringVar(&variant, "variant", "", "The name of the variant to use")
 	flag.StringVar(&validationFile, "validation", "", "The path to the validation.json file")
 	flag.StringVar(&tracesFile, "traces", "", "The path to the traces.json file")
 	flag.Parse()
@@ -44,7 +46,11 @@ func main() {
 	}
 
 	var validation struct {
-		Traces []*trace.Span `json:"output"`
+		Traces   []*trace.Span `json:"output"`
+		Variants map[string]struct {
+			Flags  []string      `json:"flags"`
+			Traces []*trace.Span `json:"output"`
+		} `json:"variants,omitempty"`
 	}
 	if data, err := os.ReadFile(validationFile); err != nil {
 		log.Fatalln("Error reading validation.json file:", err)
@@ -60,14 +66,22 @@ func main() {
 	}
 
 	exitCode := 0
-	for idx, reference := range validation.Traces {
+	referenceTraces := validation.Traces
+	if variant != "" {
+		if setup, found := validation.Variants[variant]; !found {
+			log.Fatalf("No such variant configured: %q\n", variant)
+		} else {
+			referenceTraces = setup.Traces
+		}
+	}
+	for idx, reference := range referenceTraces {
 		matches, diffs := reference.MatchesAny(traces)
 		if matches {
-			fmt.Printf("Successfully matched reference trace %d out of %d\n", idx+1, len(validation.Traces))
+			fmt.Printf("Successfully matched reference trace %d out of %d\n", idx+1, len(referenceTraces))
 			continue
 		}
 		exitCode = 1
-		fmt.Fprintf(os.Stderr, "Failed to match reference trace %d out of %d:\n%v\nDifferences:\n%s\n", idx+1, len(validation.Traces), reference, diffs)
+		fmt.Fprintf(os.Stderr, "Failed to match reference trace %d out of %d:\n%v\nDifferences:\n%s\n", idx+1, len(referenceTraces), reference, diffs)
 	}
 
 	os.Exit(exitCode)

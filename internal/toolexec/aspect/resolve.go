@@ -38,6 +38,7 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 	if err = cmd.Run(); err != nil {
 		return nil, fmt.Errorf("running %q: %w", cmd.Args, err)
 	}
+	log.Tracef("Command successful, parsing output...\n")
 
 	type listItem struct {
 		ImportPath string // The import path of the package

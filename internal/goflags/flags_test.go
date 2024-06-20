@@ -49,15 +49,15 @@ func TestParse(t *testing.T) {
 		expected CommandFlags
 	}{
 		"short": {
-			flags:    []string{"-short1", "-short2"},
+			flags:    []string{"-short1", "--short2"},
 			expected: CommandFlags{Short: map[string]struct{}{"-short1": {}, "-short2": {}}},
 		},
 		"long": {
-			flags:    []string{"-long1", "longval1", "-long2", "longval2"},
+			flags:    []string{"-long1", "longval1", "--long2", "longval2"},
 			expected: CommandFlags{Long: map[string]string{"-long1": "longval1", "-long2": "longval2"}},
 		},
 		"long-assigned": {
-			flags:    []string{"-long1=longval1", "-long2=longval2"},
+			flags:    []string{"-long1=longval1", "--long2=longval2"},
 			expected: CommandFlags{Long: map[string]string{"-long1": "longval1", "-long2": "longval2"}},
 		},
 		"long-mixed": {
@@ -86,18 +86,29 @@ func TestParse(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
+			defer restore(shortFlags, longFlags)
 			shortFlags = tc.expected.Short
 			longFlags = map[string]struct{}{}
 			for flag := range tc.expected.Long {
 				longFlags[flag] = struct{}{}
 			}
+
 			flags := ParseCommandFlags(tc.flags)
 			if len(tc.expected.Short) > 0 {
 				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short))
 			}
 			if len(tc.expected.Long) > 0 {
 				require.True(t, reflect.DeepEqual(tc.expected.Long, flags.Long))
+				for key, val := range tc.expected.Long {
+					actual, _ := flags.Get(key)
+					require.Equal(t, val, actual)
+				}
 			}
 		})
 	}
+}
+
+func restore(short map[string]struct{}, long map[string]struct{}) {
+	shortFlags = short
+	longFlags = long
 }

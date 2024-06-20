@@ -9,6 +9,7 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -52,13 +53,15 @@ jobs:
       - name: Run unit tests
         run: |-
           mkdir -p coverage
-          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/report.out -race ./...
+          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
       - name: Upload coverage report
+        # We want this even if the tests failed
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},unit,unit.${{ runner.os }}-${{ runner.arch }}
-          files: coverage/report.out
+          flags: go${{ matrix.go-version }},${{ runner.os }},${{ runner.arch }},unit
+          file: ./coverage/unit.out
 
   integration-tests:
     strategy:
@@ -66,8 +69,16 @@ jobs:
       matrix:
         runs-on: [macos, ubuntu, windows]
         go-version: ['1.21', '1.22']
+        include:
+          # Alternate build modes (only on ubuntu, latest go; to save CI time)
+          - runs-on: ubuntu
+            go-version: '1.22'
+            build-mode: TOOLEXEC
+          - runs-on: ubuntu
+            go-version: '1.22'
+            build-mode: GOFLAGS
     runs-on: ${{ matrix.runs-on }}-latest
-    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
+    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode || 'DRIVER' }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,12 +93,21 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         run: ./integration-tests.ps1
+        env:
+          TESTCASE_BUILD_MODE: ${{ matrix.build-mode || 'DRIVER' }}
+      - name: Consolidate coverage report
+        if: always()
+        run: |-
+          mkdir ./coverage
+          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
       - name: Upload coverage report
+        # We want this even if the tests failed
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ matrix.go-version }},${{ runner.os }}-${{ runner.arch }},integration,integration.${{ runner.os }}-${{ runner.arch }}
-          files: _integration-tests/outputs/coverage/*
+          flags: go${{ matrix.go-version }},${{ runner.os }},${{ runner.arch }},integration
+          file: ./coverage/integration.out
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()

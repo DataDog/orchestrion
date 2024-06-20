@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -62,17 +63,28 @@ type (
 func New(pkgDir string, opts Options) (*Injector, error) {
 	fileset := token.NewFileSet()
 	cfg := &packages.Config{
-		Dir:  opts.Dir,
-		Fset: fileset,
+		// Explicitly disable toolexec for this, as if provided via $GOFLAGS, it
+		// would be honored by the go/packages loader and that'd cause this call to
+		// become a fork-bomb.
+		BuildFlags: []string{"-toolexec="},
+		Dir:        opts.Dir,
+		Fset:       fileset,
 		Mode: packages.NeedName |
 			packages.NeedFiles |
-			packages.NeedCompiledGoFiles |
 			packages.NeedImports |
 			packages.NeedTypes |
 			packages.NeedTypesSizes |
 			packages.NeedSyntax |
 			packages.NeedTypesInfo,
 	}
+	if flags, err := goflags.Flags(); err == nil {
+		// Honor any `-tags`  flags provided by the user, as these may affect what
+		// is getting compiled or not.
+		if tags, hasTags := flags.Get("-tags"); hasTags {
+			cfg.BuildFlags = append(cfg.BuildFlags, fmt.Sprintf("-tags=%s", tags))
+		}
+	}
+
 	var (
 		pkgPath     string
 		dec         *decorator.Decorator
