@@ -5,3 +5,4 @@
 /errors
 *.swp
 orchestrion
+coverage/

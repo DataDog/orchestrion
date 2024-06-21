@@ -3,16 +3,13 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package utils
+//go:build buildtag
 
-import (
-	"log"
-)
+package main
 
-// ExitIfError calls os.Exit(1) if err is not nil
-func ExitIfError(err error) {
-	if err == nil {
-		return
-	}
-	log.Fatalln(err)
+import "context"
+
+//dd:span variant:tag
+func tagSpecificSpan(context.Context) string {
+	return "Variant Tag"
 }

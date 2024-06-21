@@ -24,7 +24,6 @@ import (
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/toolexec/aspect"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
-	"github.com/datadog/orchestrion/internal/toolexec/utils"
 	"github.com/datadog/orchestrion/internal/version"
 )
 
@@ -138,21 +137,24 @@ func main() {
 				log.Infof("SKIP: %q\n", proxyCmd.Args())
 				return
 			}
-			utils.ExitIfError(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompileMain); err != nil {
 			if errors.Is(err, proxy.ErrSkipCommand) {
 				log.Infof("SKIP: %q\n", proxyCmd.Args())
 				return
 			}
-			utils.ExitIfError(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
 			if errors.Is(err, proxy.ErrSkipCommand) {
 				log.Infof("SKIP: %q\n", proxyCmd.Args())
 				return
 			}
-			utils.ExitIfError(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 
 		// Spacing so the final command is aligned with the original one...

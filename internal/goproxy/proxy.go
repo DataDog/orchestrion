@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/datadog/orchestrion/internal/log"
 )
@@ -25,7 +23,7 @@ type Option func(*config)
 // WithToolexec forces a call to Run() to build with the -toolexec option when
 // wrapping a build command
 func WithToolexec(bin string, args ...string) Option {
-	var buffer = strings.Builder{}
+	var buffer strings.Builder
 	if _, err := fmt.Fprintf(&buffer, "%q", bin); err != nil {
 		// This is expected to never happen (short of running OOM, maybe?)
 		panic(err)
@@ -53,7 +51,6 @@ func WithToolexec(bin string, args ...string) Option {
 // different process
 func Run(goArgs []string, opts ...Option) error {
 	var cfg config
-	env := os.Environ()
 	for _, opt := range opts {
 		opt(&cfg)
 	}
@@ -105,26 +102,18 @@ func Run(goArgs []string, opts ...Option) error {
 	}
 
 	log.Tracef("exec: %q\n", argv)
-	if runtime.GOOS == "windows" {
-		// Windows *has* the `syscall.Exec` function, but it only returns `EWINDOWS` instead of actually
-		// doing the job. So we won't do process substitution on Windows...
-		cmd := exec.Command(argv[0], argv[1:]...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			if err, ok := err.(*exec.ExitError); ok {
-				os.Exit(err.ExitCode())
-			}
-			return fmt.Errorf("exec[windows]: %w", err)
+	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		if err, ok := err.(*exec.ExitError); ok {
+			os.Exit(err.ExitCode())
 		}
-		// We emulate the behavior of `syscall.Exec`, which only returns if there is an error. In
-		// success cases, the process has been replaced and this code no longer exists.
-		os.Exit(0) // We were successful at this point!
+		return fmt.Errorf("exec: %w", err)
 	}
 
-	// `syscall.Exec` only returns if unsuccessful (then `err` is not nil).
-	return fmt.Errorf("execve: %w", syscall.Exec(argv[0], argv, env))
+	return nil
 }
 
 var goBinPath string
