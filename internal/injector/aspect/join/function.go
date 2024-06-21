@@ -338,7 +338,6 @@ func (fo oneOfFunctions) AsCode() jen.Code {
 
 func (fo oneOfFunctions) toHTML() string {
 	return "one-of"
-
 }
 
 type receives struct {
