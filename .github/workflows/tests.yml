@@ -100,6 +100,7 @@ jobs:
         with:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
+        shell: bash # PowerShell has different syntax for env. var access...
         if: (matrix.build-mode || 'DRIVER') == 'DRIVER'
         run: |-
           mkdir -p ${GOCOVERDIR}
