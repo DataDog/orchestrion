@@ -6,7 +6,10 @@
 ---
 # Client Instrumentation
 - join-point:
-    function-call: google.golang.org/grpc.Dial
+    one-of:
+      - function-call: google.golang.org/grpc.Dial
+      - function-call: google.golang.org/grpc.DialContext
+      - function-call: google.golang.org/grpc.NewClient
   advice:
     - append-args:
         type: google.golang.org/grpc.DialOption

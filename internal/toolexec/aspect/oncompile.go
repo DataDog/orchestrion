@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/aspect"
@@ -73,9 +75,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	injector, err := injector.New(cmd.SourceDir, injector.Options{
 		Aspects: aspects,
 		ModifiedFile: func(file string) string {
-			return filepath.Join(orchestrionDir, "src", filepath.Base(file))
+			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
 		},
 		PreserveLineInfo: true,
+		// Include test files if any of the input Go files has a _test.go suffix.
+		IncludeTests: slices.ContainsFunc(cmd.GoFiles(), func(s string) bool { return strings.HasSuffix(strings.ToLower(s), "_test.go") }),
 	})
 	if err != nil {
 		return fmt.Errorf("creating injector for %s (in %q): %w", w.ImportPath, cmd.SourceDir, err)

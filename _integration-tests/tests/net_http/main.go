@@ -3,79 +3,150 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package nethttp
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"orchestrion/integration"
+	"orchestrion/integration/validator/trace"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
-var s *http.Server
+type TestCase struct {
+	*http.Server
+}
 
-func main() {
-	defer log.Printf("Server shutting down gracefully.")
-
+func (tc *TestCase) Setup(t *testing.T) {
 	mux := http.NewServeMux()
-	s = &http.Server{
-		Addr:    "127.0.0.1:8085",
+	tc.Server = &http.Server{
+		Addr:    "127.0.0.1:8080",
 		Handler: mux,
 	}
 
-	mux.HandleFunc("/quit",
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Shutdown requested...")
-			defer s.Shutdown(context.Background())
-			w.Write([]byte("Goodbye\n"))
-			return
-		})
+	mux.HandleFunc("/hit", tc.handleHit)
+	mux.HandleFunc("/", tc.handleRoot)
 
-	mux.HandleFunc("/hit",
-		func(w http.ResponseWriter, r *http.Request) {
-			defer r.Body.Close()
+	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+}
 
-			b, err := io.ReadAll(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(err.Error()))
-				return
-			}
+func (tc *TestCase) Run(t *testing.T) {
+	resp, err := http.Get(fmt.Sprintf("http://%s/", tc.Server.Addr))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
 
-			w.WriteHeader(http.StatusOK)
-			w.Write(b)
-		})
+func (tc *TestCase) Teardown(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-	mux.HandleFunc("/",
-		func(w http.ResponseWriter, r *http.Request) {
-			defer r.Body.Close()
+	require.NoError(t, tc.Server.Shutdown(ctx))
+}
 
-			resp, err := http.Post(fmt.Sprintf("http://%s/hit", s.Addr), "text/plain", r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(err.Error()))
-				return
-			}
-			defer resp.Body.Close()
+func (tc *TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]any{
+				"name":     "http.request",
+				"service":  "tests.test",
+				"resource": "GET /",
+				"type":     "http",
+			},
+			Meta: map[string]any{
+				"component": "net/http",
+				"span.kind": "client",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":     "http.request",
+						"service":  "tests.test",
+						"resource": "GET /",
+						"type":     "web",
+					},
+					Meta: map[string]any{
+						"component": "net/http",
+						"span.kind": "server",
+					},
+					Children: trace.Spans{
+						{
+							Tags: map[string]any{
+								"name":     "http.request",
+								"service":  "tests.test",
+								"resource": "POST /hit",
+								"type":     "http",
+							},
+							Meta: map[string]any{
+								"http.url":                 fmt.Sprintf("http://%s/hit", tc.Server.Addr),
+								"component":                "net/http",
+								"span.kind":                "client",
+								"network.destination.name": "127.0.0.1",
+								"http.status_code":         "200",
+								"http.method":              "POST",
+							},
+							Children: trace.Spans{
+								{
+									Tags: map[string]any{
+										"name":     "http.request",
+										"service":  "tests.test",
+										"resource": "POST /hit",
+										"type":     "web",
+									},
+									Meta: map[string]any{
+										"http.useragent":   "Go-http-client/1.1",
+										"http.status_code": "200",
+										"http.host":        tc.Server.Addr,
+										"component":        "net/http",
+										"http.url":         fmt.Sprintf("http://%s/hit", tc.Server.Addr),
+										"http.method":      "POST",
+										"span.kind":        "server",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
 
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
-				return
-			}
+func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
-			w.WriteHeader(resp.StatusCode)
-			w.Write(b)
-		})
+	resp, err := http.Post(fmt.Sprintf("http://%s/hit", tc.Server.Addr), "text/plain", r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	defer resp.Body.Close()
 
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
-	log.Printf("Server shut down: %v", s.ListenAndServe())
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	w.Write(b)
+}
+
+func (*TestCase) handleHit(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
 }

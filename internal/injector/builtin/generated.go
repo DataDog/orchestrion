@@ -139,7 +139,11 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From yaml/grpc.yml
 	{
-		JoinPoint: join.FunctionCall("google.golang.org/grpc.Dial"),
+		JoinPoint: join.OneOf(
+			join.FunctionCall("google.golang.org/grpc.Dial"),
+			join.FunctionCall("google.golang.org/grpc.DialContext"),
+			join.FunctionCall("google.golang.org/grpc.NewClient"),
+		),
 		Advice: []advice.Advice{
 			advice.AppendArgs(
 				join.MustTypeName("google.golang.org/grpc.DialOption"),
@@ -318,6 +322,21 @@ var Aspects = [...]aspect.Aspect{
 					"options":           "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 				},
 			)),
+		},
+	},
+	// From yaml/internal/integration.yml
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("orchestrion/integration/tests"),
+			join.Function(
+				join.Name("Test"),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  orchestrionEnabled = true\n}",
+				map[string]string{},
+			), []string{}),
 		},
 	},
 	// From yaml/stdlib/database-sql.yml
@@ -565,4 +584,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:knp7PcdqK6KhQJuAIiKj59LAExOsk4obRw9yxdBMB87otChb7Grw2l04YGoeV+n0AT0F+qVtkSm0VLUlAKUDYQ=="
+const Checksum = "sha512:g8qWZ1o5wOt/SEUc/1I4PBieKFnhz/GZMOZuspj9iYjlCBFcTXMeJNdAlEg4XS+WKfxfLNnE8H1rmYJbXsI6yg=="

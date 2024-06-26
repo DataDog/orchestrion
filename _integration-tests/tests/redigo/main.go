@@ -3,42 +3,38 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package redigo
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
 	"net/url"
-	"os"
-	"runtime"
+	"orchestrion/integration/validator/trace"
+	"testing"
 	"time"
 
-	"orchestrion/integration"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
-func main() {
-	if os.Getenv("DOCKER_NOT_AVAILABLE") != "" {
-		log.Println("Docker is required to run this test. Exiting with status code 42!")
-		os.Exit(42)
-	}
+type TestCase struct {
+	server *testredis.RedisContainer
+	*redis.Pool
+}
 
+func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
-	server, err := testredis.RunContainer(ctx,
+
+	var err error
+	tc.server, err = testredis.RunContainer(ctx,
+		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		testcontainers.WithImage("redis:7"),
-		testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}),
-		testcontainers.WithHostConfigModifier(func(config *container.HostConfig) {
-			if runtime.GOOS == "windows" {
-				config.NetworkMode = network.NetworkNat
-			}
-		}),
+		testcontainers.WithLogConsumers(testLogConsumer{t}),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
 				wait.ForLog("* Ready to accept connections"),
@@ -48,11 +44,9 @@ func main() {
 		),
 	)
 	if err != nil {
-		log.Fatalf("Failed to start redis test container: %v\n", err)
+		t.Skipf("Failed to start redis test container: %v\n", err)
 	}
-	defer server.Terminate(ctx)
-
-	redisURI, err := server.ConnectionString(ctx)
+	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {
 		log.Fatalf("Failed to obtain connection string: %v\n", err)
 	}
@@ -61,15 +55,10 @@ func main() {
 		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
 	}
 
-	mux := &http.ServeMux{}
-	s := &http.Server{
-		Addr:    "127.0.0.1:8089",
-		Handler: mux,
-	}
-
 	const network = "tcp"
 	address := redisURL.Host
-	pool := &redis.Pool{
+
+	tc.Pool = &redis.Pool{
 		Dial:        func() (redis.Conn, error) { return redis.Dial(network, address) },
 		DialContext: func(ctx context.Context) (redis.Conn, error) { return redis.DialContext(ctx, network, address) },
 		TestOnBorrow: func(c redis.Conn, _ time.Time) error {
@@ -78,49 +67,76 @@ func main() {
 		},
 	}
 
-	func() {
-		client := pool.Get()
-		defer client.Close()
+	client := tc.Pool.Get()
+	defer require.NoError(t, client.Close())
+	_, err = client.Do("SET", "test_key", "test_value")
+	require.NoError(t, err)
+}
 
-		if _, err := client.Do("SET", "test_key", "test_value"); err != nil {
-			log.Fatalf("Failed to insert test data: %v", err)
-		}
-	}()
+func (tc *TestCase) Run(t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+	defer span.Finish()
 
-	mux.HandleFunc("/quit",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Shutdown requested...")
-			defer s.Shutdown(context.Background())
-			w.Write([]byte("Goodbye\n"))
-		})
+	client, err := tc.Pool.GetContext(ctx)
+	require.NoError(t, err)
+	defer client.Close()
 
-	mux.HandleFunc("/",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			client, err := pool.GetContext(r.Context())
-			if err != nil {
-				log.Printf("Could not get client: %v", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "%v\n", err)
-				return
-			}
-			defer client.Close()
+	res, err := client.Do("GET", "test_key", ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
+}
 
-			if res, err := client.Do("GET", "test_key", r.Context()); err != nil {
-				log.Printf("Error: %v\n", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "%v\n", err)
-			} else {
-				w.Write(res.([]byte))
-			}
-		})
+func (tc *TestCase) Teardown(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
 
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
+	assert.NoError(t, tc.Pool.Close())
+	assert.NoError(t, tc.server.Terminate(ctx))
+}
 
-	log.Print(s.ListenAndServe())
+func (tc *TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]any{
+				"resource": "GET",
+				"type":     "redis",
+				"name":     "redis.command",
+				"service":  "redis.conn",
+			},
+			Meta: map[string]any{
+				"redis.raw_command": "GET test_key",
+				"db.system":         "redis",
+				"component":         "gomodule/redigo",
+				"out.network":       "tcp",
+				"out.host":          "localhost",
+				"redis.args_length": "1",
+				"span.kind":         "client",
+			},
+		},
+		{
+			Tags: map[string]any{
+				"resource": "redigo.Conn.Flush",
+				"type":     "redis",
+				"name":     "redis.command",
+				"service":  "redis.conn",
+			},
+			Meta: map[string]any{
+				"redis.raw_command": "GET test_key",
+				"db.system":         "redis",
+				"component":         "gomodule/redigo",
+				"out.network":       "tcp",
+				"out.host":          "localhost",
+				"redis.args_length": "1",
+				"span.kind":         "client",
+			},
+		},
+	}
+}
+
+type testLogConsumer struct {
+	*testing.T
+}
+
+func (t testLogConsumer) Accept(log testcontainers.Log) {
+	t.T.Log(string(log.Content))
 }

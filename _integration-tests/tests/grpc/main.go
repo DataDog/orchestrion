@@ -3,42 +3,72 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package grpc
 
 import (
 	"context"
-	"log"
-	"net/http"
+	"net"
+	"orchestrion/integration/validator/trace"
+	"testing"
 	"time"
 
-	"orchestrion/integration"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/examples/helloworld/helloworld"
 )
 
-var s *http.Server
-
-func main() {
-	go runServer()
-
-	s = &http.Server{
-		Addr:    "127.0.0.1:8083",
-		Handler: http.HandlerFunc(handle),
-	}
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
-	log.Printf("Server shut down: %v", s.ListenAndServe())
+type TestCase struct {
+	*grpc.Server
 }
 
-func handle(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/quit" {
-		log.Println("Shutdown requested...")
-		defer s.Shutdown(context.Background())
-		w.Write([]byte("Goodbye\n"))
-		return
-	}
+func (tc *TestCase) Setup(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:9090")
+	require.NoError(t, err)
 
-	runClient()
-	w.WriteHeader(http.StatusOK)
+	tc.Server = grpc.NewServer()
+	helloworld.RegisterGreeterServer(tc.Server, &server{})
+
+	go func() { require.NoError(t, tc.Server.Serve(lis)) }()
+}
+
+func (tc *TestCase) Run(t *testing.T) {
+	conn, err := grpc.NewClient("127.0.0.1:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	defer func() { require.NoError(t, conn.Close()) }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	client := helloworld.NewGreeterClient(conn)
+	resp, err := client.SayHello(ctx, &helloworld.HelloRequest{Name: "rob"})
+	require.NoError(t, err)
+	require.Equal(t, "Hello rob", resp.GetMessage())
+}
+
+func (tc *TestCase) Teardown(t *testing.T) {
+	tc.Server.GracefulStop()
+}
+
+func (*TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]any{
+				"name":     "grpc.client",
+				"service":  "grpc.client",
+				"resource": "/helloworld.Greeter/SayHello",
+				"type":     "rpc",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":     "grpc.server",
+						"service":  "tests.test",
+						"resource": "/helloworld.Greeter/SayHello",
+						"type":     "rpc",
+					},
+				},
+			},
+		},
+	}
 }

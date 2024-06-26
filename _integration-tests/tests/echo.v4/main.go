@@ -3,36 +3,71 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package echo
 
 import (
 	"context"
-	"log"
+	"io"
 	"net/http"
-	"orchestrion/integration"
+	"orchestrion/integration/validator/trace"
+	"testing"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/require"
 )
 
-func main() {
-	r := echo.New()
-	r.GET("/ping", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]any{
-			"message": "pong",
-		})
+type TestCase struct {
+	*echo.Echo
+}
+
+func (tc *TestCase) Setup(t *testing.T) {
+	tc.Echo = echo.New()
+	tc.Echo.Logger.SetOutput(io.Discard)
+
+	tc.Echo.GET("/ping", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]any{"message": "pong"})
 	})
-	r.GET("/quit", func(c echo.Context) error {
-		log.Println("Shutdown requested...")
-		defer r.Shutdown(context.Background())
-		return c.JSON(http.StatusOK, map[string]any{
-			"message": "Goodbye",
-		})
-	})
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		r.Shutdown(ctx)
-	})
-	log.Print(r.Start("127.0.0.1:8081"))
+
+	go func() { require.ErrorIs(t, tc.Echo.Start("127.0.0.1:8080"), http.ErrServerClosed) }()
+}
+
+func (tc *TestCase) Run(t *testing.T) {
+	resp, err := http.Get("http://127.0.0.1:8080/ping")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func (tc *TestCase) Teardown(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	require.NoError(t, tc.Echo.Shutdown(ctx))
+}
+
+func (*TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
+			Tags: map[string]any{
+				"name":     "http.request",
+				"resource": "GET /ping",
+				"service":  "tests.test",
+				"type":     "http",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":     "http.request",
+						"service":  "tests.test",
+						"resource": "GET /ping",
+						"type":     "web",
+					},
+					Meta: map[string]any{
+						"http.url": "http://127.0.0.1:8080/ping",
+					},
+				},
+			},
+		},
+	}
 }

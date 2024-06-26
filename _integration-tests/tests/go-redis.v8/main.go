@@ -3,35 +3,39 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package goredis
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
 	"net/url"
-	"orchestrion/integration"
-	"os"
+	"orchestrion/integration/validator/trace"
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
 	"github.com/go-redis/redis/v8"
 )
 
-func main() {
-	if os.Getenv("DOCKER_NOT_AVAILABLE") != "" {
-		log.Println("Docker is required to run this test. Exiting with status code 42!")
-		os.Exit(42)
-	}
+type TestCase struct {
+	server *testredis.RedisContainer
+	*redis.Client
+}
 
+func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
-	server, err := testredis.RunContainer(ctx,
+
+	var err error
+	tc.server, err = testredis.RunContainer(ctx,
+		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		testcontainers.WithImage("redis:7"),
-		testcontainers.WithLogConsumers(&testcontainers.StdoutLogConsumer{}),
+		testcontainers.WithLogConsumers(testLogConsumer{t}),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
 				wait.ForLog("* Ready to accept connections"),
@@ -41,11 +45,10 @@ func main() {
 		),
 	)
 	if err != nil {
-		log.Fatalf("Failed to start redis test container: %v\n", err)
+		t.Skipf("Failed to start redis test container: %v\n", err)
 	}
-	defer server.Terminate(ctx)
 
-	redisURI, err := server.ConnectionString(ctx)
+	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {
 		log.Fatalf("Failed to obtain connection string: %v\n", err)
 	}
@@ -54,44 +57,75 @@ func main() {
 		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
 	}
 	addr := redisURL.Host
-	client := redis.NewClient(&redis.Options{Addr: addr})
-	defer client.Close()
+	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
+}
 
-	if err := client.Set(ctx, "test_key", "test_value", 0).Err(); err != nil {
-		log.Fatalf("Failed to insert test data: %v", err)
+func (tc *TestCase) Run(t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+	defer span.Finish()
+
+	require.NoError(t, tc.Client.Set(ctx, "test_key", "test_value", 0).Err())
+	require.NoError(t, tc.Client.Get(ctx, "test_key").Err())
+}
+
+func (tc *TestCase) Teardown(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	assert.NoError(t, tc.Client.Close())
+	assert.NoError(t, tc.server.Terminate(ctx))
+}
+
+func (*TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]any{
+				"name": "test.root",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":     "redis.command",
+						"service":  "redis.client",
+						"resource": "set",
+						"type":     "redis",
+					},
+					Meta: map[string]any{
+						"redis.args_length": "3",
+						"component":         "go-redis/redis.v8",
+						"out.db":            "0",
+						"span.kind":         "client",
+						"db.system":         "redis",
+						"redis.raw_command": "set test_key test_value:",
+						"out.host":          "localhost",
+					},
+				},
+				{
+					Tags: map[string]any{
+						"name":     "redis.command",
+						"service":  "redis.client",
+						"resource": "get",
+						"type":     "redis",
+					},
+					Meta: map[string]any{
+						"redis.args_length": "2",
+						"component":         "go-redis/redis.v8",
+						"out.db":            "0",
+						"span.kind":         "client",
+						"db.system":         "redis",
+						"redis.raw_command": "get test_key:",
+						"out.host":          "localhost",
+					},
+				},
+			},
+		},
 	}
+}
 
-	mux := &http.ServeMux{}
-	s := &http.Server{
-		Addr:    "127.0.0.1:8091",
-		Handler: mux,
-	}
+type testLogConsumer struct {
+	*testing.T
+}
 
-	mux.HandleFunc("/quit",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Shutdown requested...")
-			defer s.Shutdown(ctx)
-			w.Write([]byte("Goodbye\n"))
-		})
-
-	mux.HandleFunc("/",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			if res, err := client.Get(r.Context(), "test_key").Result(); err != nil {
-				log.Printf("Error: %v\n", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "%v\n", err)
-			} else {
-				w.Write([]byte(res))
-			}
-		})
-
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
-
-	log.Print(s.ListenAndServe())
+func (t testLogConsumer) Accept(log testcontainers.Log) {
+	t.T.Log(string(log.Content))
 }
