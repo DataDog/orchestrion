@@ -115,7 +115,7 @@ jobs:
       - name: Consolidate coverage report
         if: always() && github.event_name != 'merge_group'
         run: |-
-          mkdir ./coverage
+          mkdir -p ./coverage
           go tool covdata textfmt -i ./coverage/raw -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
