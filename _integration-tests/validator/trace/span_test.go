@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -56,18 +55,10 @@ func TestMatchesAny(t *testing.T) {
 				require.Empty(t, diff, 0)
 			} else {
 				require.NotEmpty(t, diff)
-				golden.AssertBytes(t, normalize(diff.String()), goldFile)
+				golden.Assert(t, strings.TrimSpace(diff.String()), goldFile)
 			}
 		})
 	}
-}
-
-// normalize ensures strings always look the same, including on Windows, regardless of environment
-// or git settings.
-func normalize(text string) []byte {
-	nl := regexp.MustCompile(`\r\n?`)
-	text = nl.ReplaceAllString(text, "\n")
-	return []byte(text)
 }
 
 func renderDiff(diff []Diff) []byte {
