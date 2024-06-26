@@ -102,7 +102,7 @@ jobs:
       - name: Run Integration Tests
         run: |-
           mkdir -p ${GOCOVERDIR}
-          go -cover -covermode=atomic -coverpkg=./... run . go -C _integration-tests test -v ./...
+          go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
         env:
           GOCOVERDIR: ./coverage/raw
       - name: Run Integration Tests
