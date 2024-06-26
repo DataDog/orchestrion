@@ -55,10 +55,17 @@ func TestMatchesAny(t *testing.T) {
 				require.Empty(t, diff, 0)
 			} else {
 				require.NotEmpty(t, diff)
-				golden.Assert(t, diff.String(), goldFile)
+				golden.Assert(t, normalize(diff.String()), goldFile)
 			}
 		})
 	}
+}
+
+// normalize ensures strings always look the same, including on Windows, regardless of environment
+// or git settings.
+func normalize(text string) string {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	return text
 }
 
 func renderDiff(diff []Diff) []byte {
