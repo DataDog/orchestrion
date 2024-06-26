@@ -7,11 +7,15 @@ package linkdeps
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/datadog/orchestrion/internal/log"
 )
 
 const (
@@ -24,6 +28,22 @@ const (
 // LinkDeps represents the contents of a link.deps file.
 type LinkDeps struct {
 	deps map[string]struct{}
+}
+
+// FromArchive reads a link.deps file from the provided Go archive file. Returns
+// an empty LinkDeps if the archive does not contain a link.deps file.
+func FromArchive(importPath, archive string) (res LinkDeps, err error) {
+	var data io.Reader
+	data, err = readArchiveData(archive, LinkDepsFilename)
+	if err != nil {
+		return res, fmt.Errorf("reading %s from %s[%s]: %w", LinkDepsFilename, importPath, archive, err)
+	}
+	if data == nil {
+		return
+	}
+
+	log.Tracef("Found %s file in %s[%s]\n", LinkDepsFilename, importPath, archive)
+	return Read(data)
 }
 
 // ReadFile reads a link.deps file from the provided filename.
@@ -139,4 +159,32 @@ func (l *LinkDeps) Write(w io.Writer) error {
 	}
 
 	return nil
+}
+
+// readArchiveData returns the content of the given entry from the provided archive file. If there
+// is no such entry in the archive, a nil io.Reader and no error is returned.
+func readArchiveData(archive, entry string) (io.Reader, error) {
+	var list, data bytes.Buffer
+	cmd := exec.Command("go", "tool", "pack", "t", archive)
+	cmd.Stdout = &list
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("running `go tool pack t %q`: %w", archive, err)
+	}
+	for {
+		line, err := list.ReadString('\n')
+		if err == io.EOF {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("reading pack list from %q: %w", archive, err)
+		}
+		if line[:len(line)-1] == entry {
+			// Found it!
+			break
+		}
+	}
+
+	cmd = exec.Command("go", "tool", "pack", "p", archive, entry)
+	cmd.Stdout = &data
+	return &data, cmd.Run()
 }

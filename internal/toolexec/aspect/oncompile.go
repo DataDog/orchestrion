@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/aspect"
@@ -71,7 +73,8 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	injector, err := injector.New(cmd.SourceDir, injector.Options{
-		Aspects: aspects,
+		Aspects:      aspects,
+		IncludeTests: slices.ContainsFunc(cmd.GoFiles(), func(name string) bool { return strings.HasSuffix(strings.ToLower(name), "_test.go") }),
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", filepath.Base(file))
 		},
@@ -114,7 +117,23 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		regUpdated bool
 	)
 	for depImportPath, kind := range references {
-		if _, ok := reg.PackageFile[depImportPath]; ok || depImportPath == "unsafe" {
+		if depImportPath == "unsafe" {
+			// Unsafe isn't like other go packages, and it does not have an associated archive file.
+			continue
+		}
+
+		if archive, ok := reg.PackageFile[depImportPath]; ok {
+			deps, err := linkdeps.FromArchive(depImportPath, archive)
+			if err != nil {
+				return err
+			}
+			for _, tDep := range deps.Dependencies() {
+				if _, found := reg.PackageFile[tDep]; !found {
+					log.Debugf("Copying %s dependency on %q inherited from %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath)
+					linkDeps.Add(tDep)
+				}
+			}
+
 			// Already part of natural dependencies, nothing to do...
 			continue
 		}
@@ -129,11 +148,22 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 			}
 			for dep, archive := range deps {
+				deps, err := linkdeps.FromArchive(depImportPath, archive)
+				if err != nil {
+					return err
+				}
+				for _, tDep := range deps.Dependencies() {
+					if _, found := reg.PackageFile[tDep]; !found {
+						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath, dep)
+						linkDeps.Add(tDep)
+					}
+				}
+
 				if _, ok := reg.PackageFile[dep]; ok {
 					// Already part of natural dependencies, nothing to do...
 					continue
 				}
-				log.Debugf("Recording transitive dependency: %q => %q\n", dep, archive)
+				log.Debugf("Recording transitive dependency of %q: %q => %q\n", depImportPath, dep, archive)
 				reg.PackageFile[dep] = archive
 				regUpdated = true
 			}

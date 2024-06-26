@@ -100,6 +100,12 @@ jobs:
         with:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
+        run: |-
+          mkdir -P ${GOCOVERDIR}
+          go -cover -covermode=atomic -coverpkg=./... run . go -C _integration-tests test -v ./...
+        env:
+          GOCOVERDIR: ./_integration-tests/outputs/coverage
+      - name: Run Integration Tests
         run: ./integration-tests.ps1
         env:
           TESTCASE_BUILD_MODE: ${{ matrix.build-mode || 'DRIVER' }}

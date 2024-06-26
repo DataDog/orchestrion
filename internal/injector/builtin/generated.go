@@ -116,6 +116,19 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From yaml/directive/orchestrion-enabled.yml
+	{
+		JoinPoint: join.AllOf(
+			join.HasDirective("dd:orchestrion-enabled"),
+			join.ValueDeclaration(join.MustTypeName("bool")),
+		),
+		Advice: []advice.Advice{
+			advice.AssignValue(code.MustTemplate(
+				"true",
+				map[string]string{},
+			)),
+		},
+	},
 	// From yaml/go-main.yml
 	{
 		JoinPoint: join.AllOf(
@@ -495,7 +508,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
 			advice.AddBlankImport("unsafe"),
 			advice.InjectDeclarations(code.MustTemplate(
-				"//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nfunc __dd_orchestrion_gls_get() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nfunc __dd_orchestrion_gls_set(val any) {\n  getg().m.curg.__dd_gls = val\n}",
+				"//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nvar __dd_orchestrion_gls_get = func() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nvar __dd_orchestrion_gls_set = func(val any) {\n  getg().m.curg.__dd_gls = val\n}",
 				map[string]string{},
 			), []string{}),
 		},
@@ -565,4 +578,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:knp7PcdqK6KhQJuAIiKj59LAExOsk4obRw9yxdBMB87otChb7Grw2l04YGoeV+n0AT0F+qVtkSm0VLUlAKUDYQ=="
+const Checksum = "sha512:0PlyCAKxjaooSAsoRWccFwx4S/P0XKXXPDiQGuo1ey2etJQDx7jizmzmoSf6kINbGiCgAFn4JXuitJY8mpUfZQ=="
