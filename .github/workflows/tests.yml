@@ -52,7 +52,7 @@ jobs:
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: |-
-          mkdir -p coverage
+          mkdir -p ./coverage
           go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
@@ -114,6 +114,7 @@ jobs:
           TESTCASE_BUILD_MODE: ${{ matrix.build-mode }}
       - name: Consolidate coverage report
         if: always() && github.event_name != 'merge_group'
+        shell: bash # PowerShell mkdir -p fails if the directory already exists...
         run: |-
           mkdir -p ./coverage
           go tool covdata textfmt -i ./coverage/raw -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
