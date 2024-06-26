@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -64,7 +65,8 @@ func TestMatchesAny(t *testing.T) {
 // normalize ensures strings always look the same, including on Windows, regardless of environment
 // or git settings.
 func normalize(text string) string {
-	text = strings.ReplaceAll(text, "\r\n", "\n")
+	nl := regexp.MustCompile(`\r\n?`)
+	text = nl.ReplaceAllString(text, "\n")
 	return text
 }
 
