@@ -101,10 +101,10 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         run: |-
-          mkdir -P ${GOCOVERDIR}
+          mkdir -p ${GOCOVERDIR}
           go -cover -covermode=atomic -coverpkg=./... run . go -C _integration-tests test -v ./...
         env:
-          GOCOVERDIR: ./_integration-tests/outputs/coverage
+          GOCOVERDIR: ./coverage/raw
       - name: Run Integration Tests
         run: ./integration-tests.ps1
         env:
@@ -113,7 +113,7 @@ jobs:
         if: always() && github.event_name != 'merge_group'
         run: |-
           mkdir ./coverage
-          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
+          go tool covdata textfmt -i ./coverage/raw -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
