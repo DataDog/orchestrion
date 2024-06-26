@@ -77,6 +77,7 @@ jobs:
       matrix:
         runs-on: [macos, ubuntu, windows]
         go-version: ['1.21', '1.22', '1.23.0-rc.1']
+        build-mode: [DRIVER]
         include:
           # Alternate build modes (only on ubuntu, latest go; to save CI time)
           - runs-on: ubuntu
@@ -86,7 +87,7 @@ jobs:
             go-version: '1.22'
             build-mode: GOFLAGS
     runs-on: ${{ matrix.runs-on }}-latest
-    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode || 'DRIVER' }})
+    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,7 +102,7 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         shell: bash # PowerShell has different syntax for env. var access...
-        if: (matrix.build-mode || 'DRIVER') == 'DRIVER'
+        if: matrix.build-mode == 'DRIVER'
         run: |-
           mkdir -p ${GOCOVERDIR}
           go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
@@ -110,7 +111,7 @@ jobs:
       - name: Run Integration Tests
         run: ./integration-tests.ps1
         env:
-          TESTCASE_BUILD_MODE: ${{ matrix.build-mode || 'DRIVER' }}
+          TESTCASE_BUILD_MODE: ${{ matrix.build-mode }}
       - name: Consolidate coverage report
         if: always() && github.event_name != 'merge_group'
         run: |-
@@ -131,7 +132,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
           file: ./coverage/integration.out
-          name: Integration Tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode || 'DRIVER' }})
+          name: Integration Tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
       - name: Upload artifact
         # We want this even if the tests failed
         if: always()
