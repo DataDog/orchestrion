@@ -100,11 +100,12 @@ jobs:
         with:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
+        if: (matrix.build-mode || 'DRIVER') == 'DRIVER'
         run: |-
           mkdir -p ${GOCOVERDIR}
           go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
         env:
-          GOCOVERDIR: ./coverage/raw
+          GOCOVERDIR: ${{ github.workspace }}/coverage/raw
       - name: Run Integration Tests
         run: ./integration-tests.ps1
         env:
