@@ -138,7 +138,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.runs-on }}-tests-${{ matrix.go-version }}-output
+          name: ${{ matrix.runs-on }}-tests-${{ matrix.go-version }}-${{ matrix.build-mode }}-output
           path: _integration-tests/outputs
           if-no-files-found: error # That would be very unexpected
 
