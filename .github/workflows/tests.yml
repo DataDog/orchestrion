@@ -114,7 +114,7 @@ jobs:
             go -C=_integration-tests test -toolexec="${{ github.workspace }}/bin/orchestrion toolexec" -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile="${{ github.workspace }}/coverage/integration.tests.out" ./...
             ;;
           "GOFLAGS")
-            export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion toolexec'"
+            export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion toolexec' ${GOFLAGS}"
             go -C=_integration-tests test -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile="${{ github.workspace }}/coverage/integration.tests.out" ./...
             ;;
           *)
@@ -124,6 +124,7 @@ jobs:
           esac
         env:
           GOCOVERDIR: ./coverage/raw
+          GOFLAGS: -tags=integration,buildtag # Globally set build tags
       - name: Consolidate coverage report
         if: always() && github.event_name != 'merge_group'
         run: |-
