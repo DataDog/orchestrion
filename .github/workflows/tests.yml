@@ -101,7 +101,7 @@ jobs:
         with:
           python-version: '>=3.9 <3.13'
       - name: Build orchestrion binary
-        run: go build -cover -covermode=atomic -coverpkg=./... -o bin/orchestrion .
+        run: go build -cover -covermode=atomic -coverpkg="./..." -o=bin/orchestrion .
       - name: Run Integration Tests
         shell: bash
         run: |-
