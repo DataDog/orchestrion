@@ -102,7 +102,6 @@ jobs:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
         shell: bash # PowerShell has different syntax for env. var access...
-        if: matrix.build-mode == 'DRIVER'
         run: |-
           mkdir -p ${GOCOVERDIR}
           go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
