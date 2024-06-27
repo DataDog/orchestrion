@@ -118,7 +118,7 @@ jobs:
         shell: bash # PowerShell mkdir -p fails if the directory already exists...
         run: |-
           mkdir -p ./coverage
-          go tool covdata textfmt -i ./coverage/raw -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
+          go tool covdata textfmt -i ./coverage/raw,./_integration-tests/outputs/coverage -o ./coverage/integration.out
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
