@@ -29,4 +29,3 @@ Root
                     └── [±]  span.kind
                         ├── [-]  client
                         └── [+]  <nil>
-            
