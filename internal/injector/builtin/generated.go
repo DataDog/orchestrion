@@ -87,9 +87,11 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From yaml/dd-span.yml
 	{
-		JoinPoint: join.FunctionBody(join.Function(
+		JoinPoint: join.FunctionBody(join.AllOf(
 			join.Directive("dd:span"),
-			join.Receives(join.MustTypeName("context.Context")),
+			join.Function(
+				join.Receives(join.MustTypeName("context.Context")),
+			),
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
@@ -102,9 +104,11 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.FunctionBody(join.Function(
+		JoinPoint: join.FunctionBody(join.AllOf(
+			join.Function(
+				join.Receives(join.MustTypeName("*net/http.Request")),
+			),
 			join.Directive("dd:span"),
-			join.Receives(join.MustTypeName("*net/http.Request")),
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
@@ -119,7 +123,7 @@ var Aspects = [...]aspect.Aspect{
 	// From yaml/directive/orchestrion-enabled.yml
 	{
 		JoinPoint: join.AllOf(
-			join.HasDirective("dd:orchestrion-enabled"),
+			join.Directive("dd:orchestrion-enabled"),
 			join.ValueDeclaration(join.MustTypeName("bool")),
 		),
 		Advice: []advice.Advice{
@@ -578,4 +582,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:0PlyCAKxjaooSAsoRWccFwx4S/P0XKXXPDiQGuo1ey2etJQDx7jizmzmoSf6kINbGiCgAFn4JXuitJY8mpUfZQ=="
+const Checksum = "sha512:WKkXiaLL0ojNa4k6DizJO19b5QMf0i7CcXSjWxJDRiZcP9vFzb3QrSZdrVW8nT5xi9PFq5b3Mb3qQVGyNLQMtA=="

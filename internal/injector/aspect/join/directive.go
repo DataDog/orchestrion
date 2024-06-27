@@ -15,13 +15,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type hasDirective string
+type directive string
 
-func HasDirective(name string) hasDirective {
-	return hasDirective(name)
+func Directive(name string) directive {
+	return directive(name)
 }
 
-func (d hasDirective) Matches(node *node.Chain) bool {
+func (d directive) Matches(node *node.Chain) bool {
 	re := regexp.MustCompile(fmt.Sprintf(`\s*//%s(?:\s.*)?$`, regexp.QuoteMeta(string(d))))
 	for _, dec := range node.Node.Decorations().Start.All() {
 		if re.MatchString(dec) {
@@ -29,20 +29,27 @@ func (d hasDirective) Matches(node *node.Chain) bool {
 		}
 	}
 
-	if _, isSpec := node.Node.(dst.Spec); isSpec {
-		// This is a spec (variable, const, import), so we need to also check the parent for directives!
-		return d.Matches(node.Parent())
+	// If this is a spec (variable, const, import), so we need to also check the parent for directives!
+	if _, isSpec := node.Node.(dst.Spec); isSpec && d.Matches(node.Parent()) {
+		return true
+	}
+
+	// If the parent is an assignment statement, so we also check it for directives.
+	if parent := node.Parent(); parent != nil {
+		if _, isAssign := parent.Node.(*dst.AssignStmt); isAssign && d.Matches(parent) {
+			return true
+		}
 	}
 
 	return false
 }
 
-func (hasDirective) ImpliesImported() []string {
+func (directive) ImpliesImported() []string {
 	return nil
 }
 
-func (d hasDirective) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "HasDirective").Call(jen.Lit(string(d)))
+func (d directive) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(string(d)))
 }
 
 func init() {
@@ -51,6 +58,6 @@ func init() {
 		if err := node.Decode(&name); err != nil {
 			return nil, err
 		}
-		return HasDirective(name), nil
+		return Directive(name), nil
 	}
 }
