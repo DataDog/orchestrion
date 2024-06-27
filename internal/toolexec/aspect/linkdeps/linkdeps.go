@@ -14,8 +14,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-
-	"github.com/datadog/orchestrion/internal/log"
 )
 
 const (
@@ -32,17 +30,15 @@ type LinkDeps struct {
 
 // FromArchive reads a link.deps file from the provided Go archive file. Returns
 // an empty LinkDeps if the archive does not contain a link.deps file.
-func FromArchive(importPath, archive string) (res LinkDeps, err error) {
+func FromArchive(archive string) (res LinkDeps, err error) {
 	var data io.Reader
 	data, err = readArchiveData(archive, LinkDepsFilename)
 	if err != nil {
-		return res, fmt.Errorf("reading %s from %s[%s]: %w", LinkDepsFilename, importPath, archive, err)
+		return res, fmt.Errorf("reading %s from %q: %w", LinkDepsFilename, archive, err)
 	}
 	if data == nil {
 		return
 	}
-
-	log.Tracef("Found %s file in %s[%s]\n", LinkDepsFilename, importPath, archive)
 	return Read(data)
 }
 

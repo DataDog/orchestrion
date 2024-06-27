@@ -123,10 +123,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		}
 
 		if archive, ok := reg.PackageFile[depImportPath]; ok {
-			deps, err := linkdeps.FromArchive(depImportPath, archive)
+			deps, err := linkdeps.FromArchive(archive)
 			if err != nil {
-				return err
+				return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, depImportPath, err)
 			}
+			log.Debugf("Processing %s dependencies from %s[%s]...", linkdeps.LinkDepsFilename, depImportPath, archive)
 			for _, tDep := range deps.Dependencies() {
 				if _, found := reg.PackageFile[tDep]; !found {
 					log.Debugf("Copying %s dependency on %q inherited from %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath)
@@ -148,10 +149,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 			}
 			for dep, archive := range deps {
-				deps, err := linkdeps.FromArchive(depImportPath, archive)
+				deps, err := linkdeps.FromArchive(archive)
 				if err != nil {
-					return err
+					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.LinkDepsFilename, dep, archive, err)
 				}
+				log.Debugf("Processing %s dependencies from %s...", linkdeps.LinkDepsFilename, dep)
 				for _, tDep := range deps.Dependencies() {
 					if _, found := reg.PackageFile[tDep]; !found {
 						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath, dep)
