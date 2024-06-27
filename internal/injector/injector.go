@@ -104,13 +104,12 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 		}
 
 		for _, pkg := range pkgs {
-			switch len(pkg.Errors) {
-			case 0:
-				// Nothing to do, this is a success!
-			case 1:
-				return nil, pkg.Errors[0]
-			default:
-				return nil, fmt.Errorf("%w (and %d more)", pkg.Errors[0], len(pkg.Errors)-1)
+			if len(pkg.Errors) > 0 {
+				errs := make([]error, len(pkg.Errors))
+				for i := range pkg.Errors {
+					errs[i] = pkg.Errors[i]
+				}
+				return nil, errors.Join(errs...)
 			}
 
 			if pkgPath == "" {
