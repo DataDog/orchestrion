@@ -63,7 +63,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				{
 					Tags: map[string]any{
 						"name":     "grpc.server",
-						"service":  "tests.test",
+						"service":  "grpc.server",
 						"resource": "/helloworld.Greeter/SayHello",
 						"type":     "rpc",
 					},

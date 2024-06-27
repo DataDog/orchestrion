@@ -53,7 +53,7 @@ jobs:
       - name: Run unit tests
         run: |-
           mkdir -p coverage
-          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
+          go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
@@ -108,14 +108,14 @@ jobs:
           mkdir -p "${GOCOVERDIR}"
           case "${{ matrix.build-mode }}" in
           "DRIVER")
-            bin/orchestrion go -C=_integration-tests test ./...
+            bin/orchestrion go -C=_integration-tests test -shuffle=on ./...
             ;;
           "TOOLEXEC")
-            go -C=_integration-tests test -toolexec="${{ github.workspace }}/bin/orchestrion toolexec" ./...
+            go -C=_integration-tests test -shuffle=on -toolexec="${{ github.workspace }}/bin/orchestrion toolexec" ./...
             ;;
           "GOFLAGS")
             export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion toolexec' ${GOFLAGS}"
-            go -C=_integration-tests test ./...
+            go -C=_integration-tests test -shuffle=on ./...
             ;;
           *)
             echo "Unknown build mode: ${{ matrix.build-mode }}"

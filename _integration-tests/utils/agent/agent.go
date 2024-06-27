@@ -116,7 +116,6 @@ func (a *MockAgent) NewSession(t *testing.T) (session *mockSession, err error) {
 		tracer.WithSampler(tracer.NewAllSampler()),
 		tracer.WithLogStartup(false),
 		tracer.WithLogger(testLogger{t}),
-		tracer.WithService("tests.test"),
 	)
 
 	return session, nil

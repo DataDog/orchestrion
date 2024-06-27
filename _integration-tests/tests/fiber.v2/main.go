@@ -52,7 +52,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
-						"service":  "tests.test",
+						"service":  "fiber",
 						"resource": "GET /ping",
 						"type":     "web",
 					},
