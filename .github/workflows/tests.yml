@@ -105,7 +105,7 @@ jobs:
         if: matrix.build-mode == 'DRIVER'
         run: |-
           mkdir -p ${GOCOVERDIR}
-          go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
+          go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -a -v ./...
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
       - name: Run Integration Tests
