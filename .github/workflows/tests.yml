@@ -108,14 +108,14 @@ jobs:
           mkdir -p "${GOCOVERDIR}"
           case "${{ matrix.build-mode }}" in
           "DRIVER")
-            bin/orchestrion go -C=_integration-tests test -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile="${{ github.workspace }}/coverage/integration.tests.out" ./...
+            bin/orchestrion go -C=_integration-tests test ./...
             ;;
           "TOOLEXEC")
-            go -C=_integration-tests test -toolexec="${{ github.workspace }}/bin/orchestrion toolexec" -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile="${{ github.workspace }}/coverage/integration.tests.out" ./...
+            go -C=_integration-tests test -toolexec="${{ github.workspace }}/bin/orchestrion toolexec" ./...
             ;;
           "GOFLAGS")
             export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion toolexec' ${GOFLAGS}"
-            go -C=_integration-tests test -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile="${{ github.workspace }}/coverage/integration.tests.out" ./...
+            go -C=_integration-tests test ./...
             ;;
           *)
             echo "Unknown build mode: ${{ matrix.build-mode }}"
@@ -126,25 +126,22 @@ jobs:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: -tags=integration,buildtag # Globally set build tags
       - name: Consolidate coverage report
-        if: always() && github.event_name != 'merge_group'
-        run: |-
-          mkdir ./coverage
-          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
+        if: github.event_name != 'merge_group'
+        run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
       - name: Determine simple go version
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         id: simple-go-version
         run: echo "::set-output name=version::${COMPLETE_VERSION:0:4}"
         shell: bash
         env:
           COMPLETE_VERSION: ${{ matrix.go-version }}
       - name: Upload coverage report
-        # We want this even if the tests failed
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
-          file: ./coverage/integration.out
+          files: ./coverage/integration.out
           name: Integration Tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
 
   # This is just a join point intended to simplify branch protection settings
