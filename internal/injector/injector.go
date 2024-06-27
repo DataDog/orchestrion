@@ -169,44 +169,9 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 
 	res.Filename = filename
 
-	var (
-		file      *dst.File
-		decorator *decorator.Decorator = i.decorators[0] // Fall back to the first decorator
-	)
-	{
-		stat, err := os.Stat(filename)
-		if err != nil {
-			return res, err
-		}
-	out:
-		for _, dec := range i.decorators {
-			for node, name := range dec.Filenames {
-				if name == "" {
-					// A bunch of synthetic nodes won't have a file name.
-					continue
-				}
-				s, err := os.Stat(name)
-				if err != nil {
-					continue
-				}
-				if os.SameFile(stat, s) {
-					file = node
-					decorator = dec
-					break out
-				}
-			}
-		}
-	}
-
-	if file == nil {
-		src, err := os.ReadFile(filename)
-		if err != nil {
-			return res, err
-		}
-
-		if file, err = decorator.ParseFile(filename, src, parser.ParseComments); err != nil {
-			return res, err
-		}
+	file, decorator, err := i.lookupDecoratedFile(filename)
+	if err != nil {
+		return res, err
 	}
 
 	ctx := typed.ContextWithValue(context.Background(), decorator)
@@ -228,6 +193,42 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 	}
 
 	return res, err
+}
+
+func (i *Injector) lookupDecoratedFile(filename string) (*dst.File, *decorator.Decorator, error) {
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, dec := range i.decorators {
+		for node, name := range dec.Filenames {
+			if name == "" {
+				// A bunch of synthetic nodes won't have a file name.
+				continue
+			}
+			s, err := os.Stat(name)
+			if err != nil {
+				continue
+			}
+			if os.SameFile(stat, s) {
+				return node, dec, nil
+			}
+		}
+	}
+
+	src, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	decorator := i.decorators[0]
+	file, err := decorator.ParseFile(filename, src, parser.ParseComments)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return file, decorator, nil
 }
 
 // inject performs all configured injections on the specified file. It returns whether the file was
