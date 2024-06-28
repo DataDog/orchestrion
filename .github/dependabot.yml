@@ -1,0 +1,28 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      dependency-type: direct
+
+  - package-ecosystem: gomod
+    directory: /_integration-tests
+    schedule:
+      interval: daily
+    allow:
+      dependency-type: direct
+
+  - package-ecosystem: gomod
+    directory: /samples
+    schedule:
+      interval: daily
+    allow:
+      dependency-type: direct

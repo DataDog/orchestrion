@@ -23,7 +23,7 @@ require (
 	github.com/xlab/treeprint v1.2.0
 	google.golang.org/grpc v1.64.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
-	gopkg.in/DataDog/dd-trace-go.v1 v1.65.0-rc.2
+	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
 	gorm.io/driver/sqlite v1.5.5
 	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
 	gotest.tools/v3 v3.5.1
