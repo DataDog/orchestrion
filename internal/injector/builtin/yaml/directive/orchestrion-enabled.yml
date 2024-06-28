@@ -1,0 +1,9 @@
+%YAML 1.1
+---
+- join-point:
+    all-of:
+      - directive: dd:orchestrion-enabled
+      - value-declaration: bool
+  advice:
+    - assign-value:
+        template: true

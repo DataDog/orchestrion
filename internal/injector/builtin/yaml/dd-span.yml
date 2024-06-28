@@ -6,9 +6,10 @@
 ---
 - join-point:
     function-body:
-      function:
-        - directive: 'dd:span'
-        - receives: context.Context
+      all-of:
+        - directive: dd:span
+        - function:
+            - receives: context.Context
   advice:
     prepend-statements:
       imports:
@@ -28,9 +29,10 @@
 
 - join-point:
     function-body:
-      function:
+      all-of:
+        - function:
+            - receives: '*net/http.Request'
         - directive: 'dd:span'
-        - receives: '*net/http.Request'
   advice:
     prepend-statements:
       imports:

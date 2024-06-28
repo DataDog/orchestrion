@@ -38,20 +38,13 @@ func (w Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 	}
 
 	var addImports []string
-	for _, archive := range reg.PackageFile {
-		data, err := readArchiveData(archive, linkdeps.LinkDepsFilename)
+	for importPath, archive := range reg.PackageFile {
+		linkDeps, err := linkdeps.FromArchive(archive)
 		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
-		} else if data == nil {
-			continue
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, importPath, err)
 		}
 
-		log.Tracef("Found %s file in %q\n", linkdeps.LinkDepsFilename, archive)
-		linkDeps, err := linkdeps.Read(data)
-		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
-		}
-
+		log.Debugf("Processing %s dependencies from %s[%s]...", linkdeps.LinkDepsFilename, importPath, archive)
 		for _, depPath := range linkDeps.Dependencies() {
 			if arch, found := reg.PackageFile[depPath]; found {
 				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, depPath, arch)
