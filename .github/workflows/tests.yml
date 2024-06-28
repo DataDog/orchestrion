@@ -103,6 +103,10 @@ jobs:
       - name: Run Integration Tests
         shell: bash # PowerShell has different syntax for env. var access...
         run: |-
+          # Without orchestrion enabled
+          go -C _integration-tests test -v ./...
+
+          # With orchestrion enabled
           mkdir -p ${GOCOVERDIR}
           go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
         env:
