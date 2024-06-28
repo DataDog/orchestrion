@@ -522,10 +522,11 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
 		Advice: []advice.Advice{
+			advice.AddBlankImport("unsafe"),
 			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
 			advice.AddBlankImport("unsafe"),
 			advice.InjectDeclarations(code.MustTemplate(
-				"//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nfunc __dd_orchestrion_gls_get() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nfunc __dd_orchestrion_gls_set(val any) {\n  getg().m.curg.__dd_gls = val\n}",
+				"//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nvar __dd_orchestrion_gls_get = func() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nvar __dd_orchestrion_gls_set = func(val any) {\n  getg().m.curg.__dd_gls = val\n}",
 				map[string]string{},
 			), []string{}),
 		},
@@ -595,4 +596,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:rsdxI7L3776sVLhkOBAVy/OPJ9xpns5J4Fti5H6ceS8f5By+fXZYrbHPF7+WgMZvgtT1KwYf1wrAwgoheH5xCw=="
+const Checksum = "sha512:foG1i7rMPnN/nt8tW6WpNdlVjTZAz+Ss6VmooOyBa+9PX8Ajvazx6nF/dp6Pet5q1Gs9A6mRO02VgJI+l/Il2A=="
