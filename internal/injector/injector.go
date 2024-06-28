@@ -87,8 +87,6 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 		if tags, hasTags := flags.Get("-tags"); hasTags {
 			cfg.BuildFlags = append(cfg.BuildFlags, fmt.Sprintf("-tags=%s", tags))
 		}
-	} else {
-		cfg.BuildFlags = append(cfg.BuildFlags, "-tags=integration")
 	}
 
 	var (
