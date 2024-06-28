@@ -87,9 +87,11 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From dd-span.yml
 	{
-		JoinPoint: join.FunctionBody(join.Function(
+		JoinPoint: join.FunctionBody(join.AllOf(
 			join.Directive("dd:span"),
-			join.Receives(join.MustTypeName("context.Context")),
+			join.Function(
+				join.Receives(join.MustTypeName("context.Context")),
+			),
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
@@ -102,9 +104,11 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.FunctionBody(join.Function(
+		JoinPoint: join.FunctionBody(join.AllOf(
 			join.Directive("dd:span"),
-			join.Receives(join.MustTypeName("*net/http.Request")),
+			join.Function(
+				join.Receives(join.MustTypeName("*net/http.Request")),
+			),
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
@@ -113,6 +117,19 @@ var Aspects = [...]aspect.Aspect{
 					"event":      "github.com/datadog/orchestrion/instrument/event",
 					"instrument": "github.com/datadog/orchestrion/instrument",
 				},
+			)),
+		},
+	},
+	// From directive/orchestrion-enabled.yml
+	{
+		JoinPoint: join.AllOf(
+			join.Directive("dd:orchestrion-enabled"),
+			join.ValueDeclaration(join.MustTypeName("bool")),
+		),
+		Advice: []advice.Advice{
+			advice.AssignValue(code.MustTemplate(
+				"true",
+				map[string]string{},
 			)),
 		},
 	},
@@ -578,4 +595,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:A/nIDxbQFW6jvKmm0z55cru9tkzxR2DtLrETjxXz2eMbcuqul2xvFZnkwaocCTAq9SO1srjNjgYPIbr7tF7SDQ=="
+const Checksum = "sha512:rsdxI7L3776sVLhkOBAVy/OPJ9xpns5J4Fti5H6ceS8f5By+fXZYrbHPF7+WgMZvgtT1KwYf1wrAwgoheH5xCw=="

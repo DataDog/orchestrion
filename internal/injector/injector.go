@@ -11,6 +11,7 @@ package injector
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -33,11 +34,11 @@ import (
 type (
 	// Injector injects go code into a program.
 	Injector struct {
-		fileset   *token.FileSet
-		decorator *decorator.Decorator
-		restorer  *decorator.Restorer
-		opts      Options
-		mutex     sync.Mutex // Guards access to InjectFile
+		fileset    *token.FileSet
+		decorators []*decorator.Decorator
+		restorer   *decorator.Restorer
+		opts       Options
+		mutex      sync.Mutex // Guards access to InjectFile
 	}
 
 	// ModifiedFileFn is called with the original file and must return the path to use when writing a modified version.
@@ -49,6 +50,8 @@ type (
 		// Dir is the working directory to use for resolving dependencies, etc... If blank, the current working directory is
 		// used.
 		Dir string
+		// IncludeTests requests test files to be prepared for injection, too.
+		IncludeTests bool
 		// ModifiedFile is called to obtain the file name to use when writing a modified file. If nil, the original file is
 		// overwritten in-place.
 		ModifiedFile ModifiedFileFn
@@ -76,6 +79,7 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 			packages.NeedTypesSizes |
 			packages.NeedSyntax |
 			packages.NeedTypesInfo,
+		Tests: opts.IncludeTests,
 	}
 	if flags, err := goflags.Flags(); err == nil {
 		// Honor any `-tags`  flags provided by the user, as these may affect what
@@ -87,44 +91,63 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 
 	var (
 		pkgPath     string
-		dec         *decorator.Decorator
+		decorators  []*decorator.Decorator
 		restorerMap map[string]string
 	)
 	if pkgs, err := decorator.Load(cfg, pkgDir); err != nil {
 		return nil, err
 	} else {
-		pkg := pkgs[0]
-		switch len(pkg.Errors) {
-		case 0:
-			// Nothing to do, this is a success!
-		case 1:
-			return nil, pkg.Errors[0]
-		default:
-			return nil, fmt.Errorf("%w (and %d more)", pkg.Errors[0], len(pkg.Errors)-1)
-		}
-
-		dec = pkg.Decorator
-		pkgPath = pkg.PkgPath
-		restorerMap = make(map[string]string, len(pkg.Imports)+len(builtin.RestorerMap))
+		decorators = make([]*decorator.Decorator, 0, len(pkgs))
+		restorerMap = make(map[string]string, len(builtin.RestorerMap))
 		for path, name := range builtin.RestorerMap {
 			restorerMap[path] = name
 		}
-		for _, imp := range pkg.Imports {
-			if imp.Name == "" {
-				// Happens when there is an error while processing the import, typically inability to resolve the name due to a
-				// typo or something. If we allow blank names in the map, the restorer just removes the qualifiers, which is
-				// obviously undesirable.
-				continue
+
+		for _, pkg := range pkgs {
+			if len(pkg.Errors) > 0 {
+				errs := make([]error, len(pkg.Errors))
+				for i := range pkg.Errors {
+					errs[i] = pkg.Errors[i]
+				}
+				return nil, errors.Join(errs...)
 			}
-			restorerMap[imp.PkgPath] = imp.Name
+
+			if pkgPath == "" {
+				// The first non-blank package path is the "top level" one (the one we care about).
+				pkgPath = pkg.PkgPath
+			}
+
+			for _, imp := range pkg.Imports {
+				if imp.Name == "" {
+					// Happens when there is an error while processing the import, typically inability to resolve the name due to
+					// a typo or something. If we allow blank names in the map, the restorer just removes the qualifiers, which is
+					// obviously undesirable.
+					continue
+				}
+				restorerMap[imp.PkgPath] = imp.Name
+			}
+
+			// pkg.Decorator is nil in case the package in question does not include any go source file. This can be the case
+			// when building test packages that do not include any non-test source file; in which case the "package under
+			// test" is empty. This is because the loader returns three different entries when processing tests:
+			// 1. The package under test (which may be empty)
+			// 2. The test functions
+			// 3. The test binary/main
+			if pkg.Decorator != nil {
+				decorators = append(decorators, pkg.Decorator)
+			}
 		}
 	}
 
+	if len(decorators) == 0 {
+		return nil, errors.New("no decorators could be created")
+	}
+
 	return &Injector{
-		fileset:   fileset,
-		decorator: dec,
-		restorer:  decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)),
-		opts:      opts,
+		fileset:    fileset,
+		decorators: decorators,
+		restorer:   decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)),
+		opts:       opts,
 	}, nil
 }
 
@@ -145,41 +168,13 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 
 	res.Filename = filename
 
-	var file *dst.File
-	{
-		stat, err := os.Stat(filename)
-		if err != nil {
-			return res, err
-		}
-		for node, name := range i.decorator.Filenames {
-			if name == "" {
-				// A bunch of synthetic nodes won't have a file name.
-				continue
-			}
-			s, err := os.Stat(name)
-			if err != nil {
-				continue
-			}
-			if os.SameFile(stat, s) {
-				file = node
-				break
-			}
-		}
+	file, decorator, err := i.lookupDecoratedFile(filename)
+	if err != nil {
+		return res, err
 	}
 
-	if file == nil {
-		src, err := os.ReadFile(filename)
-		if err != nil {
-			return res, err
-		}
-
-		if file, err = i.decorator.ParseFile(filename, src, parser.ParseComments); err != nil {
-			return res, err
-		}
-	}
-
-	ctx := typed.ContextWithValue(context.Background(), i.decorator)
-	if res.Modified, res.References, err = i.inject(ctx, file, rootConfig); err != nil {
+	ctx := typed.ContextWithValue(context.Background(), decorator)
+	if res.Modified, res.References, err = i.inject(ctx, file, decorator, rootConfig); err != nil {
 		return res, err
 	}
 
@@ -199,10 +194,46 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 	return res, err
 }
 
+func (i *Injector) lookupDecoratedFile(filename string) (*dst.File, *decorator.Decorator, error) {
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, dec := range i.decorators {
+		for node, name := range dec.Filenames {
+			if name == "" {
+				// A bunch of synthetic nodes won't have a file name.
+				continue
+			}
+			s, err := os.Stat(name)
+			if err != nil {
+				continue
+			}
+			if os.SameFile(stat, s) {
+				return node, dec, nil
+			}
+		}
+	}
+
+	src, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	decorator := i.decorators[0]
+	file, err := decorator.ParseFile(filename, src, parser.ParseComments)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return file, decorator, nil
+}
+
 // inject performs all configured injections on the specified file. It returns whether the file was
 // modified, any import references introduced by modifications. In case of an error, the
 // trasnformation aborts as quickly as possible and returns the error.
-func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
+func (i *Injector) inject(ctx context.Context, file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
 	ctx = typed.ContextWithValue(ctx, &refs)
 	var chain *node.Chain
 
@@ -212,7 +243,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[st
 			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
 				return false
 			}
-			chain = chain.ChildFromCursor(csor, i.decorator.Path)
+			chain = chain.ChildFromCursor(csor, decorator.Path)
 			if _, ok := csor.Node().(*dst.File); ok {
 				// This is the root node, so we set the root configuration on it...
 				for k, v := range rootConfig {
@@ -245,7 +276,7 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, rootConfig map[st
 	}
 
 	if mod && i.opts.PreserveLineInfo {
-		i.addLineDirectives(file)
+		i.addLineDirectives(file, decorator)
 	}
 
 	return
@@ -277,7 +308,7 @@ func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstu
 // addLineDirectives travers a transformed AST and adds "//line file:line" directives where
 // necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
 // within a `<generated>` pseudo-file.
-func (i *Injector) addLineDirectives(file *dst.File) {
+func (i *Injector) addLineDirectives(file *dst.File, decorator *decorator.Decorator) {
 	var (
 		// Whether we are in generated code or not
 		inGen = false
@@ -306,7 +337,7 @@ func (i *Injector) addLineDirectives(file *dst.File) {
 			forceGen = false
 		}()
 
-		ast := i.decorator.Ast.Nodes[node]
+		ast := decorator.Ast.Nodes[node]
 		if ast != nil {
 			position := i.fileset.Position(ast.Pos())
 			// Generated nodes from templates may have a corresponding AST node, with a blank filename.

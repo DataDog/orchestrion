@@ -55,7 +55,7 @@ func TestMatchesAny(t *testing.T) {
 				require.Empty(t, diff, 0)
 			} else {
 				require.NotEmpty(t, diff)
-				golden.Assert(t, diff.String(), goldFile)
+				golden.Assert(t, strings.TrimSpace(diff.String()), goldFile)
 			}
 		})
 	}

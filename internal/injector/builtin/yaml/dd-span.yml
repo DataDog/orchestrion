@@ -12,9 +12,10 @@ aspects:
   - id: Using context.Context
     join-point:
       function-body:
-        function:
+        all-of:
           - directive: 'dd:span'
-          - receives: context.Context
+          - function:
+              - receives: context.Context
     advice:
       prepend-statements:
         imports:
@@ -35,9 +36,10 @@ aspects:
   - id: Using *http.Request
     join-point:
       function-body:
-        function:
+        all-of:
           - directive: 'dd:span'
-          - receives: '*net/http.Request'
+          - function:
+              - receives: '*net/http.Request'
     advice:
       prepend-statements:
         imports:

@@ -256,39 +256,6 @@ func (fo *signature) toHTML() string {
 	return buf.String()
 }
 
-type directive struct {
-	name string
-}
-
-// Directive matches function declarations based on the presence of a leading
-// directive comment.
-func Directive(name string) FunctionOption {
-	return &directive{name}
-}
-
-func (*directive) impliesImported() []string {
-	return nil
-}
-
-func (fo *directive) evaluate(info *functionInformation) bool {
-	for _, decs := range info.Decorations {
-		for _, dec := range decs.Start {
-			if dec == "//"+fo.name || strings.HasPrefix(dec, "//"+fo.name+" ") {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (fo *directive) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(fo.name))
-}
-
-func (fo *directive) toHTML() string {
-	return fmt.Sprintf("<div class=\"flex join-point function-option fo-directive\"><span class=\"type\">Has directive</span><code>//%s</code></div>", fo.name)
-}
-
 type oneOfFunctions []FunctionOption
 
 func OneOfFunctions(opts ...FunctionOption) oneOfFunctions {
@@ -397,11 +364,11 @@ func (fo *receiver) toHTML() string {
 }
 
 type funcBody struct {
-	up *funcDecl
+	up Point
 }
 
 // FunctionBody returns the *dst.BlockStmt of the matched *dst.FuncDecl body.
-func FunctionBody(up *funcDecl) *funcBody {
+func FunctionBody(up Point) *funcBody {
 	if up == nil {
 		panic("upstream FunctionDeclaration InjectionPoint cannot be nil")
 	}
@@ -437,13 +404,9 @@ func (s *funcBody) RenderHTML() string {
 
 func init() {
 	unmarshalers["function-body"] = func(node *yaml.Node) (Point, error) {
-		ip, err := FromYAML(node)
+		up, err := FromYAML(node)
 		if err != nil {
 			return nil, err
-		}
-		up, ok := ip.(*funcDecl)
-		if !ok {
-			return nil, fmt.Errorf("line %d: function-body only supports function injection points", node.Content[1].Line)
 		}
 		return FunctionBody(up), nil
 	}
@@ -480,12 +443,6 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	switch key {
-	case "directive":
-		var name string
-		if err := node.Content[1].Decode(&name); err != nil {
-			return err
-		}
-		o.FunctionOption = Directive(name)
 	case "name":
 		var name string
 		if err := node.Content[1].Decode(&name); err != nil {

@@ -6,11 +6,8 @@
 package aspect
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
@@ -28,20 +25,13 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 	}
 
 	var changed bool
-	for _, archive := range reg.PackageFile {
-		data, err := readArchiveData(archive, linkdeps.LinkDepsFilename)
+	for archiveImportPath, archive := range reg.PackageFile {
+		linkDeps, err := linkdeps.FromArchive(archive)
 		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
-		} else if data == nil {
-			continue
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archiveImportPath, err)
 		}
 
-		log.Tracef("Found %s file in %q\n", linkdeps.LinkDepsFilename, archive)
-		linkDeps, err := linkdeps.Read(data)
-		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archive, err)
-		}
-
+		log.Debugf("Processing %s dependencies from %s[%s]...", linkdeps.LinkDepsFilename, archiveImportPath, archive)
 		for _, depPath := range linkDeps.Dependencies() {
 			if arch, found := reg.PackageFile[depPath]; found {
 				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, depPath, arch)
@@ -76,32 +66,4 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 	}
 
 	return nil
-}
-
-// readArchiveData returns the content of the given entry from the provided archive file. If there
-// is no such entry in the archive, a nil io.Reader and no error is returned.
-func readArchiveData(archive, entry string) (io.Reader, error) {
-	var list, data bytes.Buffer
-	cmd := exec.Command("go", "tool", "pack", "t", archive)
-	cmd.Stdout = &list
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("running `go tool pack t %q`: %w", archive, err)
-	}
-	for {
-		line, err := list.ReadString('\n')
-		if err == io.EOF {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("reading pack list from %q: %w", archive, err)
-		}
-		if line[:len(line)-1] == entry {
-			// Found it!
-			break
-		}
-	}
-
-	cmd = exec.Command("go", "tool", "pack", "p", archive, entry)
-	cmd.Stdout = &data
-	return &data, cmd.Run()
 }

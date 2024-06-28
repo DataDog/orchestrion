@@ -1,0 +1,19 @@
+%YAML 1.1
+---
+meta:
+  name: //dd:orchestrion-enabled
+  description: Flip a boolean to true if Orchestrion is enabled.
+  icon: cog
+  caveats: |-
+    This aspect allows introducing conditional logic based on whether
+    Orchestrion has been used to instrument an application or not. This should
+    generally be avoided.
+aspects:
+  - id: Initialize to true
+    join-point:
+      all-of:
+        - directive: dd:orchestrion-enabled
+        - value-declaration: bool
+    advice:
+      - assign-value:
+          template: true
