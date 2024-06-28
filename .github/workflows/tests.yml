@@ -101,6 +101,18 @@ jobs:
         with:
           python-version: '>=3.9 <3.13'
       - name: Run Integration Tests
+        shell: bash # PowerShell has different syntax for env. var access...
+        run: |-
+          # Without orchestrion enabled
+          go -C _integration-tests test -v ./...
+
+          # With orchestrion enabled
+          mkdir -p ${GOCOVERDIR}
+          go run -cover -covermode=atomic -coverpkg=./... . go -C _integration-tests test -v ./...
+        env:
+          GOCOVERDIR: ${{ github.workspace }}/coverage/raw
+          GOCACHE: ${{ runner.temp }}/gocache
+      - name: Run Integration Tests
         run: ./integration-tests.ps1
         env:
           TESTCASE_BUILD_MODE: ${{ matrix.build-mode }}
@@ -109,7 +121,7 @@ jobs:
         shell: bash # PowerShell mkdir -p fails if the directory already exists...
         run: |-
           mkdir -p ./coverage
-          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
+          go tool covdata textfmt -i ./coverage/raw,./_integration-tests/outputs/coverage -o ./coverage/integration.out
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version

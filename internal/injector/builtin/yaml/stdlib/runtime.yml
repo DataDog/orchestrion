@@ -16,11 +16,11 @@
     - inject-declarations:
         template: |-
           //go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
-          func __dd_orchestrion_gls_get() any {
+          var __dd_orchestrion_gls_get = func() any {
             return getg().m.curg.__dd_gls
           }
 
           //go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set
-          func __dd_orchestrion_gls_set(val any) {
+          var __dd_orchestrion_gls_set = func(val any) {
             getg().m.curg.__dd_gls = val
           }
