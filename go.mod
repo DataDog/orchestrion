@@ -13,7 +13,7 @@ require (
 	golang.org/x/sys v0.20.0
 	golang.org/x/term v0.20.0
 	golang.org/x/tools v0.21.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.65.0-rc.2
+	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
