@@ -1,5 +1,7 @@
 # Orchestrion
 
+[![Documentation](https://img.shields.io/badge/documentation-datadoghq.dev/orchestrion-blue.svg?style=flat)](https://datadoghq.dev/orchestrion)
+
 Automatic compile-time instrumentation of Go code
 
 ![Orchestrion](https://upload.wikimedia.org/wikipedia/commons/5/55/Welteorchestrion1862.jpg)

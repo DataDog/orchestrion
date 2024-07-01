@@ -29,6 +29,7 @@ type (
 		code.AsCode
 		impliesImported() []string
 		evaluate(*functionInformation) bool
+		toHTML() string
 	}
 
 	funcDecl struct {
@@ -88,6 +89,24 @@ func (s *funcDecl) AsCode() jen.Code {
 	})
 }
 
+func (s *funcDecl) RenderHTML() string {
+	var buf strings.Builder
+
+	buf.WriteString("<div class=\"join-point function-declaratop,\">\n")
+	buf.WriteString("  <span class=\"type pill\">Function declaration</span>\n")
+	buf.WriteString("  <ul>\n")
+	for _, opt := range s.opts {
+		buf.WriteString("    <li>\n")
+		buf.WriteString(opt.toHTML())
+		buf.WriteString("    </li>\n")
+
+	}
+	buf.WriteString("  </ul>\n")
+	buf.WriteString("</div>\n")
+
+	return buf.String()
+}
+
 type funcName string
 
 func Name(name string) FunctionOption {
@@ -104,6 +123,13 @@ func (fo funcName) evaluate(info *functionInformation) bool {
 
 func (fo funcName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Name").Call(jen.Lit(string(fo)))
+}
+
+func (fo funcName) toHTML() string {
+	if fo == "" {
+		return "<div class=\"join-point function-option fo-name\"><span class=\"type pill\">Function literal expression</span></div>"
+	}
+	return fmt.Sprintf("<div class=\"join-point flex function-option fo-name\"><span class=\"type\">Function name</span><code>%s</code></div>", string(fo))
 }
 
 type signature struct {
@@ -187,33 +213,47 @@ func (fo *signature) AsCode() jen.Code {
 	})
 }
 
-type directive struct {
-	name string
-}
+func (fo *signature) toHTML() string {
+	var buf strings.Builder
 
-// Directive matches function declarations based on the presence of a leading
-// directive comment.
-func Directive(name string) FunctionOption {
-	return &directive{name}
-}
+	buf.WriteString("<div class=\"join-point function-option fo-signature\">\n")
+	buf.WriteString("  <span class=\"type pill\">Signature matches</span>\n")
+	buf.WriteString("<ul>\n")
 
-func (*directive) impliesImported() []string {
-	return nil
-}
-
-func (fo *directive) evaluate(info *functionInformation) bool {
-	for _, decs := range info.Decorations {
-		for _, dec := range decs.Start {
-			if dec == "//"+fo.name || strings.HasPrefix(dec, "//"+fo.name+" ") {
-				return true
-			}
+	if len(fo.args) > 0 {
+		buf.WriteString("    <li>\n")
+		buf.WriteString("      <span class=\"type pill\">Arguments</span>\n")
+		buf.WriteString("      <ol>\n")
+		for _, arg := range fo.args {
+			buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
+			buf.WriteString(arg.RenderHTML())
+			buf.WriteString("        </li>\n")
 		}
+		buf.WriteString("      </ol>\n")
+		buf.WriteString("    </li>\n")
+	} else {
+		buf.WriteString("    <li class=\"flex\"><span class=\"type\">Arguments</span><span class=\"value\">None</span></li>\n")
 	}
-	return false
-}
 
-func (fo *directive) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(fo.name))
+	if len(fo.returns) > 0 {
+		buf.WriteString("    <li>\n")
+		buf.WriteString("      <span class=\"type pill\">Return Values</span>\n")
+		buf.WriteString("      <ol>\n")
+		for _, arg := range fo.returns {
+			buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
+			buf.WriteString(arg.RenderHTML())
+			buf.WriteString("        </li>\n")
+		}
+		buf.WriteString("      </ol>\n")
+		buf.WriteString("    </li>\n")
+	} else {
+		buf.WriteString("    <li class=\"flex\"><span class=\"type\">Return Values</span><span class=\"value\">None</span></li>\n")
+	}
+
+	buf.WriteString("</ul>\n")
+	buf.WriteString("</div>\n")
+
+	return buf.String()
 }
 
 type oneOfFunctions []FunctionOption
@@ -263,6 +303,10 @@ func (fo oneOfFunctions) AsCode() jen.Code {
 	})
 }
 
+func (fo oneOfFunctions) toHTML() string {
+	return "one-of"
+}
+
 type receives struct {
 	typeName TypeName
 }
@@ -291,6 +335,10 @@ func (fo *receives) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.AsCode())
 }
 
+func (fo *receives) toHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point function-option fo-receives"><span class="type">Has parameter</span>%s</div>`, fo.typeName.RenderHTML())
+}
+
 type receiver struct {
 	typeName TypeName
 }
@@ -311,12 +359,16 @@ func (fo *receiver) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Receiver").Call(fo.typeName.AsCode())
 }
 
+func (fo *receiver) toHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point function-option fo-receiver"><span class="type">Is method of</span>%s</div>`, fo.typeName.RenderHTML())
+}
+
 type funcBody struct {
-	up *funcDecl
+	up Point
 }
 
 // FunctionBody returns the *dst.BlockStmt of the matched *dst.FuncDecl body.
-func FunctionBody(up *funcDecl) *funcBody {
+func FunctionBody(up Point) *funcBody {
 	if up == nil {
 		panic("upstream FunctionDeclaration InjectionPoint cannot be nil")
 	}
@@ -346,15 +398,15 @@ func (s *funcBody) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionBody").Call(s.up.AsCode())
 }
 
+func (s *funcBody) RenderHTML() string {
+	return fmt.Sprintf(`<div class="join-point function-body"><span class="type pill">Function body</span><ul><li>%s</li></ul></div>`, s.up.RenderHTML())
+}
+
 func init() {
 	unmarshalers["function-body"] = func(node *yaml.Node) (Point, error) {
-		ip, err := FromYAML(node)
+		up, err := FromYAML(node)
 		if err != nil {
 			return nil, err
-		}
-		up, ok := ip.(*funcDecl)
-		if !ok {
-			return nil, fmt.Errorf("line %d: function-body only supports function injection points", node.Content[1].Line)
 		}
 		return FunctionBody(up), nil
 	}
@@ -391,12 +443,6 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	switch key {
-	case "directive":
-		var name string
-		if err := node.Content[1].Decode(&name); err != nil {
-			return err
-		}
-		o.FunctionOption = Directive(name)
 	case "name":
 		var name string
 		if err := node.Content[1].Decode(&name); err != nil {

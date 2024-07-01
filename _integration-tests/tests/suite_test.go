@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-// go:build integration
+//go:build integration
 
 package tests
 
@@ -16,7 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var orchestrionEnabled bool // Modified by orchestrion itself
+//dd:orchestrion-enabled
+const orchestrionEnabled = false
 
 func Test(t *testing.T) {
 	require.True(t, orchestrionEnabled, "this test suite must be run with orchestrion enabled")

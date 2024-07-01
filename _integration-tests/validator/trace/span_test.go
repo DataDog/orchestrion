@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"unicode"
 
 	"github.com/stretchr/testify/require"
 	"gotest.tools/v3/golden"
@@ -56,7 +55,7 @@ func TestMatchesAny(t *testing.T) {
 				require.Empty(t, diff, 0)
 			} else {
 				require.NotEmpty(t, diff)
-				golden.Assert(t, strings.TrimRightFunc(diff.String(), unicode.IsSpace), goldFile)
+				golden.Assert(t, strings.TrimSpace(diff.String()), goldFile)
 			}
 		})
 	}

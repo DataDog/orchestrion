@@ -98,34 +98,41 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 		return nil, err
 	} else {
 		decorators = make([]*decorator.Decorator, 0, len(pkgs))
-
 		restorerMap = make(map[string]string, len(builtin.RestorerMap))
 		for path, name := range builtin.RestorerMap {
 			restorerMap[path] = name
 		}
 
 		for _, pkg := range pkgs {
-			switch len(pkg.Errors) {
-			case 0:
-				// Nothing to do, this is a success!
-			case 1:
-				return nil, pkg.Errors[0]
-			default:
-				return nil, fmt.Errorf("%w (and %d more)", pkg.Errors[0], len(pkg.Errors)-1)
+			if len(pkg.Errors) > 0 {
+				errs := make([]error, len(pkg.Errors))
+				for i := range pkg.Errors {
+					errs[i] = pkg.Errors[i]
+				}
+				return nil, errors.Join(errs...)
 			}
 
 			if pkgPath == "" {
+				// The first non-blank package path is the "top level" one (the one we care about).
 				pkgPath = pkg.PkgPath
 			}
+
 			for _, imp := range pkg.Imports {
 				if imp.Name == "" {
-					// Happens when there is an error while processing the import, typically inability to resolve the name due to a
-					// typo or something. If we allow blank names in the map, the restorer just removes the qualifiers, which is
+					// Happens when there is an error while processing the import, typically inability to resolve the name due to
+					// a typo or something. If we allow blank names in the map, the restorer just removes the qualifiers, which is
 					// obviously undesirable.
 					continue
 				}
 				restorerMap[imp.PkgPath] = imp.Name
 			}
+
+			// pkg.Decorator is nil in case the package in question does not include any go source file. This can be the case
+			// when building test packages that do not include any non-test source file; in which case the "package under
+			// test" is empty. This is because the loader returns three different entries when processing tests:
+			// 1. The package under test (which may be empty)
+			// 2. The test functions
+			// 3. The test binary/main
 			if pkg.Decorator != nil {
 				decorators = append(decorators, pkg.Decorator)
 			}
@@ -161,45 +168,11 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 
 	res.Filename = filename
 
-	var (
-		file      *dst.File
-		decorator *decorator.Decorator = i.decorators[0]
-	)
-	{
-		stat, err := os.Stat(filename)
-		if err != nil {
-			return res, err
-		}
-	out:
-		for _, dec := range i.decorators {
-			for node, name := range dec.Filenames {
-				if name == "" {
-					// A bunch of synthetic nodes won't have a file name.
-					continue
-				}
-				s, err := os.Stat(name)
-				if err != nil {
-					continue
-				}
-				if os.SameFile(stat, s) {
-					file = node
-					decorator = dec
-					break out
-				}
-			}
-		}
+	file, decorator, err := i.lookupDecoratedFile(filename)
+	if err != nil {
+		return res, err
 	}
 
-	if file == nil {
-		src, err := os.ReadFile(filename)
-		if err != nil {
-			return res, err
-		}
-
-		if file, err = decorator.ParseFile(filename, src, parser.ParseComments); err != nil {
-			return res, err
-		}
-	}
 	ctx := typed.ContextWithValue(context.Background(), decorator)
 	if res.Modified, res.References, err = i.inject(ctx, file, decorator, rootConfig); err != nil {
 		return res, err
@@ -219,6 +192,42 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 	}
 
 	return res, err
+}
+
+func (i *Injector) lookupDecoratedFile(filename string) (*dst.File, *decorator.Decorator, error) {
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, dec := range i.decorators {
+		for node, name := range dec.Filenames {
+			if name == "" {
+				// A bunch of synthetic nodes won't have a file name.
+				continue
+			}
+			s, err := os.Stat(name)
+			if err != nil {
+				continue
+			}
+			if os.SameFile(stat, s) {
+				return node, dec, nil
+			}
+		}
+	}
+
+	src, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	decorator := i.decorators[0]
+	file, err := decorator.ParseFile(filename, src, parser.ParseComments)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return file, decorator, nil
 }
 
 // inject performs all configured injections on the specified file. It returns whether the file was

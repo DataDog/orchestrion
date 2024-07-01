@@ -53,7 +53,8 @@ jobs:
       - name: Run unit tests
         run: |-
           mkdir -p coverage
-          go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
+          go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=${{ github.workspace }}/coverage/unit.out -race ./...
+          go -C _integration-tests test -shuffle=on -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile=${{ github.workspace }}/coverage/integration.out -race ./...
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
@@ -68,7 +69,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
-          file: ./coverage/unit.out
+          files: ./coverage/unit.out,.couverage/integration.out
           name: Unit Tests (go${{ matrix.go-version }})
 
   integration-tests:

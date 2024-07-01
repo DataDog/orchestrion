@@ -6,6 +6,8 @@
 package join
 
 import (
+	"strings"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -47,6 +49,21 @@ func (o allOf) AsCode() jen.Code {
 			g.Line().Empty()
 		}
 	})
+}
+
+func (o allOf) RenderHTML() string {
+	var buf strings.Builder
+	buf.WriteString("<div class=\"join-point all-of\">")
+	buf.WriteString("  <span class=\"type pill\">All of</span>")
+	buf.WriteString("  <ul>\n")
+	for _, candidate := range o {
+		buf.WriteString("    <li class=\"candidate\">\n")
+		buf.WriteString(candidate.RenderHTML())
+		buf.WriteString("    </li>\n")
+	}
+	buf.WriteString("  </ul>\n")
+	buf.WriteString("</div>\n")
+	return buf.String()
 }
 
 func init() {

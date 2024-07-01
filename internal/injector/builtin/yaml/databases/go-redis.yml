@@ -4,38 +4,45 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-################################################################################
-# V7
-- join-point:
-    one-of:
-      - function-call: github.com/go-redis/redis/v7.NewClient
-      - function-call: github.com/go-redis/redis/v7.NewFailoverClient
-  advice:
-    - wrap-expression:
-        imports:
-          redis: github.com/go-redis/redis/v7
-          trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7
-        template: |-
-          func() (client *redis.Client) {
-            client = {{ . }}
-            trace.WrapClient(client)
-            return
-          }()
+meta:
+  name: github.com/go-redis/redis
+  description: Redis client for Go.
+  icon: database
+aspects:
+  ################################################################################
+  # V7
+  - id: Wrap V7 client
+    join-point:
+      one-of:
+        - function-call: github.com/go-redis/redis/v7.NewClient
+        - function-call: github.com/go-redis/redis/v7.NewFailoverClient
+    advice:
+      - wrap-expression:
+          imports:
+            redis: github.com/go-redis/redis/v7
+            trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7
+          template: |-
+            func() (client *redis.Client) {
+              client = {{ . }}
+              trace.WrapClient(client)
+              return
+            }()
 
-################################################################################
-# V8
-- join-point:
-    one-of:
-      - function-call: github.com/go-redis/redis/v8.NewClient
-      - function-call: github.com/go-redis/redis/v8.NewFailoverClient
-  advice:
-    - wrap-expression:
-        imports:
-          redis: github.com/go-redis/redis/v8
-          trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8
-        template: |-
-          func() (client *redis.Client) {
-            client = {{ . }}
-            trace.WrapClient(client)
-            return
-          }()
+  ################################################################################
+  # V8
+  - id: Wrap V8 client
+    join-point:
+      one-of:
+        - function-call: github.com/go-redis/redis/v8.NewClient
+        - function-call: github.com/go-redis/redis/v8.NewFailoverClient
+    advice:
+      - wrap-expression:
+          imports:
+            redis: github.com/go-redis/redis/v8
+            trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8
+          template: |-
+            func() (client *redis.Client) {
+              client = {{ . }}
+              trace.WrapClient(client)
+              return
+            }()

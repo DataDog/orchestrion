@@ -59,6 +59,10 @@ func (a *wrapExpression) AddedImports() []string {
 	return a.template.AddedImports()
 }
 
+func (a *wrapExpression) RenderHTML() string {
+	return fmt.Sprintf(`<div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>%s</div>`, a.template.RenderHTML())
+}
+
 func init() {
 	unmarshalers["wrap-expression"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template

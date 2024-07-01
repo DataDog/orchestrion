@@ -4,26 +4,35 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-################################################################################
-# Dial
-- join-point:
-    function-call: github.com/gomodule/redigo/redis.Dial
-  advice:
-    - replace-function:
-        gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
+meta:
+  name: github.com/gomodule/redigo/redis
+  description: Redigo is a Go client for the Redis database.
+  icon: database
 
-################################################################################
-# DialContext
-- join-point:
-    function-call: github.com/gomodule/redigo/redis.DialContext
-  advice:
-    - replace-function:
-        gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+aspects:
+  ##############################################################################
+  # Dial
+  - id: Dial
+    join-point:
+      function-call: github.com/gomodule/redigo/redis.Dial
+    advice:
+      - replace-function:
+          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
 
-################################################################################
-# DialURL
-- join-point:
-    function-call: github.com/gomodule/redigo/redis.DialURL
-  advice:
-    - replace-function:
-        gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
+  ##############################################################################
+  # DialContext
+  - id: DialContext
+    join-point:
+      function-call: github.com/gomodule/redigo/redis.DialContext
+    advice:
+      - replace-function:
+          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+
+  ##############################################################################
+  # DialURL
+  - id: DialURL
+    join-point:
+      function-call: github.com/gomodule/redigo/redis.DialURL
+    advice:
+      - replace-function:
+          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL

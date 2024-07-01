@@ -17,18 +17,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type blockStmts struct {
+type prependStatements struct {
 	template code.Template
 }
 
 // PrependStmts prepends statements to the matched *dst.BlockStmt. This action
 // can only be used if the selector matches on a *dst.BlockStmt. The prepended
 // statements are wrapped in a new block statement to prevent scope leakage.
-func PrependStmts(template code.Template) *blockStmts {
-	return &blockStmts{template: template}
+func PrependStmts(template code.Template) *prependStatements {
+	return &prependStatements{template: template}
 }
 
-func (a *blockStmts) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
+func (a *prependStatements) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
 	block, ok := node.Node.(*dst.BlockStmt)
 	if !ok {
 		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", node.Node)
@@ -47,12 +47,16 @@ func (a *blockStmts) Apply(ctx context.Context, node *node.Chain, csor *dstutil.
 	return true, nil
 }
 
-func (a *blockStmts) AsCode() jen.Code {
+func (a *prependStatements) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "PrependStmts").Call(a.template.AsCode())
 }
 
-func (a *blockStmts) AddedImports() []string {
+func (a *prependStatements) AddedImports() []string {
 	return a.template.AddedImports()
+}
+
+func (a *prependStatements) RenderHTML() string {
+	return fmt.Sprintf(`<div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>%s</div>`, a.template.RenderHTML())
 }
 
 func init() {

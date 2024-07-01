@@ -1,0 +1,162 @@
+/*
+ * Unless explicitly stated otherwise all files in this repository are licensed
+ * under the Apache License Version 2.0.
+ * This product includes software developed at Datadog (https://www.datadoghq.com/).
+ * Copyright 2023-present Datadog, Inc.
+ */
+
+.aspect {
+  --blue:    #0d6efd;
+  --indigo:  #6610f2;
+  --purple:  #6f42c1;
+  --pink:    #d63384;
+  --red:     #dc3545;
+  --orange:  #fd7e14;
+  --yellow:  #ffc107;
+  --green:   #198754;
+  --teal:    #20c997;
+  --cyan:    #0dcaf0;
+
+  --type-background: #000;
+  --type-foreground: #fff;
+
+  --tree-spacing: 1.25rem;
+  --tree-border-width: 3px;
+}
+
+.join-point.flex,
+.join-point .flex {
+  display: flex;
+  align-items: stretch;
+}
+
+.join-point .type {
+  font-weight: bold;
+  background-color: var(--type-background);
+  color: var(--type-foreground);
+
+  border-radius: 1rem 0 0 1rem;
+  padding: 0 .5rem 0 .5rem;
+}
+
+.join-point .type.pill {
+  border-radius: 1rem;
+  padding: .1rem .5rem .1rem .5rem;
+}
+
+.join-point > ul,
+.join-point ol {
+  list-style-type: none;
+  margin-left: calc(0 - var(--tree-spacing));
+  margin-top: -1px;
+}
+.join-point > ul > li,
+.join-point ol > li {
+  display: block;
+  position: relative;
+  border-left: var(--tree-border-width) solid var(--type-background);
+  padding-left: calc(2 * var(--tree-spacing) - var(tree-border-width));
+
+  margin: 0 0 0 var(--tree-spacing);
+  padding: .25rem .25rem .25rem var(--tree-spacing);
+}
+.join-point > ul > li:last-child,
+.join-point ol > li:last-child {
+  border-color: transparent !important;
+}
+.join-point > ul > li::before,
+.join-point ol > li::before {
+  content: '';
+  position: absolute;
+  display: block;
+  border-color: var(--type-background);
+  border-width: 0 0 var(--tree-border-width) var(--tree-border-width);
+
+  top: 0;
+  left: calc(0px - var(--tree-border-width));
+  height: calc(1rem + var(--tree-border-width) / 2);
+  width: calc(var(--tree-spacing) + var(--tree-border-width));
+}
+
+.join-point ol {
+  counter-reset: item;
+}
+.join-point ol > li {
+  counter-increment: item;
+}
+.join-point ol > li > .id:before {
+  display: flex;
+  content: counter(item);
+
+  background-color: var(--type-background);
+  color: var(--type-foreground);
+
+  justify-content: end;
+  min-width: 1.5rem;
+  padding: 0 .5rem 0 .5rem;
+  border-radius: 1rem 0 0 1rem;
+}
+
+.join-point code,
+.join-point .value {
+  display: flex;
+  border: 1px solid var(--type-background);
+  border-radius: 0 1rem 1rem 0;
+  padding: 0 .5rem 0 .5rem;
+}
+.join-point .value {
+  font-size: .9rem;
+}
+
+/******************************************************************************/
+.join-point.all-of {
+  --type-background: var(--green);
+}
+
+/******************************************************************************/
+.join-point.configuration {
+  --type-background: black;
+}
+
+/******************************************************************************/
+.join-point.function-body {
+  --type-background: var(--purple);
+}
+.join-point.function-body .function-option {
+  --type-background: var(--indigo);
+}
+.join-point.function-body .function-option.fo-signature ul {
+  --type-background: #999;
+}
+
+/******************************************************************************/
+.join-point.function-call {
+  --type-background: var(--purple);
+}
+
+/******************************************************************************/
+.join-point.import-path {
+  --type-background: var(--pink);
+}
+
+/******************************************************************************/
+.join-point.not,
+.join-point.none-of {
+  --type-background: var(--red);
+}
+
+/******************************************************************************/
+.join-point.one-of {
+  --type-background: var(--blue);
+}
+
+/******************************************************************************/
+.join-point.package-name {
+  --type-background: var(--pink);
+}
+
+/******************************************************************************/
+.join-point.struct-definition,
+.join-point.struct-literal {
+  --type-background: var(--orange);
+}

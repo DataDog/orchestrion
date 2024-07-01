@@ -10,6 +10,7 @@ package advice
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
@@ -46,6 +47,10 @@ func (a addBlankImport) AsCode() jen.Code {
 
 func (a addBlankImport) AddedImports() []string {
 	return []string{string(a)}
+}
+
+func (a addBlankImport) RenderHTML() string {
+	return fmt.Sprintf(`<span class="advice add-blank-import"><span class="type">Add blank import of </span>{{<godoc %q>}}</span>`, string(a))
 }
 
 func init() {

@@ -8,7 +8,9 @@ package advice
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/datadog/orchestrion/internal/injector/node"
@@ -72,6 +74,26 @@ func (a injectDeclarations) AsCode() jen.Code {
 
 func (a injectDeclarations) AddedImports() []string {
 	return a.links
+}
+
+func (a injectDeclarations) RenderHTML() string {
+	var buf strings.Builder
+	buf.WriteString("<div class=\"advice inject-declarations\">\n")
+	buf.WriteString("  <div class=\"type\">Introduce new declarations:\n")
+	buf.WriteString(a.template.RenderHTML())
+	buf.WriteString("\n  </div>\n")
+	if len(a.links) > 0 {
+		buf.WriteString("  <div class=\"type\">Record link-time dependencies on:\n")
+		buf.WriteString("    <ul>\n")
+		for _, link := range a.links {
+			buf.WriteString(fmt.Sprintf("      <li>{{<godoc %q>}}</li>\n", link))
+		}
+		buf.WriteString("    </ul>\n")
+		buf.WriteString("  </div>\n")
+	}
+	buf.WriteString("</div>\n")
+
+	return buf.String()
 }
 
 func init() {
