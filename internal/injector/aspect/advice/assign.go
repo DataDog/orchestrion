@@ -52,6 +52,10 @@ func (a *assignValue) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "AssignValue").Call(a.template.AsCode())
 }
 
+func (a *assignValue) RenderHTML() string {
+	return fmt.Sprintf(`<div class="advice assign-value"><div class="type">Set initial value to:</div>%s</div>`, a.template.RenderHTML())
+}
+
 func init() {
 	unmarshalers["assign-value"] = func(node *yaml.Node) (Advice, error) {
 		var template code.Template

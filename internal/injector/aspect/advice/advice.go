@@ -28,4 +28,8 @@ type Advice interface {
 	// short-circuit and not do anything; e.g. import injection may be skipped if
 	// the import already exists).
 	Apply(context.Context, *node.Chain, *dstutil.Cursor) (bool, error)
+
+	// RenderHTML renders and HTML representation of this advice for documentation
+	// purposes.
+	RenderHTML() string
 }

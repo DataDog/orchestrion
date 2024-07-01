@@ -73,12 +73,12 @@ func buildHandlers() {
 }
 
 //dd:span foo:bar type:potato
-func myFunc(ctx context.Context, name string) {
+func myFunc(_ context.Context, name string) {
 	fmt.Println(name)
 }
 
 //dd:span foo2:bar2 type:request
-func myFunc2(name string, req *http.Request) {
+func myFunc2(name string, _ *http.Request) {
 	fmt.Println(name)
 }
 

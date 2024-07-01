@@ -4,18 +4,24 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-- join-point:
-    one-of:
-      - function-call: github.com/gin-gonic/gin.Default
-      - function-call: github.com/gin-gonic/gin.New
-  advice:
-    - wrap-expression:
-        imports:
-          gin: github.com/gin-gonic/gin
-          gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
-        template: |-
-          func() *gin.Engine {
-            e := {{ . }}
-            e.Use(gintrace.Middleware(""))
-            return e
-          }()
+meta:
+  name: github.com/gin-gonic/gin
+  description: Gin is a web framework written in Go.
+  icon: at-symbol
+aspects:
+  - id: Use tracer middleware
+    join-point:
+      one-of:
+        - function-call: github.com/gin-gonic/gin.Default
+        - function-call: github.com/gin-gonic/gin.New
+    advice:
+      - wrap-expression:
+          imports:
+            gin: github.com/gin-gonic/gin
+            gintrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
+          template: |-
+            func() *gin.Engine {
+              e := {{ . }}
+              e.Use(gintrace.Middleware(""))
+              return e
+            }()

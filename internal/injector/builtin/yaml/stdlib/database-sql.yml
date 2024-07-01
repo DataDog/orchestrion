@@ -4,17 +4,26 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-- join-point:
-    function-call: database/sql.Register
-  advice:
-    - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Register
+meta:
+  name: database/sql
+  description: A generic interface around SQL (or SQL-like) databases.
+  icon: database
 
-- join-point:
-    function-call: database/sql.Open
-  advice:
-    - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Open
+aspects:
+  - id: Register
+    join-point:
+      function-call: database/sql.Register
+    advice:
+      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Register
 
-- join-point:
-    function-call: database/sql.OpenDB
-  advice:
-    - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.OpenDB
+  - id: Open
+    join-point:
+      function-call: database/sql.Open
+    advice:
+      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Open
+
+  - id: OpenDB
+    join-point:
+      function-call: database/sql.OpenDB
+    advice:
+      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.OpenDB

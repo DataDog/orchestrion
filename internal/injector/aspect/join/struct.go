@@ -7,6 +7,7 @@ package join
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
@@ -52,6 +53,10 @@ func (s *structDefinition) Matches(chain *node.Chain) bool {
 
 func (s *structDefinition) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructDefinition").Call(s.typeName.AsCode())
+}
+
+func (s *structDefinition) RenderHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point struct-definition"><span class="type">Definition of</span>%s</div>`, s.typeName.RenderHTML())
 }
 
 type structLiteral struct {
@@ -105,6 +110,29 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 
 func (s *structLiteral) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), jen.Lit(s.field))
+}
+
+func (s *structLiteral) RenderHTML() string {
+	var buf strings.Builder
+
+	buf.WriteString("<div class=\"join-point struct-literal\">\n")
+	buf.WriteString("  <div class=\"flex\">\n")
+	buf.WriteString("    <span class=\"type\">Struct literal</span>\n")
+	buf.WriteString(s.typeName.RenderHTML())
+	buf.WriteString("\n  </div>\n")
+	if s.field != "" {
+		buf.WriteString("  <ul>\n")
+		buf.WriteString("    <li class=\"flex\">\n")
+		buf.WriteString("      <span class=\"type\">Including field</span>\n")
+		buf.WriteString("      <code>\n")
+		buf.WriteString(s.field)
+		buf.WriteString("\n      </code>\n")
+		buf.WriteString("    </li>\n")
+		buf.WriteString("  </ul>\n")
+	}
+	buf.WriteString("</div>\n")
+
+	return buf.String()
 }
 
 func init() {

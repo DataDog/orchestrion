@@ -4,16 +4,22 @@
 # Copyright 2023-present Datadog, Inc.
 %YAML 1.1
 ---
-- join-point:
-    function-call: github.com/labstack/echo/v4.New
-  advice:
-    - wrap-expression:
-        imports:
-          echo: github.com/labstack/echo/v4
-          echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
-        template: |-
-          func() *echo.Echo {
-            e := {{ . }}
-            e.Use(echotrace.Middleware())
-            return e
-          }()
+meta:
+  name: github.com/labstack/echo
+  description: High performance, extensible, minimalist Go web framework.
+  icon: at-symbol
+aspects:
+  - id: Use tracer middleware
+    join-point:
+      function-call: github.com/labstack/echo/v4.New
+    advice:
+      - wrap-expression:
+          imports:
+            echo: github.com/labstack/echo/v4
+            echotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
+          template: |-
+            func() *echo.Echo {
+              e := {{ . }}
+              e.Use(echotrace.Middleware())
+              return e
+            }()

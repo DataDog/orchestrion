@@ -6,6 +6,8 @@
 package join
 
 import (
+	"fmt"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -29,6 +31,13 @@ func (n not) Matches(node *node.Chain) bool {
 
 func (n not) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Not").Call(n.jp.AsCode())
+}
+
+func (n not) RenderHTML() string {
+	if jp, ok := n.jp.(oneOf); ok {
+		return fmt.Sprintf(`<div class="join-point none-of"><span class="type pill">None of</span>%s</div>`, jp.renderCandidatesHTML())
+	}
+	return fmt.Sprintf(`<div class="join-point not"><span class="type pill">Not</span><ul><li>%s</li></ul></div>`, n.jp.RenderHTML())
 }
 
 func init() {

@@ -29,6 +29,7 @@ import (
 type Template struct {
 	template *template.Template
 	imports  map[string]string
+	source   string
 }
 
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
@@ -55,7 +56,7 @@ package _
 func NewTemplate(text string, imports map[string]string) (Template, error) {
 	template := template.Must(wrapper.Clone())
 	template, err := template.Parse(text)
-	return Template{template, imports}, err
+	return Template{template, imports, text}, err
 }
 
 // MustTemplate is the same as NewTemplate, but panics if an error occurs.
@@ -201,7 +202,7 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 
 func (t *Template) AsCode() jen.Code {
 	return jen.Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
-		jen.Line().Lit(t.template.Tree.Root.String()),
+		jen.Line().Lit(t.source),
 		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
 			// We sort the keys so the generated code order is consistent...
 			keys := make([]string, 0, len(t.imports))
@@ -252,4 +253,31 @@ func numberLines(text string) string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (t *Template) RenderHTML() string {
+	var buf strings.Builder
+
+	if len(t.imports) > 0 {
+		keys := make([]string, 0, len(t.imports))
+		for name := range t.imports {
+			keys = append(keys, name)
+		}
+		sort.Strings(keys)
+
+		buf.WriteString("\n\n```go\n")
+		buf.WriteString("// Using the following synthetic imports:\n")
+		buf.WriteString("import (\n")
+		for _, name := range keys {
+			fmt.Fprintf(&buf, "\t%s %q\n", name, t.imports[name])
+		}
+		buf.WriteString(")\n```")
+	}
+
+	buf.WriteString("\n\n```go-template\n")
+	// Render with tabs so it's more go-esque!
+	buf.WriteString(strings.ReplaceAll(t.source, "  ", "\t"))
+	buf.WriteString("\n```\n")
+
+	return buf.String()
 }

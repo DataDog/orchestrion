@@ -61,6 +61,10 @@ func (a *addStuctField) AddedImports() []string {
 	return nil
 }
 
+func (a *addStuctField) RenderHTML() string {
+	return fmt.Sprintf(`<div class="advice add-struct-field"><div class="type">Add new field named <code>%s</code> typed as %s.</div>`, a.fieldName, a.fieldType.RenderHTML())
+}
+
 func init() {
 	unmarshalers["add-struct-field"] = func(node *yaml.Node) (Advice, error) {
 		var spec struct {

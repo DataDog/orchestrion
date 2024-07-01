@@ -121,18 +121,37 @@ func (a *appendArgs) AddedImports() []string {
 	return imports
 }
 
-type replaceFunction struct {
+func (a *appendArgs) RenderHTML() string {
+	var buf strings.Builder
+
+	buf.WriteString("<div class=\"advice append-arguments\">\n")
+	buf.WriteString("  <div class=\"type\">Append the following ")
+	buf.WriteString(a.typeName.RenderHTML())
+	buf.WriteString(" arguments to the function call:</div>\n")
+	buf.WriteString("  <ol>\n")
+	for _, t := range a.templates {
+		buf.WriteString("    <li>")
+		buf.WriteString(t.RenderHTML())
+		buf.WriteString("</li>\n")
+	}
+	buf.WriteString("  </ol>\n")
+	buf.WriteString("</div>\n")
+
+	return buf.String()
+}
+
+type redirectCall struct {
 	path string
 	name string
 }
 
 // ReplaceFunction replaces the called function with the provided drop-in replacement. The signature
 // must be compatible with the original function (it may accept a new variadic argument).
-func ReplaceFunction(path, name string) *replaceFunction {
-	return &replaceFunction{path, name}
+func ReplaceFunction(path, name string) *redirectCall {
+	return &redirectCall{path, name}
 }
 
-func (r *replaceFunction) Apply(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (bool, error) {
+func (r *redirectCall) Apply(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (bool, error) {
 	file, hasFile := node.Find[*dst.File](chain)
 
 	node, ok := chain.Node.(*dst.CallExpr)
@@ -157,15 +176,19 @@ func (r *replaceFunction) Apply(ctx context.Context, chain *node.Chain, csor *ds
 	return true, nil
 }
 
-func (r *replaceFunction) AsCode() jen.Code {
+func (r *redirectCall) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ReplaceFunction").Call(jen.Lit(r.path), jen.Lit(r.name))
 }
 
-func (r *replaceFunction) AddedImports() []string {
+func (r *redirectCall) AddedImports() []string {
 	if r.path != "" {
 		return []string{r.path}
 	}
 	return nil
+}
+
+func (a *redirectCall) RenderHTML() string {
+	return fmt.Sprintf(`<div class="advice redirect-call"><div class="type">Redirect the call to {{<godoc %q %q>}}.</div></div>`, a.path, a.name)
 }
 
 func init() {

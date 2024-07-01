@@ -62,6 +62,10 @@ func (i *functionCall) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.path + "." + i.name))
 }
 
+func (i *functionCall) RenderHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc %q %q>}}</div>`, i.path, i.name)
+}
+
 var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([^.]+)\z`)
 
 func init() {

@@ -6,6 +6,8 @@
 package join
 
 import (
+	"fmt"
+
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -47,6 +49,10 @@ func (i *valueDeclaration) ImpliesImported() []string {
 
 func (i *valueDeclaration) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ValueDeclaration").Call(i.typeName.AsCode())
+}
+
+func (i *valueDeclaration) RenderHTML() string {
+	return fmt.Sprintf(`<div class="flex join-point value-declaration"><span class="type">Package-level <code style="display:inline">const</code> or <code style="display:inline">var</code></span>%s</div>`, i.typeName.RenderHTML())
 }
 
 func init() {

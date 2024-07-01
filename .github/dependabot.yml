@@ -11,18 +11,18 @@ updates:
     schedule:
       interval: daily
     allow:
-      dependency-type: direct
+      - dependency-type: direct
 
   - package-ecosystem: gomod
     directory: /_integration-tests
     schedule:
       interval: daily
     allow:
-      dependency-type: direct
+      - dependency-type: direct
 
   - package-ecosystem: gomod
     directory: /samples
     schedule:
       interval: daily
     allow:
-      dependency-type: direct
+      - dependency-type: direct
