@@ -73,14 +73,13 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	injector, err := injector.New(cmd.SourceDir, injector.Options{
-		Aspects:      aspects,
+		Aspects: aspects,
+		// Include test files if any of the input Go files has a _test.go suffix.
 		IncludeTests: slices.ContainsFunc(cmd.GoFiles(), func(name string) bool { return strings.HasSuffix(strings.ToLower(name), "_test.go") }),
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
 		},
 		PreserveLineInfo: true,
-		// Include test files if any of the input Go files has a _test.go suffix.
-		IncludeTests: slices.ContainsFunc(cmd.GoFiles(), func(s string) bool { return strings.HasSuffix(strings.ToLower(s), "_test.go") }),
 	})
 	if err != nil {
 		return fmt.Errorf("creating injector for %s (in %q): %w", w.ImportPath, cmd.SourceDir, err)
