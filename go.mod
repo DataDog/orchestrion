@@ -10,7 +10,7 @@ require (
 	github.com/google/go-licenses v1.6.0
 	github.com/shirou/gopsutil/v3 v3.24.4
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/sys v0.20.0
+	golang.org/x/sys v0.21.0
 	golang.org/x/term v0.20.0
 	golang.org/x/tools v0.21.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
