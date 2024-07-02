@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/beevik/guid"
+	"github.com/google/uuid"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -34,16 +34,20 @@ type MockAgent struct {
 
 type mockSession struct {
 	agent *MockAgent
-	token *guid.Guid
+	token uuid.UUID
 }
 
-func New(t *testing.T) (agent MockAgent, err error) {
+func New(t *testing.T) (*MockAgent, error) {
+	var (
+		agent MockAgent
+		err   error
+	)
 	if agent.virtualEnv, err = os.MkdirTemp("", "orchestrion-integ-venv-*"); err != nil {
-		return
+		return nil, err
 	}
 	t.Logf("Creating Python venv at %q...\n", agent.virtualEnv)
 	if err = exec.Command("python3", "-m", "venv", agent.virtualEnv).Run(); err != nil {
-		return
+		return nil, err
 	}
 	venvBin := filepath.Join(agent.virtualEnv, "bin")
 	if runtime.GOOS == "windows" {
@@ -52,11 +56,11 @@ func New(t *testing.T) (agent MockAgent, err error) {
 
 	t.Logf("Installing ddapm-test-agent in venv...\n")
 	if err = exec.Command(filepath.Join(venvBin, "pip"), "install", "ddapm-test-agent").Run(); err != nil {
-		return
+		return nil, err
 	}
 
 	if agent.port, err = getFreePort(); err != nil {
-		return
+		return nil, err
 	}
 	t.Logf("Starting ddapm-test-agent on port %d\n", agent.port)
 	var ctx context.Context
@@ -67,14 +71,18 @@ func New(t *testing.T) (agent MockAgent, err error) {
 		fmt.Sprintf("--port=%d", agent.port),
 	)
 	if err = agent.process.Start(); err != nil {
-		return
+		return nil, err
 	}
 
-	return
+	return &agent, nil
 }
 
 func (a *MockAgent) NewSession(t *testing.T) (session *mockSession, err error) {
-	session = &mockSession{agent: a, token: guid.New()}
+	token, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	session = &mockSession{agent: a, token: token}
 	if !a.currentSession.CompareAndSwap(nil, session) {
 		return nil, errors.New("a test session is already in progress")
 	}

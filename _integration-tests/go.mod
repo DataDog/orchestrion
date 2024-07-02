@@ -5,7 +5,6 @@ go 1.21
 replace github.com/datadog/orchestrion => ../
 
 require (
-	github.com/beevik/guid v1.0.0
 	github.com/datadog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/dave/jennifer v1.7.0
 	github.com/gin-gonic/gin v1.10.0
@@ -14,6 +13,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/gomodule/redigo v1.8.9
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
@@ -156,7 +156,6 @@ require (
 	github.com/google/go-licenses v1.6.0 // indirect
 	github.com/google/licenseclassifier v0.0.0-20221004142553-c1ed8fcf4bab // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.5.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect

@@ -69,7 +69,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
-          files: ./coverage/unit.out,.couverage/integration.out
+          files: ./coverage/unit.out,.coverage/integration.out
           name: Unit Tests (go${{ matrix.go-version }})
 
   integration-tests:
@@ -125,7 +125,7 @@ jobs:
           esac
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
-          GOFLAGS: -tags=integration,buildtag # Globally set build tags
+          GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
