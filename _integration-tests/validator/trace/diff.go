@@ -8,17 +8,18 @@ package trace
 import (
 	"fmt"
 	"sort"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/xlab/treeprint"
 )
 
 type Diff treeprint.Tree
 
-// MatchesAny determines whether the receiing span matches any of the other
-// spans, and returns difference information if not.
-func (span *Span) MatchesAny(others []*Span) (bool, Diff) {
+// RequireAnyMatch asserts that any of the traces in `others` corresponds to the receiver.
+func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
 	span, diff := span.matchesAny(others, treeprint.NewWithRoot("Root"))
-	return span != nil, diff
+	require.NotNil(t, span, diff.String())
 }
 
 func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) {

@@ -49,8 +49,7 @@ func Test(t *testing.T) {
 				t.Logf("Received %d traces", len(traces))
 
 				for _, expected := range tc.ExpectedTraces() {
-					matches, diffs := expected.MatchesAny(traces)
-					require.True(t, matches, "%s", diffs)
+					expected.RequireAnyMatch(t, traces)
 				}
 			}()
 
