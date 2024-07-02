@@ -19,7 +19,7 @@ type Diff treeprint.Tree
 // RequireAnyMatch asserts that any of the traces in `others` corresponds to the receiver.
 func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
 	span, diff := span.matchesAny(others, treeprint.NewWithRoot("Root"))
-	require.NotNil(t, span, diff.String())
+	require.NotNil(t, span, "no match found for trace:\n%s", diff)
 }
 
 func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) {
