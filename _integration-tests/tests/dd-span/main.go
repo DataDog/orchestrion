@@ -3,46 +3,32 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package ddspan
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"time"
+	"testing"
 
-	"orchestrion/integration"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
-func main() {
-	mux := http.NewServeMux()
-	s := &http.Server{
-		Addr:    "127.0.0.1:8092",
-		Handler: mux,
-	}
+type TestCase struct{}
 
-	mux.HandleFunc("/quit",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Shutdown requested...")
-			defer s.Shutdown(context.Background())
-			w.Write([]byte("Goodbye\n"))
-		})
+func (tc *TestCase) Setup(t *testing.T) {}
 
-	mux.HandleFunc("/",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(spanFromHttpRequest(r)))
-		})
+func (tc *TestCase) Run(t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+	defer span.Finish()
 
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:0/", nil)
+	require.NoError(t, err)
 
-	log.Print(s.ListenAndServe())
+	spanFromHttpRequest(req)
 }
+
+func (tc *TestCase) Teardown(t *testing.T) {}
 
 //dd:span foo:bar
 func spanFromHttpRequest(req *http.Request) string {

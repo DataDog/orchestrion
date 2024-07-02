@@ -3,35 +3,31 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package gorm
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"net/http"
-	"orchestrion/integration"
-	"time"
+	"orchestrion/integration/validator/trace"
+	"testing"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
-type Note struct {
-	gorm.Model
-	UserID  int
-	Content string
+type TestCase struct {
+	*gorm.DB
 }
 
-func main() {
-	db, err := gorm.Open("sqlite3", "file::memory:?cache=shared")
-	if err != nil {
-		log.Fatalf("Failed to open GORM database: %v", err)
-	}
-	defer db.Close()
+func (tc *TestCase) Setup(t *testing.T) {
+	var err error
+	tc.DB, err = gorm.Open("sqlite3", "file::memory:")
+	require.NoError(t, err)
 
-	db.AutoMigrate(&Note{})
+	require.NoError(t, tc.DB.AutoMigrate(&Note{}).Error)
 	for _, note := range []*Note{
 		{UserID: 1, Content: `Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.`},
 		{UserID: 1, Content: `Hey, remember to mow the lawn.`},
@@ -40,44 +36,48 @@ func main() {
 		{UserID: 3, Content: `Pick up cabbage from the store on the way home.`},
 		{UserID: 3, Content: `Review PR #1138`},
 	} {
-		db.Create(note)
+		require.NoError(t, tc.DB.Create(note).Error)
 	}
 
-	mux := &http.ServeMux{}
-	s := &http.Server{
-		Addr:    "127.0.0.1:8088",
-		Handler: mux,
+}
+
+func (tc *TestCase) Run(t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+	defer span.Finish()
+
+	var note Note
+	require.NoError(t, gormtrace.WithContext(ctx, tc.DB).Where("user_id = ?", 2).First(&note).Error)
+}
+
+func (tc *TestCase) Teardown(t *testing.T) {
+	assert.NoError(t, tc.DB.Close())
+}
+
+func (*TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]any{
+				"name": "test.root",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"resource": "SELECT * FROM \"notes\"  WHERE \"notes\".\"deleted_at\" IS NULL AND ((user_id = ?)) ORDER BY \"notes\".\"id\" ASC LIMIT 1",
+						"type":     "sql",
+						"name":     "gorm.query",
+						"service":  "gorm.db",
+					},
+					Meta: map[string]any{
+						"component": "jinzhu/gorm",
+					},
+				},
+			},
+		},
 	}
+}
 
-	mux.HandleFunc("/quit",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Shutdown requested...")
-			defer s.Shutdown(context.Background())
-			w.Write([]byte("Goodbye\n"))
-		})
-
-	mux.HandleFunc("/",
-		//dd:ignore
-		func(w http.ResponseWriter, r *http.Request) {
-			// TODO: This should not be necessary (it's manual, and manual is yuck)
-			db := gormtrace.WithContext(r.Context(), db)
-
-			var note Note
-			if err := db.Where("user_id = ?", 2).First(&note).Error; err != nil {
-				log.Printf("Error: %v\n", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "%v\n", err)
-				return
-			}
-			w.Write([]byte(note.Content))
-		})
-
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
-
-	log.Print(s.ListenAndServe())
+type Note struct {
+	gorm.Model
+	UserID  int
+	Content string
 }

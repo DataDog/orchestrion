@@ -3,44 +3,76 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package gin
 
 import (
 	"context"
-	"log"
 	"net/http"
+	"orchestrion/integration/validator/trace"
+	"testing"
 	"time"
 
-	"orchestrion/integration"
-
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
-func main() {
-	r := gin.Default()
-	//dd:ignore
-	s := &http.Server{
-		Addr:    "127.0.0.1:8082",
-		Handler: r.Handler(),
+type TestCase struct {
+	*http.Server
+}
+
+func (tc *TestCase) Setup(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode) // Silence start-up logging
+	engine := gin.New()
+
+	tc.Server = &http.Server{
+		Addr:    "127.0.0.1:8080",
+		Handler: engine.Handler(),
 	}
 
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
-	r.GET("/quit", func(c *gin.Context) {
-		log.Println("Shutdown requested...")
-		defer s.Shutdown(context.Background())
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Goodbye",
-		})
-	})
+	engine.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
 
-	integration.OnSignal(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	})
-	log.Print(s.ListenAndServe())
+	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+}
+
+func (tc *TestCase) Run(t *testing.T) {
+	resp, err := http.Get("http://127.0.0.1:8080/ping")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func (tc *TestCase) Teardown(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	require.NoError(t, tc.Server.Shutdown(ctx))
+}
+
+func (*TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
+			Tags: map[string]any{
+				"name":     "http.request",
+				"resource": "GET /ping",
+				"service":  "tests.test",
+				"type":     "http",
+			},
+			Meta: map[string]any{
+				"http.url": "http://127.0.0.1:8080/ping",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":     "http.request",
+						"service":  "tests.test",
+						"resource": "GET /ping",
+						"type":     "web",
+					},
+					Meta: map[string]any{
+						"http.url": "http://127.0.0.1:8080/ping",
+					},
+				},
+			},
+		},
+	}
 }
