@@ -25,7 +25,7 @@ require (
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
 	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
 	gorm.io/driver/sqlite v1.5.6
-	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
+	gorm.io/gorm v1.25.10
 	gotest.tools/v3 v3.5.1
 )
 
