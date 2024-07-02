@@ -42,32 +42,41 @@ func New(t *testing.T) (*MockAgent, error) {
 		agent MockAgent
 		err   error
 	)
-	if agent.virtualEnv, err = os.MkdirTemp("", "orchestrion-integ-venv-*"); err != nil {
-		return nil, err
-	}
-	t.Logf("Creating Python venv at %q...\n", agent.virtualEnv)
-	if err = exec.Command("python3", "-m", "venv", agent.virtualEnv).Run(); err != nil {
-		return nil, err
-	}
-	venvBin := filepath.Join(agent.virtualEnv, "bin")
-	if runtime.GOOS == "windows" {
-		venvBin = filepath.Join(agent.virtualEnv, "Scripts")
-	}
 
-	t.Logf("Installing ddapm-test-agent in venv...\n")
-	if err = exec.Command(filepath.Join(venvBin, "pip"), "install", "ddapm-test-agent").Run(); err != nil {
-		return nil, err
+	ddapmTestAgent, _ := exec.LookPath("ddapm-test-agent")
+	if ddapmTestAgent == "" {
+		t.Log("No ddapm-test-agent found in $PATH, installing into a python venv...")
+		if agent.virtualEnv, err = os.MkdirTemp("", "orchestrion-integ-venv-*"); err != nil {
+			return nil, err
+		}
+		t.Logf("Creating Python venv at %q...\n", agent.virtualEnv)
+		if err = exec.Command("python3", "-m", "venv", agent.virtualEnv).Run(); err != nil {
+			return nil, err
+		}
+		venvBin := filepath.Join(agent.virtualEnv, "bin")
+		if runtime.GOOS == "windows" {
+			venvBin = filepath.Join(agent.virtualEnv, "Scripts")
+		}
+
+		t.Logf("Installing requirements in venv...\n")
+		_, thisFile, _, _ := runtime.Caller(0)
+		thisDir := filepath.Dir(thisFile)
+		if err = exec.Command(filepath.Join(venvBin, "pip"), "install", "-r", filepath.Join(thisDir, "requirements.txt")).Run(); err != nil {
+			return nil, err
+		}
+
+		ddapmTestAgent = filepath.Join(venvBin, "ddapm-test-agent")
 	}
 
 	if agent.port, err = getFreePort(); err != nil {
 		return nil, err
 	}
-	t.Logf("Starting ddapm-test-agent on port %d\n", agent.port)
+	t.Logf("Starting %s on port %d\n", ddapmTestAgent, agent.port)
 	var ctx context.Context
 	ctx, agent.processCancel = context.WithCancel(context.Background())
 	agent.process = exec.CommandContext(
 		ctx,
-		filepath.Join(venvBin, "ddapm-test-agent"),
+		ddapmTestAgent,
 		fmt.Sprintf("--port=%d", agent.port),
 	)
 	if err = agent.process.Start(); err != nil {
