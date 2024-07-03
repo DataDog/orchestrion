@@ -21,7 +21,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.31.0
 	github.com/xlab/treeprint v1.2.0
-	google.golang.org/grpc v1.64.0
+	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
 	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
 	gorm.io/driver/sqlite v1.5.6
@@ -31,8 +31,7 @@ require (
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
-	cloud.google.com/go/compute v1.25.1 // indirect
-	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/storage v1.38.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
@@ -268,7 +267,7 @@ require (
 	golang.org/x/image v0.16.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/oauth2 v0.18.0 // indirect
+	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/term v0.21.0 // indirect
@@ -277,10 +276,9 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.169.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240318140521-94a12d6c2237 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240520151616-dc85e6b867a5 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
