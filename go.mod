@@ -8,7 +8,7 @@ require (
 	github.com/dave/jennifer v1.7.0
 	github.com/gohugoio/hugo v0.128.0
 	github.com/google/go-licenses v1.6.0
-	github.com/shirou/gopsutil/v3 v3.24.4
+	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sys v0.21.0
 	golang.org/x/term v0.21.0
