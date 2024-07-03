@@ -8,11 +8,11 @@ require (
 	github.com/datadog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/docker/docker v25.0.5+incompatible
 	github.com/gin-gonic/gin v1.10.0
-	github.com/go-chi/chi/v5 v5.0.12
+	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/fiber/v2 v2.52.4
-	github.com/gomodule/redigo v1.8.9
+	github.com/gomodule/redigo v1.9.2
 	github.com/gorilla/mux v1.8.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
@@ -24,7 +24,7 @@ require (
 	google.golang.org/grpc v1.64.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
 	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
-	gorm.io/driver/sqlite v1.5.5
+	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
 	gotest.tools/v3 v3.5.1
 )
