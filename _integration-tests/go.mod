@@ -144,7 +144,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gohugoio/go-i18n/v2 v2.1.3-0.20230805085216-e63c13218d0e // indirect
 	github.com/gohugoio/httpcache v0.7.0 // indirect
-	github.com/gohugoio/hugo v0.128.0 // indirect
+	github.com/gohugoio/hugo v0.128.1 // indirect
 	github.com/gohugoio/hugo-goldmark-extensions/extras v0.2.0 // indirect
 	github.com/gohugoio/hugo-goldmark-extensions/passthrough v0.2.0 // indirect
 	github.com/gohugoio/locales v0.14.0 // indirect
@@ -228,7 +228,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
-	github.com/shirou/gopsutil/v3 v3.24.4 // indirect
+	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
