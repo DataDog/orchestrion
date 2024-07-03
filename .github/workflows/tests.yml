@@ -69,7 +69,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
-          files: ./coverage/unit.out,.coverage/integration.out
+          files: ./coverage/unit.out,./coverage/integration.out
           name: Unit Tests (go${{ matrix.go-version }})
 
   integration-tests:
