@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.0
-	github.com/gohugoio/hugo v0.128.0
+	github.com/gohugoio/hugo v0.128.1
 	github.com/google/go-licenses v1.6.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/stretchr/testify v1.9.0
