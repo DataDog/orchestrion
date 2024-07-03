@@ -23,7 +23,7 @@ aspects:
           name: __dd_gls
           type: any
       - add-blank-import: unsafe # Needed for go:linkname
-      - inject-declarations:
+      - inject-declarations: # Reference: https://github.com/golang/go/blob/master/src/runtime/HACKING.md?plain=1#L44
           template: |-
             //go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
             var __dd_orchestrion_gls_get = func() any {
