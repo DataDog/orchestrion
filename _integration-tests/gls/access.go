@@ -5,6 +5,11 @@
 
 package gls
 
+/*
+extern void cgoCallback();
+*/
+import "C"
+
 import (
 	_ "runtime" // Provides go:linkname targets (if Orchestrion modifies)
 	_ "unsafe"  // For go:linkname
@@ -28,4 +33,13 @@ func init() {
 	if __dd_orchestrion_gls_set != nil {
 		set = __dd_orchestrion_gls_set
 	}
+}
+
+//export cgoCallback
+func cgoCallback() {
+	set("I am inside a cgo callback")
+}
+
+func cgoCall() {
+	C.cgoCallback()
 }
