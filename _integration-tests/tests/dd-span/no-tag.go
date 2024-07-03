@@ -5,9 +5,37 @@
 
 //go:build !buildtag
 
-package main
+package ddspan
 
-import "context"
+import (
+	"context"
+
+	"orchestrion/integration/validator/trace"
+)
+
+func (tc *TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]any{
+				"name": "test.root",
+			},
+			Children: trace.Spans{
+				{
+					Meta: map[string]any{
+						"foo": "bar",
+					},
+					Children: trace.Spans{
+						{
+							Meta: map[string]any{
+								"variant": "notag",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
 
 //dd:span variant:notag
 func tagSpecificSpan(context.Context) string {

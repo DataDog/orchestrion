@@ -52,8 +52,9 @@ jobs:
           cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         run: |-
-          mkdir -p ./coverage
-          go test -cover -covermode=atomic -coverpkg=./... -coverprofile=coverage/unit.out -race ./...
+          mkdir -p coverage
+          go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=${{ github.workspace }}/coverage/unit.out -race ./...
+          go -C _integration-tests test -shuffle=on -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile=${{ github.workspace }}/coverage/integration.out -race ./...
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
@@ -68,7 +69,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
-          file: ./coverage/unit.out
+          files: ./coverage/unit.out,./coverage/integration.out
           name: Unit Tests (go${{ matrix.go-version }})
 
   integration-tests:
@@ -100,40 +101,53 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '>=3.9 <3.13'
+          cache: pip
+          cache-dependency-path: _integration-tests/utils/agent/requirements.txt
+      - name: Install python dependencies
+        run: pip install -r _integration-tests/utils/agent/requirements.txt
+      - name: Build orchestrion binary
+        run: go build -cover -covermode=atomic -coverpkg="./..." -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
-        run: ./integration-tests.ps1
-        env:
-          TESTCASE_BUILD_MODE: ${{ matrix.build-mode }}
-      - name: Consolidate coverage report
-        if: always() && github.event_name != 'merge_group'
-        shell: bash # PowerShell mkdir -p fails if the directory already exists...
+        shell: bash
         run: |-
-          mkdir -p ./coverage
-          go tool covdata textfmt -i ./_integration-tests/outputs/coverage -o ./coverage/integration.out
+          mkdir -p "${GOCOVERDIR}"
+          case "${{ matrix.build-mode }}" in
+          "DRIVER")
+            bin/orchestrion.exe go -C=_integration-tests test -shuffle=on ./...
+            ;;
+          "TOOLEXEC")
+            go -C=_integration-tests test -shuffle=on -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
+            ;;
+          "GOFLAGS")
+            export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion.exe toolexec' ${GOFLAGS}"
+            go -C=_integration-tests test -shuffle=on ./...
+            ;;
+          *)
+            echo "Unknown build mode: ${{ matrix.build-mode }}"
+            exit 1
+            ;;
+          esac
+        env:
+          GOCOVERDIR: ${{ github.workspace }}/coverage/raw
+          GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+      - name: Consolidate coverage report
+        if: github.event_name != 'merge_group'
+        run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
       - name: Determine simple go version
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         id: simple-go-version
         run: echo "::set-output name=version::${COMPLETE_VERSION:0:4}"
         shell: bash
         env:
           COMPLETE_VERSION: ${{ matrix.go-version }}
       - name: Upload coverage report
-        # We want this even if the tests failed
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
-          file: ./coverage/integration.out
+          files: ./coverage/integration.out
           name: Integration Tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
-      - name: Upload artifact
-        # We want this even if the tests failed
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.runs-on }}-tests-${{ matrix.go-version }}-${{ matrix.build-mode }}-output
-          path: _integration-tests/outputs
-          if-no-files-found: error # That would be very unexpected
 
   # This is just a join point intended to simplify branch protection settings
   complete:
