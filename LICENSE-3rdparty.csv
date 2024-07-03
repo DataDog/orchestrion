@@ -11,6 +11,7 @@ orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
 orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
 orchestrion,github.com/cespare/xxhash/v2,MIT,Copyright (c) 2016 Caleb Spare
 orchestrion,github.com/charmbracelet/lipgloss,MIT,"Copyright (c) 2021-2023 Charmbracelet, Inc"
+orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
 orchestrion,github.com/datadog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
@@ -26,7 +27,6 @@ orchestrion,github.com/lucasb-eyer/go-colorful,MIT,Copyright (c) 2013 Lucas Beye
 orchestrion,github.com/mattn/go-isatty,MIT,unknown
 orchestrion,github.com/mattn/go-runewidth,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
 orchestrion,github.com/mitchellh/mapstructure,MIT,Copyright (c) 2013 Mitchell Hashimoto
-orchestrion,github.com/muesli/reflow,MIT,Copyright (c) 2019 Christian Muehlhaeuser
 orchestrion,github.com/muesli/termenv,MIT,Copyright (c) 2019 Christian Muehlhaeuser
 orchestrion,github.com/outcaste-io/ristretto,Apache-2.0,unknown
 orchestrion,github.com/outcaste-io/ristretto/z,MIT,unknown
