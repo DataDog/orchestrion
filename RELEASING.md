@@ -1,52 +1,33 @@
 # Release process
 
-## Overview
-
-The release process consists of creating a release branch, merging fixes to `main` **and** to the release branch, and releasing release candidates as things progress. Once a release candidate is stable, a final version can be released.
-
 ## Steps
 
-### Create the release branch and the first release candidate
-
-1. Checkout the repository on the correct branch and changeset (`main`).
-2. Create a new release branch: `git checkout -b vX.Y`.
-3. Add a tag for the first release candidate: `git tag vX.Y.Z-rc.1`.
-4. Push the branch and tag.
-
+1. Determine the new release's version number
+   - Follow [Semantic Versioning 2.0](https://semver.org/spec/v2.0.0.html) semantics
+      + Be mindful of the `v0.x.y` semantics!
+   - The placeholder `vX.Y.Z` is used to refer to the tag name including this version number in all
+     steps below
+1. Check out the repository on the correct commit, which is most likely `origin/main`
    ```console
-   $ git push origin vX.Y
-   $ git push origin vX.Y.Z-rc.1
+   $ git fetch
+   $ git checkout origin/main -b ${USER}/release/vX.Y.Z
    ```
-5. Bump the tag in the `internal/version/version.go` file in the main branch to the next minor pre-release version using the `-dev` pre-release suffix.
-
-### Create a release candidate after a bug fix
-
-**Note:** The fix must be merged to `main` and backported the release branch.
-
-1. Update the release branch `vX.Y` locally by pulling the bug fix merged upstream (`git fetch`, `git pull`)
-2. Modify the version string in `internal/version/version.go` to the release candidate version.
-3. Add a tag for the new release candidate: `git tag vX.Y.Z-rc.W`.
-4. Push the branch and tag.
-
+1. Edit [`internal/version/version.go`](/internal/version/version.go) to set the `Tag` constant to
+   the new `vX.Y.Z` version
+1. Commit the resulting changes
    ```console
-   $ git push origin vX.Y
-   $ git push origin vX.Y.Z-rc.W
+   $ git commit -m "release: vX.Y.Z" internal/version/version.go
    ```
-
-### Release the final version
-
-1. Update the release branch `vX.Y` locally by pulling any bug fixes merged upstream (`git fetch`, `git pull`)
-2. Modify the version string in `internal/version/version.go` to the final version.
-3. Add a final release tag: `git tag vX.Y.Z`.
-4. Push the branch and tag.
-
+1. Open a pull request
    ```console
-   $ git push origin vX.Y
-   $ git push origin vX.Y.Z-rc.W
+   $ gh pr create --web
    ```
-
-5. Create a [GitHub release](https://github.com/DataDog/orchestrion/releases/new). 
-    - Choose the version tag `vX.Y.Z`
-    - Set the release title to `vX.Y.Z`
-    - Click on `Generate release notes` for automatic release notes generation
-    - Click on `Publish release`
+1. Get the PR reviewed by a colleague, ensure all CI passes including the _Release_ validations
+1. Get the PR merged to `main` via the merge queue
+1. Once merged, a draft release will automatically be created on GitHub
+   - Locate it on the [releases](https://github.com/DataDog/orchestrion/releases) page
+   - Review the release notes, and edit them if necessary:
+      + Remove `chore:` entrie
+      + Fix any typos you notice
+1. Once validated, publish the release on GitHub
+   - This automatically creates the release tag, so you're done!
