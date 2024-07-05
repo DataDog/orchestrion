@@ -55,6 +55,6 @@ jobs:
       - name: Create draft release
         if: github.event_name == 'push' && steps.version.outputs.exists == 'false'
         run: |-
-          gh release create --draft --generate-notes --target="${{ github.sha }}" --title="${{ steps.version.outputs.tag }}" ${{ contains(steps.version.outputs.tag, '-') && '--prerelease' || '' }}
+          gh release create '${{ steps.version.outputs.tag }}' --draft --generate-notes --target='${{ github.sha }}' --title='${{ steps.version.outputs.tag }}' ${{ contains(steps.version.outputs.tag, '-') && '--prerelease' || '' }}
         env:
           GH_TOKEN: ${{ github.token }}
