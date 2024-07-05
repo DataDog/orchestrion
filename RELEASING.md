@@ -27,7 +27,7 @@
 1. Once merged, a draft release will automatically be created on GitHub
    - Locate it on the [releases](https://github.com/DataDog/orchestrion/releases) page
    - Review the release notes, and edit them if necessary:
-      + Remove `chore:` entrie
+      + Remove `chore:` entries
       + Fix any typos you notice
 1. Once validated, publish the release on GitHub
    - This automatically creates the release tag, so you're done!
