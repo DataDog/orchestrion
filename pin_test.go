@@ -38,6 +38,9 @@ func TestPin(t *testing.T) {
 }
 
 func scaffold(dir string) error {
+	_, thisFile, _, _ := runtime.Caller(0)
+	thisDir := filepath.Dir(thisFile)
+
 	goMod, err := os.Create(filepath.Join(dir, "go.mod"))
 	if err != nil {
 		return err
@@ -50,7 +53,13 @@ func scaffold(dir string) error {
 	if _, err := fmt.Fprintln(goMod); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(goMod, "go %s", runtime.Version()[2:6]); err != nil {
+	if _, err := fmt.Fprintf(goMod, "go %s\n", runtime.Version()[2:6]); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(goMod); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(goMod, "replace github.com/datadog/orchestrion %s => %s\n", version.Tag, thisDir); err != nil {
 		return err
 	}
 
