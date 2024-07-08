@@ -18,12 +18,12 @@ aspects:
   - join-point:
       struct-definition: runtime.g
     advice:
-      - add-blank-import: unsafe
       - add-struct-field:
           name: __dd_gls
           type: any
       - add-blank-import: unsafe # Needed for go:linkname
-      - inject-declarations: # Reference: https://github.com/golang/go/blob/master/src/runtime/HACKING.md?plain=1#L44
+      - inject-declarations:
+          # Reference: https://github.com/golang/go/blob/6d89b38ed86e0bfa0ddaba08dc4071e6bb300eea/src/runtime/HACKING.md?plain=1#L44-L54
           template: |-
             //go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
             var __dd_orchestrion_gls_get = func() any {

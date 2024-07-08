@@ -522,7 +522,6 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
 		Advice: []advice.Advice{
-			advice.AddBlankImport("unsafe"),
 			advice.AddStructField("__dd_gls", join.MustTypeName("any")),
 			advice.AddBlankImport("unsafe"),
 			advice.InjectDeclarations(code.MustTemplate(
@@ -596,4 +595,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:kTPWkFtDERJc07Xp9A4Y9ogpVrgDysNLf81jjN/UoDyi6xj1a2zTWu0Ir2ZdJ14JM+LGYU07xFnlQ1CbTjXyIA=="
+const Checksum = "sha512:jUoH2+06uMlhRMStdbAans2JcOlDDFuXIhBQlT2LzkS0QCqztstydjGL4tRDly8J+jEo4YvSu936I60FQkMuww=="
