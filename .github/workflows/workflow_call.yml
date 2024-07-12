@@ -26,18 +26,13 @@ jobs:
         runs-on: [macos, ubuntu, windows]
         go-version: ['1.21', '1.22']
     runs-on: ${{ matrix.runs-on }}-latest
-    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
+    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
       - name: Checkout orchestrion
         uses: actions/checkout@v4
         with:
+          path: orchestrion
           repository: DataDog/orchestrion
-      - name: Checkout dd-trace-go
-        uses: actions/checkout@v4
-        with:
-          path: dd-trace-go
-          repository: DataDog/dd-trace-go
-          ref: ${{ inputs.dd-trace-go-ref }}
       - name: Setup go
         uses: actions/setup-go@v5
         with:
@@ -48,17 +43,19 @@ jobs:
         with:
           python-version: '>=3.9 <3.13'
           cache: pip
-          cache-dependency-path: _integration-tests/utils/agent/requirements.txt
+          cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements.txt
       - name: Install python dependencies
-        run: pip install -r _integration-tests/utils/agent/requirements.txt
+        run: pip install -r orchestrion/_integration-tests/utils/agent/requirements.txt
       - name: Build orchestrion binary
-        run: go build -o="bin/orchestrion.exe" .
+        run: go -C orchestrion/ build -o="./_integration-tests/orchestrion.exe" .
       - name: Run Integration Tests
         shell: bash
         run: |-
-          bin/orchestrion.exe go -C=_integration-tests mod edit -replace=gopkg.in/DataDog/dd-trace-go.v1=../dd-trace-go
-          bin/orchestrion.exe go -C=_integration-tests mod tidy
-          bin/orchestrion.exe go -C=_integration-tests test -shuffle=on ./...
+          set -x
+          cd orchestrion/_integration-tests
+          ./orchestrion.exe go get gopkg.in/DataDog/dd-trace-go.v1@${{ inputs.dd-trace-go-ref }}
+          ./orchestrion.exe go mod tidy
+          ./orchestrion.exe go test -shuffle=on ./...
         env:
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
 
