@@ -55,7 +55,7 @@ jobs:
           cd orchestrion/_integration-tests
           ./orchestrion.exe go get gopkg.in/DataDog/dd-trace-go.v1@${{ inputs.dd-trace-go-ref }}
           ./orchestrion.exe go mod tidy
-          ./orchestrion.exe go test -shuffle=on ./...
+          ./orchestrion.exe go test -v -shuffle=on ./...
         env:
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
 
