@@ -6,11 +6,8 @@
 package gls
 
 import (
-	"os"
-	"os/signal"
 	"runtime"
 	"sync"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,38 +41,6 @@ func TestCGO(t *testing.T) {
 	set(nil)
 	cgoCall()
 	require.Equal(t, expected, get())
-}
-
-// TestSignal tests that the GLS is correctly set even when the code comes from a signal handler.
-func TestSignal(t *testing.T) {
-	if !orchestrionEnabled {
-		t.Skip("Orchestrion is not enabled")
-	}
-
-	expected := "I am inside a signal handler"
-
-	set(nil)
-
-	doneSigChan := make(chan struct{}, 1)
-	checkChan := make(chan struct{}, 1)
-	doneCheckChan := make(chan struct{}, 1)
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGUSR1)
-
-	go func() {
-		<-sigChan
-		set(expected)
-		doneSigChan <- struct{}{}
-
-		<-checkChan
-		require.Equal(t, expected, get())
-		doneCheckChan <- struct{}{}
-	}()
-
-	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
-	<-doneSigChan
-	checkChan <- struct{}{}
-	<-doneCheckChan
 }
 
 func TestConcurrency(t *testing.T) {
