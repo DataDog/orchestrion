@@ -20,7 +20,7 @@ func mongoClient() {
 	opts := options.Client().ApplyURI("mongodb://localhost:27017")
 	client, err :=
 //line <generated>:1
-		func(opts *mongo.ClientOptions) (client *mongo.Client, err error) {
+		func() (client *mongo.Client, err error) {
 			opts.Monitor = mongo.NewMonitor()
 			return mongo.Connect(ctx, opts)
 		}()
