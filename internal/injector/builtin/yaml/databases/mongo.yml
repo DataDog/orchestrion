@@ -19,7 +19,7 @@ aspects:
             redis: go.mongodb.org/mongo-driver/mongo
             mongotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo
           template: |-
-            func(opts *mongo.ClientOptions) (client *mongo.Client, err error) {
+            func() (client *mongo.Client, err error) {
               opts.Monitor = mongotrace.NewMonitor()
               return mongo.Connect(ctx, opts)
             }()
