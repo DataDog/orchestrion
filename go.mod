@@ -6,12 +6,12 @@ require (
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.0
-	github.com/gohugoio/hugo v0.128.1
+	github.com/gohugoio/hugo v0.128.2
 	github.com/google/go-licenses v1.6.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/sys v0.21.0
-	golang.org/x/term v0.21.0
+	golang.org/x/sys v0.22.0
+	golang.org/x/term v0.22.0
 	golang.org/x/tools v0.22.0
 	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -174,7 +174,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect

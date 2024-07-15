@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/xlab/treeprint"
 	"gotest.tools/v3/golden"
 )
 
@@ -48,9 +49,9 @@ func TestMatchesAny(t *testing.T) {
 				require.NoError(t, json.Unmarshal(data, &actual))
 			}
 
-			matches, diff := expected.MatchesAny(actual)
+			matches, diff := expected.matchesAny(actual, treeprint.NewWithRoot("Root"))
 			goldFile := filepath.Join(name, "diff.txt")
-			if matches {
+			if matches != nil {
 				golden.Assert(t, "<none>", goldFile)
 				require.Empty(t, diff, 0)
 			} else {

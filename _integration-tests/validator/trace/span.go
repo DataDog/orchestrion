@@ -24,6 +24,8 @@ type Span struct {
 	Children []*Span
 }
 
+type Spans = []*Span
+
 var _ json.Unmarshaler = &Span{}
 
 func (span *Span) UnmarshalJSON(data []byte) error {

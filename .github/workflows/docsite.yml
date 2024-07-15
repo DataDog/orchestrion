@@ -7,7 +7,6 @@ on:
     branches: ['main']
   push:
     branches: [main]
-    paths: [docs/**]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
@@ -29,7 +28,10 @@ jobs:
       - name: Run go generate (builtin)
         run: go generate ./internal/injector/builtin
       - name: Build Site
-        run: go -C ./docs run github.com/gohugoio/hugo --minify --enableGitInfo
+        # Set environment to anything other than "production", as the theme we use adds SRI attributes to all CSS files,
+        # but datadoghq.dev is behind CloudFlare with auto-minify enabled; which breaks SRI if its minification is not
+        # identical to hugo's.
+        run: go -C ./docs run github.com/gohugoio/hugo --minify --enableGitInfo --environment=gh-pages
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
