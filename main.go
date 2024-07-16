@@ -7,21 +7,18 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha512"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime/debug"
-	"strings"
 
 	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/log"
+	"github.com/datadog/orchestrion/internal/toolexec"
 	"github.com/datadog/orchestrion/internal/toolexec/aspect"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/version"
@@ -81,50 +78,7 @@ func main() {
 
 		if proxyCmd.ShowVersion() {
 			log.Tracef("Toolexec version command: %q\n", proxyCmd.Args())
-
-			stdout := strings.Builder{}
-			proxy.MustRunCommand(proxyCmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
-
-			versionString := bytes.NewBufferString(version.Tag)
-			if bi, ok := debug.ReadBuildInfo(); ok {
-				var vcsModified bool
-				for _, setting := range bi.Settings {
-					if setting.Key == "vcs.modified" {
-						vcsModified = setting.Value == "true"
-						break
-					}
-				}
-
-				if vcsModified || bi.Main.Version == "(devel)" {
-					// If this binary was built with `go build`, it may have VCS information indicating the
-					// working directory was dirty (vcsModified). If it was produced with `go run`, it won't
-					// have VCS information, but the version may be `(devel)`, indicating it was built from a
-					// development branch. In either case, we add a checksum of the current binary to the
-					// version string so that development iteration builds aren't frustrated by GOCACHE.
-					// We would have wanted to use `bi.Main.Sum` and `bi.Deps.*.Sum` here instead, but the go
-					// toolchain does not produce `bi.Main.Sum`, which prevents detecting changes in the main
-					// module itself.
-					log.Tracef("Detected this build is from a dev tree: vcs.modified=%v; main.Version=%s\n", vcsModified, bi.Main.Version)
-
-					// We try to open the executable. If that fails, we won't be able to hash it, but we'll
-					// ignore this error. The consequence is that GOCACHE entries may be re-used when they
-					// shouldn't; which is only a problem on dev iteration. On Windows specifically, this may
-					// always fail due to being unable to open a running executable for reading.
-					if file, err := os.Open(orchestrionBinPath); err == nil {
-						sha := sha512.New512_224()
-						var buffer [4_096]byte
-						if _, err := io.CopyBuffer(sha, file, buffer[:]); err == nil {
-							var buf [sha512.Size224]byte
-							fmt.Fprintf(versionString, "+%02x", sha.Sum(buf[:0]))
-						} else {
-							log.Debugf("When hashing executable file: %v\n", err)
-						}
-					} else {
-						log.Debugf("When opening executable file for hashing: %v\n", err)
-					}
-				}
-			}
-			fullVersion := fmt.Sprintf("%s:%s,%s", strings.TrimSpace(stdout.String()), versionString.String(), builtin.Checksum)
+			fullVersion := toolexec.ComputeVersion(proxyCmd, orchestrionBinPath)
 			log.Tracef("Complete version output: %s\n", fullVersion)
 			fmt.Println(fullVersion)
 			return
