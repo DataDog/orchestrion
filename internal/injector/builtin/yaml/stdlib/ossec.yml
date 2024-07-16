@@ -7,7 +7,7 @@
 meta:
   name: os
   description: Protection from Local File Inclusion (LFI) Attacks
-  icon: file
+  icon: save
 
 # All calls that are susceptible to LFI attacks go through the os.OpenFile function, therefore we only need to protect
 # this function. This can change in the future if new functions are added to the os package that are susceptible to LFI
@@ -23,10 +23,33 @@ aspects:
       - prepend-statements:
           imports:
             ossec: gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec
+            dyngo: gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo
+            events: gopkg.in/DataDog/dd-trace-go.v1/appsec/events
           template: |-
-            {{- $path := .Function.Argument 0 -}}
-            {{- $flags := .Function.Argument 1 -}}
-            if err := ossec.ProtectOpen(nil, {{ $path }}, {{ $flags }}); err != nil {
-              return nil, err
-            }            
-            
+            parent, _ := dyngo.FromContext(nil)
+            if parent != nil {
+            	op := &ossec.OpenOperation{
+                    Operation: dyngo.NewOperation(parent),
+                }
+
+                var __dd_block bool
+                dyngo.OnData(op, func(_ *events.BlockingSecurityEvent) {
+                    __dd_block = true
+                })
+
+                dyngo.StartOperation(op, ossec.OpenOperationArgs{
+                    Path: {{ .Function.Argument 0 }},
+                    Flags: {{ .Function.Argument 1 }},
+                    Perms: {{ .Function.Argument 2 }},
+                })
+
+                var __dd_file any = {{ .Function.Returns 0 }}
+                defer dyngo.FinishOperation(op, ossec.OpenOperationRes{
+                    File: &__dd_file,
+                    Err: &{{ .Function.Returns 1 }},
+                })
+
+                if __dd_block {
+                    return
+                }
+            }

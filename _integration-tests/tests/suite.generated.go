@@ -26,6 +26,7 @@ import (
 	mongo "orchestrion/integration/tests/mongo"
 	mux "orchestrion/integration/tests/mux"
 	nethttp "orchestrion/integration/tests/net_http"
+	os "orchestrion/integration/tests/os"
 	redigo "orchestrion/integration/tests/redigo"
 	shopifysarama "orchestrion/integration/tests/shopify_sarama"
 	slog "orchestrion/integration/tests/slog"
