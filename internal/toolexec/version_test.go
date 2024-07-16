@@ -70,6 +70,7 @@ func Test(t *testing.T) {
 
 	// Replace the orchestrion package with the copy we just made...
 	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", copyDir))
+	runGo(t, tmp, "mod", "tidy") // The hash of the dependency has changed... go list would complain...
 	updated := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
 	require.NotEmpty(t, updated)
 	require.NotEqual(t, initial, updated)
