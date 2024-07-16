@@ -6,15 +6,26 @@
 package toolexec
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )
+
+var rootDir string
+
+func init() {
+	_, file, _, _ := runtime.Caller(0)
+	rootDir = filepath.Join(file, "..", "..", "..")
+}
 
 func Test(t *testing.T) {
 	tmp := t.TempDir()
@@ -33,8 +44,31 @@ func Test(t *testing.T) {
 	cmd, err := proxy.ParseCommand([]string{"go", "tool", "compile", "-V=full"})
 	require.NoError(t, err)
 
+	// Compute the initial version string...
 	initial := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
 	require.NotEmpty(t, initial)
+
+	copyDir := t.TempDir()
+	require.NoError(t, copy.Copy(rootDir, copyDir, copy.Options{
+		Skip: func(src string) (bool, error) {
+			return filepath.Base(src) == ".git", nil
+		},
+	}))
+	beaconFile := filepath.Join(copyDir, "instrument", "beacon___.go")
+	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 42"), 0o644))
+
+	// Replace the orchestrion package with the copy we just made...
+	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", copyDir))
+	updated := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
+	require.NotEmpty(t, updated)
+	require.NotEqual(t, initial, updated)
+
+	// Modify the beacon
+	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 1337"), 0o644))
+	final := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
+	require.NotEmpty(t, final)
+	require.NotEqual(t, initial, final)
+	require.NotEqual(t, updated, final)
 }
 
 func inDir[T any](t *testing.T, wd string, cb func() T) T {

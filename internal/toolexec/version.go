@@ -13,9 +13,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/golist"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
@@ -31,9 +33,6 @@ import (
 // - the injector configuration is different
 // - injected dependencies versions are different
 func ComputeVersion(cmd proxy.Command, orchestrionBinPath string) string {
-	pwd, _ := os.Getwd()
-	log.Tracef("toolexec.ComputeVersion(cmd, %q) / PWD=%s\n", orchestrionBinPath, pwd)
-
 	// Get the output of the raw `-V=full` invocation
 	stdout := strings.Builder{}
 	proxy.MustRunCommand(cmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout })
@@ -84,8 +83,9 @@ func ComputeVersion(cmd proxy.Command, orchestrionBinPath string) string {
 	}
 
 	// Simply hash the output of `go list -deps -json` to detect changes in possibly injected
-	// dependencies.
-	goList := exec.Command("go", "list", "-deps", "-json", "--")
+	// dependencies. We pass `-toolexec` in order to NOT honor it from GOFLAGS, as it would cause an
+	// infinite recursive invocation of Orchestrion (obviously not desirable).
+	goList := exec.Command("go", "list", "-deps", "-json", "-toolexec=", "--")
 	goList.Args = append(goList.Args, builtin.InjectedPaths[:]...)
 	var jsonText bytes.Buffer
 	goList.Stdout = &jsonText
@@ -94,9 +94,34 @@ func ComputeVersion(cmd proxy.Command, orchestrionBinPath string) string {
 		panic(fmt.Errorf("failed to run go list ...: %w", err))
 	}
 	depsHash := sha512.New()
-	if _, err := fmt.Fprint(depsHash, jsonText); err != nil {
+	if _, err := fmt.Fprint(depsHash, jsonText.String()); err != nil {
 		panic(fmt.Errorf("while hashing dependencies list: %w", err))
 	}
+
+	// For any directory-targeting replace directive, also hash the source files...
+	parsed, err := golist.ParseJSON(&jsonText)
+	if err != nil {
+		panic(fmt.Errorf("parsing output og 'go list -json ...': %w", err))
+	}
+	for _, entry := range parsed {
+		if entry.Standard || entry.Module == nil || entry.Module.Replace == nil || entry.Module.Replace.Version != "" {
+			continue
+		}
+		for _, file := range entry.AllFiles(false) {
+			filepath := filepath.Join(entry.Dir, file)
+			fmt.Fprintf(depsHash, "\x01%s\x02", filepath)
+			file, err := os.Open(filepath)
+			if err != nil {
+				panic(fmt.Errorf("opening %q: %w", filepath, err))
+			}
+			defer file.Close()
+			if _, err := io.Copy(depsHash, file); err != nil {
+				panic(fmt.Errorf("hashing %q: %w", filepath, err))
+			}
+			fmt.Fprint(depsHash, "\x03")
+		}
+	}
+
 	var depsChecksum [sha512.Size]byte
 	depsHashString := base64.StdEncoding.EncodeToString(depsHash.Sum(depsChecksum[:0]))
 
