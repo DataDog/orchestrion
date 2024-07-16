@@ -8,6 +8,7 @@ require (
 	github.com/dave/jennifer v1.7.0
 	github.com/gohugoio/hugo v0.128.2
 	github.com/google/go-licenses v1.6.0
+	github.com/otiai10/copy v1.6.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/sys v0.22.0
@@ -184,7 +185,6 @@ require (
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/niklasfasching/go-org v1.7.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/otiai10/copy v1.6.0 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
