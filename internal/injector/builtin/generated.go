@@ -68,13 +68,13 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From databases/mongo.yml
 	{
-		JoinPoint: join.FunctionCall("go.mongodb.org/mongo-driver/mongo.Connect"),
+		JoinPoint: join.FunctionCall("go.mongodb.org/mongo-driver/mongo/options.Client"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (client *mongo.Client, err error) {\n  opts.Monitor = mongotrace.NewMonitor()\n  return mongo.Connect(ctx, opts)\n}()",
+				"func() (opts *options.ClientOptions) {\n  opts = {{ . }}.SetMonitor(mongotrace.NewMonitor())\n  return\n}()",
 				map[string]string{
 					"mongotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
-					"redis":      "go.mongodb.org/mongo-driver/mongo",
+					"options":    "go.mongodb.org/mongo-driver/mongo/options",
 				},
 			)),
 		},
@@ -609,4 +609,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:1YE/Og6S72GvffqBg8XL+DL31sNpN8QH9pvGciVn2wIitizPbpUXPzL3Jmzm/l2N4e3YFISDVw3HHDcNAIkpnA=="
+const Checksum = "sha512:31IB7BKqr1OilHGhP4T1L5/fYuy25DCgMOW29o5HytGZaXcsCRliQlLWSCurnuf/u2JvwZGz8sM+26XXXqNkOw=="

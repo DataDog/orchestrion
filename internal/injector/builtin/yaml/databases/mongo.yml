@@ -11,15 +11,14 @@ meta:
 aspects:
   - id: Inject mongotrace.NewMonitor
     join-point:
-      one-of:
-        - function-call: go.mongodb.org/mongo-driver/mongo.Connect
+      function-call: go.mongodb.org/mongo-driver/mongo/options.Client
     advice:
       - wrap-expression:
           imports:
-            mongo: go.mongodb.org/mongo-driver/mongo
+            options: go.mongodb.org/mongo-driver/mongo/options
             mongotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo
           template: |-
-            func() (client *mongo.Client, err error) {
-              opts.Monitor = mongotrace.NewMonitor()
-              return mongo.Connect(ctx, opts)
+            func() (opts *options.ClientOptions) {
+              opts = {{ . }}.SetMonitor(mongotrace.NewMonitor())
+              return
             }()
