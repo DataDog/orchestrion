@@ -18,7 +18,4 @@ aspects:
             options: go.mongodb.org/mongo-driver/mongo/options
             mongotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo
           template: |-
-            func() (opts *options.ClientOptions) {
-              opts = {{ . }}.SetMonitor(mongotrace.NewMonitor())
-              return
-            }()
+            {{ . }}.SetMonitor(mongotrace.NewMonitor())
