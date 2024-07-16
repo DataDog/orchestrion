@@ -16,7 +16,7 @@ aspects:
     advice:
       - wrap-expression:
           imports:
-            redis: go.mongodb.org/mongo-driver/mongo
+            mongo: go.mongodb.org/mongo-driver/mongo
             mongotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo
           template: |-
             func() (client *mongo.Client, err error) {
