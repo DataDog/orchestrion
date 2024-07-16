@@ -130,6 +130,9 @@ jobs:
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+      - name: Consolidate coverage report
+        if: github.event_name != 'merge_group'
+        run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: simple-go-version
@@ -143,7 +146,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
-          directory: ${{ github.workspace }}/coverage/raw
+          files: ./coverage/integration.out
           name: Integration Tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
 
   # This is just a join point intended to simplify branch protection settings
