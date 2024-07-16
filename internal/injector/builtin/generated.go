@@ -71,7 +71,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("go.mongodb.org/mongo-driver/mongo/options.Client"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (opts *options.ClientOptions) {\n  opts = {{ . }}.SetMonitor(mongotrace.NewMonitor())\n  return\n}()",
+				"{{ . }}.SetMonitor(mongotrace.NewMonitor())",
 				map[string]string{
 					"mongotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
 					"options":    "go.mongodb.org/mongo-driver/mongo/options",
@@ -609,4 +609,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:31IB7BKqr1OilHGhP4T1L5/fYuy25DCgMOW29o5HytGZaXcsCRliQlLWSCurnuf/u2JvwZGz8sM+26XXXqNkOw=="
+const Checksum = "sha512:M1yO7gdlnh5Uy2ySDJZp1/QbFL97hY5HGKHYpIq2r561weEn4pAbseW7yBGNuQAP8lTpY4Id8M5jC1ItvVcj2w=="
