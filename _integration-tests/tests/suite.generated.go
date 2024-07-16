@@ -18,6 +18,7 @@ import (
 	gorm "orchestrion/integration/tests/gorm"
 	gormjinzhu "orchestrion/integration/tests/gorm.jinzhu"
 	grpc "orchestrion/integration/tests/grpc"
+	mongo "orchestrion/integration/tests/mongo"
 	mux "orchestrion/integration/tests/mux"
 	nethttp "orchestrion/integration/tests/net_http"
 	redigo "orchestrion/integration/tests/redigo"
@@ -35,6 +36,7 @@ var suite = map[string]testCase{
 	"gorm":        new(gorm.TestCase),
 	"gorm.jinzhu": new(gormjinzhu.TestCase),
 	"grpc":        new(grpc.TestCase),
+	"mongo":       new(mongo.TestCase),
 	"mux":         new(mux.TestCase),
 	"net_http":    new(nethttp.TestCase),
 	"redigo":      new(redigo.TestCase),

@@ -20,8 +20,10 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.32.0
 	github.com/xlab/treeprint v1.2.0
+	go.mongodb.org/mongo-driver v1.13.1
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
 	gopkg.in/DataDog/dd-trace-go.v1 v1.65.1
@@ -154,6 +156,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-licenses v1.6.0 // indirect
 	github.com/google/licenseclassifier v0.0.0-20221004142553-c1ed8fcf4bab // indirect
@@ -206,6 +209,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/montanaflynn/stats v0.7.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/smartcrop v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
@@ -251,6 +255,10 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
+	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
+	github.com/xdg-go/scram v1.1.2 // indirect
+	github.com/xdg-go/stringprep v1.0.4 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	github.com/yuin/goldmark v1.7.4 // indirect
 	github.com/yuin/goldmark-emoji v1.0.3 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect

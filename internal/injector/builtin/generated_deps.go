@@ -21,6 +21,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"

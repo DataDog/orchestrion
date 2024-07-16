@@ -66,6 +66,19 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/mongo.yml
+	{
+		JoinPoint: join.FunctionCall("go.mongodb.org/mongo-driver/mongo/options.Client"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{ . }}.SetMonitor(mongotrace.NewMonitor())",
+				map[string]string{
+					"mongotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
+					"options":    "go.mongodb.org/mongo-driver/mongo/options",
+				},
+			)),
+		},
+	},
 	// From databases/redigo.yml
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
@@ -571,6 +584,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
@@ -595,4 +609,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:jUoH2+06uMlhRMStdbAans2JcOlDDFuXIhBQlT2LzkS0QCqztstydjGL4tRDly8J+jEo4YvSu936I60FQkMuww=="
+const Checksum = "sha512:M1yO7gdlnh5Uy2ySDJZp1/QbFL97hY5HGKHYpIq2r561weEn4pAbseW7yBGNuQAP8lTpY4Id8M5jC1ItvVcj2w=="
