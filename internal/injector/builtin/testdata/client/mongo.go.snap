@@ -20,14 +20,10 @@ func mongoClient() {
 	ctx := context.Background()
 	opts :=
 //line <generated>:1
-		func() (opts *options.ClientOptions) {
-			opts =
 //line samples/client/mongo.go:18
-				options.Client().
+		options.Client().
 //line <generated>:1
-					SetMonitor(mongo1.NewMonitor())
-			return
-		}().
+			SetMonitor(mongo1.NewMonitor()).
 //line samples/client/mongo.go:18
 			ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(ctx, opts)
