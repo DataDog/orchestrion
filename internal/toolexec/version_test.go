@@ -1,0 +1,56 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package toolexec
+
+import (
+	"os"
+	"os/exec"
+	"strings"
+	"testing"
+
+	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/stretchr/testify/require"
+)
+
+func Test(t *testing.T) {
+	tmp := t.TempDir()
+	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
+
+	getArgs := []string{"get"}
+	for _, pkg := range builtin.InjectedPaths {
+		// We don't want to try to "go get" standard library packages; these don't contain a ".".
+		if strings.Contains(pkg, ".") {
+			getArgs = append(getArgs, pkg)
+		}
+	}
+	runGo(t, tmp, getArgs...)
+
+	// "Fake" proxy command.
+	cmd, err := proxy.ParseCommand([]string{"go", "tool", "compile", "-V=full"})
+	require.NoError(t, err)
+
+	initial := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
+	require.NotEmpty(t, initial)
+}
+
+func inDir[T any](t *testing.T, wd string, cb func() T) T {
+	orig, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { require.NoError(t, os.Chdir(orig)) }()
+
+	require.NoError(t, os.Chdir(wd))
+	return cb()
+}
+
+func runGo(t *testing.T, wd string, args ...string) {
+	cmd := exec.Command("go", args...)
+	cmd.Dir = wd
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run(), "failed to run 'go %s'", strings.Join(args, " "))
+}
