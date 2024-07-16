@@ -6,6 +6,7 @@
 package toolexec
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -39,6 +40,16 @@ func Test(t *testing.T) {
 		}
 	}
 	runGo(t, tmp, getArgs...)
+	// Add a go source file to make sure the toolchain doesn't complain we need to run `go mod tidy`...
+	var depsGo bytes.Buffer
+	fmt.Fprintln(&depsGo, "//go:build tools")
+	fmt.Fprintln(&depsGo, "package main")
+	fmt.Fprintln(&depsGo, "import (")
+	for _, pkg := range builtin.InjectedPaths {
+		fmt.Fprintf(&depsGo, "\t_ %q\n", pkg)
+	}
+	fmt.Fprintln(&depsGo, ")")
+	require.NoError(t, os.WriteFile(filepath.Join(tmp, "deps.go"), depsGo.Bytes(), 0o644))
 
 	// "Fake" proxy command.
 	cmd, err := proxy.ParseCommand([]string{"go", "tool", "compile", "-V=full"})
