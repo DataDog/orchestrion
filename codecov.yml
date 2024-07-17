@@ -1,4 +1,8 @@
 ---
+codecov:
+  notify:
+    wait_for_ci: true
+
 ignore:
   - '**/generator/main.go' # Generators are not actually part of the product
   - 'samples/**' # This is sample code for instrumentable things
@@ -15,9 +19,6 @@ coverage:
       default:
         target: auto
         informational: true
-
-notify:
-  after_n_builds: 15 # Generators + Unit Tests (3 entries) + Integration Tests (11 entries)
 
 comment:
   require_changes: true
