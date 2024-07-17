@@ -130,9 +130,6 @@ jobs:
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
-      - name: Tweak ulimit for open file descriptors
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: ulimit -Sn 1048575
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
         # Using gotip because the fix for https://github.com/golang/go/issues/68468 is not yet released.
