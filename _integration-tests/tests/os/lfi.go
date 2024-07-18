@@ -89,6 +89,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 }
 
 func (tc *TestCase) handleRoot(w http.ResponseWriter, _ *http.Request) {
+
 	fp, err := os.Open("/etc/passwd")
 
 	require.ErrorIs(tc.T, err, &events.BlockingSecurityEvent{})
@@ -97,8 +98,6 @@ func (tc *TestCase) handleRoot(w http.ResponseWriter, _ *http.Request) {
 		span.SetTag("is.security.error", true)
 		return
 	}
-
-	tc.T.Log("Reading /etc/passwd")
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
