@@ -132,7 +132,11 @@ jobs:
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
-        run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
+        # Using gotip because the fix for https://github.com/golang/go/issues/68468 is not yet released.
+        run: |-
+          go install golang.org/dl/gotip@latest
+          gotip download
+          gotip tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: simple-go-version

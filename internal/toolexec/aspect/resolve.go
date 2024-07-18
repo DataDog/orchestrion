@@ -7,14 +7,13 @@ package aspect
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 
 	"github.com/datadog/orchestrion/internal/goflags"
+	"github.com/datadog/orchestrion/internal/golist"
 	"github.com/datadog/orchestrion/internal/log"
 )
 
@@ -40,24 +39,10 @@ func resolvePackageFiles(importPath string) (map[string]string, error) {
 	}
 	log.Tracef("Command successful, parsing output...\n")
 
-	type listItem struct {
-		ImportPath string // The import path of the package
-		Export     string // The path to its archive, if any
-		BuildID    string // The build ID for the package
-		Standard   bool   // Whether this is from the standard library
+	items, err := golist.ParseJSON(&stdout)
+	if err != nil {
+		return nil, err
 	}
-	var items []listItem
-	dec := json.NewDecoder(&stdout)
-	for {
-		var item listItem
-		if err := dec.Decode(&item); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, fmt.Errorf("parsing `go list` output: %w", err)
-		}
-		items = append(items, item)
-	}
-
 	output := make(map[string]string, len(items))
 	for _, item := range items {
 		if item.Standard && item.ImportPath == "unsafe" && item.Export == "" {
