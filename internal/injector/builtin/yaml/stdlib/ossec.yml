@@ -26,8 +26,10 @@ aspects:
             dyngo: gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo
             events: gopkg.in/DataDog/dd-trace-go.v1/appsec/events
           template: |-
+            println("os.OpenFile")
             parent, _ := dyngo.FromContext(nil)
             if parent != nil {
+                println("os.OpenFile: parent is not nil")
             	op := &ossec.OpenOperation{
                     Operation: dyngo.NewOperation(parent),
                 }
