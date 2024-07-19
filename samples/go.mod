@@ -42,6 +42,7 @@ require (
 	github.com/DataDog/go-libddwaf/v3 v3.2.1 // indirect
 	github.com/DataDog/go-sqllexer v0.0.11 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/DataDog/sketches-go v1.4.5 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
@@ -137,6 +138,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-licenses v1.6.0 // indirect
 	github.com/google/licenseclassifier v0.0.0-20210722185704-3043a050f148 // indirect
+	github.com/google/pprof v0.0.0-20230817174616-7a8ec2ada47b // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.5.0 // indirect
@@ -199,6 +201,7 @@ require (
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -208,6 +211,7 @@ require (
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.8.0 // indirect
