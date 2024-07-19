@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 //line <generated>:1
-	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 	__orchestrion_chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
 )
 
@@ -27,13 +26,8 @@ func chiV5Server() {
 			return mux
 		}()
 //line samples/server/chiv5.go:16
-	router.Get("/",
-//line <generated>:1
-		__orchestrion_instrument.WrapHandlerFunc(
-//line samples/server/chiv5.go:16
-			func(w http.ResponseWriter, _ *http.Request) {
-				w.Write([]byte("Hello World!\n"))
-			}))
-//line samples/server/chiv5.go:19
+	router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte("Hello World!\n"))
+	})
 	http.ListenAndServe(":8080", router)
 }

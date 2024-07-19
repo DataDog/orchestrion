@@ -9,41 +9,13 @@ meta:
   description: HTTP server implementation.
   icon: at-symbol
 aspects:
-  # When httpmode is "wrap"
-  - id: Wrap http.Server.Handler
-    join-point:
-      all-of:
-        - configuration:
-            httpmode: wrap
-        - struct-literal:
-            type: net/http.Server
-            field: Handler
-        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-        - not:
-            one-of:
-              - import-path: github.com/go-chi/chi/v5
-              - import-path: github.com/go-chi/chi/v5/middleware
-              - import-path: golang.org/x/net/http2
-    advice:
-      - wrap-expression:
-          imports:
-            instrument: github.com/datadog/orchestrion/instrument
-          template: |-
-            //dd:startwrap
-            instrument.WrapHandler({{.}})
-            //dd:endwrap
   - id: Wrap http.HandlerFunc
     join-point:
       all-of:
-        - configuration:
-            httpmode: wrap
-        - function:
-            - name: '' # This filters only *dst.FuncLit
-            - signature:
-                args: [net/http.ResponseWriter, '*net/http.Request']
-        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
+        - function-call: net/http.HandlerFunc
         - not:
             one-of:
+              - import-path: net/http
               - import-path: github.com/go-chi/chi/v5
               - import-path: github.com/go-chi/chi/v5/middleware
               # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
@@ -54,24 +26,42 @@ aspects:
             instrument: "github.com/datadog/orchestrion/instrument"
           template: |-
             instrument.WrapHandlerFunc({{.}})
-
-  # When httpmode is "report"
-  - id: Report http.HandlerFunc calls
+  - id: Wrap http.HandleFunc and http.(*ServeMux).HandleFunc
     join-point:
       all-of:
-        - configuration:
-            httpmode: report
+        - one-of:
+          - function-call: net/http.HandleFunc
+          - function-call: net/http.(*ServeMux).HandleFunc
+        - not:
+            one-of:
+              - import-path: net/http
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
+              - import-path: golang.org/x/net/http2
+    advice:
+      - wrap-expression:
+          imports:
+            instrument: "github.com/datadog/orchestrion/instrument"
+          template: |-
+            {{.AST.Fun}}(
+              {{ index .AST.Args 0}},
+              instrument.WrapHandlerFunc({{ index .AST.Args 1 }}),
+            )
+  - id: Report net/http.Handler implementations
+    join-point:
+      all-of:
         - function-body:
             function:
+              - name: 'ServeHTTP'
               - signature:
                   args: [net/http.ResponseWriter, '*net/http.Request']
         # No instrumenting github.com/go-chi/chi/v5 as this causes a circular in wrap mode, and we
         # don't want the behavior to be significantly different between wrap and report modes.
         - not:
             one-of:
+              - import-path: net/http
               - import-path: github.com/go-chi/chi/v5
               - import-path: github.com/go-chi/chi/v5/middleware
-              # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
               - import-path: golang.org/x/net/http2
     advice:
       prepend-statements:
