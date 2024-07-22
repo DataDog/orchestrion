@@ -17,6 +17,7 @@ import (
 	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/datadog/orchestrion/internal/goproxy"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/jobserver"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/toolexec"
 	"github.com/datadog/orchestrion/internal/toolexec/aspect"
@@ -78,7 +79,11 @@ func main() {
 
 		if proxyCmd.ShowVersion() {
 			log.Tracef("Toolexec version command: %q\n", proxyCmd.Args())
-			fullVersion := toolexec.ComputeVersion(proxyCmd, orchestrionBinPath)
+			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to compute version: %v\n", err)
+				os.Exit(1)
+			}
 			log.Tracef("Complete version output: %s\n", fullVersion)
 			fmt.Println(fullVersion)
 			return
@@ -171,6 +176,8 @@ func main() {
 			}
 		}
 		return
+	case "server":
+		jobserver.Run(args)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)
 		printUsage(os.Args[0])

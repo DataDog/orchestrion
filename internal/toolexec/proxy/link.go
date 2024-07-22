@@ -20,6 +20,8 @@ type linkFlagSet struct {
 type LinkCommand struct {
 	command
 	Flags linkFlagSet
+	// WorkDir is the $WORK directory managed by the go toolchain.
+	WorkDir string
 }
 
 func (cmd *LinkCommand) Type() CommandType {
@@ -36,5 +38,9 @@ func parseLinkCommand(args []string) (Command, error) {
 	}
 	flags := &linkFlagSet{}
 	parseFlags(flags, args[1:])
-	return &LinkCommand{command: NewCommand(args), Flags: *flags}, nil
+
+	// The WorkDir is the parent of the stage dir, and the ImportCfg file is directly in the stage dir.
+	workDir := filepath.Dir(filepath.Dir(flags.ImportCfg))
+
+	return &LinkCommand{command: NewCommand(args), Flags: *flags, WorkDir: workDir}, nil
 }

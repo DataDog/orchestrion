@@ -37,6 +37,10 @@ func LevelNamed(name string) (Level, bool) {
 	}
 }
 
+func (l Level) Printf(format string, args ...any) {
+	write(l, format, args...)
+}
+
 func (l Level) String() string {
 	switch l {
 	case LevelError:
