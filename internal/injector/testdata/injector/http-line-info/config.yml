@@ -1,0 +1,62 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - signature:
+              args:
+                - 'net/http.ResponseWriter'
+                - '*net/http.Request'
+    advice:
+      - prepend-statements:
+          imports:
+            event: github.com/datadog/orchestrion/instrument/event
+            instrument: github.com/datadog/orchestrion/instrument
+          template: |-
+            {{- $arg := .Function.Argument 1 -}}
+            {{- $name := .Function.Name -}}
+            {{$arg}} = instrument.HandleHeader({{$arg}})
+            instrument.Report({{$arg}}.Context(), event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}, "http.method", {{$arg}}.Method)
+            defer instrument.Report({{$arg}}.Context(), event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}, "http.method", {{$arg}}.Method)
+
+preserveLineInfo: true
+
+syntheticReferences:
+  github.com/datadog/orchestrion/instrument/event: true
+  github.com/datadog/orchestrion/instrument: true
+
+code: |-
+  package main
+
+  import (
+    "context"
+    "io"
+    "log"
+    "net/http"
+
+    "orchestrion/integration"
+  )
+
+  func main() {
+    s := &http.Server{
+      Addr:    ":8085",
+      Handler: http.HandlerFunc(handle),
+    }
+    integration.OnSignal(func() {
+      s.Shutdown(context.Background())
+    })
+    log.Printf("Server shut down: %v", s.ListenAndServe())
+  }
+
+  func handle(w http.ResponseWriter, r *http.Request) {
+    data, err := io.ReadAll(r.Body)
+    if err != nil {
+      w.WriteHeader(http.StatusBadRequest)
+      w.Write([]byte(err.Error()))
+      return
+    }
+    defer r.Body.Close()
+    w.WriteHeader(http.StatusOK)
+    w.Write(data)
+  }

@@ -1,0 +1,23 @@
+--- input.go
++++ output.go
+@@ -5,6 +5,8 @@
+   "log"
+   "net/http"
+ 
++  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
++  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
+   "orchestrion/integration"
+ )
+ 
+@@ -19,5 +21,10 @@
+   log.Printf("Server shut down: %v", s.ListenAndServe())
+ }
+ 
+-func handle(http.ResponseWriter, *http.Request) {
++func handle(_ http.ResponseWriter, __argument__1 *http.Request) {
++  {
++    __argument__1 = __orchestrion_instrument.HandleHeader(__argument__1)
++    __orchestrion_instrument.Report(__argument__1.Context(), __orchestrion_event.EventStart, "name", "handle", "http.method", __argument__1.Method)
++    defer __orchestrion_instrument.Report(__argument__1.Context(), __orchestrion_event.EventEnd, "name", "handle", "http.method", __argument__1.Method)
++  }
+ }

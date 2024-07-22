@@ -1,0 +1,55 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      struct-literal:
+        type: net/http.Server
+        field: Handler
+    advice:
+      - wrap-expression:
+          imports:
+            instrument: github.com/datadog/orchestrion/instrument
+          template: |-
+            //dd:startwrap
+            instrument.WrapHandler({{ . }})
+            //dd:endwrap
+
+preserveLineInfo: true
+
+syntheticReferences:
+  github.com/datadog/orchestrion/instrument: true
+
+code: |-
+  package main
+
+  import (
+    "context"
+    "io"
+    "log"
+    "net/http"
+
+    "orchestrion/integration"
+  )
+
+  func main() {
+    s := &http.Server{
+      Addr:    ":8085",
+      Handler: http.HandlerFunc(handle),
+    }
+    integration.OnSignal(func() {
+      s.Shutdown(context.Background())
+    })
+    log.Printf("Server shut down: %v", s.ListenAndServe())
+  }
+
+  func handle(w http.ResponseWriter, r *http.Request) {
+    data, err := io.ReadAll(r.Body)
+    if err != nil {
+      w.WriteHeader(http.StatusBadRequest)
+      w.Write([]byte(err.Error()))
+      return
+    }
+    defer r.Body.Close()
+    w.WriteHeader(http.StatusOK)
+    w.Write(data)
+  }

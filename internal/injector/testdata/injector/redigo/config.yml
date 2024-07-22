@@ -1,0 +1,64 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-call: github.com/gomodule/redigo/redis.Dial
+    advice:
+      - replace-function:
+          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
+  - join-point:
+      function-call: github.com/gomodule/redigo/redis.DialContext
+    advice:
+      - replace-function:
+          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+  - join-point:
+      function-call: github.com/gomodule/redigo/redis.DialURL
+    advice:
+      - replace-function:
+          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
+
+preserveLineInfo: true
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
+
+code: |-
+  package main
+
+  import (
+    "context"
+
+    "github.com/gomodule/redigo/redis"
+  )
+
+  func dial(net, address string) error {
+    c, err := redis.Dial(net, address)
+    if err != nil {
+      return err
+    }
+    defer c.Close()
+    return use(c)
+  }
+
+  func dialContext(ctx context.Context, net, address string) error {
+    c, err := redis.DialContext(ctx, net, address)
+    if err != nil {
+      return err
+    }
+    defer c.Close()
+    return use(c)
+  }
+
+  func dialURL(url string) error {
+    c, err := redis.DialURL(url)
+    if err != nil {
+      return err
+    }
+    defer c.Close()
+    return use(c)
+  }
+
+  func use(c redis.Conn) error {
+    _, err := c.Do("SET", "test", "success")
+    return err
+  }

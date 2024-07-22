@@ -1,0 +1,60 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-call: google.golang.org/grpc.Dial
+    advice:
+      - append-args:
+          type: google.golang.org/grpc.DialOption
+          values:
+            - imports: &imports
+                instrument: github.com/datadog/orchestrion/instrument
+              template: instrument.GRPCStreamClientInterceptor()
+            - imports: *imports
+              template: instrument.GRPCUnaryClientInterceptor()
+  - join-point:
+      function-call: google.golang.org/grpc.NewServer
+    advice:
+      - append-args:
+          type: google.golang.org/grpc.ServerOption
+          values:
+            - imports: *imports
+              template: instrument.GRPCStreamServerInterceptor()
+            - imports: *imports
+              template: instrument.GRPCUnaryServerInterceptor()
+
+preserveLineInfo: true
+
+syntheticReferences:
+  github.com/datadog/orchestrion/instrument: true
+
+code: |-
+  package main
+
+  import (
+    "log"
+    "net"
+
+    "google.golang.org/grpc"
+  )
+
+  func grpcClient() {
+    dialOpts := []grpc.DialOption{grpc.WithInsecure()}
+    conn, err := grpc.Dial("localhost:50051", dialOpts...)
+    if err != nil {
+      log.Fatal(err)
+    }
+    defer conn.Close()
+  }
+
+  func grpcServer() {
+    ln, err := net.Listen("tcp", ":50051")
+    if err != nil {
+      log.Fatal(err)
+    }
+
+    s := grpc.NewServer(grpc.EmptyServerOption{})
+    if err := s.Serve(ln); err != nil {
+      log.Fatalf("failed to serve: %v", err)
+    }
+  }
