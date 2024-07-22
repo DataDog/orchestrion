@@ -1,6 +1,7 @@
 ---
 codecov:
   notify:
+    after_n_builds: 15
     wait_for_ci: true
 
 ignore:
