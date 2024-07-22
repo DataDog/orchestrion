@@ -78,6 +78,14 @@ func main() {
 		}
 
 		if proxyCmd.ShowVersion() {
+			if proxyCmd.Type() == proxy.CommandTypeOther {
+				// proxy.CommandTypeOther commands are not subject to any injection, so it is not useful to
+				// cache-bust their output artifacts when orchestrion somehow changes. We just run these
+				// as-is.
+				proxy.MustRunCommand(proxyCmd)
+				return
+			}
+
 			log.Tracef("Toolexec version command: %q\n", proxyCmd.Args())
 			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
 			if err != nil {
