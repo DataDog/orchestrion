@@ -10,30 +10,30 @@ import (
 
 	jinzhu "github.com/jinzhu/gorm"
 	"gorm.io/driver/postgres"
-	gorm2 "gorm.io/gorm"
+	"gorm.io/gorm"
 
 	_ "github.com/mattn/go-sqlite3"
 //line <generated>:1
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
-	gorm1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
+	__orchestrion_sql "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	__orchestrion_gorm "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
+	__orchestrion_gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 )
 
 //line samples/client/gorm.go:19
 func gormClient() {
-	sqlDB, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	sqlDB, err := __orchestrion_sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sqlDB.Close()
 
-	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm2.Config{})
+	db, err := __orchestrion_gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var user struct {
-		gorm2.Model
+		gorm.Model
 		Name string
 	}
 	db.Where("name = ?", "gorm.io").First(&user)
@@ -50,7 +50,7 @@ func jinzhuGormClient() {
 			if err != nil {
 				return nil, err
 			}
-			return gorm1.WithCallbacks(db), err
+			return __orchestrion_gormtrace.WithCallbacks(db), err
 		}()
 //line samples/client/gorm.go:40
 	if err != nil {
