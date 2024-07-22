@@ -24,7 +24,8 @@ type service struct {
 	mu              sync.Mutex
 }
 
-func Subscribe(conn *nats.Conn, stats *common.CacheStats) {
+func Subscribe(conn *nats.Conn, stats *common.CacheStats) error {
 	s := &service{stats: stats}
-	conn.Subscribe(versionSubject, common.Fork(s.versionSuffix))
+	_, err := conn.Subscribe(versionSubject, common.Fork(s.versionSuffix))
+	return err
 }

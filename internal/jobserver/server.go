@@ -127,9 +127,18 @@ func New(opts *Options) (*Server, error) {
 		conn:       conn,
 		CacheStats: &common.CacheStats{},
 	}
-	buildid.Subscribe(conn, res.CacheStats)
-	pkgs.Subscribe(server.ClientURL(), conn, res.CacheStats)
-	conn.Subscribe("clients", res.handleClients)
+	if err := buildid.Subscribe(conn, res.CacheStats); err != nil {
+		defer server.Shutdown()
+		return nil, err
+	}
+	if err := pkgs.Subscribe(server.ClientURL(), conn, res.CacheStats); err != nil {
+		defer server.Shutdown()
+		return nil, err
+	}
+	if _, err := conn.Subscribe("clients", res.handleClients); err != nil {
+		defer server.Shutdown()
+		return nil, err
+	}
 
 	if opts.InactivityTimeout > 0 {
 		sysConn, err := nats.Connect(server.ClientURL(), nats.Name("server-local-admin"), nats.UserInfo(sysUser, noPassword), nats.InProcessServer(server))
@@ -140,8 +149,14 @@ func New(opts *Options) (*Server, error) {
 
 		res.inactivityTimeout = opts.InactivityTimeout
 		res.clients = make(map[uint64]string)
-		sysConn.Subscribe(fmt.Sprintf("$SYS.ACCOUNT.%s.CONNECT", userAccount.Name), res.handleClientConnect)
-		sysConn.Subscribe(fmt.Sprintf("$SYS.ACCOUNT.%s.DISCONNECT", userAccount.Name), res.handleClientDisconnect)
+		if _, err := sysConn.Subscribe(fmt.Sprintf("$SYS.ACCOUNT.%s.CONNECT", userAccount.Name), res.handleClientConnect); err != nil {
+			defer server.Shutdown()
+			return nil, err
+		}
+		if _, err := sysConn.Subscribe(fmt.Sprintf("$SYS.ACCOUNT.%s.DISCONNECT", userAccount.Name), res.handleClientDisconnect); err != nil {
+			defer server.Shutdown()
+			return nil, err
+		}
 
 		// We don't have any (external) client just yet (we've not yet advertised our URL!), so we can start the inactivity
 		// timer right away.

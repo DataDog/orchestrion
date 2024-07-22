@@ -21,11 +21,12 @@ type service struct {
 	serverURL string
 }
 
-func Subscribe(serverURL string, conn *nats.Conn, stats *common.CacheStats) {
+func Subscribe(serverURL string, conn *nats.Conn, stats *common.CacheStats) error {
 	s := &service{
 		resolved:  common.NewCache[ResolveResponse](stats),
 		serverURL: serverURL,
 	}
 
-	conn.Subscribe(resolveSubject, common.Fork(s.resolve))
+	_, err := conn.Subscribe(resolveSubject, common.Fork(s.resolve))
+	return err
 }
