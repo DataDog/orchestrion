@@ -1,0 +1,44 @@
+--- input.go
++++ output.go
+@@ -7,8 +7,12 @@
+   "net/http"
+ 
+   "orchestrion/integration"
++//line <generated>:1
++  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
++  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
+ )
+ 
++//line input.go:12
+ func main() {
+   s := &http.Server{
+     Addr:    ":8085",
+@@ -21,6 +23,28 @@
+ }
+ 
+ func handle(w http.ResponseWriter, r *http.Request) {
++//line <generated>:1
++  {
++    r = r.WithContext(__orchestrion_instrument.Report(
++      r.Context(),
++      __orchestrion_event.EventStart,
++      "function-name", "handle",
++      "span.kind", "server",
++      "http.method", r.Method,
++      "http.url", r.URL,
++      "http.useragent", r.Header.Get("User-Agent"),
++    ))
++    defer __orchestrion_instrument.Report(
++      r.Context(),
++      __orchestrion_event.EventEnd,
++      "function-name", "handle",
++      "span.kind", "server",
++      "http.method", r.Method,
++      "http.url", r.URL,
++      "http.useragent", r.Header.Get("User-Agent"),
++    )
++  }
++//line input.go:24
+   data, err := io.ReadAll(r.Body)
+   if err != nil {
+     w.WriteHeader(http.StatusBadRequest)

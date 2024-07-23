@@ -193,7 +193,8 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 
 		csor.Replace(repl)
 		if refMap, ok := typed.ContextValue[*typed.ReferenceMap](ctx); ok {
-			refMap.AddImport(file, path)
+			// We apply an alias to the import to mitigate the risk of conflicting with an existing symbol in the surrounding scope.
+			refMap.AddImport(file, path, ident.Name)
 		}
 
 		return true

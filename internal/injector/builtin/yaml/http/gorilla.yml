@@ -110,6 +110,7 @@ aspects:
             httptrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http
             httptraceinternal: gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace
             options: gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
             {{- $r := .Function.Receiver -}}
             {{- $w := .Function.Argument 0 -}}

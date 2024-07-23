@@ -1,0 +1,37 @@
+--- input.go
++++ output.go
+@@ -1,19 +1,31 @@
+ package test
+ 
+ import (
+-  "database/sql"
+   "database/sql/driver"
++//line <generated>:1
++  __orchestrion_sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+ )
+ 
++//line input.go:8
+ var conn driver.Connector
+ 
+ func main() {
+-  db1, err := sql.Open("foo", "bar")
++  db1, err :=
++//line <generated>:1
++    __orchestrion_sqltrace.Open(
++//line input.go:11
++      "foo", "bar")
++//line input.go:12
+   if err != nil {
+     panic(err)
+   }
+   defer db1.Close()
+ 
+-  db2 := sql.OpenDB(conn)
++  db2 :=
++//line <generated>:1
++    __orchestrion_sqltrace.OpenDB(
++//line input.go:17
++      conn)
++//line input.go:18
+   defer db2.Close()
+ }

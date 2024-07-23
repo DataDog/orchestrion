@@ -1,0 +1,49 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-call: database/sql.Open
+    advice:
+      - wrap-expression:
+          imports:
+            sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+          template: |-
+            sqltrace.Open(
+              {{range .AST.Args}}{{.}},
+            {{end}})
+  - join-point:
+      function-call: database/sql.OpenDB
+    advice:
+      - wrap-expression:
+          imports:
+            sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+          template: |-
+            sqltrace.OpenDB(
+              {{range .AST.Args}}{{.}},
+            {{end}})
+
+preserveLineInfo: true
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql: true
+
+code: |-
+  package test
+
+  import (
+    "database/sql"
+    "database/sql/driver"
+  )
+
+  var conn driver.Connector
+
+  func main() {
+    db1, err := sql.Open("foo", "bar")
+    if err != nil {
+      panic(err)
+    }
+    defer db1.Close()
+
+    db2 := sql.OpenDB(conn)
+    defer db2.Close()
+  }

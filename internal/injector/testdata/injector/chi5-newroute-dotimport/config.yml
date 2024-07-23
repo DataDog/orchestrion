@@ -1,0 +1,51 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-call: github.com/go-chi/chi/v5.NewRouter
+    advice:
+      - wrap-expression:
+          imports:
+            chi: github.com/go-chi/chi/v5
+            chitrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
+          template: |-
+            func() *chi.Mux {
+              mux := {{ . }}
+              mux.Use(chitrace.Middleware())
+              return mux
+            }()
+
+preserveLineInfo: true
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5: true
+
+code: |-
+  package main
+
+  import (
+    "context"
+    "log"
+    "net/http"
+    "time"
+
+    "orchestrion/integration"
+
+    . "github.com/go-chi/chi/v5"
+  )
+
+  func main() {
+    router := NewRouter()
+    router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+      w.Write([]byte("Hello World!"))
+    })
+    s := &http.Server{
+      Addr:    ":8080",
+      Handler: router,
+    }
+    integration.OnSignal(func() {
+      ctx, _ := context.WithTimeout(context.Background(), time.Second)
+      s.Shutdown(ctx)
+    })
+    log.Print(s.ListenAndServe())
+  }
