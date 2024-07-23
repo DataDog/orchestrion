@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -22,10 +23,13 @@ import (
 )
 
 const (
-	loopback       = "127.0.0.1"
 	serverUsername = "server" // User for the server itself
 	sysUser        = "admin"  // User for system event access
 	noPassword     = ""       // We don't need passwords, this is only to have access to system events, not for security.
+)
+
+var (
+	loopback = "127.0.0.1"
 )
 
 type (
@@ -270,4 +274,20 @@ func (s *Server) startShutdownTimer() {
 			s.Shutdown()
 		}
 	})
+}
+
+// Tries to identify a loopback IP address from available interfaces. This is
+// done to ensure the server will work even if the host runs an IPv6-only
+// stack, as we would discover `::1` appropriately.
+func init() {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return
+	}
+	for _, addr := range addrs {
+		if addr, ok := addr.(*net.IPNet); ok && addr.IP.IsLoopback() {
+			loopback = addr.IP.String()
+			return
+		}
+	}
 }
