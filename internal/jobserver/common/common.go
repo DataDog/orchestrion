@@ -6,48 +6,34 @@
 package common
 
 import (
-	"encoding/json"
-	"errors"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 
 	"github.com/nats-io/nats.go"
 )
 
-// Sends an error response to the client, formatted as a JSON object with a
-// single `"error"` key containing the error message.
-func RespondError(msg *nats.Msg, err error) {
-	response := fmt.Sprintf(`{ "error": %q }`, err)
-	msg.Respond([]byte(response))
+type Response[T any] struct {
+	Value T
+	Error error
 }
 
-// Sends a success response to the client, formatted as a JSON object with a
-// single `"result"` key containing the response value.
-func RespondJSON(msg *nats.Msg, value any) {
-	response := struct {
-		Result any `json:"result"`
-	}{value}
-
-	data, err := json.Marshal(response)
-	if err != nil {
-		RespondError(msg, err)
-		return
+// Sends a response to the client.
+func Respond[T any](msg *nats.Msg, value T, err error) {
+	var encoded bytes.Buffer
+	enc := gob.NewEncoder(&encoded)
+	if err := enc.Encode(Response[T]{Value: value, Error: err}); err != nil {
+		panic(fmt.Errorf("failed to encode response: %w", err))
 	}
-
-	msg.Respond(data)
+	msg.Respond(encoded.Bytes())
 }
 
 func UnmarshalResponse[T any](data []byte) (T, error) {
-	var parsed struct {
-		Result T      `json:"result,omitempty"`
-		Error  string `json:"error,omitempty"`
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	var decoded Response[T]
+	if err := dec.Decode(&decoded); err != nil {
+		var zero T
+		return zero, fmt.Errorf("failed to decode result: %w", err)
 	}
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return parsed.Result, err
-	}
-
-	if parsed.Error != "" {
-		return parsed.Result, errors.New(parsed.Error)
-	}
-
-	return parsed.Result, nil
+	return decoded.Value, decoded.Error
 }

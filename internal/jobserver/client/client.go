@@ -6,7 +6,8 @@
 package client
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"os"
 	"time"
@@ -21,7 +22,8 @@ const (
 )
 
 type Client struct {
-	conn *nats.Conn
+	conn    *nats.Conn
+	encoder gob.GobEncoder
 }
 
 // Connect creates a new client connected to the NATS server at the specified
@@ -52,13 +54,15 @@ type (
 )
 
 func Request[Req request, Res responseTo[Req]](client *Client, req Req, timeout time.Duration) (Res, error) {
-	reqData, err := json.Marshal(req)
-	if err != nil {
+	var reqData bytes.Buffer
+	enc := gob.NewEncoder(&reqData)
+
+	if err := enc.Encode(req); err != nil {
 		var zero Res
 		return zero, fmt.Errorf("encoding request payload: %w", err)
 	}
 
-	resp, err := client.conn.Request(req.Subject(), reqData, timeout)
+	resp, err := client.conn.Request(req.Subject(), reqData.Bytes(), timeout)
 	if err != nil {
 		var zero Res
 		return zero, err
