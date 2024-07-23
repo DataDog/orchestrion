@@ -23,7 +23,7 @@ syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
 
 code: |-
-  package main
+  package test
 
   import (
     "context"

@@ -21,7 +21,7 @@ aspects:
             }()
 
 code: |-
-  package main
+  package test
 
   import (
     "errors"

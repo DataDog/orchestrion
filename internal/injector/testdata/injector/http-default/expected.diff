@@ -9,14 +9,29 @@
    "orchestrion/integration"
  )
  
-@@ -21,6 +23,11 @@
+@@ -21,6 +23,26 @@
  }
  
  func handle(w http.ResponseWriter, r *http.Request) {
 +  {
-+    r = __orchestrion_instrument.HandleHeader(r)
-+    __orchestrion_instrument.Report(r.Context(), __orchestrion_event.EventStart, "name", "handle", "http.method", r.Method)
-+    defer __orchestrion_instrument.Report(r.Context(), __orchestrion_event.EventEnd, "name", "handle", "http.method", r.Method)
++    r = r.WithContext(__orchestrion_instrument.Report(
++      r.Context(),
++      __orchestrion_event.EventStart,
++      "function-name", "handle",
++      "span.kind", "server",
++      "http.method", r.Method,
++      "http.url", r.URL,
++      "http.useragent", r.Header.Get("User-Agent"),
++    ))
++    defer __orchestrion_instrument.Report(
++      r.Context(),
++      __orchestrion_event.EventEnd,
++      "function-name", "handle",
++      "span.kind", "server",
++      "http.method", r.Method,
++      "http.url", r.URL,
++      "http.useragent", r.Header.Get("User-Agent"),
++    )
 +  }
    data, err := io.ReadAll(r.Body)
    if err != nil {

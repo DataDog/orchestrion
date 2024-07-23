@@ -13,15 +13,30 @@
  func main() {
    s := &http.Server{
      Addr:    ":8085",
-@@ -21,6 +23,13 @@
+@@ -21,6 +23,28 @@
  }
  
  func handle(w http.ResponseWriter, r *http.Request) {
 +//line <generated>:1
 +  {
-+    r = __orchestrion_instrument.HandleHeader(r)
-+    __orchestrion_instrument.Report(r.Context(), __orchestrion_event.EventStart, "name", "handle", "http.method", r.Method)
-+    defer __orchestrion_instrument.Report(r.Context(), __orchestrion_event.EventEnd, "name", "handle", "http.method", r.Method)
++    r = r.WithContext(__orchestrion_instrument.Report(
++      r.Context(),
++      __orchestrion_event.EventStart,
++      "function-name", "handle",
++      "span.kind", "server",
++      "http.method", r.Method,
++      "http.url", r.URL,
++      "http.useragent", r.Header.Get("User-Agent"),
++    ))
++    defer __orchestrion_instrument.Report(
++      r.Context(),
++      __orchestrion_event.EventEnd,
++      "function-name", "handle",
++      "span.kind", "server",
++      "http.method", r.Method,
++      "http.url", r.URL,
++      "http.useragent", r.Header.Get("User-Agent"),
++    )
 +  }
 +//line input.go:24
    data, err := io.ReadAll(r.Body)

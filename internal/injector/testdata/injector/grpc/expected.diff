@@ -5,7 +5,7 @@
  
    "google.golang.org/grpc"
 +//line <generated>:1
-+  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
++  __orchestrion_grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
  )
  
 +//line input.go:10
@@ -15,7 +15,7 @@
 +  conn, err := grpc.Dial("localhost:50051",
 +//line <generated>:1
 +    func(opts ...grpc.DialOption) []grpc.DialOption {
-+      return append(opts, __orchestrion_instrument.GRPCStreamClientInterceptor(), __orchestrion_instrument.GRPCUnaryClientInterceptor())
++      return append(opts, grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
 +    }(
 +//line input.go:12
 +      dialOpts...)...)
@@ -30,7 +30,7 @@
 -  s := grpc.NewServer(grpc.EmptyServerOption{})
 +  s := grpc.NewServer(grpc.EmptyServerOption{},
 +//line <generated>:1
-+    __orchestrion_instrument.GRPCStreamServerInterceptor(), __orchestrion_instrument.GRPCUnaryServerInterceptor())
++    grpc.StreamInterceptor(__orchestrion_grpctrace.StreamServerInterceptor()), grpc.UnaryInterceptor(__orchestrion_grpctrace.UnaryServerInterceptor()))
 +//line input.go:26
    if err := s.Serve(ln); err != nil {
      log.Fatalf("failed to serve: %v", err)

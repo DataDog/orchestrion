@@ -35,6 +35,8 @@ type testConfig struct {
 }
 
 func Test(t *testing.T) {
+	t.Parallel()
+
 	differ := diffmatchpatch.New()
 	differ.PatchMargin = 5
 
@@ -75,7 +77,7 @@ func Test(t *testing.T) {
 				Aspects:          config.Aspects,
 				Dir:              tmp,
 				PreserveLineInfo: config.PreserveLineInfo,
-				ModifiedFile:     func(path string) string { return path + ".edited" },
+				ModifiedFile:     func(path string) string { return path + ".edited.go" },
 			})
 			require.NoError(t, err, "failed to create injector")
 
@@ -83,7 +85,7 @@ func Test(t *testing.T) {
 			require.NoError(t, err, "failed to inject file")
 
 			if res.Modified {
-				assert.Equal(t, inputFile+".edited", res.Filename)
+				assert.Equal(t, inputFile+".edited.go", res.Filename)
 			} else {
 				assert.Equal(t, inputFile, res.Filename)
 			}
@@ -97,6 +99,13 @@ func Test(t *testing.T) {
 			edits := myers.ComputeEdits(span.URIFromPath("input.go"), original, modified)
 			diff := gotextdiff.ToUnified("input.go", "output.go", original, edits)
 			golden.Assert(t, fmt.Sprint(diff), filepath.Join(dirName, testName, "expected.diff"))
+
+			if res.Modified {
+				// Verify that the modified code compiles...
+				os.Rename(res.Filename, inputFile)
+				runGo(t, tmp, "mod", "tidy")
+				runGo(t, tmp, "build", inputFile)
+			}
 		})
 	}
 }
