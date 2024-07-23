@@ -10,7 +10,8 @@ meta:
   icon: at-symbol
 aspects:
   # Add tracing to the default http.RoundTripper implementation.
-  - join-point:
+  - id: Add field to Transport
+    join-point:
       struct-definition: net/http.Transport
     advice:
       add-struct-field:
@@ -18,7 +19,8 @@ aspects:
         type: bool
   # In tracer internals, set the DD__tracer_internal field to true so that we do not end up
   # instrumenting the tracer's internal HTTP clients (this would be a span bomb!)
-  - tracer-internal: true
+  - id: Flag tracer internal Transport instances
+    tracer-internal: true
     join-point:
       all-of:
         - struct-literal:
@@ -37,7 +39,8 @@ aspects:
               {{ range .AST.Elts }}{{ . }},
               {{ end }}
             }
-  - join-point:
+  - id: Instrument Transport.RoundTrip
+    join-point:
       function-body:
         function:
           - name: RoundTrip
@@ -157,7 +160,8 @@ aspects:
 
   # Replace the http.Get, http.Head, http.Post, and http.PostForm short-hands with the longer forms if
   # there is a context available from the surroundings.
-  - join-point:
+  - id: Wire context through http.Get/Head/Post/PostForm
+    join-point:
       all-of:
         - not:
             # We don't want to instrument in net/http, it'd create a circular dependency!
