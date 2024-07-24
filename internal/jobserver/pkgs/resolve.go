@@ -6,10 +6,8 @@
 package pkgs
 
 import (
-	"bytes"
 	"crypto/sha512"
 	"encoding/base64"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -43,9 +41,8 @@ func (ResolveResponse) IsResponseTo(*ResolveRequest) {}
 
 func (s *service) resolve(msg *nats.Msg) {
 	var req ResolveRequest
-	dec := gob.NewDecoder(bytes.NewReader(msg.Data))
-	if err := dec.Decode(&req); err != nil {
-		common.Respond[ResolveResponse](msg, nil, err)
+	if err := json.Unmarshal(msg.Data, &req); err != nil {
+		common.RespondError(msg, err)
 		return
 	}
 	// Make sure all children jobs connect to THIS jobserver; this is more efficient than checking for
@@ -55,7 +52,7 @@ func (s *service) resolve(msg *nats.Msg) {
 
 	reqHash, err := req.hash()
 	if err != nil {
-		common.Respond[ResolveResponse](msg, nil, err)
+		common.RespondError(msg, err)
 		return
 	}
 
@@ -86,11 +83,11 @@ func (s *service) resolve(msg *nats.Msg) {
 		return resp, nil
 	})
 	if err != nil {
-		common.Respond[ResolveResponse](msg, nil, err)
+		common.RespondError(msg, err)
 		return
 	}
 
-	common.Respond(msg, resp, nil)
+	common.RespondJSON(msg, resp)
 }
 
 func hashArray(items []string) string {

@@ -51,7 +51,7 @@ func ComputeVersion(cmd proxy.Command) (string, error) {
 	}
 	defer conn.Close()
 
-	res, err := client.Request[*buildid.VersionSuffixRequest, buildid.VersionSuffixResponse](conn, &buildid.VersionSuffixRequest{}, time.Minute)
+	res, err := client.Request[*buildid.VersionSuffixRequest, buildid.VersionSuffixResponse](conn, nil, time.Minute)
 	if err != nil {
 		return "", err
 	}

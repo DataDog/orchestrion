@@ -45,7 +45,7 @@ func (s *service) versionSuffix(msg *nats.Msg) {
 
 	if s.resolvedVersion != "" {
 		s.stats.RecordHit()
-		common.Respond(msg, VersionSuffixResponse(s.resolvedVersion), nil)
+		common.RespondJSON(msg, s.resolvedVersion)
 		return
 	}
 	s.stats.RecordMiss()
@@ -58,7 +58,7 @@ func (s *service) versionSuffix(msg *nats.Msg) {
 		builtin.InjectedPaths[:]...,
 	)
 	if err != nil {
-		common.Respond[VersionSuffixResponse](msg, "", err)
+		common.RespondError(msg, err)
 		return
 	}
 
@@ -76,15 +76,15 @@ func (s *service) versionSuffix(msg *nats.Msg) {
 	for _, name := range names {
 		mod := modules[name]
 		if _, err := fmt.Fprintf(sha, "\x01%s\x02", name); err != nil {
-			common.Respond[VersionSuffixResponse](msg, "", err)
+			common.RespondError(msg, err)
 			return
 		}
 
 		if data, err := json.Marshal(mod); err != nil {
-			common.Respond[VersionSuffixResponse](msg, "", err)
+			common.RespondError(msg, err)
 			return
 		} else if _, err := sha.Write(data); err != nil {
-			common.Respond[VersionSuffixResponse](msg, "", err)
+			common.RespondError(msg, err)
 			return
 		}
 	}
@@ -97,7 +97,7 @@ func (s *service) versionSuffix(msg *nats.Msg) {
 		sum,
 		builtin.Checksum,
 	)
-	common.Respond(msg, VersionSuffixResponse(s.resolvedVersion), nil)
+	common.RespondJSON(msg, s.resolvedVersion)
 }
 
 type moduleInfo struct {
