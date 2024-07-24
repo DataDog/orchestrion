@@ -8,7 +8,7 @@ package main
 import (
 	"github.com/gofiber/fiber/v2"
 //line <generated>:1
-	fiber1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
+	__orchestrion_fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
 )
 
 //line samples/server/fiberv2.go:12
@@ -20,7 +20,7 @@ func fiberV2Server() {
 //line samples/server/fiberv2.go:13
 				fiber.New()
 //line <generated>:1
-			app.Use(fiber1.Middleware())
+			app.Use(__orchestrion_fibertrace.Middleware())
 			return app
 		}()
 //line samples/server/fiberv2.go:14

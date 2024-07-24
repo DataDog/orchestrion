@@ -6,7 +6,6 @@
 package injector_test
 
 import (
-	_ "embed" // For go:embed
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,104 +15,110 @@ import (
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/injector"
+	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/hexops/gotextdiff"
+	"github.com/hexops/gotextdiff/myers"
+	"github.com/hexops/gotextdiff/span"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"gotest.tools/v3/golden"
 )
 
-//go:embed "testdata/injector.yml"
-var injectorTestdata []byte
+type testConfig struct {
+	Aspects             []aspect.Aspect                `yaml:"aspects"`
+	PreserveLineInfo    bool                           `yaml:"preserveLineInfo"`
+	SyntheticReferences map[string]typed.ReferenceKind `yaml:"syntheticReferences"`
+	Code                string                         `yaml:"code"`
+}
 
-func TestInjector(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	orchestrionPath := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
-
-	var goModFile = []byte(strings.Join([]string{
-		"module dummy/test/module",
-		"",
-		"go 1.21",
-		"",
-		"require (",
-		"\tgithub.com/datadog/orchestrion v0.0.0",
-		"\tgithub.com/go-chi/chi/v5 v5.0.10",
-		"\torchestrion/integration v0.0.0",
-		")",
-		"replace (",
-		fmt.Sprintf("\tgithub.com/datadog/orchestrion => %q", orchestrionPath),
-		fmt.Sprintf("\torchestrion/integration => %q", filepath.Join(orchestrionPath, "_integration-tests")),
-		")",
-	}, "\n"))
-	type testCase struct {
-		Options  injector.Options `yaml:"options"`
-		Source   string           `yaml:"source"`
-		Expected struct {
-			Modified   bool               `yaml:"modified"`
-			References typed.ReferenceMap `yaml:"references"`
-			Source     string             `yaml:"source"`
-		} `yaml:"expected"`
-	}
-	var cases map[string]testCase
-	err := yaml.Unmarshal(injectorTestdata, &cases)
-	require.NoError(t, err, "failed to parse test suite data")
-
+func Test(t *testing.T) {
 	t.Parallel()
 
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			tc.Options.ModifiedFile = func(filename string) string { return filename + ".edited" }
+	differ := diffmatchpatch.New()
+	differ.PatchMargin = 5
 
-			dir, err := os.MkdirTemp("", fmt.Sprintf("orchestrion-injector-test-*-%s", name))
-			require.NoError(t, err, "failed to create temporary directory")
-			defer os.RemoveAll(dir)
+	_, thisFile, _, _ := runtime.Caller(0)
+	dirName := "injector"
+	testsDir := filepath.Join(thisFile, "..", "testdata", dirName)
+	rootDir := filepath.Join(thisFile, "..", "..", "..")
+	integDir := filepath.Join(rootDir, "_integration-tests")
 
-			// The TMPDIR may be a symlink, in which case there could be a mismatch between $PWD and the current working
-			// directory, which go tooling asserts as an error (outside of main module or its selected dependencies).
-			dir, err = filepath.EvalSymlinks(dir)
-			require.NoError(t, err, "failed to resolve canonical temporary directory")
+	entries, err := os.ReadDir(testsDir)
+	require.NoError(t, err, "failed to read test data directory")
+	for _, item := range entries {
+		if !item.IsDir() {
+			continue
+		}
 
-			require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), goModFile, 0o644), "failed to write go.mod file")
+		testName := item.Name()
+		testPath := filepath.Join(testsDir, testName)
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
 
-			require.NoError(t, os.Mkdir(filepath.Join(dir, "main"), 0o755), "failed to create main directory")
-			require.NoError(t, os.WriteFile(filepath.Join(dir, "tools.go"), []byte("//go:build tools\npackage tools\nimport _ \"github.com/datadog/orchestrion/instrument\""), 0o644), "failed to write tools.go file")
+			data, err := os.ReadFile(filepath.Join(testPath, "config.yml"))
+			require.NoError(t, err, "failed to read test configuration")
+			var config testConfig
+			require.NoError(t, yaml.Unmarshal(data, &config), "failed to parse test configuration")
 
-			filename := filepath.Join(dir, "main", "input.go")
-			require.NoError(t, os.WriteFile(filename, []byte(tc.Source), 0o644), "failed to write injection input file")
+			tmp := t.TempDir()
+			runGo(t, tmp, "mod", "init", "dummy/test/module")
+			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", rootDir))
+			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("orchestrion/integration=%s", integDir))
 
-			run := func(cmd string, args ...string) error {
-				child := exec.Command(cmd, args...)
-				child.Dir = dir
-				child.Stdin = os.Stdin
-				child.Stdout = os.Stdout
-				child.Stderr = os.Stderr
-				return child.Run()
-			}
-			require.NoError(t, run("go", "mod", "tidy"), "failed to run go mod tidy")
-			require.NoError(t, run("go", "mod", "download"), "failed to run go mod download")
+			inputFile := filepath.Join(tmp, "input.go")
+			original := strings.TrimSpace(config.Code) + "\n"
+			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
+			runGo(t, tmp, "mod", "tidy")
 
-			if dir, err := os.Getwd(); err == nil {
-				defer func() {
-					require.NoError(t, os.Chdir(dir))
-				}()
-			}
-			require.NoError(t, os.Chdir(dir))
+			inj, err := injector.New(tmp, injector.Options{
+				Aspects:          config.Aspects,
+				Dir:              tmp,
+				PreserveLineInfo: config.PreserveLineInfo,
+				ModifiedFile:     func(path string) string { return path + ".edited.go" },
+			})
+			require.NoError(t, err, "failed to create injector")
 
-			injector, err := injector.New(filepath.Dir(filename), tc.Options)
-			require.NoError(t, err)
-			res, err := injector.InjectFile(filename, nil)
-			require.NoError(t, err)
-			assert.Equal(t, tc.Expected.Modified, res.Modified, "modified status")
-			assert.Equal(t, tc.Expected.References, res.References)
+			res, err := inj.InjectFile(inputFile, nil)
+			require.NoError(t, err, "failed to inject file")
 
 			if res.Modified {
-				assert.Equal(t, filename+".edited", res.Filename, "output filename")
+				assert.Equal(t, inputFile+".edited.go", res.Filename)
+			} else {
+				assert.Equal(t, inputFile, res.Filename)
+			}
 
-				out, err := os.ReadFile(res.Filename)
-				require.NoError(t, err, "failed to read injection output file")
-				assert.Equal(t, tc.Expected.Source, normalize(out, filename), "injected output")
+			modifiedData, err := os.ReadFile(res.Filename)
+			require.NoError(t, err, "failed to read modified file")
+			modified := normalize(modifiedData, inputFile)
+
+			assert.Equal(t, config.SyntheticReferences, res.References.Map())
+
+			edits := myers.ComputeEdits(span.URIFromPath("input.go"), original, modified)
+			diff := gotextdiff.ToUnified("input.go", "output.go", original, edits)
+			golden.Assert(t, fmt.Sprint(diff), filepath.Join(dirName, testName, "expected.diff"))
+
+			if res.Modified {
+				// Verify that the modified code compiles...
+				os.Rename(res.Filename, inputFile)
+				runGo(t, tmp, "mod", "tidy")
+				runGo(t, tmp, "build", inputFile)
 			}
 		})
 	}
+}
+
+func runGo(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.Command("go", args...)
+	cmd.Dir = dir
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	require.NoError(t, cmd.Run(), "failed running go %s", strings.Join(args, " "))
 }
 
 // normalize replaces all tabulation characters with two spaces, matching the indentation style found in YAML documents,

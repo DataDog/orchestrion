@@ -1,0 +1,27 @@
+--- input.go
++++ output.go
+@@ -9,10 +9,23 @@
+   "orchestrion/integration"
+ 
+   . "github.com/go-chi/chi/v5"
++//line <generated>:1
++  __orchestrion_chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
+ )
+ 
++//line input.go:14
+ func main() {
+-  router := NewRouter()
++  router :=
++//line <generated>:1
++    func() *Mux {
++      mux :=
++//line input.go:15
++        NewRouter()
++//line <generated>:1
++      mux.Use(__orchestrion_chitrace.Middleware())
++      return mux
++    }()
++//line input.go:16
+   router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+     w.Write([]byte("Hello World!"))
+   })

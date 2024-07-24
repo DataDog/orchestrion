@@ -37,7 +37,7 @@ func (a addBlankImport) Apply(ctx context.Context, chain *node.Chain, _ *dstutil
 		return false, errors.New("cannot add import: no *typed.ReferenceMap found in context")
 	}
 
-	refMap.AddImport(file, string(a))
+	refMap.AddImport(file, string(a), "_")
 	return true, nil
 }
 

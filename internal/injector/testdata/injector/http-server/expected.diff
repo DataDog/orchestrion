@@ -1,0 +1,28 @@
+--- input.go
++++ output.go
+@@ -7,13 +7,23 @@
+   "net/http"
+ 
+   "orchestrion/integration"
++//line <generated>:1
++  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
+ )
+ 
++//line input.go:12
+ func main() {
+   s := &http.Server{
+-    Addr:    ":8085",
+-    Handler: http.HandlerFunc(handle),
++    Addr: ":8085",
++    Handler:
++//line <generated>:1
++    //dd:startwrap
++    __orchestrion_instrument.WrapHandler(
++//line input.go:15
++      http.HandlerFunc(handle)),
++    //dd:endwrap
+   }
++//line input.go:17
+   integration.OnSignal(func() {
+     s.Shutdown(context.Background())
+   })
