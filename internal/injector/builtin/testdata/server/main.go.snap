@@ -26,11 +26,9 @@ func main() {
 		Addr: ":8080",
 		Handler:
 //line <generated>:1
-		//dd:startwrap
-		__orchestrion_instrument.WrapHandler(
+		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/main.go:17
 			http.HandlerFunc(myHandler)),
-		//dd:endwrap
 	}
 
 //line samples/server/main.go:20

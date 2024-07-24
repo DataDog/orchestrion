@@ -459,38 +459,9 @@ var Aspects = [...]aspect.Aspect{
 	// From stdlib/net-http.server.yml
 	{
 		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "wrap",
-			}),
-			join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
+			join.FunctionCall("net/http.HandlerFunc"),
 			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-				join.ImportPath("golang.org/x/net/http2"),
-			)),
-		),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"//dd:startwrap\ninstrument.WrapHandler({{.}})\n//dd:endwrap",
-				map[string]string{
-					"instrument": "github.com/datadog/orchestrion/instrument",
-				},
-			)),
-		},
-	},
-	{
-		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "wrap",
-			}),
-			join.Function(
-				join.Name(""),
-				join.Signature(
-					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
-					nil,
-				),
-			),
-			join.Not(join.OneOf(
+				join.ImportPath("net/http"),
 				join.ImportPath("github.com/go-chi/chi/v5"),
 				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
 				join.ImportPath("golang.org/x/net/http2"),
@@ -507,16 +478,37 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "report",
-			}),
+			join.OneOf(
+				join.FunctionCall("net/http.HandleFunc"),
+				join.FunctionCall("net/http.(*ServeMux).HandleFunc"),
+			),
+			join.Not(join.OneOf(
+				join.ImportPath("net/http"),
+				join.ImportPath("github.com/go-chi/chi/v5"),
+				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
+				join.ImportPath("golang.org/x/net/http2"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{.AST.Fun}}(\n  {{ index .AST.Args 0}},\n  instrument.WrapHandlerFunc({{ index .AST.Args 1 }}),\n)",
+				map[string]string{
+					"instrument": "github.com/datadog/orchestrion/instrument",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
 			join.FunctionBody(join.Function(
+				join.Name("ServeHTTP"),
 				join.Signature(
 					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
 					nil,
 				),
 			)),
 			join.Not(join.OneOf(
+				join.ImportPath("net/http"),
 				join.ImportPath("github.com/go-chi/chi/v5"),
 				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
 				join.ImportPath("golang.org/x/net/http2"),
@@ -610,4 +602,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:I1oGLSbbNqMImNOaFn/U3TpW8nddDcv4Io4+8HfyPNCEZOwUqx+DS7FKPLtm2kazKwWDMYey1O+I2enZW0KbTg=="
+const Checksum = "sha512:0oauBD+FnlsMdF1mpefwMixjKHjf3nnjvtpLQgYPs3snRXtKTfYl8HgRXH7rqFJlVllT7ovtIVU1w+tLaQ5XBg=="
