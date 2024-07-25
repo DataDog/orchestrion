@@ -2,13 +2,35 @@
 
 [![Documentation](https://img.shields.io/badge/documentation-datadoghq.dev/orchestrion-blue.svg?style=flat)](https://datadoghq.dev/orchestrion)
 
-Automatic compile-time instrumentation of Go code
+Automatic compile-time instrumentation of Go code.
 
 ## Overview
 
-[Orchestrion](https://en.wikipedia.org/wiki/Orchestrion) processes Go source code at compilation time and automatically inserts instrumentation. This instrumentation
-produces Datadog APM traces from the instrumented code and supports Datadog Application Security Management. Future work
-will include support for OpenTelemetry tracing as well.
+[Orchestrion](https://en.wikipedia.org/wiki/Orchestrion) processes Go source code at compilation time and automatically
+inserts instrumentation. This instrumentation produces Datadog APM traces from the instrumented code and supports
+Datadog Application Security Management. Future work will include support for OpenTelemetry tracing as well.
+
+> [!IMPORTANT]
+> Orchestrion is under active development. The supported features are rapidly growing, and the user experiece may evolve
+> with future releases.
+>
+> Should you encounter issues or a bug when using `orchestrion`, please report it in the [bug tracker][gh-issues].
+>
+> For support & general questions, you are welcome to use [GitHub discussions][gh-discussions]. You may also contact us
+> privately via Datadog support.
+>
+> [gh-issues]: https://github.com/DataDog/orchestrion/issues/new/choose
+> [gh-discussions]: https://github.com/DataDog/orchestrion/discussions
+
+## Requirements
+
+Orchestrion supports the two latest releases of Go, matching Go's [official release policy][go-releases]. It may
+function correctly with older Go releases; but we will not be able to offer support for these if they don't.
+
+In addition to this, Orchestrion only supports projects using [Go modules][go-modules].
+
+[go-releases]: https://go.dev/doc/devel/release#policy
+[go-modules]: https://pkg.go.dev/cmd/go#hdr-Modules__module_versions__and_more
 
 ## Getting started
 

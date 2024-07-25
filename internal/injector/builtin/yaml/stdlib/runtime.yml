@@ -15,7 +15,8 @@ meta:
     enable trace context forwarding in places where a {{<godoc "context" "Context">}} value is not
     available.
 aspects:
-  - join-point:
+  - id: GLS Access
+    join-point:
       struct-definition: runtime.g
     advice:
       - add-struct-field:

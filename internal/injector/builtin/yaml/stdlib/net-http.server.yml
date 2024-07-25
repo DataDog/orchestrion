@@ -74,30 +74,30 @@ aspects:
               # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
               - import-path: golang.org/x/net/http2
     advice:
-      prepend-statements:
-        imports:
-          event: github.com/datadog/orchestrion/instrument/event
-          instrument: github.com/datadog/orchestrion/instrument
-        template: |-
-          {{- $arg := .Function.Argument 1 -}}
-          {{- $name := .Function.Name -}}
-          {{$arg}} = {{$arg}}.WithContext(instrument.Report(
-            {{$arg}}.Context(),
-            event.EventStart,
-            {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-            "span.kind", "server",
-            "http.method", {{$arg}}.Method,
-            "http.url", {{$arg}}.URL,
-            "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-            {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
-          ))
-          defer instrument.Report(
-            {{$arg}}.Context(),
-            event.EventEnd,
-            {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-            "span.kind", "server",
-            "http.method", {{$arg}}.Method,
-            "http.url", {{$arg}}.URL,
-            "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-            {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
-          )
+      - prepend-statements:
+          imports:
+            event: github.com/datadog/orchestrion/instrument/event
+            instrument: github.com/datadog/orchestrion/instrument
+          template: |-
+            {{- $arg := .Function.Argument 1 -}}
+            {{- $name := .Function.Name -}}
+            {{$arg}} = {{$arg}}.WithContext(instrument.Report(
+              {{$arg}}.Context(),
+              event.EventStart,
+              {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+              "span.kind", "server",
+              "http.method", {{$arg}}.Method,
+              "http.url", {{$arg}}.URL,
+              "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+              {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
+            ))
+            defer instrument.Report(
+              {{$arg}}.Context(),
+              event.EventEnd,
+              {{with $name}}"function-name", {{printf "%q" .}},{{end}}
+              "span.kind", "server",
+              "http.method", {{$arg}}.Method,
+              "http.url", {{$arg}}.URL,
+              "http.useragent", {{$arg}}.Header.Get("User-Agent"),
+              {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
+            )

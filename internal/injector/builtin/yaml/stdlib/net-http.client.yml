@@ -14,9 +14,9 @@ aspects:
     join-point:
       struct-definition: net/http.Transport
     advice:
-      add-struct-field:
-        name: DD__tracer_internal
-        type: bool
+      - add-struct-field:
+          name: DD__tracer_internal
+          type: bool
   # In tracer internals, set the DD__tracer_internal field to true so that we do not end up
   # instrumenting the tracer's internal HTTP clients (this would be a span bomb!)
   - id: Flag tracer internal Transport instances

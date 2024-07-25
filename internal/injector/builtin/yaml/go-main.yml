@@ -16,7 +16,7 @@ aspects:
         - function-body:
             function:
               - name: main
-              - signature:
+              - signature: {}
     advice:
       - prepend-statements:
           imports:

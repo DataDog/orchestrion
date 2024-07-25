@@ -16,4 +16,4 @@ aspects:
         - value-declaration: bool
     advice:
       - assign-value:
-          template: true
+          template: 'true'
