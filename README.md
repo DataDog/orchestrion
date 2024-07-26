@@ -1,6 +1,9 @@
 # Orchestrion
 
 [![Documentation](https://img.shields.io/badge/documentation-datadoghq.dev/orchestrion-blue.svg?style=flat)](https://datadoghq.dev/orchestrion)
+![Latest Release](https://img.shields.io/github/v/release/DataDog/orchestrion?display_name=tag&label=Latest%20Release)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/datadog/orchestrion)
+
 
 Automatic compile-time instrumentation of Go code.
 
