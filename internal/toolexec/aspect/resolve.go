@@ -6,9 +6,9 @@
 package aspect
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
@@ -39,6 +39,7 @@ func resolvePackageFiles(importPath string, workDir string) (map[string]string, 
 	toolexec := fmt.Sprintf("%q %q", os.Args[0], os.Args[1])
 
 	return client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
 			Dir: cwd,
@@ -52,6 +53,5 @@ func resolvePackageFiles(importPath string, workDir string) (map[string]string, 
 			),
 			Patterns: []string{importPath},
 		},
-		time.Hour,
 	)
 }

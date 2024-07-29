@@ -6,10 +6,10 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/datadog/orchestrion/internal/jobserver/common"
 	"github.com/nats-io/nats.go"
@@ -18,6 +18,9 @@ import (
 const (
 	USERNAME    = "orchestrion"
 	NO_PASSWORD = "" // We only use account management to have access to system events, not for security.
+
+	HDR_CLIENT_PID  = "client-pid"  // Header containing the client PID
+	HDR_CLIENT_PPID = "client-ppid" // Header containing the client parent PID
 )
 
 type Client struct {
@@ -51,14 +54,14 @@ type (
 	}
 )
 
-func Request[Req request, Res responseTo[Req]](client *Client, req Req, timeout time.Duration) (Res, error) {
+func Request[Req request, Res responseTo[Req]](ctx context.Context, client *Client, req Req) (Res, error) {
 	reqData, err := json.Marshal(req)
 	if err != nil {
 		var zero Res
 		return zero, fmt.Errorf("encoding request payload: %w", err)
 	}
 
-	resp, err := client.conn.Request(req.Subject(), reqData, timeout)
+	resp, err := client.conn.RequestWithContext(ctx, req.Subject(), reqData)
 	if err != nil {
 		var zero Res
 		return zero, err

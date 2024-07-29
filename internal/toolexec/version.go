@@ -6,11 +6,11 @@
 package toolexec
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/datadog/orchestrion/internal/jobserver"
 	"github.com/datadog/orchestrion/internal/jobserver/buildid"
@@ -51,7 +51,7 @@ func ComputeVersion(cmd proxy.Command) (string, error) {
 	}
 	defer conn.Close()
 
-	res, err := client.Request[*buildid.VersionSuffixRequest, buildid.VersionSuffixResponse](conn, nil, time.Minute)
+	res, err := client.Request[*buildid.VersionSuffixRequest, buildid.VersionSuffixResponse](context.Background(), conn, nil)
 	if err != nil {
 		return "", err
 	}

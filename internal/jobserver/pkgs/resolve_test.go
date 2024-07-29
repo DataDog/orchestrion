@@ -6,10 +6,10 @@
 package pkgs_test
 
 import (
+	"context"
 	"math/rand"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/datadog/orchestrion/internal/jobserver"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
@@ -30,12 +30,12 @@ func TestCache(t *testing.T) {
 
 	// First request is expected to always be a cache miss
 	resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
 			Patterns: []string{"os", "net/http"},
 			Env:      env,
 		},
-		time.Hour, // Limited by test timeout
 	)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(resp), 2)
@@ -47,12 +47,12 @@ func TestCache(t *testing.T) {
 	// cache hitting or missing.
 	rand.Shuffle(len(env), func(i, j int) { env[i], env[j] = env[j], env[i] })
 	resp, err = client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
 			Patterns: []string{"net/http", "os"}, // Changed the order of these... but the request is equivalent!
 			Env:      env,
 		},
-		time.Hour, // Limited by test timeout
 	)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(resp), 2)
@@ -61,12 +61,12 @@ func TestCache(t *testing.T) {
 
 	// Third request is different, should result in a cache miss again
 	resp, err = client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
 			Patterns: []string{"net/http", "os", "runtime"}, // Added "runtime"
 			Env:      env,
 		},
-		time.Hour, // Limited by test timeout
 	)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(resp), 3)
@@ -84,9 +84,9 @@ func TestError(t *testing.T) {
 	defer conn.Close()
 
 	resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{BuildFlags: []string{"--definitely-not-a-valid-build-flag"}, Patterns: []string{"runtime"}},
-		time.Hour, // Limited by test timeout
 	)
 	require.Error(t, err)
 	require.Nil(t, resp)
