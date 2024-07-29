@@ -33,8 +33,8 @@ func TestCache(t *testing.T) {
 		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
-			Patterns: []string{"os", "net/http"},
-			Env:      env,
+			Pattern: "net/http",
+			Env:     env,
 		},
 	)
 	require.NoError(t, err)
@@ -50,8 +50,8 @@ func TestCache(t *testing.T) {
 		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
-			Patterns: []string{"net/http", "os"}, // Changed the order of these... but the request is equivalent!
-			Env:      env,
+			Pattern: "net/http",
+			Env:     env, // This was shuffled, so it's not the same as before
 		},
 	)
 	require.NoError(t, err)
@@ -64,8 +64,8 @@ func TestCache(t *testing.T) {
 		context.Background(),
 		conn,
 		&pkgs.ResolveRequest{
-			Patterns: []string{"net/http", "os", "runtime"}, // Added "runtime"
-			Env:      env,
+			Pattern: "os", // Not the same package as before...
+			Env:     env,
 		},
 	)
 	require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestError(t *testing.T) {
 	resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
 		context.Background(),
 		conn,
-		&pkgs.ResolveRequest{BuildFlags: []string{"--definitely-not-a-valid-build-flag"}, Patterns: []string{"runtime"}},
+		&pkgs.ResolveRequest{BuildFlags: []string{"--definitely-not-a-valid-build-flag"}, Pattern: "runtime"},
 	)
 	require.Error(t, err)
 	require.Nil(t, resp)

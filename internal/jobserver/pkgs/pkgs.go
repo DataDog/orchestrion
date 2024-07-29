@@ -18,6 +18,7 @@ const (
 
 type service struct {
 	resolved  common.Cache[ResolveResponse]
+	graph     common.Graph
 	serverURL string
 }
 

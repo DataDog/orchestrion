@@ -33,25 +33,22 @@ func resolvePackageFiles(importPath string, workDir string) (map[string]string, 
 	if err != nil {
 		return nil, fmt.Errorf("retrieving go command flags: %w", err)
 	}
-	slice := flags.Slice()
 
-	// Apply quoting as appropriate to avoid shell interpretation issues...
-	toolexec := fmt.Sprintf("%q %q", os.Args[0], os.Args[1])
-
-	return client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+	archives, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
 		context.Background(),
 		conn,
-		&pkgs.ResolveRequest{
-			Dir: cwd,
-			Env: os.Environ(),
-			BuildFlags: append(
-				append(
-					make([]string, 0, len(slice)+1),
-					slice...,
-				),
-				fmt.Sprintf("-toolexec=%s", toolexec),
-			),
-			Patterns: []string{importPath},
-		},
+		pkgs.NewResolveRequest(cwd, flags.Slice(), importPath),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for missing archives...
+	for ip, arch := range archives {
+		if arch == "" {
+			return nil, fmt.Errorf("failed to resolve archive for %q", ip)
+		}
+	}
+
+	return archives, nil
 }

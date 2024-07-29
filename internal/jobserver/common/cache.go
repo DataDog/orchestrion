@@ -19,8 +19,8 @@ type (
 	}
 	slot[V any] struct {
 		mu     sync.Mutex
-		value  V
 		loaded bool
+		value  V
 	}
 
 	CacheStats struct {

@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -24,14 +25,36 @@ type (
 		Dir        string   `json:"dir"`                  // The directory to resolve from (usually where `go.mod` is)
 		Env        []string `json:"env"`                  // Environment variables to use during resolution
 		BuildFlags []string `json:"buildFlags,omitempty"` // Additional build flags to pass to the resolution driver
-		Patterns   []string `json:"patterns"`             // Package patterns to resolve
+		Pattern    string   `json:"pattern"`              // Package pattern to resolve
 
-		canonical bool // Whether this request was canonicalized yet
+		// Fields set by canonicalization
+		resolveParentId    string // The value of the `envVarParentId` environment variable
+		toolexecImportpath string // The value of the TOOLEXEC_IMPORTPATH environment variable
+		canonical          bool   // Whether this request was canonicalized yet
 	}
 	// ResolveResponse is a map of package import path to their respective export file, if one is
 	// found. Users should handle possibly missing export files as is relevant to their use-case.
 	ResolveResponse map[string]string
 )
+
+const (
+	envVarParentId = "ORCHESTRION_PKG.RESOLVE_PARENT_ID"
+)
+
+func NewResolveRequest(dir string, buildFlags []string, pattern string) *ResolveRequest {
+	// We add the `-toolexec` flags here (client-side) because it otherwise makes it difficult to test
+	// the implementation of the resolver without causing the tests to recursively spawn temselves.
+	allFlags := make([]string, 0, len(buildFlags)+1)
+	allFlags = append(allFlags, buildFlags...)
+	allFlags = append(allFlags, fmt.Sprintf("-toolexec=%q toolexec", os.Args[0]))
+
+	return &ResolveRequest{
+		Dir:        dir,
+		Env:        os.Environ(),
+		BuildFlags: allFlags,
+		Pattern:    pattern,
+	}
+}
 
 func (*ResolveRequest) Subject() string {
 	return resolveSubject
@@ -56,6 +79,20 @@ func (s *service) resolve(msg *nats.Msg) {
 		return
 	}
 
+	if req.resolveParentId != "" {
+		if err := s.graph.AddEdge(req.resolveParentId, req.toolexecImportpath); err != nil {
+			common.RespondError(msg, err)
+			return
+		}
+		defer s.graph.RemoveEdge(req.resolveParentId, req.toolexecImportpath)
+	}
+
+	env := req.Env
+	if req.toolexecImportpath != "" {
+		env = make([]string, 0, len(req.Env)+1)
+		env = append(env, req.Env...)
+		env = append(env, fmt.Sprintf("%s=%s", envVarParentId, req.toolexecImportpath))
+	}
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
 		pkgs, err := packages.Load(
 			&packages.Config{
@@ -67,10 +104,10 @@ func (s *service) resolve(msg *nats.Msg) {
 					// Finally, we need the resolved package import path
 					packages.NeedName,
 				Dir:        req.Dir,
-				Env:        req.Env,
+				Env:        env,
 				BuildFlags: req.BuildFlags,
 			},
-			req.Patterns...,
+			req.Pattern,
 		)
 		if err != nil {
 			return nil, err
@@ -106,8 +143,7 @@ func (r *ResolveRequest) canonicalize() {
 	}
 
 	slices.Sort(r.BuildFlags)
-	slices.Sort(r.Patterns)
-	r.Env = canonicalizeEnviron(r.Env)
+	r.canonicalizeEnviron()
 
 	r.canonical = true
 }
@@ -139,18 +175,24 @@ func (r *ResolveResponse) mergeFrom(pkg *packages.Package) {
 	}
 }
 
-var envIgnoreList = map[string]struct{}{
-	"PWD":                 {}, // We don't use this, instead rely on the `Dir` field.
-	"TOOLEXEC_IMPORTPATH": {}, // Known to change between invocations & irrelevant to the resolution.
+var envIgnoreList = map[string]func(*ResolveRequest, string){
+	// We don't use this, instead rely on the `Dir` field.
+	"PWD": nil,
+	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
+	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
+	envVarParentId:        func(r *ResolveRequest, id string) { r.resolveParentId = id },
 }
 
-func canonicalizeEnviron(env []string) []string {
-	named := make(map[string]string, len(env))
-	names := make([]string, 0, len(env))
+func (r *ResolveRequest) canonicalizeEnviron() {
+	named := make(map[string]string, len(r.Env))
+	names := make([]string, 0, len(r.Env))
 
-	for _, kv := range env {
-		name, _, _ := strings.Cut(kv, "=")
-		if _, ignore := envIgnoreList[name]; ignore {
+	for _, kv := range r.Env {
+		name, val, _ := strings.Cut(kv, "=")
+		if cb, ignore := envIgnoreList[name]; ignore {
+			if cb != nil {
+				cb(r, val)
+			}
 			continue
 		}
 		if _, found := named[name]; !found {
@@ -160,9 +202,8 @@ func canonicalizeEnviron(env []string) []string {
 	}
 
 	slices.Sort(names)
-	result := make([]string, 0, len(names))
+	r.Env = make([]string, 0, len(names))
 	for _, name := range names {
-		result = append(result, named[name])
+		r.Env = append(r.Env, named[name])
 	}
-	return result
 }
