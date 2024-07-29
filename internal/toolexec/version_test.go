@@ -8,6 +8,7 @@ package toolexec
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,7 +62,7 @@ func Test(t *testing.T) {
 
 	copyDir := t.TempDir()
 	require.NoError(t, copy.Copy(rootDir, copyDir, copy.Options{
-		Skip: func(src string) (bool, error) {
+		Skip: func(_ fs.FileInfo, src string, dest string) (bool, error) {
 			return filepath.Base(src) == ".git", nil
 		},
 	}))
