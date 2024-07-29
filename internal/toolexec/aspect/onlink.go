@@ -31,7 +31,7 @@ func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archiveImportPath, err)
 		}
 
-		log.Debugf("Processing %s dependencies from %s[%s]...", linkdeps.LinkDepsFilename, archiveImportPath, archive)
+		log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.LinkDepsFilename, archiveImportPath, archive)
 		for _, depPath := range linkDeps.Dependencies() {
 			if arch, found := reg.PackageFile[depPath]; found {
 				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, depPath, arch)

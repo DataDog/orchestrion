@@ -14,7 +14,7 @@ First, install the `ddapm-test-agent` if you haven't already:
 ``` console
 $ python3 -m venv venv
 $ source ./venv/bin/activate
-$ pip install -r ./utils/agent/requirementes.txt
+$ pip install -r ./utils/agent/requirements.txt
 ```
 
 Then, ensure that Docker is installed and the daemon is running.

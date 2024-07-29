@@ -1,0 +1,44 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+%YAML 1.1
+---
+meta:
+  name: k8s.io/client-go
+  description: Go client for Kubernetes.
+  icon: at-symbol
+aspects:
+  - id: Update config from k8s.io/client-go/rest.InClusterConfig.
+    join-point:
+      function-call: k8s.io/client-go/rest.InClusterConfig
+    advice:
+      - wrap-expression:
+          imports:
+            rest: k8s.io/client-go/rest
+            kubernetestrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes
+          template: |-
+            func() (*rest.Config, error) {
+              cfg, err := {{ . }}
+              if err != nil {
+                return nil, err
+              }
+              cfg.Wrap(kubernetestrace.WrapRoundTripper)
+              return cfg, nil
+            }()
+
+  - id: Update config from k8s.io/client-go/rest.Config struct literal.
+    join-point:
+      struct-literal:
+        type: k8s.io/client-go/rest.Config
+    advice:
+      - wrap-expression:
+          imports:
+            rest: k8s.io/client-go/rest
+            kubernetestrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes
+          template: |-
+            {{- .AST.Type -}}{
+              WrapTransport: kubernetestrace.WrapRoundTripper,
+              {{ range .AST.Elts }}{{ . }},
+              {{ end }}
+            }
