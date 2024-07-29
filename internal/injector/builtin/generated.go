@@ -16,6 +16,13 @@ import (
 
 // Aspects is the list of built-in aspects.
 var Aspects = [...]aspect.Aspect{
+	// From api/vault.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/hashicorp/vault/api.NewClient"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault", "NewClient"),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -590,6 +597,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
@@ -610,4 +618,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:zkYUW2y78pSybfnoy3iuCQdnK8wQOTUH1oKNpY+on1doDPnby9mb5+M7S8KeEWcbH95+9pH62bXCZaQligQ0yg=="
+const Checksum = "sha512:lX1+QrWesGpR8LnuxLQssYWY7SOz7cZLCUr5Knrhw8No/aYm3WTxyhkV3FWFR+qne3c+nMqZTV+zN02ZyVh5eQ=="
