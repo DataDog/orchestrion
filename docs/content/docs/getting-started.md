@@ -8,7 +8,11 @@ next: /docs/built-in
 
 ## Requirements
 
-Orchestrion requires `go 1.21` or later.
+Orchestrion supports the two latest Go releases, matching the
+[Go release policy](https://go.dev/doc/devel/release#policy).
+
+It also requires the use of
+[Go modules](https://pkg.go.dev/cmd/go#hdr-Modules__module_versions__and_more).
 
 > Orchestrion can inject instrumentation which enables use of Datadog's
 > <abbr title="Application Security Management">ASM</abbr> features, but those
@@ -28,7 +32,7 @@ This is achieved using the following steps:
 ### Step 1
 Install Orchestrion in your environment:
 ```console
-$ go install github.com/datadog/orchestrion@{{< releaseTag >}}
+$ go install github.com/datadog/orchestrion@latest
 ```
 
 If necessary, also add the `GOBIN` directory to your `PATH`:

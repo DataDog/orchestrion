@@ -7,4 +7,4 @@
 // instrumentations.
 package builtin
 
-//go:generate go run ./generator -i yaml/*.yml -i yaml/*/*.yml -p builtin -o ./generated.go -d ./generated_deps.go -C 1 -docs ../../../docs/content/docs/built-in/
+//go:generate go run ./generator -i=yaml/*.yml -i=yaml/*/*.yml -p=builtin -o=./generated.go -d=./generated_deps.go -C=1 -docs=../../../docs/content/docs/built-in/ -schemadocs=../../../docs/content/contributing/aspects/

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/golangci-lint.json
 linters:
   disable-all: true
   enable:
