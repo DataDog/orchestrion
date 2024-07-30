@@ -1,5 +1,9 @@
-%YAML 1.1
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
 ---
+# yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
   name: //dd:orchestrion-enabled
   description: Flip a boolean to true if Orchestrion is enabled.

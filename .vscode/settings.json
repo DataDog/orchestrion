@@ -1,6 +1,0 @@
-{
-  "json.validate.enable": true,
-  "yaml.schemas": {
-    "./docs/static/schema.json": ["internal/injector/builtin/yaml/**/*.yml"],
-  },
-}

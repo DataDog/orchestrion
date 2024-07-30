@@ -2,9 +2,8 @@
 # under the Apache License Version 2.0.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
-%YAML 1.1
 ---
-# Provides access to the Goroutine Local Storage (GLS) for other aspects to use.
+# yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
   name: runtime
   description: Operations that interact with Go's runtime system.
