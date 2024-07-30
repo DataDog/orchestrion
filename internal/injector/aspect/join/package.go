@@ -8,8 +8,7 @@ package join
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/dave/dst"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -24,8 +23,8 @@ func (p importPath) ImpliesImported() []string {
 	return []string{string(p)} // Technically the current package in this instance
 }
 
-func (p importPath) Matches(chain *node.Chain) bool {
-	return chain.ImportPath() == string(p)
+func (p importPath) Matches(ctx context.AspectContext) bool {
+	return ctx.ImportPath() == string(p)
 }
 
 func (p importPath) AsCode() jen.Code {
@@ -46,9 +45,8 @@ func (packageName) ImpliesImported() []string {
 	return nil // Can't assume anything here...
 }
 
-func (p packageName) Matches(chain *node.Chain) bool {
-	file, found := node.Find[*dst.File](chain)
-	return found && file.Name.Name == string(p)
+func (p packageName) Matches(ctx context.AspectContext) bool {
+	return ctx.Package() == string(p)
 }
 
 func (p packageName) AsCode() jen.Code {

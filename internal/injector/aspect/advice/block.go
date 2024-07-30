@@ -6,13 +6,11 @@
 package advice
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -28,13 +26,13 @@ func PrependStmts(template code.Template) *prependStatements {
 	return &prependStatements{template: template}
 }
 
-func (a *prependStatements) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
-	block, ok := node.Node.(*dst.BlockStmt)
+func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
+	block, ok := ctx.Node().(*dst.BlockStmt)
 	if !ok {
-		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", node.Node)
+		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", ctx.Node())
 	}
 
-	stmts, err := a.template.CompileBlock(ctx, node)
+	stmts, err := a.template.CompileBlock(ctx)
 	if err != nil {
 		return false, err
 	}

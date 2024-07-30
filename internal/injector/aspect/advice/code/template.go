@@ -7,7 +7,6 @@ package code
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"go/token"
@@ -16,11 +15,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/version"
 	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -72,8 +69,8 @@ func MustTemplate(text string, imports map[string]string) (template Template) {
 // resulting dst.Stmt nodes in a new *dst.BlockStmt. The provided
 // context.Context and *dstutil.Cursor are used to supply context information to
 // the template functions.
-func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.BlockStmt, error) {
-	stmts, err := t.compile(ctx, node)
+func (t *Template) CompileBlock(ctx context.AdviceContext) (*dst.BlockStmt, error) {
+	stmts, err := t.compile(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +79,8 @@ func (t *Template) CompileBlock(ctx context.Context, node *node.Chain) (*dst.Blo
 
 // CompileDeclarations generates new source based on this Template and extracts
 // all produced declarations.
-func (t *Template) CompileDeclarations(ctx context.Context, node *node.Chain) ([]dst.Decl, error) {
-	return t.compileTemplate(ctx, "_declarations_", node)
+func (t *Template) CompileDeclarations(ctx context.AdviceContext) ([]dst.Decl, error) {
+	return t.compileTemplate(ctx, "_declarations_")
 }
 
 // CompileExpression generates new source based on this Template and extracts
@@ -91,8 +88,8 @@ func (t *Template) CompileDeclarations(ctx context.Context, node *node.Chain) ([
 // are used to supply context information to the template functions. The
 // provided dst.Expr will be copied in places where the `{{Expr}}` template
 // function is used, unless `expr` is nil.
-func (t *Template) CompileExpression(ctx context.Context, node *node.Chain) (dst.Expr, error) {
-	stmts, err := t.compile(ctx, node)
+func (t *Template) CompileExpression(ctx context.AdviceContext) (dst.Expr, error) {
+	stmts, err := t.compile(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +113,8 @@ func (t *Template) CompileExpression(ctx context.Context, node *node.Chain) (dst
 
 // compile generates new source based on this Template and returns a cloned
 // version of minimally post-processed dst.Stmt nodes this produced.
-func (t *Template) compile(ctx context.Context, chain *node.Chain) ([]dst.Stmt, error) {
-	decls, err := t.compileTemplate(ctx, "_statements_", chain)
+func (t *Template) compile(ctx context.AdviceContext) ([]dst.Stmt, error) {
+	decls, err := t.compileTemplate(ctx, "_statements_")
 	if err != nil {
 		return nil, err
 	}
@@ -125,25 +122,16 @@ func (t *Template) compile(ctx context.Context, chain *node.Chain) ([]dst.Stmt, 
 	return decls[0].(*dst.FuncDecl).Body.List, nil
 }
 
-func (t *Template) compileTemplate(ctx context.Context, name string, chain *node.Chain) ([]dst.Decl, error) {
-	ctxFile, found := node.Find[*dst.File](chain)
-	if !found {
-		return nil, errors.New("no *dst.File was found in the node chain")
-	}
-
+func (t *Template) compileTemplate(ctx context.AdviceContext, name string) ([]dst.Decl, error) {
 	tmpl := template.Must(t.template.Clone())
 
 	buf := bytes.NewBuffer(nil)
-	dot := &dot{node: chain}
+	dot := &dot{context: ctx}
 	if err := tmpl.ExecuteTemplate(buf, name, dot); err != nil {
 		return nil, fmt.Errorf("while executing template: %w", err)
 	}
 
-	dec, ok := typed.ContextValue[*decorator.Decorator](ctx)
-	if !ok {
-		return nil, errors.New("no *decorator.Decorator was available from context")
-	}
-	file, err := dec.Parse(buf.Bytes())
+	file, err := ctx.ParseSource(buf.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("while parsing generated code: %w\n%s", err, numberLines(buf.String()))
 	}
@@ -157,7 +145,7 @@ func (t *Template) compileTemplate(ctx context.Context, name string, chain *node
 	}
 
 	for i := range decls {
-		decls[i] = t.processImports(ctx, ctxFile, decls[i])
+		decls[i] = t.processImports(ctx, decls[i])
 	}
 
 	return decls, nil
@@ -167,7 +155,7 @@ func (t *Template) compileTemplate(ctx context.Context, name string, chain *node
 // present in the t.imports map with a qualified *dst.Ident node, so that the
 // import-enabled decorator.Restorer can emit the correct code, and knows not to
 // remove the inserted import statements.
-func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.Decl) dst.Decl {
+func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.Decl {
 	if len(t.imports) == 0 {
 		return node
 	}
@@ -192,10 +180,9 @@ func (t *Template) processImports(ctx context.Context, file *dst.File, node dst.
 		repl.Path = path
 
 		csor.Replace(repl)
-		if refMap, ok := typed.ContextValue[*typed.ReferenceMap](ctx); ok {
-			// We apply an alias to the import to mitigate the risk of conflicting with an existing symbol in the surrounding scope.
-			refMap.AddImport(file, path, ident.Name)
-		}
+
+		// We apply an alias to the import to mitigate the risk of conflicting with an existing symbol in the surrounding scope.
+		ctx.AddImport(path, ident.Name)
 
 		return true
 	}, nil).(dst.Decl)

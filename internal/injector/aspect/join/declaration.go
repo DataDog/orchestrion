@@ -8,7 +8,7 @@ package join
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -22,17 +22,17 @@ func ValueDeclaration(typeName TypeName) *valueDeclaration {
 	return &valueDeclaration{typeName}
 }
 
-func (i *valueDeclaration) Matches(node *node.Chain) bool {
-	parent := node.Parent()
+func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
+	parent := ctx.Parent()
 	if parent == nil {
 		return false
 	}
 
-	if _, ok := parent.Node.(*dst.GenDecl); !ok {
+	if _, ok := parent.Node().(*dst.GenDecl); !ok {
 		return false
 	}
 
-	spec, ok := node.Node.(*dst.ValueSpec)
+	spec, ok := ctx.Node().(*dst.ValueSpec)
 	if !ok {
 		return false
 	}

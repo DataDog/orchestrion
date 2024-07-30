@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -21,22 +21,24 @@ func Directive(name string) directive {
 	return directive(name)
 }
 
-func (d directive) Matches(node *node.Chain) bool {
+func (d directive) Matches(ctx context.AspectContext) bool {
 	re := regexp.MustCompile(fmt.Sprintf(`\s*//%s(?:\s.*)?$`, regexp.QuoteMeta(string(d))))
-	for _, dec := range node.Node.Decorations().Start.All() {
+	for _, dec := range ctx.Node().Decorations().Start.All() {
 		if re.MatchString(dec) {
 			return true
 		}
 	}
 
 	// If this is a spec (variable, const, import), so we need to also check the parent for directives!
-	if _, isSpec := node.Node.(dst.Spec); isSpec && d.Matches(node.Parent()) {
-		return true
+	if _, isSpec := ctx.Node().(dst.Spec); isSpec {
+		if parent := ctx.Parent(); parent != nil && d.Matches(parent) {
+			return true
+		}
 	}
 
 	// If the parent is an assignment statement, so we also check it for directives.
-	if parent := node.Parent(); parent != nil {
-		if _, isAssign := parent.Node.(*dst.AssignStmt); isAssign && d.Matches(parent) {
+	if parent := ctx.Parent(); parent != nil {
+		if _, isAssign := parent.Node().(*dst.AssignStmt); isAssign && d.Matches(parent) {
 			return true
 		}
 	}
