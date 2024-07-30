@@ -37,6 +37,7 @@ type (
 		server     *server.Server     // The underlying NATS server
 		conn       *nats.Conn         // The local server connection
 		CacheStats *common.CacheStats // Cache statistics
+		clientUrl  string             // The client URL to use for connecting to this server
 
 		// Tracking connected clients for automatic shutdown on inactivity...
 		clients           map[uint64]string
@@ -116,10 +117,12 @@ func New(opts *Options) (*Server, error) {
 		return nil, errors.New("timed out waiting for NATS server to become available")
 	}
 
-	log.Tracef("[JOBSERVER] NATS Server ready for connections on %q\n", server.ClientURL())
+	clientUrl := fmt.Sprintf("nats://%s", server.Addr().String())
+
+	log.Tracef("[JOBSERVER] NATS Server ready for connections on %q\n", clientUrl)
 
 	// Obtaining the local server connection
-	conn, err := nats.Connect(server.ClientURL(), nats.UserInfo(serverUsername, noPassword), nats.InProcessServer(server))
+	conn, err := nats.Connect(clientUrl, nats.UserInfo(serverUsername, noPassword), nats.InProcessServer(server))
 	if err != nil {
 		defer server.Shutdown()
 		return nil, fmt.Errorf("connecting to in-process NATS server instance: %w", err)
@@ -130,12 +133,13 @@ func New(opts *Options) (*Server, error) {
 		server:     server,
 		conn:       conn,
 		CacheStats: &common.CacheStats{},
+		clientUrl:  clientUrl,
 	}
 	if err := buildid.Subscribe(conn, res.CacheStats); err != nil {
 		defer server.Shutdown()
 		return nil, err
 	}
-	if err := pkgs.Subscribe(server.ClientURL(), conn, res.CacheStats); err != nil {
+	if err := pkgs.Subscribe(clientUrl, conn, res.CacheStats); err != nil {
 		defer server.Shutdown()
 		return nil, err
 	}
@@ -145,7 +149,7 @@ func New(opts *Options) (*Server, error) {
 	}
 
 	if opts.InactivityTimeout > 0 {
-		sysConn, err := nats.Connect(server.ClientURL(), nats.Name("server-local-admin"), nats.UserInfo(sysUser, noPassword), nats.InProcessServer(server))
+		sysConn, err := nats.Connect(clientUrl, nats.Name("server-local-admin"), nats.UserInfo(sysUser, noPassword), nats.InProcessServer(server))
 		if err != nil {
 			defer server.Shutdown()
 			return nil, err
@@ -174,7 +178,7 @@ func New(opts *Options) (*Server, error) {
 // Connect returns a client using the in-process connection to the server.
 func (s *Server) Connect() (*client.Client, error) {
 	conn, err := nats.Connect(
-		s.server.ClientURL(),
+		s.clientUrl,
 		nats.Name("local-connect"),
 		nats.UserInfo(client.USERNAME, client.NO_PASSWORD),
 		nats.InProcessServer(s.server),
@@ -188,7 +192,7 @@ func (s *Server) Connect() (*client.Client, error) {
 // ClientURL returns the URL connection string clients should use to connect to
 // this NATS server.
 func (s *Server) ClientURL() string {
-	return s.server.ClientURL()
+	return s.clientUrl
 }
 
 // Shutdown initiates the shutdown of this server.
