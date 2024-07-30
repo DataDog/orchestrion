@@ -2,9 +2,8 @@
 # under the Apache License Version 2.0.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
-%YAML 1.1
 ---
-
+# yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
   name: github.com/gorilla/mux
   description: Package gorilla/mux implements a request router and dispatcher for matching incoming requests to their respective handler.
@@ -15,7 +14,8 @@ aspects:
   # refactor work in dd-trace-go at the moment. This remvoes a risk for a compilation error, since it
   # no longer modifies the original structure, however it relies on access to a number of tracer
   # packages in `/internal/` paths, which should be replaced.
-  - join-point:
+  - id: Add fields to Router
+    join-point:
       struct-definition: github.com/gorilla/mux.Router
     advice:
       - inject-declarations:
@@ -55,7 +55,8 @@ aspects:
           name: __dd_config
           type: ddRouterConfig
 
-  - join-point:
+  - id: Setup in NewRouter
+    join-point:
       all-of:
         - import-path: github.com/gorilla/mux
         - function-body:
@@ -98,7 +99,8 @@ aspects:
               }
             }()
 
-  - join-point:
+  - id: Instrument Router.ServeHTTP
+    join-point:
       function-body:
         function:
           - receiver: '*github.com/gorilla/mux.Router'
