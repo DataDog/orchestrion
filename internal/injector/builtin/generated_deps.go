@@ -40,6 +40,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
+	_ "k8s.io/client-go/transport"
 	_ "math"
 	_ "net/http"
 	_ "os"

@@ -9,24 +9,6 @@ meta:
   description: Go client for Kubernetes.
   icon: at-symbol
 aspects:
-  - id: Update config from k8s.io/client-go/rest.InClusterConfig.
-    join-point:
-      function-call: k8s.io/client-go/rest.InClusterConfig
-    advice:
-      - wrap-expression:
-          imports:
-            rest: k8s.io/client-go/rest
-            kubernetestrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes
-          template: |-
-            func() (*rest.Config, error) {
-              cfg, err := {{ . }}
-              if err != nil {
-                return nil, err
-              }
-              cfg.Wrap(kubernetestrace.WrapRoundTripper)
-              return cfg, nil
-            }()
-
   - id: Update config from k8s.io/client-go/rest.Config struct literal.
     join-point:
       struct-literal:
@@ -34,11 +16,20 @@ aspects:
     advice:
       - wrap-expression:
           imports:
-            rest: k8s.io/client-go/rest
             kubernetestrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes
+            kubernetestransport: k8s.io/client-go/transport
           template: |-
             {{- .AST.Type -}}{
-              WrapTransport: kubernetestrace.WrapRoundTripper,
-              {{ range .AST.Elts }}{{ . }},
+              {{- $hasField := false -}}
+              {{ range .AST.Elts }}
+              {{- if eq .Key.Name "WrapTransport" }}
+              {{- $hasField = true -}}
+              WrapTransport: kubernetestransport.Wrappers({{ .Value }}, kubernetestrace.WrapRoundTripper),
+              {{- else -}}
+              {{ . }},
+              {{ end -}}
               {{ end }}
+              {{- if not $hasField -}}
+              WrapTransport: kubernetestransport.Wrappers(nil, kubernetestrace.WrapRoundTripper),
+              {{- end }}
             }
