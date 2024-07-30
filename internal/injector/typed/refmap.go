@@ -20,7 +20,10 @@ type (
 	ReferenceKind bool
 
 	// ReferenceMap associates import paths to ReferenceKind values.
-	ReferenceMap map[string]ReferenceKind
+	ReferenceMap struct {
+		refs    map[string]ReferenceKind
+		aliases map[string]string
+	}
 )
 
 const (
@@ -33,13 +36,20 @@ const (
 // AddImport determines whether a new import declaration needs to be added to make the provided path
 // available within the specified file. Returns true if that is the case. False if the import path
 // is already available within the file.
-func (r *ReferenceMap) AddImport(file *dst.File, path string) bool {
+func (r *ReferenceMap) AddImport(file *dst.File, path string, alias string) bool {
 	if hasImport(file, path) {
 		return false
 	}
 
 	// Register in this ReferenceMap
 	r.add(path, ImportStatement)
+	if alias != "_" {
+		// We don't register blank aliases, as this is the default behavior anyway...
+		if r.aliases == nil {
+			r.aliases = make(map[string]string)
+		}
+		r.aliases[path] = fmt.Sprintf("__orchestrion_%s", alias)
+	}
 
 	return true
 }
@@ -73,13 +83,17 @@ func (r *ReferenceMap) AddLink(file *dst.File, path string) bool {
 // declaration when the cursor moves forward. Instead, it is advise to call this method after
 // dstutil.Apply has returned.
 func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
-	toAdd := make([]*dst.ImportSpec, 0, len(*r))
+	toAdd := make([]*dst.ImportSpec, 0, len(r.refs))
 
-	for path, kind := range *r {
+	for path, kind := range r.refs {
 		if kind != ImportStatement {
 			continue
 		}
-		toAdd = append(toAdd, &dst.ImportSpec{Path: &dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", path)}, Name: dst.NewIdent("_")})
+		name := &dst.Ident{Name: "_"}
+		if alias := r.aliases[path]; alias != "" {
+			name.Name = alias
+		}
+		toAdd = append(toAdd, &dst.ImportSpec{Path: &dst.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", path)}, Name: name})
 	}
 
 	if len(toAdd) == 0 {
@@ -121,19 +135,33 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 }
 
 func (r *ReferenceMap) Merge(other ReferenceMap) {
-	for path, kind := range other {
+	for path, kind := range other.refs {
 		r.add(path, kind)
+		if alias := other.aliases[path]; alias != "" {
+			if r.aliases == nil {
+				r.aliases = make(map[string]string)
+			}
+			r.aliases[path] = alias
+		}
 	}
 }
 
+func (r *ReferenceMap) Map() map[string]ReferenceKind {
+	return r.refs
+}
+
+func (r *ReferenceMap) Count() int {
+	return len(r.refs)
+}
+
 func (r *ReferenceMap) add(path string, kind ReferenceKind) bool {
-	if *r == nil {
-		*r = ReferenceMap{path: kind}
+	if r.refs == nil {
+		r.refs = map[string]ReferenceKind{path: kind}
 		return true
-	} else if old, found := (*r)[path]; !found || old != ImportStatement {
+	} else if old, found := r.refs[path]; !found || old != ImportStatement {
 		// If it was already in as an ImportStatement, we don't do anything, since that is the strongest
 		// kind of reference (imported implies relocatable, the reverse is not true).
-		(*r)[path] = kind
+		r.refs[path] = kind
 		return true
 	}
 	return false

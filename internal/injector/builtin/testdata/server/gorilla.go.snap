@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 //line <generated>:1
-	"github.com/datadog/orchestrion/instrument"
+	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 )
 
 //line samples/server/gorilla.go:15
@@ -19,7 +19,7 @@ func gorillaMuxServer() {
 	r := mux.NewRouter()
 	ping :=
 //line <generated>:1
-		instrument.WrapHandlerFunc(
+		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/gorilla.go:17
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")

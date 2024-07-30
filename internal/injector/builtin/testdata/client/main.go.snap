@@ -14,15 +14,15 @@ import (
 	"strings"
 	"time"
 //line <generated>:1
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 //line samples/client/main.go:18
 func main() {
 //line <generated>:1
 	{
-		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-		defer tracer.Stop()
+		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
+		defer __orchestrion_tracer.Stop()
 	}
 //line samples/client/main.go:19
 	if len(os.Args) < 2 {

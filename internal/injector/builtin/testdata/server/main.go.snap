@@ -10,16 +10,16 @@ import (
 	"log"
 	"net/http"
 //line <generated>:1
-	"github.com/datadog/orchestrion/instrument"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
+	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 //line samples/server/main.go:14
 func main() {
 //line <generated>:1
 	{
-		tracer.Start(tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-		defer tracer.Stop()
+		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
+		defer __orchestrion_tracer.Stop()
 	}
 //line samples/server/main.go:15
 	s := &http.Server{
@@ -27,7 +27,7 @@ func main() {
 		Handler:
 //line <generated>:1
 		//dd:startwrap
-		instrument.WrapHandler(
+		__orchestrion_instrument.WrapHandler(
 //line samples/server/main.go:17
 			http.HandlerFunc(myHandler)),
 		//dd:endwrap

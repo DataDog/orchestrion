@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-body:
+        all-of:
+          - directive: 'dd:span'
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("hello world")
+
+preserveLineInfo: true
+mustCompile: true
+
+syntheticReferences:
+  fmt: true
+
+code: |-
+  package test
+
+  var fmt = "hello"
+
+  //dd:span
+  func foo() {
+    println(fmt)
+  }

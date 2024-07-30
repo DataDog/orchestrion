@@ -354,6 +354,7 @@ var Aspects = [...]aspect.Aspect{
 					"httptrace":         "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 					"httptraceinternal": "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 					"options":           "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
+					"tracer":            "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
 		},
@@ -609,4 +610,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:M1yO7gdlnh5Uy2ySDJZp1/QbFL97hY5HGKHYpIq2r561weEn4pAbseW7yBGNuQAP8lTpY4Id8M5jC1ItvVcj2w=="
+const Checksum = "sha512:zkYUW2y78pSybfnoy3iuCQdnK8wQOTUH1oKNpY+on1doDPnby9mb5+M7S8KeEWcbH95+9pH62bXCZaQligQ0yg=="

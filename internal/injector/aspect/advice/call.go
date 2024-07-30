@@ -8,6 +8,7 @@ package advice
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
@@ -94,7 +95,7 @@ func (a *appendArgs) Apply(ctx context.Context, chain *node.Chain, csor *dstutil
 	if importPath := a.typeName.ImportPath(); importPath != "" {
 		if file, ok := typed.ContextValue[*dst.File](ctx); ok {
 			if refMap, ok := typed.ContextValue[*typed.ReferenceMap](ctx); ok {
-				refMap.AddImport(file, importPath)
+				refMap.AddImport(file, importPath, inferPkgName(importPath))
 			}
 		}
 	}
@@ -169,7 +170,7 @@ func (r *redirectCall) Apply(ctx context.Context, chain *node.Chain, csor *dstut
 
 	if r.path != "" && hasFile {
 		if refMap, found := typed.ContextValue[*typed.ReferenceMap](ctx); found {
-			refMap.AddImport(file, r.path)
+			refMap.AddImport(file, r.path, inferPkgName(r.path))
 		}
 	}
 
@@ -228,4 +229,23 @@ func init() {
 
 		return ReplaceFunction(path, name), nil
 	}
+}
+
+var (
+	importPathRe        = regexp.MustCompile(`^(?:.+/)?([^/]+?)(?:\.v\d+|/v\d+)?$`)
+	notValidIdentCharRe = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+)
+
+// inferPkgName extracts the last part of an import path and sanitizes it to be a valid Go
+// identifier continuation (meaning it assumes it would be appended to a valid Go identifier). This
+// is done for cosmetic purposes and does not require being accurate.
+func inferPkgName(importPath string) string {
+	matches := importPathRe.FindStringSubmatch(importPath)
+	var pkgName string
+	if len(matches) < 2 {
+		pkgName = importPath
+	} else {
+		pkgName = matches[1]
+	}
+	return notValidIdentCharRe.ReplaceAllLiteralString(pkgName, "_")
 }

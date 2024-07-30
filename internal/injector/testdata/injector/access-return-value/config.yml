@@ -1,0 +1,34 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - signature:
+              returns:
+                - any
+                - error
+    advice:
+      - prepend-statements:
+          imports:
+            log: log
+          template: |-
+            {{- $ret := .Function.Returns 1 -}}
+            defer func(){
+              if {{$ret}} != nil {
+                log.Println("error in {{.Function.Name}}:", {{$ret}})
+              }
+            }()
+
+code: |-
+  package test
+
+  import (
+    "errors"
+    "log"
+  )
+
+  func test() (interface{}, error) {
+    log.Println("Running test function...")
+    return nil, errors.ErrUnsupported
+  }

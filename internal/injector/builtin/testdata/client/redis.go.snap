@@ -13,9 +13,9 @@ import (
 	redisv8 "github.com/go-redis/redis/v8"
 	redigo "github.com/gomodule/redigo/redis"
 //line <generated>:1
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
-	redis1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
-	redigo1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
+	__orchestrion_trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
+	__orchestrion_trace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
+	__orchestrion_redigo "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
 )
 
 //line samples/client/redis.go:17
@@ -27,7 +27,7 @@ func redisV7Client() {
 //line samples/client/redis.go:18
 				redisv7.NewClient(&redisv7.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>:1
-			redis.WrapClient(client)
+			__orchestrion_trace.WrapClient(client)
 			return
 		}()
 //line samples/client/redis.go:19
@@ -45,7 +45,7 @@ func redisV8Client(ctx context.Context) {
 //line samples/client/redis.go:26
 				redisv8.NewClient(&redisv8.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>:1
-			redis1.WrapClient(client)
+			__orchestrion_trace1.WrapClient(client)
 			return
 		}()
 //line samples/client/redis.go:27
@@ -60,19 +60,19 @@ func redigoClient(ctx context.Context, net, addr string) {
 		conn.Do("SET", "test_key", "test_value", ctx)
 	}
 
-	if conn, err := redigo1.Dial(net, addr); err != nil {
+	if conn, err := __orchestrion_redigo.Dial(net, addr); err != nil {
 		panic(err)
 	} else {
 		use(conn)
 	}
 
-	if conn, err := redigo1.DialContext(ctx, net, addr); err != nil {
+	if conn, err := __orchestrion_redigo.DialContext(ctx, net, addr); err != nil {
 		panic(err)
 	} else {
 		use(conn)
 	}
 
-	if conn, err := redigo1.DialURL(fmt.Sprintf("%s://%s", net, addr)); err != nil {
+	if conn, err := __orchestrion_redigo.DialURL(fmt.Sprintf("%s://%s", net, addr)); err != nil {
 		panic(err)
 	} else {
 		use(conn)

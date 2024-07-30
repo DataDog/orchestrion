@@ -104,7 +104,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		references.Merge(res.References)
 	}
 
-	if len(references) == 0 {
+	if references.Count() == 0 {
 		return nil
 	}
 
@@ -117,7 +117,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		linkDeps   linkdeps.LinkDeps
 		regUpdated bool
 	)
-	for depImportPath, kind := range references {
+	for depImportPath, kind := range references.Map() {
 		if depImportPath == "unsafe" {
 			// Unsafe isn't like other go packages, and it does not have an associated archive file.
 			continue
