@@ -9,9 +9,26 @@ meta:
   description: Official package for interacting with a Vault server.
   icon: at-symbol
 aspects:
-  - id: 
+  - id: Wrap HTTP client
     join-point:
-      function-call: github.com/hashicorp/vault/api.NewClient
+      struct-literal:
+        type: github.com/hashicorp/vault/api.Config
     advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault.NewClient
+      - wrap-expression:
+          imports:
+            vaulttrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault/api
+          template: |-
+            {{- .AST.Type -}}{
+              {{- $hasField := false -}}
+              {{ range .AST.Elts }}
+              {{- if eq .Key.Name "HttpClient" }}
+              {{- $hasField = true -}}
+              HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),
+              {{- else -}}
+              {{ . }},
+              {{ end -}}
+              {{ end }}
+              {{- if not $hasField -}}
+              HttpClient: vaulttrace.NewHTTPClient(),
+              {{- end }}
+            }

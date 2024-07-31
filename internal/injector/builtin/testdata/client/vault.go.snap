@@ -6,16 +6,43 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/hashicorp/vault/api"
 //line <generated>:1
-	__orchestrion_vault "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault"
+	__orchestrion_vaulttrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault/api"
 )
 
-//line samples/client/vault.go:12
+//line samples/client/vault.go:14
 func vaultClient() {
-	c, err := __orchestrion_vault.NewClient(&api.Config{
+	c, err := api.NewClient(&
+//line <generated>:1
+//line samples/client/vault.go:15
+	api.Config{
+		Address: "http://vault.mydomain.com:8200",
+//line <generated>:1
+		HttpClient: __orchestrion_vaulttrace.NewHTTPClient(),
+	})
+//line samples/client/vault.go:18
+	if err != nil {
+		panic(err)
+	}
+	c.Logical().Read("secret/key")
+}
+
+func vaultProvidedClient() {
+	c, err := api.NewClient(&
+//line <generated>:1
+//line samples/client/vault.go:25
+	api.Config{
+//line <generated>:1
+		HttpClient: __orchestrion_vaulttrace.WrapHTTPClient(
+//line samples/client/vault.go:26
+			&http.Client{}),
+//line samples/client/vault.go:27
 		Address: "http://vault.mydomain.com:8200",
 	})
+//line samples/client/vault.go:29
 	if err != nil {
 		panic(err)
 	}
