@@ -13,9 +13,14 @@ unsafe = true
 noClasses = false
 
 [[menu.main]]
-name = 'Documentation'
+name = 'User Documentation'
 pageRef = '/docs'
 weight = 2
+
+[[menu.main]]
+name = 'Contributor Guide'
+pageRef = '/contributing'
+weight = 3
 
 [[menu.main]]
 name = 'Search'

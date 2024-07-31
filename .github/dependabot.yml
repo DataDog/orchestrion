@@ -13,8 +13,9 @@ updates:
     allow:
       - dependency-type: direct
     groups:
-      dependencies:
+      core:
         applies-to: version-updates
+        dependency-type: production
         exclude-patterns:
           - 'github.com/docker/*' # Not go module-compatible
 
@@ -25,8 +26,9 @@ updates:
     allow:
       - dependency-type: direct
     groups:
-      dependencies:
+      integration:
         applies-to: version-updates
+        dependency-type: production
         exclude-patterns:
           - 'github.com/docker/*' # Not go module-compatible
 
@@ -37,7 +39,8 @@ updates:
     allow:
       - dependency-type: direct
     groups:
-      dependencies:
+      samples:
         applies-to: version-updates
+        dependency-type: production
         exclude-patterns:
           - 'github.com/docker/*' # Not go module-compatible
