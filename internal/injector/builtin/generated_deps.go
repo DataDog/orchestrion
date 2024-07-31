@@ -44,7 +44,5 @@ import (
 	_ "math"
 	_ "net/http"
 	_ "os"
-	_ "slices"
 	_ "strconv"
-	_ "strings"
 )
