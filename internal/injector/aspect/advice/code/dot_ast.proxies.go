@@ -14,12 +14,18 @@ type proxyArrayType struct {
 	placeholders *placeholders
 }
 
+func (p *proxyArrayType) Copy() string {
+	return p.placeholders.forNode(p.ArrayType, false)
+}
+
 func (p *proxyArrayType) String() string {
 	return p.placeholders.forNode(p.ArrayType, true)
 }
+
 func (p *proxyArrayType) Len() dst.Expr {
 	return newProxy[dst.Expr](p.ArrayType.Len, p.placeholders)
 }
+
 func (p *proxyArrayType) Elt() dst.Expr {
 	return newProxy[dst.Expr](p.ArrayType.Elt, p.placeholders)
 }
@@ -29,9 +35,14 @@ type proxyAssignStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyAssignStmt) Copy() string {
+	return p.placeholders.forNode(p.AssignStmt, false)
+}
+
 func (p *proxyAssignStmt) String() string {
 	return p.placeholders.forNode(p.AssignStmt, true)
 }
+
 func (p *proxyAssignStmt) Lhs() []dst.Expr {
 	if p.AssignStmt.Lhs == nil {
 		return nil
@@ -42,6 +53,7 @@ func (p *proxyAssignStmt) Lhs() []dst.Expr {
 	}
 	return res
 }
+
 func (p *proxyAssignStmt) Rhs() []dst.Expr {
 	if p.AssignStmt.Rhs == nil {
 		return nil
@@ -58,6 +70,10 @@ type proxyBadDecl struct {
 	placeholders *placeholders
 }
 
+func (p *proxyBadDecl) Copy() string {
+	return p.placeholders.forNode(p.BadDecl, false)
+}
+
 func (p *proxyBadDecl) String() string {
 	return p.placeholders.forNode(p.BadDecl, true)
 }
@@ -65,6 +81,10 @@ func (p *proxyBadDecl) String() string {
 type proxyBadExpr struct {
 	*dst.BadExpr
 	placeholders *placeholders
+}
+
+func (p *proxyBadExpr) Copy() string {
+	return p.placeholders.forNode(p.BadExpr, false)
 }
 
 func (p *proxyBadExpr) String() string {
@@ -76,6 +96,10 @@ type proxyBadStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyBadStmt) Copy() string {
+	return p.placeholders.forNode(p.BadStmt, false)
+}
+
 func (p *proxyBadStmt) String() string {
 	return p.placeholders.forNode(p.BadStmt, true)
 }
@@ -83,6 +107,10 @@ func (p *proxyBadStmt) String() string {
 type proxyBasicLit struct {
 	*dst.BasicLit
 	placeholders *placeholders
+}
+
+func (p *proxyBasicLit) Copy() string {
+	return p.placeholders.forNode(p.BasicLit, false)
 }
 
 func (p *proxyBasicLit) String() string {
@@ -94,12 +122,18 @@ type proxyBinaryExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyBinaryExpr) Copy() string {
+	return p.placeholders.forNode(p.BinaryExpr, false)
+}
+
 func (p *proxyBinaryExpr) String() string {
 	return p.placeholders.forNode(p.BinaryExpr, true)
 }
+
 func (p *proxyBinaryExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.BinaryExpr.X, p.placeholders)
 }
+
 func (p *proxyBinaryExpr) Y() dst.Expr {
 	return newProxy[dst.Expr](p.BinaryExpr.Y, p.placeholders)
 }
@@ -109,9 +143,14 @@ type proxyBlockStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyBlockStmt) Copy() string {
+	return p.placeholders.forNode(p.BlockStmt, false)
+}
+
 func (p *proxyBlockStmt) String() string {
 	return p.placeholders.forNode(p.BlockStmt, true)
 }
+
 func (p *proxyBlockStmt) List() []dst.Stmt {
 	if p.BlockStmt.List == nil {
 		return nil
@@ -128,9 +167,14 @@ type proxyBranchStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyBranchStmt) Copy() string {
+	return p.placeholders.forNode(p.BranchStmt, false)
+}
+
 func (p *proxyBranchStmt) String() string {
 	return p.placeholders.forNode(p.BranchStmt, true)
 }
+
 func (p *proxyBranchStmt) Label() *proxyIdent {
 	return newProxy[*proxyIdent](p.BranchStmt.Label, p.placeholders)
 }
@@ -140,12 +184,18 @@ type proxyCallExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyCallExpr) Copy() string {
+	return p.placeholders.forNode(p.CallExpr, false)
+}
+
 func (p *proxyCallExpr) String() string {
 	return p.placeholders.forNode(p.CallExpr, true)
 }
+
 func (p *proxyCallExpr) Fun() dst.Expr {
 	return newProxy[dst.Expr](p.CallExpr.Fun, p.placeholders)
 }
+
 func (p *proxyCallExpr) Args() []dst.Expr {
 	if p.CallExpr.Args == nil {
 		return nil
@@ -162,9 +212,14 @@ type proxyCaseClause struct {
 	placeholders *placeholders
 }
 
+func (p *proxyCaseClause) Copy() string {
+	return p.placeholders.forNode(p.CaseClause, false)
+}
+
 func (p *proxyCaseClause) String() string {
 	return p.placeholders.forNode(p.CaseClause, true)
 }
+
 func (p *proxyCaseClause) List() []dst.Expr {
 	if p.CaseClause.List == nil {
 		return nil
@@ -175,6 +230,7 @@ func (p *proxyCaseClause) List() []dst.Expr {
 	}
 	return res
 }
+
 func (p *proxyCaseClause) Body() []dst.Stmt {
 	if p.CaseClause.Body == nil {
 		return nil
@@ -191,9 +247,14 @@ type proxyChanType struct {
 	placeholders *placeholders
 }
 
+func (p *proxyChanType) Copy() string {
+	return p.placeholders.forNode(p.ChanType, false)
+}
+
 func (p *proxyChanType) String() string {
 	return p.placeholders.forNode(p.ChanType, true)
 }
+
 func (p *proxyChanType) Value() dst.Expr {
 	return newProxy[dst.Expr](p.ChanType.Value, p.placeholders)
 }
@@ -203,12 +264,18 @@ type proxyCommClause struct {
 	placeholders *placeholders
 }
 
+func (p *proxyCommClause) Copy() string {
+	return p.placeholders.forNode(p.CommClause, false)
+}
+
 func (p *proxyCommClause) String() string {
 	return p.placeholders.forNode(p.CommClause, true)
 }
+
 func (p *proxyCommClause) Comm() dst.Stmt {
 	return newProxy[dst.Stmt](p.CommClause.Comm, p.placeholders)
 }
+
 func (p *proxyCommClause) Body() []dst.Stmt {
 	if p.CommClause.Body == nil {
 		return nil
@@ -225,12 +292,18 @@ type proxyCompositeLit struct {
 	placeholders *placeholders
 }
 
+func (p *proxyCompositeLit) Copy() string {
+	return p.placeholders.forNode(p.CompositeLit, false)
+}
+
 func (p *proxyCompositeLit) String() string {
 	return p.placeholders.forNode(p.CompositeLit, true)
 }
+
 func (p *proxyCompositeLit) Type() dst.Expr {
 	return newProxy[dst.Expr](p.CompositeLit.Type, p.placeholders)
 }
+
 func (p *proxyCompositeLit) Elts() []dst.Expr {
 	if p.CompositeLit.Elts == nil {
 		return nil
@@ -247,9 +320,14 @@ type proxyDeclStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyDeclStmt) Copy() string {
+	return p.placeholders.forNode(p.DeclStmt, false)
+}
+
 func (p *proxyDeclStmt) String() string {
 	return p.placeholders.forNode(p.DeclStmt, true)
 }
+
 func (p *proxyDeclStmt) Decl() dst.Decl {
 	return newProxy[dst.Decl](p.DeclStmt.Decl, p.placeholders)
 }
@@ -259,9 +337,14 @@ type proxyDeferStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyDeferStmt) Copy() string {
+	return p.placeholders.forNode(p.DeferStmt, false)
+}
+
 func (p *proxyDeferStmt) String() string {
 	return p.placeholders.forNode(p.DeferStmt, true)
 }
+
 func (p *proxyDeferStmt) Call() *proxyCallExpr {
 	return newProxy[*proxyCallExpr](p.DeferStmt.Call, p.placeholders)
 }
@@ -271,9 +354,14 @@ type proxyEllipsis struct {
 	placeholders *placeholders
 }
 
+func (p *proxyEllipsis) Copy() string {
+	return p.placeholders.forNode(p.Ellipsis, false)
+}
+
 func (p *proxyEllipsis) String() string {
 	return p.placeholders.forNode(p.Ellipsis, true)
 }
+
 func (p *proxyEllipsis) Elt() dst.Expr {
 	return newProxy[dst.Expr](p.Ellipsis.Elt, p.placeholders)
 }
@@ -281,6 +369,10 @@ func (p *proxyEllipsis) Elt() dst.Expr {
 type proxyEmptyStmt struct {
 	*dst.EmptyStmt
 	placeholders *placeholders
+}
+
+func (p *proxyEmptyStmt) Copy() string {
+	return p.placeholders.forNode(p.EmptyStmt, false)
 }
 
 func (p *proxyEmptyStmt) String() string {
@@ -292,9 +384,14 @@ type proxyExprStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyExprStmt) Copy() string {
+	return p.placeholders.forNode(p.ExprStmt, false)
+}
+
 func (p *proxyExprStmt) String() string {
 	return p.placeholders.forNode(p.ExprStmt, true)
 }
+
 func (p *proxyExprStmt) X() dst.Expr {
 	return newProxy[dst.Expr](p.ExprStmt.X, p.placeholders)
 }
@@ -304,12 +401,18 @@ type proxyField struct {
 	placeholders *placeholders
 }
 
+func (p *proxyField) Copy() string {
+	return p.placeholders.forNode(p.Field, false)
+}
+
 func (p *proxyField) String() string {
 	return p.placeholders.forNode(p.Field, true)
 }
+
 func (p *proxyField) Type() dst.Expr {
 	return newProxy[dst.Expr](p.Field.Type, p.placeholders)
 }
+
 func (p *proxyField) Tag() *proxyBasicLit {
 	return newProxy[*proxyBasicLit](p.Field.Tag, p.placeholders)
 }
@@ -317,6 +420,10 @@ func (p *proxyField) Tag() *proxyBasicLit {
 type proxyFieldList struct {
 	*dst.FieldList
 	placeholders *placeholders
+}
+
+func (p *proxyFieldList) Copy() string {
+	return p.placeholders.forNode(p.FieldList, false)
 }
 
 func (p *proxyFieldList) String() string {
@@ -328,12 +435,18 @@ type proxyFile struct {
 	placeholders *placeholders
 }
 
+func (p *proxyFile) Copy() string {
+	return p.placeholders.forNode(p.File, false)
+}
+
 func (p *proxyFile) String() string {
 	return p.placeholders.forNode(p.File, true)
 }
+
 func (p *proxyFile) Name() *proxyIdent {
 	return newProxy[*proxyIdent](p.File.Name, p.placeholders)
 }
+
 func (p *proxyFile) Decls() []dst.Decl {
 	if p.File.Decls == nil {
 		return nil
@@ -350,18 +463,26 @@ type proxyForStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyForStmt) Copy() string {
+	return p.placeholders.forNode(p.ForStmt, false)
+}
+
 func (p *proxyForStmt) String() string {
 	return p.placeholders.forNode(p.ForStmt, true)
 }
+
 func (p *proxyForStmt) Init() dst.Stmt {
 	return newProxy[dst.Stmt](p.ForStmt.Init, p.placeholders)
 }
+
 func (p *proxyForStmt) Cond() dst.Expr {
 	return newProxy[dst.Expr](p.ForStmt.Cond, p.placeholders)
 }
+
 func (p *proxyForStmt) Post() dst.Stmt {
 	return newProxy[dst.Stmt](p.ForStmt.Post, p.placeholders)
 }
+
 func (p *proxyForStmt) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.ForStmt.Body, p.placeholders)
 }
@@ -371,18 +492,26 @@ type proxyFuncDecl struct {
 	placeholders *placeholders
 }
 
+func (p *proxyFuncDecl) Copy() string {
+	return p.placeholders.forNode(p.FuncDecl, false)
+}
+
 func (p *proxyFuncDecl) String() string {
 	return p.placeholders.forNode(p.FuncDecl, true)
 }
+
 func (p *proxyFuncDecl) Recv() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.FuncDecl.Recv, p.placeholders)
 }
+
 func (p *proxyFuncDecl) Name() *proxyIdent {
 	return newProxy[*proxyIdent](p.FuncDecl.Name, p.placeholders)
 }
+
 func (p *proxyFuncDecl) Type() *proxyFuncType {
 	return newProxy[*proxyFuncType](p.FuncDecl.Type, p.placeholders)
 }
+
 func (p *proxyFuncDecl) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.FuncDecl.Body, p.placeholders)
 }
@@ -392,12 +521,18 @@ type proxyFuncLit struct {
 	placeholders *placeholders
 }
 
+func (p *proxyFuncLit) Copy() string {
+	return p.placeholders.forNode(p.FuncLit, false)
+}
+
 func (p *proxyFuncLit) String() string {
 	return p.placeholders.forNode(p.FuncLit, true)
 }
+
 func (p *proxyFuncLit) Type() *proxyFuncType {
 	return newProxy[*proxyFuncType](p.FuncLit.Type, p.placeholders)
 }
+
 func (p *proxyFuncLit) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.FuncLit.Body, p.placeholders)
 }
@@ -407,15 +542,22 @@ type proxyFuncType struct {
 	placeholders *placeholders
 }
 
+func (p *proxyFuncType) Copy() string {
+	return p.placeholders.forNode(p.FuncType, false)
+}
+
 func (p *proxyFuncType) String() string {
 	return p.placeholders.forNode(p.FuncType, true)
 }
+
 func (p *proxyFuncType) TypeParams() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.FuncType.TypeParams, p.placeholders)
 }
+
 func (p *proxyFuncType) Params() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.FuncType.Params, p.placeholders)
 }
+
 func (p *proxyFuncType) Results() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.FuncType.Results, p.placeholders)
 }
@@ -425,9 +567,14 @@ type proxyGenDecl struct {
 	placeholders *placeholders
 }
 
+func (p *proxyGenDecl) Copy() string {
+	return p.placeholders.forNode(p.GenDecl, false)
+}
+
 func (p *proxyGenDecl) String() string {
 	return p.placeholders.forNode(p.GenDecl, true)
 }
+
 func (p *proxyGenDecl) Specs() []dst.Spec {
 	if p.GenDecl.Specs == nil {
 		return nil
@@ -444,9 +591,14 @@ type proxyGoStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyGoStmt) Copy() string {
+	return p.placeholders.forNode(p.GoStmt, false)
+}
+
 func (p *proxyGoStmt) String() string {
 	return p.placeholders.forNode(p.GoStmt, true)
 }
+
 func (p *proxyGoStmt) Call() *proxyCallExpr {
 	return newProxy[*proxyCallExpr](p.GoStmt.Call, p.placeholders)
 }
@@ -454,6 +606,10 @@ func (p *proxyGoStmt) Call() *proxyCallExpr {
 type proxyIdent struct {
 	*dst.Ident
 	placeholders *placeholders
+}
+
+func (p *proxyIdent) Copy() string {
+	return p.placeholders.forNode(p.Ident, false)
 }
 
 func (p *proxyIdent) String() string {
@@ -465,18 +621,26 @@ type proxyIfStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyIfStmt) Copy() string {
+	return p.placeholders.forNode(p.IfStmt, false)
+}
+
 func (p *proxyIfStmt) String() string {
 	return p.placeholders.forNode(p.IfStmt, true)
 }
+
 func (p *proxyIfStmt) Init() dst.Stmt {
 	return newProxy[dst.Stmt](p.IfStmt.Init, p.placeholders)
 }
+
 func (p *proxyIfStmt) Cond() dst.Expr {
 	return newProxy[dst.Expr](p.IfStmt.Cond, p.placeholders)
 }
+
 func (p *proxyIfStmt) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.IfStmt.Body, p.placeholders)
 }
+
 func (p *proxyIfStmt) Else() dst.Stmt {
 	return newProxy[dst.Stmt](p.IfStmt.Else, p.placeholders)
 }
@@ -486,12 +650,18 @@ type proxyImportSpec struct {
 	placeholders *placeholders
 }
 
+func (p *proxyImportSpec) Copy() string {
+	return p.placeholders.forNode(p.ImportSpec, false)
+}
+
 func (p *proxyImportSpec) String() string {
 	return p.placeholders.forNode(p.ImportSpec, true)
 }
+
 func (p *proxyImportSpec) Name() *proxyIdent {
 	return newProxy[*proxyIdent](p.ImportSpec.Name, p.placeholders)
 }
+
 func (p *proxyImportSpec) Path() *proxyBasicLit {
 	return newProxy[*proxyBasicLit](p.ImportSpec.Path, p.placeholders)
 }
@@ -501,9 +671,14 @@ type proxyIncDecStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyIncDecStmt) Copy() string {
+	return p.placeholders.forNode(p.IncDecStmt, false)
+}
+
 func (p *proxyIncDecStmt) String() string {
 	return p.placeholders.forNode(p.IncDecStmt, true)
 }
+
 func (p *proxyIncDecStmt) X() dst.Expr {
 	return newProxy[dst.Expr](p.IncDecStmt.X, p.placeholders)
 }
@@ -513,12 +688,18 @@ type proxyIndexExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyIndexExpr) Copy() string {
+	return p.placeholders.forNode(p.IndexExpr, false)
+}
+
 func (p *proxyIndexExpr) String() string {
 	return p.placeholders.forNode(p.IndexExpr, true)
 }
+
 func (p *proxyIndexExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.IndexExpr.X, p.placeholders)
 }
+
 func (p *proxyIndexExpr) Index() dst.Expr {
 	return newProxy[dst.Expr](p.IndexExpr.Index, p.placeholders)
 }
@@ -528,12 +709,18 @@ type proxyIndexListExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyIndexListExpr) Copy() string {
+	return p.placeholders.forNode(p.IndexListExpr, false)
+}
+
 func (p *proxyIndexListExpr) String() string {
 	return p.placeholders.forNode(p.IndexListExpr, true)
 }
+
 func (p *proxyIndexListExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.IndexListExpr.X, p.placeholders)
 }
+
 func (p *proxyIndexListExpr) Indices() []dst.Expr {
 	if p.IndexListExpr.Indices == nil {
 		return nil
@@ -550,9 +737,14 @@ type proxyInterfaceType struct {
 	placeholders *placeholders
 }
 
+func (p *proxyInterfaceType) Copy() string {
+	return p.placeholders.forNode(p.InterfaceType, false)
+}
+
 func (p *proxyInterfaceType) String() string {
 	return p.placeholders.forNode(p.InterfaceType, true)
 }
+
 func (p *proxyInterfaceType) Methods() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.InterfaceType.Methods, p.placeholders)
 }
@@ -562,12 +754,18 @@ type proxyKeyValueExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyKeyValueExpr) Copy() string {
+	return p.placeholders.forNode(p.KeyValueExpr, false)
+}
+
 func (p *proxyKeyValueExpr) String() string {
 	return p.placeholders.forNode(p.KeyValueExpr, true)
 }
+
 func (p *proxyKeyValueExpr) Key() dst.Expr {
 	return newProxy[dst.Expr](p.KeyValueExpr.Key, p.placeholders)
 }
+
 func (p *proxyKeyValueExpr) Value() dst.Expr {
 	return newProxy[dst.Expr](p.KeyValueExpr.Value, p.placeholders)
 }
@@ -577,12 +775,18 @@ type proxyLabeledStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyLabeledStmt) Copy() string {
+	return p.placeholders.forNode(p.LabeledStmt, false)
+}
+
 func (p *proxyLabeledStmt) String() string {
 	return p.placeholders.forNode(p.LabeledStmt, true)
 }
+
 func (p *proxyLabeledStmt) Label() *proxyIdent {
 	return newProxy[*proxyIdent](p.LabeledStmt.Label, p.placeholders)
 }
+
 func (p *proxyLabeledStmt) Stmt() dst.Stmt {
 	return newProxy[dst.Stmt](p.LabeledStmt.Stmt, p.placeholders)
 }
@@ -592,12 +796,18 @@ type proxyMapType struct {
 	placeholders *placeholders
 }
 
+func (p *proxyMapType) Copy() string {
+	return p.placeholders.forNode(p.MapType, false)
+}
+
 func (p *proxyMapType) String() string {
 	return p.placeholders.forNode(p.MapType, true)
 }
+
 func (p *proxyMapType) Key() dst.Expr {
 	return newProxy[dst.Expr](p.MapType.Key, p.placeholders)
 }
+
 func (p *proxyMapType) Value() dst.Expr {
 	return newProxy[dst.Expr](p.MapType.Value, p.placeholders)
 }
@@ -605,6 +815,10 @@ func (p *proxyMapType) Value() dst.Expr {
 type proxyPackage struct {
 	*dst.Package
 	placeholders *placeholders
+}
+
+func (p *proxyPackage) Copy() string {
+	return p.placeholders.forNode(p.Package, false)
 }
 
 func (p *proxyPackage) String() string {
@@ -616,9 +830,14 @@ type proxyParenExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyParenExpr) Copy() string {
+	return p.placeholders.forNode(p.ParenExpr, false)
+}
+
 func (p *proxyParenExpr) String() string {
 	return p.placeholders.forNode(p.ParenExpr, true)
 }
+
 func (p *proxyParenExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.ParenExpr.X, p.placeholders)
 }
@@ -628,18 +847,26 @@ type proxyRangeStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyRangeStmt) Copy() string {
+	return p.placeholders.forNode(p.RangeStmt, false)
+}
+
 func (p *proxyRangeStmt) String() string {
 	return p.placeholders.forNode(p.RangeStmt, true)
 }
+
 func (p *proxyRangeStmt) Key() dst.Expr {
 	return newProxy[dst.Expr](p.RangeStmt.Key, p.placeholders)
 }
+
 func (p *proxyRangeStmt) Value() dst.Expr {
 	return newProxy[dst.Expr](p.RangeStmt.Value, p.placeholders)
 }
+
 func (p *proxyRangeStmt) X() dst.Expr {
 	return newProxy[dst.Expr](p.RangeStmt.X, p.placeholders)
 }
+
 func (p *proxyRangeStmt) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.RangeStmt.Body, p.placeholders)
 }
@@ -649,9 +876,14 @@ type proxyReturnStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyReturnStmt) Copy() string {
+	return p.placeholders.forNode(p.ReturnStmt, false)
+}
+
 func (p *proxyReturnStmt) String() string {
 	return p.placeholders.forNode(p.ReturnStmt, true)
 }
+
 func (p *proxyReturnStmt) Results() []dst.Expr {
 	if p.ReturnStmt.Results == nil {
 		return nil
@@ -668,9 +900,14 @@ type proxySelectStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxySelectStmt) Copy() string {
+	return p.placeholders.forNode(p.SelectStmt, false)
+}
+
 func (p *proxySelectStmt) String() string {
 	return p.placeholders.forNode(p.SelectStmt, true)
 }
+
 func (p *proxySelectStmt) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.SelectStmt.Body, p.placeholders)
 }
@@ -680,12 +917,18 @@ type proxySelectorExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxySelectorExpr) Copy() string {
+	return p.placeholders.forNode(p.SelectorExpr, false)
+}
+
 func (p *proxySelectorExpr) String() string {
 	return p.placeholders.forNode(p.SelectorExpr, true)
 }
+
 func (p *proxySelectorExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.SelectorExpr.X, p.placeholders)
 }
+
 func (p *proxySelectorExpr) Sel() *proxyIdent {
 	return newProxy[*proxyIdent](p.SelectorExpr.Sel, p.placeholders)
 }
@@ -695,12 +938,18 @@ type proxySendStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxySendStmt) Copy() string {
+	return p.placeholders.forNode(p.SendStmt, false)
+}
+
 func (p *proxySendStmt) String() string {
 	return p.placeholders.forNode(p.SendStmt, true)
 }
+
 func (p *proxySendStmt) Chan() dst.Expr {
 	return newProxy[dst.Expr](p.SendStmt.Chan, p.placeholders)
 }
+
 func (p *proxySendStmt) Value() dst.Expr {
 	return newProxy[dst.Expr](p.SendStmt.Value, p.placeholders)
 }
@@ -710,18 +959,26 @@ type proxySliceExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxySliceExpr) Copy() string {
+	return p.placeholders.forNode(p.SliceExpr, false)
+}
+
 func (p *proxySliceExpr) String() string {
 	return p.placeholders.forNode(p.SliceExpr, true)
 }
+
 func (p *proxySliceExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.SliceExpr.X, p.placeholders)
 }
+
 func (p *proxySliceExpr) Low() dst.Expr {
 	return newProxy[dst.Expr](p.SliceExpr.Low, p.placeholders)
 }
+
 func (p *proxySliceExpr) High() dst.Expr {
 	return newProxy[dst.Expr](p.SliceExpr.High, p.placeholders)
 }
+
 func (p *proxySliceExpr) Max() dst.Expr {
 	return newProxy[dst.Expr](p.SliceExpr.Max, p.placeholders)
 }
@@ -731,9 +988,14 @@ type proxyStarExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyStarExpr) Copy() string {
+	return p.placeholders.forNode(p.StarExpr, false)
+}
+
 func (p *proxyStarExpr) String() string {
 	return p.placeholders.forNode(p.StarExpr, true)
 }
+
 func (p *proxyStarExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.StarExpr.X, p.placeholders)
 }
@@ -743,9 +1005,14 @@ type proxyStructType struct {
 	placeholders *placeholders
 }
 
+func (p *proxyStructType) Copy() string {
+	return p.placeholders.forNode(p.StructType, false)
+}
+
 func (p *proxyStructType) String() string {
 	return p.placeholders.forNode(p.StructType, true)
 }
+
 func (p *proxyStructType) Fields() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.StructType.Fields, p.placeholders)
 }
@@ -755,15 +1022,22 @@ type proxySwitchStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxySwitchStmt) Copy() string {
+	return p.placeholders.forNode(p.SwitchStmt, false)
+}
+
 func (p *proxySwitchStmt) String() string {
 	return p.placeholders.forNode(p.SwitchStmt, true)
 }
+
 func (p *proxySwitchStmt) Init() dst.Stmt {
 	return newProxy[dst.Stmt](p.SwitchStmt.Init, p.placeholders)
 }
+
 func (p *proxySwitchStmt) Tag() dst.Expr {
 	return newProxy[dst.Expr](p.SwitchStmt.Tag, p.placeholders)
 }
+
 func (p *proxySwitchStmt) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.SwitchStmt.Body, p.placeholders)
 }
@@ -773,12 +1047,18 @@ type proxyTypeAssertExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyTypeAssertExpr) Copy() string {
+	return p.placeholders.forNode(p.TypeAssertExpr, false)
+}
+
 func (p *proxyTypeAssertExpr) String() string {
 	return p.placeholders.forNode(p.TypeAssertExpr, true)
 }
+
 func (p *proxyTypeAssertExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.TypeAssertExpr.X, p.placeholders)
 }
+
 func (p *proxyTypeAssertExpr) Type() dst.Expr {
 	return newProxy[dst.Expr](p.TypeAssertExpr.Type, p.placeholders)
 }
@@ -788,15 +1068,22 @@ type proxyTypeSpec struct {
 	placeholders *placeholders
 }
 
+func (p *proxyTypeSpec) Copy() string {
+	return p.placeholders.forNode(p.TypeSpec, false)
+}
+
 func (p *proxyTypeSpec) String() string {
 	return p.placeholders.forNode(p.TypeSpec, true)
 }
+
 func (p *proxyTypeSpec) Name() *proxyIdent {
 	return newProxy[*proxyIdent](p.TypeSpec.Name, p.placeholders)
 }
+
 func (p *proxyTypeSpec) TypeParams() *proxyFieldList {
 	return newProxy[*proxyFieldList](p.TypeSpec.TypeParams, p.placeholders)
 }
+
 func (p *proxyTypeSpec) Type() dst.Expr {
 	return newProxy[dst.Expr](p.TypeSpec.Type, p.placeholders)
 }
@@ -806,15 +1093,22 @@ type proxyTypeSwitchStmt struct {
 	placeholders *placeholders
 }
 
+func (p *proxyTypeSwitchStmt) Copy() string {
+	return p.placeholders.forNode(p.TypeSwitchStmt, false)
+}
+
 func (p *proxyTypeSwitchStmt) String() string {
 	return p.placeholders.forNode(p.TypeSwitchStmt, true)
 }
+
 func (p *proxyTypeSwitchStmt) Init() dst.Stmt {
 	return newProxy[dst.Stmt](p.TypeSwitchStmt.Init, p.placeholders)
 }
+
 func (p *proxyTypeSwitchStmt) Assign() dst.Stmt {
 	return newProxy[dst.Stmt](p.TypeSwitchStmt.Assign, p.placeholders)
 }
+
 func (p *proxyTypeSwitchStmt) Body() *proxyBlockStmt {
 	return newProxy[*proxyBlockStmt](p.TypeSwitchStmt.Body, p.placeholders)
 }
@@ -824,9 +1118,14 @@ type proxyUnaryExpr struct {
 	placeholders *placeholders
 }
 
+func (p *proxyUnaryExpr) Copy() string {
+	return p.placeholders.forNode(p.UnaryExpr, false)
+}
+
 func (p *proxyUnaryExpr) String() string {
 	return p.placeholders.forNode(p.UnaryExpr, true)
 }
+
 func (p *proxyUnaryExpr) X() dst.Expr {
 	return newProxy[dst.Expr](p.UnaryExpr.X, p.placeholders)
 }
@@ -836,12 +1135,18 @@ type proxyValueSpec struct {
 	placeholders *placeholders
 }
 
+func (p *proxyValueSpec) Copy() string {
+	return p.placeholders.forNode(p.ValueSpec, false)
+}
+
 func (p *proxyValueSpec) String() string {
 	return p.placeholders.forNode(p.ValueSpec, true)
 }
+
 func (p *proxyValueSpec) Type() dst.Expr {
 	return newProxy[dst.Expr](p.ValueSpec.Type, p.placeholders)
 }
+
 func (p *proxyValueSpec) Values() []dst.Expr {
 	if p.ValueSpec.Values == nil {
 		return nil
@@ -852,6 +1157,7 @@ func (p *proxyValueSpec) Values() []dst.Expr {
 	}
 	return res
 }
+
 func newProxy[T any](node any, placeholders *placeholders) T {
 	rv := node
 	switch node := node.(type) {
