@@ -44,7 +44,7 @@ func (w Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, importPath, err)
 		}
 
-		log.Debugf("Processing %s dependencies from %s[%s]...", linkdeps.LinkDepsFilename, importPath, archive)
+		log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.LinkDepsFilename, importPath, archive)
 		for _, depPath := range linkDeps.Dependencies() {
 			if arch, found := reg.PackageFile[depPath]; found {
 				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, depPath, arch)
