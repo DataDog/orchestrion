@@ -23,6 +23,7 @@ import (
 	nethttp "orchestrion/integration/tests/net_http"
 	redigo "orchestrion/integration/tests/redigo"
 	sql "orchestrion/integration/tests/sql"
+	vault "orchestrion/integration/tests/vault"
 )
 
 var suite = map[string]testCase{
@@ -41,4 +42,5 @@ var suite = map[string]testCase{
 	"net_http":    new(nethttp.TestCase),
 	"redigo":      new(redigo.TestCase),
 	"sql":         new(sql.TestCase),
+	"vault":       new(vault.TestCase),
 }
