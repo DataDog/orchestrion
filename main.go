@@ -6,174 +6,67 @@
 package main
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strconv"
 
-	"github.com/datadog/orchestrion/internal/ensure"
-	"github.com/datadog/orchestrion/internal/goenv"
-	"github.com/datadog/orchestrion/internal/goproxy"
-	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/cmd"
 	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/toolexec"
-	"github.com/datadog/orchestrion/internal/toolexec/aspect"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/datadog/orchestrion/internal/version"
+	"github.com/urfave/cli/v2"
+)
+
+const (
+	envVarOrchestrionLogFile  = "ORCHESTRION_LOG_FILE"
+	envVarOrchestrionLogLevel = "ORCHESTRION_LOG_LEVEL"
+	envVarToolexecImportPath  = "TOOLEXEC_IMPORTPATH"
 )
 
 func main() {
+	// Setup the logger
+	log.SetContext("ORCHESTRION", version.Tag)
+	log.SetContext("PID", strconv.FormatInt(int64(os.Getpid()), 10))
+	if val := os.Getenv(envVarToolexecImportPath); val != "" {
+		log.SetContext(envVarToolexecImportPath, val)
+	}
 	defer log.Close()
 
-	if len(os.Args) < 2 {
-		printUsage(os.Args[0])
-		return
+	// Setup the CLI application
+	app := cli.App{
+		Name:        "orchestrion",
+		Usage:       "Automatic compile-time instrumentation of Go code",
+		Description: "Orchestrion automatically adds instrumentation to Go applications at compile-time by interfacing with the standard Go toolchain using the -toolexec mechanism to re-write source code before it is passed to the compiler.\n\nFor more information, visit https://datadoghq.dev/orchestrion",
+		Copyright:   "2023-present Datadog, Inc.",
+		HideVersion: true,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Category: "Logging",
+				Name:     "log-level",
+				EnvVars:  []string{envVarOrchestrionLogLevel},
+				Usage:    "Set the log level (NONE, OFF, ERROR, WARN, INFO, DEBUG, TRACE)",
+				Value:    "NONE",
+				Action:   actionSetLogLevel,
+			},
+			&cli.StringFlag{
+				Category: "Logging",
+				Name:     "log-file",
+				EnvVars:  []string{envVarOrchestrionLogFile},
+				Usage:    "Send logging output to a file instead of STDERR. Unless --log-level is also specified, the default log level changed to WARN.",
+				Action:   actionSetLogFile,
+			},
+		},
+		Commands: []*cli.Command{
+			cmd.Go,
+			cmd.Pin,
+			cmd.Toolexec,
+			cmd.Version,
+		},
 	}
-	cmd := os.Args[1]
-	args := make([]string, len(os.Args)-2)
-	copy(args, os.Args[2:])
-
-	switch cmd {
-	case "help":
-		printUsage(os.Args[0])
-		return
-	case "version":
-		if startupVersion := ensure.StartupVersion(); startupVersion != version.Tag {
-			fmt.Printf("%s (started via %s)\n", version.Tag, startupVersion)
-		} else {
-			fmt.Println(version.Tag)
-		}
-		return
-	case "pin":
-		if err := pinOrchestrion(); err != nil {
-			fmt.Fprintf(os.Stderr, "An error occurred: %v\n", err)
-			os.Exit(1)
-		}
-		return
-	case "go":
-		autoPinOrchestrion()
-		if err := goproxy.Run(args, goproxy.WithToolexec(orchestrionBinPath, "toolexec")); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
-		return
-	case "toolexec":
-		if len(args) == 0 {
-			fmt.Fprintf(os.Stderr, "Error: no arguments provided to `orchestrion toolexec`\n")
-			os.Exit(2)
-		}
-
-		proxyCmd := proxy.MustParseCommand(args)
-		defer proxyCmd.Close()
-		switch proxyCmd.Type() {
-		case proxy.CommandTypeCompile, proxy.CommandTypeLink:
-			// We only do `autoPinOrchestrion` in case the command is a "known" and interesting one. It is
-			// otherwise a waste of time and risks failing due to working directory issues. For example,
-			// the `asm` commands run with the current working directory set to the source tree of the
-			// package, whereas `compile` and `link` run in the directrory where the `go.mod` file is.
-			autoPinOrchestrion()
-		}
-
-		if proxyCmd.ShowVersion() {
-			log.Tracef("Toolexec version command: %q\n", proxyCmd.Args())
-			fullVersion := toolexec.ComputeVersion(proxyCmd, orchestrionBinPath)
-			log.Tracef("Complete version output: %s\n", fullVersion)
-			fmt.Println(fullVersion)
-			return
-		}
-
-		log.Tracef("Toolexec original command: %q\n", proxyCmd.Args())
-		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
-		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompile); err != nil {
-			if errors.Is(err, proxy.ErrSkipCommand) {
-				log.Infof("SKIP: %q\n", proxyCmd.Args())
-				return
-			}
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompileMain); err != nil {
-			if errors.Is(err, proxy.ErrSkipCommand) {
-				log.Infof("SKIP: %q\n", proxyCmd.Args())
-				return
-			}
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
-			if errors.Is(err, proxy.ErrSkipCommand) {
-				log.Infof("SKIP: %q\n", proxyCmd.Args())
-				return
-			}
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		// Spacing so the final command is aligned with the original one...
-		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
-		proxy.MustRunCommand(proxyCmd)
-
-		return
-	case "warmup":
-		if goMod, err := goenv.GOMOD(); err == nil && goMod != "" {
-			// Ensure Orchestrion is pinned here...
-			autoPinOrchestrion()
-			log.Tracef("Warming up in the current module (%q)\n", goMod)
-		} else {
-			tmp, err := os.MkdirTemp("", "orchestrion-warmup-*")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to create temporary directory: %v\n", err)
-				os.Exit(1)
-			}
-			defer os.RemoveAll(tmp)
-			log.Tracef("Initializing warm-up module in %q\n", tmp)
-			var stderr bytes.Buffer
-			cmd := exec.Command("go", "mod", "init", "orchestrion-warmup")
-			cmd.Dir = tmp
-			cmd.Stderr = &stderr
-			if err := cmd.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to initialize temporary module (%q): %v\n", cmd.Args, err)
-				if stderr.Len() > 0 {
-					fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
-				}
-				os.Exit(1)
-			}
-
-			log.Tracef("Running 'orchestrion pin' in the temporary module...\n")
-			stderr.Reset()
-			cmd = exec.Command(orchestrionBinPath, "pin")
-			cmd.Dir = tmp
-			cmd.Stderr = &stderr
-			if err := cmd.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to install orchestrion in temporary module (%q): %v\n", cmd.Args, err)
-				if stderr.Len() > 0 {
-					fmt.Fprintf(os.Stderr, "Error output:\n%s\n", stderr.String())
-				}
-				os.Exit(1)
-			}
-
-			log.Tracef("Running `go build -v <modules>` in the temporary module...\n")
-			buildArgs := make([]string, 0, 3+len(args)+len(builtin.InjectedPaths))
-			buildArgs = append(buildArgs, "go", "build")
-			buildArgs = append(buildArgs, args...)
-			// All packages we may be instrumenting, plus the standard library.
-			buildArgs = append(buildArgs, "std")
-			buildArgs = append(buildArgs, builtin.InjectedPaths[:]...)
-			cmd = exec.Command(orchestrionBinPath, buildArgs...)
-			cmd.Dir = tmp
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "Warm-up build failed (%q): %v\n", cmd.Args, err)
-				os.Exit(1)
-			}
-		}
-		return
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown command '%s'\n\n", cmd)
-		printUsage(os.Args[0])
+	// Run the CLI application
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(-1)
 	}
 }
 
@@ -193,16 +86,45 @@ func printUsage(cmd string) {
 	}
 }
 
-var (
-	orchestrionBinPath string // The path to the current executable file
-)
+var logLevelSet bool
 
-func init() {
-	var err error
-	if orchestrionBinPath, err = os.Executable(); err != nil {
-		if orchestrionBinPath, err = filepath.Abs(os.Args[0]); err != nil {
-			orchestrionBinPath = os.Args[0]
+func actionSetLogLevel(_ *cli.Context, level string) error {
+	if level, valid := log.LevelNamed(level); valid {
+		logLevelSet = true
+		log.SetLevel(level)
+		return nil
+	}
+	return fmt.Errorf("invalid log level specified: %q", level)
+}
+
+func actionSetLogFile(_ *cli.Context, path string) error {
+	if !filepath.IsAbs(path) {
+		if wd, err := os.Getwd(); err == nil {
+			path = filepath.Join(wd, path)
+			os.Setenv(envVarOrchestrionLogFile, path)
 		}
 	}
-	orchestrionBinPath = filepath.Clean(orchestrionBinPath)
+	filename := os.Expand(path, func(name string) string {
+		switch name {
+		case "PID":
+			log.SetContext("PID", "")
+			return strconv.FormatInt(int64(os.Getpid()), 10)
+		default:
+			return fmt.Sprintf("$%s", name)
+		}
+	})
+	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	log.SetOutput(file)
+
+	if !logLevelSet {
+		log.SetLevel(log.LevelWarn)
+	}
+
+	return nil
 }

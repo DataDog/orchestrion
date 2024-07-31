@@ -12,6 +12,7 @@ orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bag
 orchestrion,github.com/cespare/xxhash/v2,MIT,Copyright (c) 2016 Caleb Spare
 orchestrion,github.com/charmbracelet/lipgloss,MIT,"Copyright (c) 2021-2023 Charmbracelet, Inc"
 orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
+orchestrion,github.com/cpuguy83/go-md2man/v2/md2man,MIT,Copyright (c) 2014 Brian Goff
 orchestrion,github.com/datadog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
@@ -34,6 +35,7 @@ orchestrion,github.com/outcaste-io/ristretto/z,MIT,unknown
 orchestrion,github.com/philhofer/fwd,MIT,"Copyright (c) 2014-2015, Philip Hofer"
 orchestrion,github.com/pkg/errors,BSD-2-Clause,"Copyright (c) 2015, Dave Cheney <dave@cheney.net>"
 orchestrion,github.com/rivo/uniseg,MIT,Copyright (c) 2019 Oliver Kuederle
+orchestrion,github.com/russross/blackfriday/v2,BSD-2-Clause,unknown
 orchestrion,github.com/ryanuber/go-glob,MIT,Copyright (c) 2014 Ryan Uber
 orchestrion,github.com/santhosh-tekuri/jsonschema/v6,Apache-2.0,unknown
 orchestrion,github.com/secure-systems-lab/go-securesystemslib/cjson,MIT,Copyright (c) 2021 NYU Secure Systems Lab
@@ -42,6 +44,8 @@ orchestrion,github.com/shoenig/go-m1cpu,MPL-2.0,unknown
 orchestrion,github.com/tinylib/msgp/msgp,MIT,Copyright (c) 2014 Philip Hofer
 orchestrion,github.com/tklauser/go-sysconf,BSD-3-Clause,"Copyright (c) 2018-2022, Tobias Klauser"
 orchestrion,github.com/tklauser/numcpus,Apache-2.0,unknown
+orchestrion,github.com/urfave/cli/v2,MIT,Copyright (c) 2022 urfave/cli maintainers
+orchestrion,github.com/xrash/smetrics,MIT,Copyright (C) 2016 Felipe da Cunha Gonçalves
 orchestrion,github.com/yusufpapurcu/wmi,MIT,Copyright (c) 2013 Stack Exchange
 orchestrion,go.uber.org/atomic,MIT,"Copyright (c) 2016 Uber Technologies, Inc."
 orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
