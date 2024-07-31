@@ -1,6 +1,7 @@
 module orchestrion/integration
 
 go 1.21
+toolchain go1.22.5
 
 replace github.com/datadog/orchestrion => ../
 
@@ -23,15 +24,15 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.32.0
 	github.com/xlab/treeprint v1.2.0
-	go.mongodb.org/mongo-driver v1.13.1
+	go.mongodb.org/mongo-driver v1.16.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20230913203803-9deee9ba5f5b
 	gopkg.in/DataDog/dd-trace-go.v1 v1.66.0
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/v3 v3.5.1
-	k8s.io/apimachinery v0.26.2
-	k8s.io/client-go v0.26.2
+	k8s.io/apimachinery v0.30.3
+	k8s.io/client-go v0.30.3
 )
 
 require (
@@ -141,7 +142,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.20.2 // indirect
-	github.com/go-openapi/jsonreference v0.20.0 // indirect
+	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.8 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -161,7 +162,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
+	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-licenses v1.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -216,7 +217,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
-	github.com/montanaflynn/stats v0.7.0 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/smartcrop v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
@@ -305,12 +306,12 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.0 // indirect
-	k8s.io/api v0.26.2 // indirect
+	k8s.io/api v0.30.3 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
-	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
-	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
+	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
