@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
@@ -17,8 +18,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/dave/dst"
-	"github.com/dave/dst/decorator"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -57,7 +56,7 @@ func main() {
 		return strings.Compare(lhs.Name(), rhs.Name())
 	})
 
-	dc := decorator.NewDecorator(nil)
+	fset := token.NewFileSet()
 
 	file.Var().Id("suite").Op("=").Map(jen.String()).Id("testCase").ValuesFunc(func(g *jen.Group) {
 		for _, entry := range entries {
@@ -66,7 +65,8 @@ func main() {
 			}
 
 			p := path.Join(root, entry.Name())
-			pkgs, err := dc.ParseDir(p, nil, parser.ParseComments)
+
+			pkgs, err := parser.ParseDir(fset, p, nil, parser.ParseComments)
 			if err != nil {
 				log.Fatalf("failed to parse AST for dir: %v\n", err)
 			}
@@ -77,12 +77,12 @@ func main() {
 			for _, pkg := range pkgs {
 				for _, f := range pkg.Files {
 					for _, decl := range f.Decls {
-						gd, ok := decl.(*dst.GenDecl)
+						gd, ok := decl.(*ast.GenDecl)
 						if !ok || gd.Tok != token.TYPE {
 							continue
 						}
 						for _, sp := range gd.Specs {
-							typeSpec, ok := sp.(*dst.TypeSpec)
+							typeSpec, ok := sp.(*ast.TypeSpec)
 							if !ok {
 								continue
 							}
