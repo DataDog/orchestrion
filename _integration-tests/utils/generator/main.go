@@ -94,6 +94,8 @@ func main() {
 					}
 				}
 			}
+			// ensure order in test cases as well
+			slices.Sort(testCases)
 
 			for _, tc := range testCases {
 				tcName := entry.Name()
