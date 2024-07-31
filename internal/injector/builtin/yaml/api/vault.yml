@@ -7,7 +7,7 @@
 meta:
   name: github.com/hashicorp/vault/api
   description: Official package for interacting with a Vault server.
-  icon: at-symbol
+  icon: key
 aspects:
   - id: Wrap HTTP client
     join-point:
