@@ -117,7 +117,15 @@ func New(opts *Options) (*Server, error) {
 		return nil, errors.New("timed out waiting for NATS server to become available")
 	}
 
-	clientUrl := fmt.Sprintf("nats://%s", server.Addr().String())
+	var clientUrl string
+	if opts.NoListener {
+		// "Any" URL will do here, it's not actually used...
+		clientUrl = "nats://localhost:0"
+	} else {
+		// We don't use `server.ClientURL()` here because it currently returns an invalid URL is the
+		// listener address is IPv6 (see: https://github.com/nats-io/nats-server/issues/5721)
+		clientUrl = fmt.Sprintf("nats://%s", server.Addr())
+	}
 
 	log.Tracef("[JOBSERVER] NATS Server ready for connections on %q\n", clientUrl)
 
