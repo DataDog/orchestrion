@@ -24,8 +24,6 @@ aspects:
             profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
             log: log
             os: os
-            slices: slices
-            strings: strings
           template: |-
             tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
             defer tracer.Stop()
