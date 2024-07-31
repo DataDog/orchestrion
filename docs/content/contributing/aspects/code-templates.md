@@ -101,11 +101,12 @@ The `.AST` method returns a view of the node's AST. This view allows refering
 to all attributes of the original AST nodes, producing a similar view object for
 each child node.
 
-When view objects are rendered by the template, they produce a *copy* of the
-view's underlying node. The **copied** AST nodes are detached from the original
-node's source location, making them appear as synthetic in the produced output,
-meaning they would be reported as belonging to generated code in the
-application's stack trace.
+When view objects are rendered by the template, they *move* the view's
+underlying node. Use the view's `.Copy` method to instead *copy* the node into
+the target AST. The **copied** AST nodes are detached from the original node's
+source location, making them appear as synthetic in the produced output, meaning
+they would be reported as belonging to generated code in the application's stack
+trace.
 
 The complete type hierarchy for these views corresponds to the
 {{<godoc "github.com/dave/dst" "Node">}} implementations, which provide the
