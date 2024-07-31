@@ -23,7 +23,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.WrapExpression(code.MustTemplate(
 				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"HttpClient\" }}\n  {{- $hasField = true -}}\n  HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  HttpClient: vaulttrace.NewHTTPClient(),\n  {{- end }}\n}",
 				map[string]string{
-					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault/api",
+					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 				},
 			)),
 		},
@@ -602,7 +602,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault/api",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
@@ -623,4 +623,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:l3/YKblDFCHZ7xfkVD/ohc8u5tJQkTuIWR+70lHWPLNuR4WbPbHGcBEJ2CJc2mlZNLbWgEQUxg9ytTU9H4yhSA=="
+const Checksum = "sha512:uAJOxbTMy9NT7R+bUAnNYt8vhCH00NiiQHn35nA+lGpf+8ZZfdSOhDp/npMOgUiWkxoZ0wogYTWznUex29+jwA=="

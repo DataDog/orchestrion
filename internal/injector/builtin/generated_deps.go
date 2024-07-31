@@ -26,7 +26,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
-	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault/api"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"

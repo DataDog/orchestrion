@@ -16,7 +16,7 @@ aspects:
     advice:
       - wrap-expression:
           imports:
-            vaulttrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault/api
+            vaulttrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault
           template: |-
             {{- .AST.Type -}}{
               {{- $hasField := false -}}
