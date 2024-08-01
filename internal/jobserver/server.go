@@ -35,7 +35,6 @@ var (
 type (
 	Server struct {
 		server     *server.Server     // The underlying NATS server
-		conn       *nats.Conn         // The local server connection
 		CacheStats *common.CacheStats // Cache statistics
 		clientUrl  string             // The client URL to use for connecting to this server
 
@@ -70,7 +69,7 @@ type (
 
 // New initializes and starts a new NATS server with the provided options. The
 // server only listens on the loopback interface.
-func New(opts *Options) (*Server, error) {
+func New(opts *Options) (srv *Server, err error) {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -112,8 +111,16 @@ func New(opts *Options) (*Server, error) {
 
 	// Starting the server, and waiting for it to be ready
 	server.Start()
+
+	defer func() {
+		if srv == nil && err != nil {
+			// Shut down the server immediately, as we are returning an error and no
+			// server, so the caller wouldn't be able to do this by themselves.
+			server.Shutdown()
+		}
+	}()
+
 	if !server.ReadyForConnections(startTimeout) {
-		defer server.Shutdown()
 		return nil, errors.New("timed out waiting for NATS server to become available")
 	}
 
@@ -132,45 +139,47 @@ func New(opts *Options) (*Server, error) {
 	// Obtaining the local server connection
 	conn, err := nats.Connect(clientUrl, nats.UserInfo(serverUsername, noPassword), nats.InProcessServer(server))
 	if err != nil {
-		defer server.Shutdown()
 		return nil, fmt.Errorf("connecting to in-process NATS server instance: %w", err)
 	}
 
 	// Installing the handlers
 	res := Server{
 		server:     server,
-		conn:       conn,
 		CacheStats: &common.CacheStats{},
 		clientUrl:  clientUrl,
 	}
 	if err := buildid.Subscribe(conn, res.CacheStats); err != nil {
-		defer server.Shutdown()
 		return nil, err
 	}
 	if err := pkgs.Subscribe(clientUrl, conn, res.CacheStats); err != nil {
-		defer server.Shutdown()
 		return nil, err
 	}
 	if _, err := conn.Subscribe("clients", res.handleClients); err != nil {
-		defer server.Shutdown()
+		return nil, err
+	}
+
+	// Wait until all subscriptions have been processed by the server...
+	if err := conn.Flush(); err != nil {
 		return nil, err
 	}
 
 	if opts.InactivityTimeout > 0 {
 		sysConn, err := nats.Connect(clientUrl, nats.Name("server-local-admin"), nats.UserInfo(sysUser, noPassword), nats.InProcessServer(server))
 		if err != nil {
-			defer server.Shutdown()
 			return nil, err
 		}
 
 		res.inactivityTimeout = opts.InactivityTimeout
 		res.clients = make(map[uint64]string)
 		if _, err := sysConn.Subscribe(fmt.Sprintf("$SYS.ACCOUNT.%s.CONNECT", userAccount.Name), res.handleClientConnect); err != nil {
-			defer server.Shutdown()
 			return nil, err
 		}
 		if _, err := sysConn.Subscribe(fmt.Sprintf("$SYS.ACCOUNT.%s.DISCONNECT", userAccount.Name), res.handleClientDisconnect); err != nil {
-			defer server.Shutdown()
+			return nil, err
+		}
+
+		// Wait until all subscriptions have been processed by the server...
+		if err := sysConn.Flush(); err != nil {
 			return nil, err
 		}
 
