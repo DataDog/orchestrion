@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/datadog/orchestrion/internal/ensure"
 	"github.com/datadog/orchestrion/internal/version"
@@ -25,13 +26,22 @@ var Version = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
+		if _, err := fmt.Fprintf(c.App.Writer, "orchestrion %s", version.Tag); err != nil {
+			return err
+		}
+
 		if c.Bool("verbose") {
 			if startupVersion := ensure.StartupVersion(); startupVersion != version.Tag {
-				fmt.Printf("%s (started via %s)\n", version.Tag, startupVersion)
-				return nil
+				if _, err := fmt.Fprintf(c.App.Writer, " (started as %s)", startupVersion); err != nil {
+					return err
+				}
+			}
+			if _, err := fmt.Fprintf(c.App.Writer, " built with %s (%s/%s)", runtime.Version(), runtime.GOOS, runtime.GOARCH); err != nil {
+				return err
 			}
 		}
-		fmt.Println(version.Tag)
-		return nil
+
+		_, err := fmt.Fprintln(c.App.Writer)
+		return err
 	},
 }
