@@ -45,6 +45,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	c, err := api.NewClient(&api.Config{
 		Address: fmt.Sprintf("http://%s:8200", serverIP),
 	})
+	c.SetToken("root")
 	if err != nil {
 		t.Fatal(err)
 	}
