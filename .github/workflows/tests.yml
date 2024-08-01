@@ -60,7 +60,7 @@ jobs:
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
-        run: echo "::set-output name=version::${COMPLETE_VERSION:0:4}"
+        run: echo "version=${COMPLETE_VERSION:0:4}" >> "${GITHUB_OUTPUT}"
         shell: bash
         env:
           COMPLETE_VERSION: ${{ matrix.go-version }}
@@ -142,7 +142,7 @@ jobs:
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: simple-go-version
-        run: echo "::set-output name=version::${COMPLETE_VERSION:0:4}"
+        run: echo "version=${COMPLETE_VERSION:0:4}" >> "${GITHUB_OUTPUT}"
         shell: bash
         env:
           COMPLETE_VERSION: ${{ matrix.go-version }}
