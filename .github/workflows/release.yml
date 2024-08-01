@@ -1,10 +1,10 @@
 name: Release
 on:
   pull_request:
-    paths: ['internal/version/version.go']
+    paths: [internal/version/version.go]
   push:
-    branches: ['main']
-    paths: ['internal/version/version.go']
+    branches: [main]
+    paths: [internal/version/version.go]
 
 permissions: read-all
 
@@ -15,9 +15,9 @@ jobs:
       contents: write # To be able to create draft releases
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           cache-dependency-path: '**/*.sum'
 

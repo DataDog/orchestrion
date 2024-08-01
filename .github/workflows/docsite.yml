@@ -4,7 +4,7 @@ on:
     branches: ['**']
     paths: [docs/**]
   merge_group:
-    branches: ['main']
+    branches: [main]
   push:
     branches: [main]
 
@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
           lfs: true
           submodules: recursive
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           cache-dependency-path: '**/*.sum'
       - name: Run go generate (builtin)
@@ -35,7 +35,7 @@ jobs:
         # identical to hugo's.
         run: go -C ./docs run github.com/gohugoio/hugo --minify --enableGitInfo --environment=gh-pages
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4
         with:
           name: site
           path: docs/public/
@@ -55,18 +55,18 @@ jobs:
     steps:
       # Check out so that actions/configure-pages can access repository details...
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Download Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: site
           path: docs/public/
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: docs/public/
       - name: Deploy to Github Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

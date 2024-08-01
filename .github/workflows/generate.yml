@@ -3,9 +3,9 @@ on:
   pull_request:
     branches: ['**']
   merge_group:
-    branches: ['main']
+    branches: [main]
   push:
-    branches: ['main']
+    branches: [main]
 
 permissions: read-all
 
@@ -20,12 +20,13 @@ jobs:
       has-patch: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: 'stable'
           cache-dependency-path: '**/*.sum'
+
       - name: Run 'go generate ./...'
         run: |-
           mkdir -p ${GOCOVERDIR}
@@ -39,16 +40,21 @@ jobs:
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always() && github.event_name != 'merge_group'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ runner.os }},${{ runner.arch }},generator
           file: ./coverage/generator.out
           name: Generators
+
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
         run: find . -iname go.mod -execdir go mod tidy \;
+
+      - name: Refresh LICENSE-3rdparty.csv
+        run: ./tools/make-licenses.sh
+
       - name: Check if working tree is dirty
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
@@ -58,7 +64,7 @@ jobs:
           git diff --staged --patch --exit-code > .repo.patch || echo "result=true" >> ${GITHUB_OUTPUT}
       - name: Upload patch
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4
         with:
           name: repo.patch
           path: .repo.patch
@@ -76,28 +82,22 @@ jobs:
     if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-          token: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
-          persist-credentials: true
       - name: Download patch
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: repo.patch
           path: ${{ runner.temp }}
       - name: Apply patch
         run: |-
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
-      - name: Setup git identity
-        run: |-
-          git config user.name "github-actions on behalf of ${{ github.actor }}"
-          git config user.email "github-actions@github.com"
+      # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        run: |-
-          git add .
-          git commit -s -m "chore: update generated files"
-          git push origin HEAD:${EVENT_PR_HEAD_REF}
-        env:
-          EVENT_PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        uses: planetscale/ghcommit-action@b68767a2e130a71926b365322e62b583404a5e09 # v0.1.43
+        with:
+          commit_message: "chore: update generated files"
+          repo: ${{ github.event.pull_request.head.repo.full_name }}
+          branch: ${{ github.event.pull_request.head.ref }}
