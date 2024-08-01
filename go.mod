@@ -21,6 +21,7 @@ require (
 	gopkg.in/DataDog/dd-trace-go.v1 v1.66.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
+	k8s.io/client-go v0.23.17
 )
 
 require (
@@ -270,6 +271,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/gorm v1.25.3 // indirect
 	howett.net/plist v1.0.0 // indirect
+	k8s.io/apimachinery v0.23.17 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )

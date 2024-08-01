@@ -371,6 +371,19 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From k8s-client.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), ""),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"WrapTransport\" }}\n  {{- $hasField = true -}}\n  WrapTransport: kubernetestransport.Wrappers({{ .Value }}, kubernetestrace.WrapRoundTripper),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  WrapTransport: kubernetestransport.Wrappers(nil, kubernetestrace.WrapRoundTripper),\n  {{- end }}\n}",
+				map[string]string{
+					"kubernetestrace":     "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
+					"kubernetestransport": "k8s.io/client-go/transport",
+				},
+			)),
+		},
+	},
 	// From stdlib/database-sql.yml
 	{
 		JoinPoint: join.FunctionCall("database/sql.Register"),
@@ -606,6 +619,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
@@ -616,6 +630,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+	"k8s.io/client-go/transport",
 	"math",
 	"net/http",
 	"os",
@@ -623,4 +638,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:hsB63Rp5oqs+7+p+vTHxAUPy7/mvHKqE+IR4ZEysV0TKAO8oZEsMSNkTSANdexrIGC6uHFONYv/pWCXIDsbgUQ=="
+const Checksum = "sha512:vY0X5F36jq6Wn+CjLP591EDCT0uTMjRMDHEL/2kRyj66A/OxqV5eTEZIRtS0N6+G6GY1PY8cn3D4KQq6WkUtGQ=="

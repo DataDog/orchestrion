@@ -8,6 +8,8 @@ on:
   push:
     branches: [main]
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
