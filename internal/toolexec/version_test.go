@@ -68,7 +68,7 @@ func Test(t *testing.T) {
 
 	copyDir := t.TempDir()
 	require.NoError(t, copy.Copy(rootDir, copyDir, copy.Options{
-		Skip: func(src string) (bool, error) {
+		Skip: func(_ os.FileInfo, src string, _ string) (bool, error) {
 			return filepath.Base(src) == ".git", nil
 		},
 	}))
