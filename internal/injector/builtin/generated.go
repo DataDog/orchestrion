@@ -571,8 +571,8 @@ var RestorerMap = map[string]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/valyala/fasthttp.v1":                      "fasthttp",
 }
 
-// InjectedPaths is a set of import paths that may be injected by built-in aspects.
-// This list is used to ensure `orchestrion warmup` includes all interesting packages.
+// InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper
+// invalidation of cached artifacts when injected dependencies change.
 var InjectedPaths = [...]string{
 	"fmt",
 	"github.com/datadog/orchestrion/instrument",

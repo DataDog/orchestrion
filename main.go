@@ -70,22 +70,6 @@ func main() {
 	}
 }
 
-func printUsage(cmd string) {
-	commands := []string{
-		"go",
-		"help",
-		"toolexec",
-		"version",
-		"pin",
-		"warmup",
-	}
-	fmt.Printf("Usage:\n    %s <command> [arguments]\n\n", cmd)
-	fmt.Println("Available commands:")
-	for _, cmd := range commands {
-		fmt.Printf("    %s\n", cmd)
-	}
-}
-
 var logLevelSet bool
 
 func actionSetLogLevel(_ *cli.Context, level string) error {
