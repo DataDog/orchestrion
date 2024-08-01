@@ -52,9 +52,11 @@ var Toolexec = &cli.Command{
 
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompile); err != nil {
 			return err
-		} else if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompileMain); err != nil {
+		}
+		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompileMain); err != nil {
 			return err
-		} else if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
+		}
+		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
 			return err
 		}
 
