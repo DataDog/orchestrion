@@ -41,12 +41,3 @@ layout: hextra-home
     style="background: radial-gradient(ellipse at 50% 80%, rgba(194,97,254,.15),hsla(0,0%,100%,0));"
   >}}
 {{</hextra/feature-grid>}}
-
-<div class="hx-mt-6">
-  {{<figure
-    src="images/orchestrion.jpg"
-    alt="An orchestrion, as pictured on Wikipedia"
-    link="https://en.wikipedia.org/wiki/Orchestrion"
-    attr="Illustrated London News, No.1106, 20 September 1862"
-  >}}
-</div>

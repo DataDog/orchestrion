@@ -65,6 +65,15 @@ func main() {
 
 		file.Func().Params(
 			jen.Id("p").Op("*").Id(proxyName),
+		).Id("Copy").Params().String().Block(
+			jen.Return().Id("p").Dot("placeholders").Dot("forNode").Call(
+				jen.Id("p").Dot(name),
+				jen.False(),
+			),
+		)
+
+		file.Line().Func().Params(
+			jen.Id("p").Op("*").Id(proxyName),
 		).Id("String").Params().String().Block(
 			jen.Return().Id("p").Dot("placeholders").Dot("forNode").Call(
 				jen.Id("p").Dot(name),
@@ -128,7 +137,7 @@ func main() {
 				name = "proxy" + name
 			}
 
-			fnDef := file.Func()
+			fnDef := file.Line().Func()
 			fnDef = fnDef.Params(jen.Id("p").Op("*").Id(proxyName))
 			fnDef = fnDef.Id(field.Name())
 			fnDef = fnDef.Params()
@@ -168,7 +177,7 @@ func main() {
 		}
 	}
 
-	newProxy := file.Func().Id("newProxy")
+	newProxy := file.Line().Func().Id("newProxy")
 	newProxy = newProxy.Types(jen.Id("T").Id("any"))
 	newProxy = newProxy.Params(
 		jen.Id("node").Id("any"),

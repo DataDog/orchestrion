@@ -5,6 +5,23 @@
  * Copyright 2023-present Datadog, Inc.
  */
 
+:root {
+  --feature-status-label-text: #a33bff;
+}
+.dark {
+  --feature-status-label-text: #c159ff;
+}
+
+
+.feature-status-label {
+  color: var(--feature-status-label-text);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .aspect {
   --blue:    #0d6efd;
   --indigo:  #6610f2;

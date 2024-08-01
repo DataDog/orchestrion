@@ -2,8 +2,8 @@
 # under the Apache License Version 2.0.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
-%YAML 1.1
 ---
+# yaml-language-server: $schema=../../../../docs/static/schema.json
 meta:
   name: //dd:span
   description: Monitor a function using a custom span.
@@ -17,21 +17,21 @@ aspects:
           - function:
               - receives: context.Context
     advice:
-      prepend-statements:
-        imports:
-          event: github.com/datadog/orchestrion/instrument/event
-          instrument: github.com/datadog/orchestrion/instrument
-        template: |-
-          {{- $ctx := .FindArgument "context.Context" -}}
-          {{- $name := .Function.Name -}}
-          {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-          {{- range .DirectiveArgs "dd:span" -}}
-            , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-          {{- end -}})
-          defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-          {{- range .DirectiveArgs "dd:span" -}}
-            , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-          {{- end -}})
+      - prepend-statements:
+          imports:
+            event: github.com/datadog/orchestrion/instrument/event
+            instrument: github.com/datadog/orchestrion/instrument
+          template: |-
+            {{- $ctx := .FindArgument "context.Context" -}}
+            {{- $name := .Function.Name -}}
+            {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+            {{- range .DirectiveArgs "dd:span" -}}
+              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+            {{- end -}})
+            defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+            {{- range .DirectiveArgs "dd:span" -}}
+              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+            {{- end -}})
 
   - id: Using *http.Request
     join-point:
@@ -41,18 +41,18 @@ aspects:
           - function:
               - receives: '*net/http.Request'
     advice:
-      prepend-statements:
-        imports:
-          event: github.com/datadog/orchestrion/instrument/event
-          instrument: github.com/datadog/orchestrion/instrument
-        template: |-
-          {{- $req := .FindArgument "*net/http.Request" -}}
-          {{- $name := .Function.Name -}}
-          {{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-          {{- range .DirectiveArgs "dd:span" -}}
-            , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-          {{- end -}}))
-          defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-          {{- range .DirectiveArgs "dd:span" -}}
-            , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-          {{- end -}})
+      - prepend-statements:
+          imports:
+            event: github.com/datadog/orchestrion/instrument/event
+            instrument: github.com/datadog/orchestrion/instrument
+          template: |-
+            {{- $req := .FindArgument "*net/http.Request" -}}
+            {{- $name := .Function.Name -}}
+            {{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+            {{- range .DirectiveArgs "dd:span" -}}
+              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+            {{- end -}}))
+            defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+            {{- range .DirectiveArgs "dd:span" -}}
+              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
+            {{- end -}})

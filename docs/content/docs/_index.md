@@ -41,9 +41,11 @@ they are compiled or linked.
   Orchestrion is still under active development, and features and APIs are
   subject to change.
 
-  Have a question or feedback? Feel free to [open an issue][gh-new-issue]!
+  Have a question or feedback? Feel free to [open an issue][gh-new-issue], or
+  engage with us and the community on [GitHub discussions][gh-discussions].
 
   [gh-new-issue]: https://github.com/DataDog/orchestrion/issues/new/choose
+  [gh-discussions]: https://github.com/DataDog/orchestrion/discussions
 {{</callout>}}
 
 ## Next
