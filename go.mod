@@ -1,6 +1,7 @@
 module github.com/datadog/orchestrion
 
 go 1.21.12
+toolchain go1.22.5
 
 require (
 	github.com/charmbracelet/lipgloss v0.12.1
@@ -18,10 +19,10 @@ require (
 	golang.org/x/sys v0.22.0
 	golang.org/x/term v0.22.0
 	golang.org/x/tools v0.23.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0-rc.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.999.0-rc.8
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
-	k8s.io/client-go v0.30.0-alpha.3
+	k8s.io/client-go v0.32.0-alpha.0
 )
 
 require (
@@ -43,7 +44,15 @@ require (
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.55.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.55.2 // indirect
 	github.com/DataDog/datadog-go/v5 v5.5.0 // indirect
-	github.com/DataDog/go-libddwaf/v3 v3.3.0 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.0.0-20240223201805-bf090590d9cc // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/gin-gonic/gin v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/go-chi/chi v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/go-chi/chi.v5 v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/google.golang.org/grpc v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/k8s.io/client-go v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/labstack/echo.v4 v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/net/http v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/go-libddwaf/v2 v2.3.1 // indirect
 	github.com/DataDog/go-sqllexer v0.0.12 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
 	github.com/DataDog/sketches-go v1.4.6 // indirect
@@ -101,7 +110,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/disintegration/gift v1.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/evanw/esbuild v0.23.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
@@ -137,6 +145,7 @@ require (
 	github.com/gohugoio/localescompressed v1.0.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gomodule/redigo v1.9.2 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
@@ -147,9 +156,8 @@ require (
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hairyhenderson/go-codeowners v0.5.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8 // indirect
-	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
-	github.com/hashicorp/go-sockaddr v1.0.6 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
@@ -199,7 +207,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
@@ -251,7 +258,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/gorm v1.25.11 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/apimachinery v0.30.0-alpha.3 // indirect
+	k8s.io/apimachinery v0.32.0-alpha.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
