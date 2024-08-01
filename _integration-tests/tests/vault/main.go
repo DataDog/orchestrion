@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"orchestrion/integration/validator/trace"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -22,7 +24,7 @@ type TestCase struct {
 	*api.Client
 }
 
-func (tc *TestCase) Setup(t *testing.T) error {
+func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
@@ -44,10 +46,9 @@ func (tc *TestCase) Setup(t *testing.T) error {
 		Address: fmt.Sprintf("http://%s:8200", serverIP),
 	})
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	tc.Client = c
-	return nil
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -60,6 +61,16 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	defer cancel()
 
 	require.NoError(t, tc.server.Terminate(ctx))
+}
+
+func (tc *TestCase) ExpectedTraces() trace.Spans {
+	return trace.Spans{
+		{
+			Tags: map[string]interface{}{
+				"service": "vault",
+			},
+		},
+	}
 }
 
 type testLogConsumer struct {
