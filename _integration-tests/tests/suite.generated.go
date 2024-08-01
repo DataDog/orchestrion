@@ -46,5 +46,5 @@ var suite = map[string]testCase{
 	"net_http": new(nethttp.TestCase),
 	"redigo":   new(redigo.TestCase),
 	"sql":      new(sql.TestCase),
-  "vault":    new(vault.TestCase),
+	"vault":    new(vault.TestCase),
 }
