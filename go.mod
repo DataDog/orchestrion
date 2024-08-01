@@ -1,8 +1,6 @@
 module github.com/datadog/orchestrion
 
-go 1.22.0
-
-toolchain go1.22.5
+go 1.21.12
 
 require (
 	github.com/charmbracelet/lipgloss v0.12.1
@@ -23,7 +21,7 @@ require (
 	gopkg.in/DataDog/dd-trace-go.v1 v1.66.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
-	k8s.io/client-go v0.30.3
+	k8s.io/client-go v0.30.0-alpha.3
 )
 
 require (
@@ -253,7 +251,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/gorm v1.25.11 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/apimachinery v0.30.3 // indirect
+	k8s.io/apimachinery v0.30.0-alpha.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect

@@ -1,8 +1,6 @@
 module orchestrion/integration
 
-go 1.22.0
-
-toolchain go1.22.5
+go 1.21.12
 
 replace github.com/datadog/orchestrion => ../
 
@@ -32,8 +30,8 @@ require (
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/v3 v3.5.1
-	k8s.io/apimachinery v0.30.3
-	k8s.io/client-go v0.30.3
+	k8s.io/apimachinery v0.30.0-alpha.3
+	k8s.io/client-go v0.30.0-alpha.3
 )
 
 require (
@@ -300,7 +298,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/api v0.30.3 // indirect
+	k8s.io/api v0.30.0-alpha.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
