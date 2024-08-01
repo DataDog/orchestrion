@@ -154,7 +154,7 @@ require (
 	github.com/invopop/yaml v0.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgx/v5 v5.5.5 // indirect
+	github.com/jackc/pgx/v5 v5.6.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jdkato/prose v1.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -257,7 +257,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240730163845-b1a4ccb954bf // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240730163845-b1a4ccb954bf // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.66.0 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0-rc.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
