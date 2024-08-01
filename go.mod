@@ -1,16 +1,17 @@
 module github.com/datadog/orchestrion
 
 go 1.21
+toolchain go1.22.5
 
 require (
-	github.com/charmbracelet/lipgloss v0.12.0
+	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.0
 	github.com/dlclark/regexp2 v1.11.2
-	github.com/gohugoio/hugo v0.128.2
+	github.com/gohugoio/hugo v0.130.0
 	github.com/google/go-licenses v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
-	github.com/otiai10/copy v1.6.0
+	github.com/otiai10/copy v1.14.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/sergi/go-diff v1.3.1
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -18,10 +19,10 @@ require (
 	golang.org/x/sys v0.22.0
 	golang.org/x/term v0.22.0
 	golang.org/x/tools v0.23.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0-rc.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.999.0-rc.8
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
-	k8s.io/client-go v0.23.17
+	k8s.io/client-go v0.30.3
 )
 
 require (
@@ -42,7 +43,15 @@ require (
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.52.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.52.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.5.0 // indirect
-	github.com/DataDog/go-libddwaf/v3 v3.3.0 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.0.0-20240223201805-bf090590d9cc // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/gin-gonic/gin v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/go-chi/chi v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/go-chi/chi.v5 v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/google.golang.org/grpc v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/k8s.io/client-go v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/labstack/echo.v4 v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/dd-trace-go/v2/contrib/net/http v0.0.0-20240216140524-914f0c30cab1 // indirect
+	github.com/DataDog/go-libddwaf/v2 v2.3.1 // indirect
 	github.com/DataDog/go-sqllexer v0.0.11 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
 	github.com/DataDog/sketches-go v1.4.5 // indirect
@@ -53,33 +62,34 @@ require (
 	github.com/aws/aws-sdk-go v1.50.7 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.26.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.26.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.16.12 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.10 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.27.0 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.15.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.7 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.5 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.7.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.2.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.35.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.2.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.16.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.18.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.21.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.26.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.19.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.22.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.27.0 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bep/clocks v0.5.0 // indirect
 	github.com/bep/debounce v1.2.0 // indirect
-	github.com/bep/gitmap v1.1.2 // indirect
+	github.com/bep/gitmap v1.6.0 // indirect
 	github.com/bep/goat v0.5.0 // indirect
 	github.com/bep/godartsass v1.2.0 // indirect
 	github.com/bep/godartsass/v2 v2.0.0 // indirect
 	github.com/bep/golibsass v1.1.1 // indirect
 	github.com/bep/gowebp v0.3.0 // indirect
+	github.com/bep/imagemeta v0.7.4 // indirect
 	github.com/bep/lazycache v0.4.0 // indirect
 	github.com/bep/logg v0.4.0 // indirect
 	github.com/bep/mclib v1.20400.20402 // indirect
@@ -89,7 +99,7 @@ require (
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charmbracelet/x/ansi v0.1.3 // indirect
+	github.com/charmbracelet/x/ansi v0.1.4 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
@@ -99,7 +109,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/disintegration/gift v1.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanw/esbuild v0.21.4 // indirect
@@ -147,9 +156,8 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hairyhenderson/go-codeowners v0.4.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7 // indirect
-	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
-	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.2.0 // indirect
@@ -202,8 +210,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd // indirect
-	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
@@ -212,8 +218,8 @@ require (
 	github.com/spf13/fsync v0.10.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/src-d/gcfg v1.4.0 // indirect
-	github.com/tdewolff/minify/v2 v2.20.20 // indirect
-	github.com/tdewolff/parse/v2 v2.7.13 // indirect
+	github.com/tdewolff/minify/v2 v2.20.36 // indirect
+	github.com/tdewolff/parse/v2 v2.7.15 // indirect
 	github.com/tinylib/msgp v1.1.9 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
@@ -240,7 +246,7 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/image v0.16.0 // indirect
+	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
@@ -261,8 +267,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/gorm v1.25.3 // indirect
 	howett.net/plist v1.0.0 // indirect
-	k8s.io/apimachinery v0.23.17 // indirect
+	k8s.io/apimachinery v0.30.3 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
