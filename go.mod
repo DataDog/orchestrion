@@ -19,9 +19,10 @@ require (
 	golang.org/x/sys v0.22.0
 	golang.org/x/term v0.22.0
 	golang.org/x/tools v0.23.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.66.0
+	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0-rc.1
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
+	k8s.io/client-go v0.23.17
 )
 
 require (
@@ -38,11 +39,11 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.0 // indirect
 	github.com/BurntSushi/locker v0.0.0-20171006230638-a6e239ea1c69 // indirect
-	github.com/DataDog/appsec-internal-go v1.6.0 // indirect
+	github.com/DataDog/appsec-internal-go v1.7.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.52.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.52.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.5.0 // indirect
-	github.com/DataDog/go-libddwaf/v3 v3.2.1 // indirect
+	github.com/DataDog/go-libddwaf/v3 v3.3.0 // indirect
 	github.com/DataDog/go-sqllexer v0.0.11 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
 	github.com/DataDog/sketches-go v1.4.5 // indirect
@@ -240,7 +241,7 @@ require (
 	gocloud.dev v0.36.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/image v0.16.0 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
@@ -262,6 +263,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/gorm v1.25.3 // indirect
 	howett.net/plist v1.0.0 // indirect
+	k8s.io/apimachinery v0.23.17 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
