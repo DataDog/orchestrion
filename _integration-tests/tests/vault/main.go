@@ -32,6 +32,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		"vault:1.7.3",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		testcontainers.WithLogConsumers(testLogConsumer{t}),
+		testvault.WithToken("root"),
 	)
 	if err != nil {
 		t.Skipf("Failed to start vault test container: %v\n", err)
