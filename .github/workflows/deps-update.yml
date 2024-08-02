@@ -32,7 +32,7 @@ jobs:
         run: |-
           set -euo pipefail
           version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions gopkg.in/DataDog/dd-trace-go.v1 | grep -v -E '^v1\.999\.' | tail -n 1)
-          echo "version=${version}" >> "${GITHUB_OUTPUTS}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
       # does not support that specific go release.
@@ -94,7 +94,7 @@ jobs:
         run: |-
           branch="automation/dependency-updates/${{ github.run_id }}"
           git push origin "${{ github.sha }}":"refs/heads/${branch}"
-          echo "branch=${branch}" >> "${GITHUB_OUTPUTS}"
+          echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
       - name: Create Commit # Adds a commit to the branch we created above
         uses: planetscale/ghcommit-action@b68767a2e130a71926b365322e62b583404a5e09 # v0.1.43
         with:
