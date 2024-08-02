@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changes-needed: ${{ steps.is-tree-dirty.outputs.result }}
-    env:
-      GOTOOLCHAIN: local # Prohibits adding `toolchain` directives to go.mod files.
     steps:
       - name: Checkout repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -37,12 +35,12 @@ jobs:
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
       # does not support that specific go release.
       - name: "Update: Project root"
-        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy
+        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && GOTOOLCHAIN=local go mod tidy
       - name: "Update: Samples"
-        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy
+        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && GOTOOLCHAIN=local go mod tidy
         working-directory: samples
       - name: "Update: Integration Tests"
-        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy
+        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && GOTOOLCHAIN=local go mod tidy
         working-directory: _integration-tests
 
       - id: is-tree-dirty
