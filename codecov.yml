@@ -1,6 +1,7 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/codecov
 codecov:
+  require_ci_to_pass: true
   notify:
     wait_for_ci: true
 
@@ -9,6 +10,7 @@ ignore:
   - 'samples/**' # This is sample code for instrumentable things
   - 'tools/**' # Repository maintenance tooling
   - 'internal/injector/aspect/advice/code/dot_ast.proxies.go' # Auto-generated proxy code
+  - '_integration-tests/tests/**' # Cannot collect coverage in integrationt tests due to a bug in the Go toolchain
 
 coverage:
   status:

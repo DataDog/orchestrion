@@ -1,0 +1,110 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    - cron: '42 5 * * 1' # Mondays at 5:42 AM
+  workflow_dispatch: {} # Manual runs
+
+permissions: read-all
+
+jobs:
+  update-go:
+    name: Update Go Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      changes-needed: ${{ steps.is-tree-dirty.outputs.result }}
+    env:
+      GOTOOLCHAIN: local # Prohibits adding `toolchain` directives to go.mod files.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version: '1.21' # Minimum supported go release
+          cache-dependency-path: '**/*.sum'
+
+      # Select the latest available version of gopkg.in/DataDog/dd-trace-go.v1, while ignoring all
+      # the `v1.999.*` versions, which are experimental pre-releases.
+      - name: Determine gopkg.in/DataDog/dd-trace-go.v1 version
+        id: dd-trace-go
+        run: |-
+          set -euo pipefail
+          version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions gopkg.in/DataDog/dd-trace-go.v1 | grep -v -E '^v1\.999\.' | tail -n 1)
+          echo "version=${version}" >> "${GITHUB_OUTPUTS}"
+
+      # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
+      # does not support that specific go release.
+      - name: "Update: Project root"
+        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy
+      - name: "Update: Samples"
+        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy
+        working-directory: samples
+      - name: "Update: Integration Tests"
+        run: go get -t -u go@1.21 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy
+        working-directory: _integration-tests
+
+      - id: is-tree-dirty
+        name: Check for updates
+        run: |-
+          git add .
+          git diff --staged --patch --exit-code || echo "result=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Update LICENSE-3rdparty.csv
+        if: steps.is-tree-dirty.outputs.result == 'true'
+        run: ./tools/make-licenses.sh
+
+      - name: Build diff
+        if: steps.is-tree-dirty.outputs.result == 'true'
+        run: |-
+          git add .
+          git diff --staged --patch --exit-code > "${{ runner.temp }}/go.diff.patch"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4
+        with:
+          name: Patches
+          path: ${{ runner.temp }}/go.diff.patch
+          if-no-files-found: error
+
+  create-pr:
+    name: Create Pull Request
+    runs-on: ubuntu-latest
+    needs: [ update-go ]
+    if: needs.update-go.outputs.changes-needed == 'true'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+
+      - name: Download patches
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: Patches
+          path: ${{ runner.temp }}/patches
+
+      - name: Apply patches
+        run: find "${{ runner.temp }}/patches" -type f -name '*.patch' -exec git apply {} \;
+
+      # We use ghcommit to create signed commits directly using the GitHub API
+      - name: Create branch # The branch needs to exist before we can add commits to it
+        id: create-branch
+        run: |-
+          branch="automation/dependency-updates/${{ github.run_id }}"
+          git push origin "${{ github.sha }}":"refs/heads/${branch}"
+          echo "branch=${branch}" >> "${GITHUB_OUTPUTS}"
+      - name: Create Commit # Adds a commit to the branch we created above
+        uses: planetscale/ghcommit-action@b68767a2e130a71926b365322e62b583404a5e09 # v0.1.43
+        with:
+          commit_message: "chore: update all dependencies"
+          repo: ${{ github.repository }}
+          branch: ${{ steps.create-branch.outputs.branch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
+
+      - name: Update PR
+        run: gh pr create --fill --head="${{ steps.create-branch.outputs.branch }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
