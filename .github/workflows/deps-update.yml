@@ -54,6 +54,8 @@ jobs:
       - name: Update LICENSE-3rdparty.csv
         if: steps.is-tree-dirty.outputs.result == 'true'
         run: ./tools/make-licenses.sh
+        env:
+          TMPDIR: ${{ runner.temp }}
 
       - name: Build diff
         if: steps.is-tree-dirty.outputs.result == 'true'
