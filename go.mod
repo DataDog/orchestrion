@@ -7,7 +7,7 @@ require (
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.0
 	github.com/dlclark/regexp2 v1.11.2
-	github.com/gohugoio/hugo v0.130.0
+	github.com/gohugoio/hugo v0.131.0
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/otiai10/copy v1.14.0
@@ -27,7 +27,7 @@ require (
 
 require (
 	cloud.google.com/go v0.115.0 // indirect
-	cloud.google.com/go/auth v0.7.2 // indirect
+	cloud.google.com/go/auth v0.7.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	cloud.google.com/go/compute/metadata v0.5.0 // indirect
 	cloud.google.com/go/iam v1.1.12 // indirect
@@ -131,6 +131,7 @@ require (
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/gofiber/fiber/v2 v2.52.5 // indirect
 	github.com/gohugoio/go-i18n/v2 v2.1.3-0.20230805085216-e63c13218d0e // indirect
+	github.com/gohugoio/hashstructure v0.1.0 // indirect
 	github.com/gohugoio/httpcache v0.7.0 // indirect
 	github.com/gohugoio/hugo-goldmark-extensions/extras v0.2.0 // indirect
 	github.com/gohugoio/hugo-goldmark-extensions/passthrough v0.2.0 // indirect
@@ -179,7 +180,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -244,7 +244,7 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
-	google.golang.org/api v0.189.0 // indirect
+	google.golang.org/api v0.190.0 // indirect
 	google.golang.org/genproto v0.0.0-20240730163845-b1a4ccb954bf // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240730163845-b1a4ccb954bf // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240730163845-b1a4ccb954bf // indirect

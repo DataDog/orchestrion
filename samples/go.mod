@@ -24,7 +24,7 @@ require (
 
 require (
 	cloud.google.com/go v0.115.0 // indirect
-	cloud.google.com/go/auth v0.7.2 // indirect
+	cloud.google.com/go/auth v0.7.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	cloud.google.com/go/compute/metadata v0.5.0 // indirect
 	cloud.google.com/go/iam v1.1.12 // indirect
@@ -127,8 +127,9 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/gohugoio/go-i18n/v2 v2.1.3-0.20230805085216-e63c13218d0e // indirect
+	github.com/gohugoio/hashstructure v0.1.0 // indirect
 	github.com/gohugoio/httpcache v0.7.0 // indirect
-	github.com/gohugoio/hugo v0.130.0 // indirect
+	github.com/gohugoio/hugo v0.131.0 // indirect
 	github.com/gohugoio/hugo-goldmark-extensions/extras v0.2.0 // indirect
 	github.com/gohugoio/hugo-goldmark-extensions/passthrough v0.2.0 // indirect
 	github.com/gohugoio/locales v0.14.0 // indirect
@@ -153,7 +154,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.6.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jdkato/prose v1.2.1 // indirect
@@ -179,7 +180,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -227,7 +227,7 @@ require (
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yuin/goldmark v1.7.4 // indirect
 	github.com/yuin/goldmark-emoji v1.0.3 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
@@ -254,7 +254,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
-	google.golang.org/api v0.189.0 // indirect
+	google.golang.org/api v0.190.0 // indirect
 	google.golang.org/genproto v0.0.0-20240730163845-b1a4ccb954bf // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240730163845-b1a4ccb954bf // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240730163845-b1a4ccb954bf // indirect
