@@ -54,6 +54,8 @@ jobs:
 
       - name: Refresh LICENSE-3rdparty.csv
         run: ./tools/make-licenses.sh
+        env:
+          TMPDIR: ${{ runner.temp }}
 
       - name: Check if working tree is dirty
         # Don't run for push, it's not necessary
