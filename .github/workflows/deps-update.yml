@@ -108,6 +108,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
 
       - name: Create PR
-        run: gh pr create --fill --head="${{ steps.create-branch.outputs.branch }}"
+        run: |-
+          gh pr create --title "chore: update all dependencies" \
+                       --body "Updated all go.mod dependencies to latest." \
+                       --head="${{ steps.create-branch.outputs.branch }}"
         env:
           GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
