@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
-          go-version: '1.21' # Minimum supported go release
+          go-version: stable # Minimum supported go release
           cache-dependency-path: '**/*.sum'
 
       # Select the latest available version of gopkg.in/DataDog/dd-trace-go.v1, while ignoring all
@@ -32,7 +32,7 @@ jobs:
         run: |-
           set -euo pipefail
           version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions gopkg.in/DataDog/dd-trace-go.v1 | grep -v -E '^v1\.999\.' | tail -n 1)
-          echo "version=${version}" >> "${GITHUB_OUTPUTS}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
       # does not support that specific go release.
@@ -54,12 +54,14 @@ jobs:
       - name: Update LICENSE-3rdparty.csv
         if: steps.is-tree-dirty.outputs.result == 'true'
         run: ./tools/make-licenses.sh
+        env:
+          TMPDIR: ${{ runner.temp }}
 
       - name: Build diff
         if: steps.is-tree-dirty.outputs.result == 'true'
         run: |-
           git add .
-          git diff --staged --patch --exit-code > "${{ runner.temp }}/go.diff.patch"
+          git diff --staged --patch > "${{ runner.temp }}/go.diff.patch"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4
@@ -71,7 +73,7 @@ jobs:
   create-pr:
     name: Create Pull Request
     runs-on: ubuntu-latest
-    needs: [ update-go ]
+    needs: [update-go]
     if: needs.update-go.outputs.changes-needed == 'true'
     permissions:
       contents: write
@@ -94,7 +96,8 @@ jobs:
         run: |-
           branch="automation/dependency-updates/${{ github.run_id }}"
           git push origin "${{ github.sha }}":"refs/heads/${branch}"
-          echo "branch=${branch}" >> "${GITHUB_OUTPUTS}"
+          echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
+          git fetch origin "${branch}"
       - name: Create Commit # Adds a commit to the branch we created above
         uses: planetscale/ghcommit-action@b68767a2e130a71926b365322e62b583404a5e09 # v0.1.43
         with:
@@ -104,7 +107,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
 
-      - name: Update PR
-        run: gh pr create --fill --head="${{ steps.create-branch.outputs.branch }}"
+      - name: Create PR
+        run: |-
+          gh pr create --title "chore: update all dependencies" \
+                       --body "Updated all go.mod dependencies to latest." \
+                       --head="${{ steps.create-branch.outputs.branch }}"
         env:
           GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
