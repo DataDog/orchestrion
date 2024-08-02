@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package pin
 
 import (
 	"errors"
@@ -26,7 +26,7 @@ func TestPin(t *testing.T) {
 	require.NoError(t, scaffold(tmp))
 	require.NoError(t, os.Chdir(tmp))
 	requiredVersionError = errors.New("test")
-	autoPinOrchestrion()
+	AutoPinOrchestrion()
 	require.NoError(t, requiredVersionError)
 
 	require.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
@@ -39,7 +39,7 @@ func TestPin(t *testing.T) {
 
 func scaffold(dir string) error {
 	_, thisFile, _, _ := runtime.Caller(0)
-	thisDir := filepath.Dir(thisFile)
+	rootDir := filepath.Join(thisFile, "..", "..", "..")
 
 	goMod, err := os.Create(filepath.Join(dir, "go.mod"))
 	if err != nil {
@@ -59,7 +59,7 @@ func scaffold(dir string) error {
 	if _, err := fmt.Fprintln(goMod); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(goMod, "replace github.com/datadog/orchestrion %s => %s\n", version.Tag, thisDir); err != nil {
+	if _, err := fmt.Fprintf(goMod, "replace github.com/datadog/orchestrion %s => %s\n", version.Tag, rootDir); err != nil {
 		return err
 	}
 

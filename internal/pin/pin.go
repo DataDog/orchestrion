@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package main
+package pin
 
 import (
 	"fmt"
@@ -32,10 +32,10 @@ var (
 	requiredVersionError error // Whether the go.mod version check succeeded
 )
 
-// autoPinOrchestrion automatically runs `pinOrchestrion` if the necessary
+// AutoPinOrchestrion automatically runs `pinOrchestrion` if the necessary
 // requirements are not already met. It prints messages to `os.Stderr` to inform
 // the user about what is going on.
-func autoPinOrchestrion() {
+func AutoPinOrchestrion() {
 	if requiredVersionError == nil {
 		// Nothing to do!
 		return
@@ -82,7 +82,7 @@ func autoPinOrchestrion() {
 	message := builder.String()
 	fmt.Fprintln(os.Stderr, box.Render(message))
 
-	if err := pinOrchestrion(); err != nil {
+	if err := PinOrchestrion(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to pin orchestrion in go.mod: %v\n", err)
 		os.Exit(1)
 	}
@@ -90,7 +90,7 @@ func autoPinOrchestrion() {
 	requiredVersionError = nil
 }
 
-func pinOrchestrion() error {
+func PinOrchestrion() error {
 	goMod, err := goenv.GOMOD()
 	if err != nil {
 		return fmt.Errorf("getting GOMOD: %w", err)

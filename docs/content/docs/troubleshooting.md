@@ -81,7 +81,7 @@ engineers will be happy to assist.
 
 Orchestrion can be configured to output extensive logging during operations.
 This is configured by setting the `ORCHESTRION_LOG_LEVEL` environment variable
-to one of the following values:
+or `--log-level` orchestrion flag to one of the following values:
 
 `ORCHESTRION_LOG_LEVEL` | Description
 ------------------------|-------------------------------------------------------
@@ -103,7 +103,8 @@ these settings during normal operations.
 By default, logging messages are sent to the process' console. It can however be
 useful to instead send those messages to one or more files, as these can be
 easier to investigate after the fact. To do so, set the `ORCHESTRION_LOG_FILE`
-environment variable to the path of the file to write logs to.
+environment variable or `--log-file` orchestrion flag to the path of the file to
+write logs to.
 
 {{<callout type="info">}}
 Setting `ORCHESTRION_LOG_FILE` changes the default value of
@@ -112,7 +113,8 @@ Setting `ORCHESTRION_LOG_FILE` changes the default value of
 
 The tokens `$PID` and `${PID}` in `ORCHESTRION_LOG_FILE` are automatically
 replaced by the loggin process' PID. This can cause a significant amount of
-files to be created when building large projects.
+files to be created when building large projects, but reduces contention writing
+to each file.
 
 If the file already exists, new entries are appended to it, instead of
 clobbering it.

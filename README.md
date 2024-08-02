@@ -42,28 +42,7 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
     $ go install github.com/datadog/orchestrion@latest
     ```
 
-2. <details><summary>Optional: artifact cache warm-up</summary>
-
-      > _Orchestrion_ can modify code in the entire application stack, including the standard library. To avoid this
-      > interferes with non-Orchestrion development on the same machine, `orchestrion` uses its own builds of everything.
-      > This means the very first `orchestrion`-enabled build you run will fully re-build the Go standard library, and some
-      > of Orchestrion's own instrumentation libraries.
-      >
-      > Orchestrion provides a single command to pre-build the standard library and all instrumentation libraries
-      > Orchestrion may inject into compiled code:
-      > ```console
-      > $ orchestrion warmup
-      > ```
-      > It is recommended to run this command when building container images (e.g, docker images) that ship with
-      > `orchestrion`, as this could significantly improve the performance of builds subsequently performed using these
-      > images.
-      >
-      > The `orchestrion`-specific builds are tied to the specific version of the `go` toolchain being used as well as
-      > `orchestrion`'s version. You may want to re-run `orchestrion warmup` after having updated your Orchestrion
-      > dependency.
-    </details>
-
-3. <details><summary>Optional: project <tt>go.mod</tt> registration</summary>
+2. <details><summary>Optional: project <tt>go.mod</tt> registration</summary>
 
       >  You can automatically add `orchestrion` to your project's dependencies by running:
       > ```console
@@ -92,7 +71,7 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
       > used by this project can be controlled directly using the `go.mod` file, as you would control any other dependency.
     </details>
 
-4. Prefix your `go` commands with `orchestrion`:
+3. Prefix your `go` commands with `orchestrion`:
     ```console
     $ orchestrion go build .
     $ orchestrion go test -race ./...
