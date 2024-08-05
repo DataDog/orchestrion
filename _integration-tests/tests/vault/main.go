@@ -23,7 +23,6 @@ import (
 type TestCase struct {
 	server *testvault.VaultContainer
 	*api.Client
-	containerIP string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
@@ -49,10 +48,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 		Address: fmt.Sprintf("http://%s:8200", serverIP),
 	})
 	c.SetToken("root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tc.containerIP, err = tc.server.ContainerIP(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +86,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 					},
 					Meta: map[string]any{
 						"http.method": "GET",
-						"http.url":    fmt.Sprintf("http://%s/v1/secret/key", tc.containerIP),
+						"http.url":    "/v1/secret/key",
 						"span.kind":   "client",
 					},
 				},
