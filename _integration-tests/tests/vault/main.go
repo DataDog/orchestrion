@@ -68,8 +68,24 @@ func (tc *TestCase) Teardown(t *testing.T) {
 func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
-			Tags: map[string]interface{}{
-				"service": "vaultx",
+			Tags: map[string]any{
+				"service": "vault",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":     "http.request",
+						"service":  "vault",
+						"resource": "GET /v1/secret/key",
+						"type":     "http",
+					},
+					Meta: map[string]any{
+						"http.url":      "/v1/secret/key",
+						"component":     "hashicorp/vault",
+						"span.kind":     "client",
+						"error.message": "404: Not Found",
+					},
+				},
 			},
 		},
 	}
