@@ -69,7 +69,11 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]interface{}{
-				"service": "vault",
+				"component": "hashicorp/vault",
+				"http.url":  "/v1/secret/key",
+				"service":   "vault",
+				"span.kind": "client",
+				"span.type": "http",
 			},
 		},
 	}
