@@ -55,7 +55,6 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 		}
 	}
 	sort.Strings(keys)
-	format := fmt.Sprintf("%%-%ds = %%q", maxLen)
 	for _, tag := range keys {
 		expected := span.Tags[tag]
 		actual := other.Tags[tag]
@@ -65,7 +64,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 			branch.AddMetaNode("+", actual)
 			matches = false
 		} else {
-			diff.AddMetaNode("=", fmt.Sprintf(format, tag, expected))
+			diff.AddMetaNode("=", fmt.Sprintf("%-*s = %q", maxLen, tag, expected))
 		}
 	}
 
@@ -78,7 +77,6 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 		}
 	}
 	sort.Strings(keys)
-	format = fmt.Sprintf("%%-%ds = %%q", maxLen)
 	var metaNode treeprint.Tree
 	for _, key := range keys {
 		expected := span.Meta[key]
@@ -92,7 +90,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 			branch.AddMetaNode("+", actual)
 			matches = false
 		} else {
-			metaNode.AddMetaNode("=", fmt.Sprintf(format, key, expected))
+			metaNode.AddMetaNode("=", fmt.Sprintf("%-*s = %q", maxLen, key, expected))
 		}
 	}
 
