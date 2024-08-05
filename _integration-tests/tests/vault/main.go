@@ -50,10 +50,12 @@ func (tc *TestCase) Setup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Logical().Write("secret/key", map[string]interface{}{
+	if _, err := c.Logical().Write("secret/key", map[string]interface{}{
 		"Key1": "Val1",
 		"Key2": "Val2",
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	tc.Client = c
 }
 
