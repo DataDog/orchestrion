@@ -77,6 +77,7 @@ jobs:
     if: needs.update-go.outputs.changes-needed == 'true'
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -105,12 +106,24 @@ jobs:
           repo: ${{ github.repository }}
           branch: ${{ steps.create-branch.outputs.branch }}
         env:
-          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Create PR
         run: |-
           gh pr create --title "chore: update all dependencies" \
                        --body "Updated all go.mod dependencies to latest." \
                        --head="${{ steps.create-branch.outputs.branch }}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # The standard GitHub Token will not trigger downstream workflows, so in order to kick off CI,
+      # we'll push a blank commit to the PR branch with the mutator token.
+      - name: Trigger CI
+        uses: planetscale/ghcommit-action@b68767a2e130a71926b365322e62b583404a5e09 # v0.1.43
+        with:
+          commit_message: "blank: trigger CI"
+          repo: ${{ github.repository }}
+          branch: ${{ steps.create-branch.outputs.branch }}
+          empty: true
         env:
           GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
