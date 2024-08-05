@@ -14,6 +14,8 @@ on:
         required: true
         description: 'The ref to checkout dd-trace-go at'
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.dd-trace-go-ref }}
   cancel-in-progress: true
