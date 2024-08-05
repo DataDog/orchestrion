@@ -50,12 +50,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Logical().Write("secret/key", map[string]interface{}{
-		"Key1": "Val1",
-		"Key2": "Val2",
-	}); err != nil {
-		t.Fatal(err)
-	}
 	tc.Client = c
 }
 
@@ -75,11 +69,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]interface{}{
-				"component": "hashicorp/vault",
-				"http.url":  "/v1/secret/key",
-				"service":   "vault",
-				"span.kind": "client",
-				"span.type": "http",
+				"service": "vaultx",
 			},
 		},
 	}

@@ -48,6 +48,7 @@ func Test(t *testing.T) {
 			require.NoError(t, err)
 
 			var traces trace.Spans
+			t.Logf("Received traces: %s", string(jsonTraces))
 			require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
 			t.Logf("Received %d traces", len(traces))
 
