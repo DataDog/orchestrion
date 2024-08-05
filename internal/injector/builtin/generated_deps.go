@@ -31,6 +31,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
