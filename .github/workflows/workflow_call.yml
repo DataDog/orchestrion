@@ -23,23 +23,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [macos, ubuntu, windows]
-        go-version: ['1.21', '1.22']
+        runs-on: [ macos, ubuntu, windows ]
+        go-version: [ '1.21', '1.22' ]
     runs-on: ${{ matrix.runs-on }}-latest
     name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
       - name: Checkout orchestrion
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
         with:
           path: orchestrion
           repository: DataDog/orchestrion
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/*.sum"
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
         with:
           python-version: '>=3.9 <3.13'
           cache: pip
@@ -58,4 +58,3 @@ jobs:
           ./orchestrion.exe go test -v -shuffle=on ./...
         env:
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
-
