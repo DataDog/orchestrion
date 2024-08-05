@@ -17,11 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testvault "github.com/testcontainers/testcontainers-go/modules/vault"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type TestCase struct {
 	server *testvault.VaultContainer
 	*api.Client
+	containerIP string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
@@ -50,11 +52,19 @@ func (tc *TestCase) Setup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tc.containerIP, err = tc.server.ContainerIP(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tc.Client = c
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	_, err := tc.Logical().Read("secret/key")
+	ctx := context.Background()
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
+	defer span.Finish()
+
+	_, err := tc.Logical().ReadWithContext(ctx, "secret/key")
 	require.NoError(t, err)
 }
 
@@ -69,7 +79,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
-				"service": "vault",
+				"name": "test.root",
 			},
 			Children: trace.Spans{
 				{
@@ -80,10 +90,9 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "http",
 					},
 					Meta: map[string]any{
-						"http.url":      "/v1/secret/key",
-						"component":     "hashicorp/vault",
-						"span.kind":     "client",
-						"error.message": "404: Not Found",
+						"http.method": "GET",
+						"http.url":    fmt.Sprintf("http://%s/v1/secret/key", tc.containerIP),
+						"span.kind":   "client",
 					},
 				},
 			},
