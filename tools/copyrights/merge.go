@@ -52,7 +52,7 @@ type (
 		data map[string]map[string]*License
 	}
 	License struct {
-		spdx      string
+		spdx      []string
 		copyright string
 	}
 )
@@ -108,11 +108,21 @@ func (l *Licenses) LoadFile(filename string) error {
 			l.data[component] = compLicense
 		}
 		if licenseInfo, found := compLicense[origin]; found {
-			if licenseInfo.spdx != license {
-				return fmt.Errorf("conflicting licence name for %s: %s and %s", origin, licenseInfo.spdx, license)
+			var found bool
+			for _, spdx := range licenseInfo.spdx {
+				if spdx == license {
+					found = true
+					break
+				}
 			}
+			if found {
+				continue
+			}
+		} else if val := compLicense[origin]; val != nil {
+			val.spdx = append(val.spdx, license)
+			sort.Strings(val.spdx)
 		} else {
-			compLicense[origin] = &License{spdx: license}
+			compLicense[origin] = &License{spdx: []string{license}}
 		}
 	}
 
@@ -144,7 +154,9 @@ func (l *Licenses) WriteFile(filename string) error {
 	var records [][4]string
 	for component, compData := range l.data {
 		for origin, license := range compData {
-			records = append(records, [4]string{component, origin, license.spdx, license.copyright})
+			for _, spdx := range license.spdx {
+				records = append(records, [4]string{component, origin, spdx, license.copyright})
+			}
 		}
 	}
 	sort.Slice(records, func(l, r int) bool {

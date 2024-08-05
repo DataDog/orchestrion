@@ -185,8 +185,8 @@ func main() {
 		g.Line().Empty()
 	})
 
-	file.Comment("InjectedPaths is a set of import paths that may be injected by built-in aspects.")
-	file.Comment("This list is used to ensure `orchestrion warmup` includes all interesting packages.")
+	file.Comment("InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper")
+	file.Comment("invalidation of cached artifacts when injected dependencies change.")
 	file.Var().Id("InjectedPaths").Op("=").Index(jen.Op("...")).String().ValuesFunc(func(g *jen.Group) {
 		paths := make([]string, 0, len(injectedPaths))
 		for path := range injectedPaths {
