@@ -15,16 +15,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type directive string
+type directive struct {
+	name string
+	re   *regexp.Regexp
+}
 
 func Directive(name string) directive {
-	return directive(name)
+	return directive{
+		name: name,
+		re:   regexp.MustCompile(fmt.Sprintf(`\s*//%s(?:\s.*)?$`, regexp.QuoteMeta(name))),
+	}
 }
 
 func (d directive) Matches(node *node.Chain) bool {
-	re := regexp.MustCompile(fmt.Sprintf(`\s*//%s(?:\s.*)?$`, regexp.QuoteMeta(string(d))))
 	for _, dec := range node.Node.Decorations().Start.All() {
-		if re.MatchString(dec) {
+		if d.re.MatchString(dec) {
 			return true
 		}
 	}
@@ -49,11 +54,11 @@ func (directive) ImpliesImported() []string {
 }
 
 func (d directive) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(string(d)))
+	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(d.name))
 }
 
 func (d directive) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point directive"><span class="type">Has directive</span><code>//%s</code></div>`, d)
+	return fmt.Sprintf(`<div class="flex join-point directive"><span class="type">Has directive</span><code>//%s</code></div>`, d.name)
 }
 
 func init() {
