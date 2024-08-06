@@ -25,6 +25,7 @@ import (
 	redigo "orchestrion/integration/tests/redigo"
 	slog "orchestrion/integration/tests/slog"
 	sql "orchestrion/integration/tests/sql"
+	vault "orchestrion/integration/tests/vault"
 )
 
 var suite = map[string]testCase{
@@ -47,4 +48,5 @@ var suite = map[string]testCase{
 	"redigo":   new(redigo.TestCase),
 	"slog":     new(slog.TestCase),
 	"sql":      new(sql.TestCase),
+	"vault":    new(vault.TestCase),
 }
