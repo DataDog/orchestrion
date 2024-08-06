@@ -1,0 +1,5 @@
+while parsing generated code: 3:64: missing ',' before newline in argument list (and 1 more errors)
+ 1 | package _
+ 2 | func _() {
+ 3 | 	this.IsNotValidGo("because it's missing a closing parenthesis"
+ 4 | }
