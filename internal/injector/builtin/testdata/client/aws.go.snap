@@ -19,7 +19,10 @@ func AWSClientV1() {
 	sess := session.Must(
 //line <generated>:1
 		func(sess *session.Session, err error) (*session.Session, error) {
-			return __orchestrion_awstrace.WrapSession(sess), err
+			if sess != nil {
+				sess = __orchestrion_awstrace.WrapSession(sess)
+			}
+			return sess, err
 		}(
 //line samples/client/aws.go:16
 			session.NewSession(cfg)))
