@@ -16,6 +16,18 @@ import (
 
 // Aspects is the list of built-in aspects.
 var Aspects = [...]aspect.Aspect{
+	// From api/vault.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), ""),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"HttpClient\" }}\n  {{- $hasField = true -}}\n  HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  HttpClient: vaulttrace.NewHTTPClient(),\n  {{- end }}\n}",
+				map[string]string{
+					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -603,6 +615,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
@@ -625,4 +638,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:vY0X5F36jq6Wn+CjLP591EDCT0uTMjRMDHEL/2kRyj66A/OxqV5eTEZIRtS0N6+G6GY1PY8cn3D4KQq6WkUtGQ=="
+const Checksum = "sha512:xVdleTJLF/JLrj8doJ5FOOIt0Z1yoB6ObmUStg98Kw1vB6h6ieCvS9vWwVG77HxXz+NRrVGK0mUoGizxsJVcjQ=="
