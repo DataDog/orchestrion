@@ -20,6 +20,7 @@ type Diff treeprint.Tree
 func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
 	span, diff := span.matchesAny(others, treeprint.NewWithRoot("Root"))
 	require.NotNil(t, span, "no match found for trace:\n%s", diff)
+	t.Logf("Found matching trace:\n%s", span)
 }
 
 func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) {

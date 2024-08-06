@@ -28,6 +28,19 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From cloud/aws-sdk.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/aws/aws-sdk-go/aws/session.NewSession"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(sess *session.Session, err error) (*session.Session, error) {\n  if sess != nil {\n    sess = awstrace.WrapSession(sess)\n  }\n  return sess, err\n}({{ . }})",
+				map[string]string{
+					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
+					"session":  "github.com/aws/aws-sdk-go/aws/session",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -604,6 +617,7 @@ var InjectedPaths = [...]string{
 	"github.com/datadog/orchestrion/instrument/event",
 	"github.com/datadog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -638,4 +652,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:xVdleTJLF/JLrj8doJ5FOOIt0Z1yoB6ObmUStg98Kw1vB6h6ieCvS9vWwVG77HxXz+NRrVGK0mUoGizxsJVcjQ=="
+const Checksum = "sha512:3nWAZmOfY/O0VGHfeGZ4Gk/yeuI3yps0nnmd1DRN0k5GGd2H3suisZfXJde4vbj8uq2QZFPcb1vuhnHfc5jz3w=="
