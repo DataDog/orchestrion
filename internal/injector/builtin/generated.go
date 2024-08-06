@@ -569,6 +569,18 @@ var Aspects = [...]aspect.Aspect{
 			), []string{}),
 		},
 	},
+	// From stdlib/slog.yml
+	{
+		JoinPoint: join.FunctionCall("log/slog.New"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{ .AST.Fun }}(slogtrace.WrapHandler({{ index .AST.Args 0 }}))",
+				map[string]string{
+					"slogtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
+				},
+			)),
+		},
+	},
 }
 
 // RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess
@@ -621,6 +633,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
@@ -638,4 +651,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:xVdleTJLF/JLrj8doJ5FOOIt0Z1yoB6ObmUStg98Kw1vB6h6ieCvS9vWwVG77HxXz+NRrVGK0mUoGizxsJVcjQ=="
+const Checksum = "sha512:unRxDnXhsMQzDuBovnYYIsd3o308PwmY2RtYDj+LXxKyi7DRydsAjazHrt/WkmuItBOt/gV4QDQxlTQS/AWdBQ=="

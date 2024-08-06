@@ -103,3 +103,5 @@ jobs:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
           branch: ${{ github.event.pull_request.head.ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
