@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"go/token"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -247,10 +248,9 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 func numberLines(text string) string {
 	lines := strings.Split(text, "\n")
 	width := len(strconv.FormatInt(int64(len(lines)), 10))
-	format := fmt.Sprintf("%% %dd | %%s", width+1)
 
 	for i, line := range lines {
-		lines[i] = fmt.Sprintf(format, i+1, line)
+		lines[i] = fmt.Sprintf("% *d | %s", width+1, i+1, line)
 	}
 
 	return strings.Join(lines, "\n")
@@ -261,8 +261,12 @@ func (t *Template) RenderHTML() string {
 
 	if len(t.imports) > 0 {
 		keys := make([]string, 0, len(t.imports))
+		nameLen := 0
 		for name := range t.imports {
 			keys = append(keys, name)
+			if l := len(name); l > nameLen {
+				nameLen = l
+			}
 		}
 		sort.Strings(keys)
 
@@ -270,14 +274,16 @@ func (t *Template) RenderHTML() string {
 		buf.WriteString("// Using the following synthetic imports:\n")
 		buf.WriteString("import (\n")
 		for _, name := range keys {
-			fmt.Fprintf(&buf, "\t%s %q\n", name, t.imports[name])
+			fmt.Fprintf(&buf, "\t%-*s %q\n", nameLen, name, t.imports[name])
 		}
 		buf.WriteString(")\n```")
 	}
 
 	buf.WriteString("\n\n```go-template\n")
 	// Render with tabs so it's more go-esque!
-	buf.WriteString(strings.ReplaceAll(t.source, "  ", "\t"))
+	buf.WriteString(regexp.MustCompile(`(?m)^(?:  )+`).ReplaceAllStringFunc(t.source, func(orig string) string {
+		return strings.Repeat("\t", len(orig)/2)
+	}))
 	buf.WriteString("\n```\n")
 
 	return buf.String()

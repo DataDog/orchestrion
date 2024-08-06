@@ -16,6 +16,18 @@ import (
 
 // Aspects is the list of built-in aspects.
 var Aspects = [...]aspect.Aspect{
+	// From api/vault.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), ""),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"HttpClient\" }}\n  {{- $hasField = true -}}\n  HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  HttpClient: vaulttrace.NewHTTPClient(),\n  {{- end }}\n}",
+				map[string]string{
+					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -362,6 +374,19 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From k8s-client.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), ""),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"WrapTransport\" }}\n  {{- $hasField = true -}}\n  WrapTransport: kubernetestransport.Wrappers({{ .Value }}, kubernetestrace.WrapRoundTripper),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  WrapTransport: kubernetestransport.Wrappers(nil, kubernetestrace.WrapRoundTripper),\n  {{- end }}\n}",
+				map[string]string{
+					"kubernetestrace":     "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
+					"kubernetestransport": "k8s.io/client-go/transport",
+				},
+			)),
+		},
+	},
 	// From stdlib/database-sql.yml
 	{
 		JoinPoint: join.FunctionCall("database/sql.Register"),
@@ -547,6 +572,18 @@ var Aspects = [...]aspect.Aspect{
 			), []string{}),
 		},
 	},
+	// From stdlib/slog.yml
+	{
+		JoinPoint: join.FunctionCall("log/slog.New"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{ .AST.Fun }}(slogtrace.WrapHandler({{ index .AST.Args 0 }}))",
+				map[string]string{
+					"slogtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
+				},
+			)),
+		},
+	},
 }
 
 // RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess
@@ -574,8 +611,8 @@ var RestorerMap = map[string]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/valyala/fasthttp.v1":                      "fasthttp",
 }
 
-// InjectedPaths is a set of import paths that may be injected by built-in aspects.
-// This list is used to ensure `orchestrion warmup` includes all interesting packages.
+// InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper
+// invalidation of cached artifacts when injected dependencies change.
 var InjectedPaths = [...]string{
 	"fmt",
 	"github.com/datadog/orchestrion/instrument",
@@ -593,10 +630,13 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
@@ -607,6 +647,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler",
+	"k8s.io/client-go/transport",
 	"log",
 	"math",
 	"net/http",
@@ -615,4 +656,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:jr0mqio13nHQrdPAiH3emLjrHTapwynFqtgFCZBH6t2GpmKPdReOHar7yysLeaXivWcjidte33wWT1sImJplRw=="
+const Checksum = "sha512:FyI3iq6sI96F0IcItrSAqpwn4S5OHY9RkYZL3IG4ASaovvQRnFThDI2eN46iO8s5om9IHooQTk6mgq4MUf5L7Q=="

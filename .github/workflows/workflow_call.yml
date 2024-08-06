@@ -1,0 +1,61 @@
+name: Integration Tests (Workflow Call)
+on:
+  workflow_dispatch:
+    inputs:
+      dd-trace-go-ref:
+        description: 'The ref to checkout dd-trace-go at'
+        required: false
+        type: string
+        default: main
+  workflow_call:
+    inputs:
+      dd-trace-go-ref:
+        type: string
+        required: true
+        description: 'The ref to checkout dd-trace-go at'
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.dd-trace-go-ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest-16-cores
+    name: Integration Smoke Tests
+    steps:
+      - name: Checkout orchestrion
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          path: orchestrion
+          repository: DataDog/orchestrion
+      - name: Checkout dd-trace-go
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          path: dd-trace-go
+          repository: DataDog/dd-trace-go
+          ref: ${{ inputs.dd-trace-go-ref }}
+      - name: Setup go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: "**/*.sum"
+      - name: Setup python
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+        with:
+          python-version: '>=3.9 <3.13'
+          cache: pip
+          cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements.txt
+      - name: Install python dependencies
+        run: pip install -r orchestrion/_integration-tests/utils/agent/requirements.txt
+      - name: Build orchestrion binary
+        run: go -C orchestrion/ build -o="./_integration-tests/orchestrion.exe" .
+      - name: Run Integration Tests
+        shell: bash
+        run: |-
+          set -x
+          cd orchestrion/_integration-tests
+          ./orchestrion.exe go mod edit -replace=gopkg.in/DataDog/dd-trace-go.v1=../../dd-trace-go
+          ./orchestrion.exe go mod tidy
+          ./orchestrion.exe go test -v -tags=integration,buildtag -shuffle=on ./...

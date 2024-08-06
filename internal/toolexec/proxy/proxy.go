@@ -41,8 +41,7 @@ type (
 
 	// CommandProcessor is a function that takes a command as input and is allowed to modify it or
 	// read its data. If it returns an error, the processing chain immediately stops and no further
-	// processors will be invoked. The special value `ErrSkipCommand` can be used to request the
-	// command to be skipped by the `toolexec` proxy instead of being finally executed.
+	// processors will be invoked.
 	CommandProcessor[T Command] func(T) error
 
 	commandFlagSet struct {
@@ -65,12 +64,6 @@ const (
 	CommandTypeOther CommandType = iota
 	CommandTypeCompile
 	CommandTypeLink
-)
-
-var (
-	// ErrSkipCommand is returned by `CommandProcessor` functions to signal the command they received
-	// should not be executed at all, instead claiming idempotent success (exit code 0).
-	ErrSkipCommand = errors.New("<skip command>")
 )
 
 // ProcessCommand applies a processor on a command if said command matches

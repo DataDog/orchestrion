@@ -3,7 +3,7 @@
 [![Documentation](https://img.shields.io/badge/documentation-datadoghq.dev/orchestrion-blue.svg?style=flat)](https://datadoghq.dev/orchestrion)
 ![Latest Release](https://img.shields.io/github/v/release/DataDog/orchestrion?display_name=tag&label=Latest%20Release)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/datadog/orchestrion)
-
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/DataDog/orchestrion/badge)](https://scorecard.dev/viewer/?uri=github.com/DataDog/orchestrion)
 
 Automatic compile-time instrumentation of Go code.
 
@@ -42,28 +42,7 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
     $ go install github.com/datadog/orchestrion@latest
     ```
 
-2. <details><summary>Optional: artifact cache warm-up</summary>
-
-      > _Orchestrion_ can modify code in the entire application stack, including the standard library. To avoid this
-      > interferes with non-Orchestrion development on the same machine, `orchestrion` uses its own builds of everything.
-      > This means the very first `orchestrion`-enabled build you run will fully re-build the Go standard library, and some
-      > of Orchestrion's own instrumentation libraries.
-      >
-      > Orchestrion provides a single command to pre-build the standard library and all instrumentation libraries
-      > Orchestrion may inject into compiled code:
-      > ```console
-      > $ orchestrion warmup
-      > ```
-      > It is recommended to run this command when building container images (e.g, docker images) that ship with
-      > `orchestrion`, as this could significantly improve the performance of builds subsequently performed using these
-      > images.
-      >
-      > The `orchestrion`-specific builds are tied to the specific version of the `go` toolchain being used as well as
-      > `orchestrion`'s version. You may want to re-run `orchestrion warmup` after having updated your Orchestrion
-      > dependency.
-    </details>
-
-3. <details><summary>Optional: project <tt>go.mod</tt> registration</summary>
+2. <details><summary>Optional: project <tt>go.mod</tt> registration</summary>
 
       >  You can automatically add `orchestrion` to your project's dependencies by running:
       > ```console
@@ -92,7 +71,7 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
       > used by this project can be controlled directly using the `go.mod` file, as you would control any other dependency.
     </details>
 
-4. Prefix your `go` commands with `orchestrion`:
+3. Prefix your `go` commands with `orchestrion`:
     ```console
     $ orchestrion go build .
     $ orchestrion go test -race ./...
@@ -195,19 +174,47 @@ func HandleRequest(name string, req *http.Request) {
 
 Orchestrion supports automatic tracing of the following libraries:
 
-- `net/http`
-- `database/sql`
-- `google.golang.org/grpc`
-- `github.com/gin-gonic/gin`
-- `github.com/labstack/echo/v4`
-- `github.com/go-chi/chi/v5`
-- `github.com/gorilla/mux`
-- `github.com/gofiber/fiber/v2`
+Library                             | Since    | Notes
+------------------------------------|:--------:|-----------------------------------------------
+`database/sql`                      | `v0.7.0` | [Aspect][db-sql]
+`github.com/gin-gonic/gin`          | `v0.7.0` | [Aspect][gin]
+`github.com/go-chi/chi/v5`          | `v0.7.0` | [Aspect][chi-v5]
+`github.com/go-chi/chi`             | `v0.7.0` | [Aspect][chi-v1]
+`github.com/go-redis/redis/v7`      | `v0.7.0` | [Aspect][go-redis-v7]
+`github.com/go-redis/redis/v8`      | `v0.7.0` | [Aspect][go-redis-v8]
+`github.com/gofiber/fiber/v2`       | `v0.7.0` | [Aspect][fiber-v2]
+`github.com/gomodule/redigo/redis`  | `v0.7.0` | [Aspect][redigo]
+`github.com/gorilla/mux`            | `v0.7.0` | [Aspect][gorilla]. Cannot be opted out of via `//dd:ignore`
+`github.com/jinzhu/gorm`            | `v0.7.0` | [Aspect][jinzhu-gorm]
+`github.com/labstack/echo/v4`       | `v0.7.0` | [Aspect][echo]
+`google.golang.org/grpc`            | `v0.7.0` | [Aspect][grpc]
+`gorm.io/gorm`                      | `v0.7.0` | [Aspect][gorm]
+`net/http`                          | `v0.7.0` | [Client][net-http.client] / [Server][net-http.server]
+`go.mongodb.org/mongo-driver/mongo` | `v0.7.3` | [Aspect][mongo]
+`k8s.io/client-go`                  | `v0.7.4` | [Aspect][k8s-client]
+`github.com/hashicorp/vault`        | `v0.7.4` | [Aspect][hashicorp-vault]
+
+[db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
+[gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
+[chi-v5]: https://datadoghq.dev/orchestrion/docs/built-in/http/chi/#use-v5-tracer-middleware
+[chi-v1]: https://datadoghq.dev/orchestrion/docs/built-in/http/chi/#use-v1-tracer-middleware
+[go-redis-v7]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v7-client
+[go-redis-v8]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v8-client
+[fiber-v2]: https://datadoghq.dev/orchestrion/docs/built-in/http/fiber/
+[redigo]: https://datadoghq.dev/orchestrion/docs/built-in/databases/redigo/
+[gorilla]: https://datadoghq.dev/orchestrion/docs/built-in/http/gorilla/
+[jinzhu-gorm]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gorm/#jinzhugorm
+[echo]: https://datadoghq.dev/orchestrion/docs/built-in/http/echo/
+[grpc]: https://datadoghq.dev/orchestrion/docs/built-in/grpc/
+[gorm]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gorm/#gormiogorm
+[net-http.Client]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/net-http.client/
+[net-http.Server]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/net-http.server/
+[mongo]: https://datadoghq.dev/orchestrion/docs/built-in/databases/mongo/
+[k8s-client]: https://datadoghq.dev/orchestrion/docs/built-in/k8s-client/
+[hashicorp-vault]: https://datadoghq.dev/orchestrion/docs/built-in/api/vault/
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.
-
-[1]: https://github.com/DataDog/go-sample-app
 
 ## Troubleshooting
 

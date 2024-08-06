@@ -154,7 +154,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				if err != nil {
 					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.LinkDepsFilename, dep, archive, err)
 				}
-				log.Debugf("Processing %s dependencies from %s...", linkdeps.LinkDepsFilename, dep)
+				log.Debugf("Processing %s dependencies from %s...\n", linkdeps.LinkDepsFilename, dep)
 				for _, tDep := range deps.Dependencies() {
 					if _, found := reg.PackageFile[tDep]; !found {
 						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath, dep)
