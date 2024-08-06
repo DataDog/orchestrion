@@ -60,6 +60,7 @@ require (
 	github.com/DataDog/go-libddwaf/v3 v3.3.0 // indirect
 	github.com/DataDog/go-sqllexer v0.0.12 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/DataDog/sketches-go v1.4.6 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.12.5 // indirect
@@ -129,6 +130,7 @@ require (
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanw/esbuild v0.23.0 // indirect
@@ -140,6 +142,7 @@ require (
 	github.com/getkin/kin-openapi v0.127.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/go-chi/chi v1.5.4 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -171,6 +174,7 @@ require (
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
+	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
@@ -187,6 +191,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
+	github.com/hashicorp/vault/sdk v0.9.2 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
@@ -243,6 +248,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
@@ -252,6 +258,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
