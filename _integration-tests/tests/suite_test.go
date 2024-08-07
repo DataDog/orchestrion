@@ -41,19 +41,27 @@ func Test(t *testing.T) {
 			sess, err := mockAgent.NewSession(t)
 			require.NoError(t, err)
 
+			// Defer this, so it runs even if the test panics (e.g, as the result of a failed assertion).
+			// If this does not happen, the test session will remain open; which is undesirable.
+			defer checkTrace(t, tc, sess)
+
 			t.Log("Running test")
 			tc.Run(t)
-
-			jsonTraces, err := sess.Close(t)
-			require.NoError(t, err)
-
-			var traces trace.Spans
-			require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
-			t.Logf("Received %d traces", len(traces))
-
-			for _, expected := range tc.ExpectedTraces() {
-				expected.RequireAnyMatch(t, traces)
-			}
 		})
+	}
+}
+
+func checkTrace(t *testing.T, tc testCase, sess *agent.Session) {
+	t.Helper()
+
+	jsonTraces, err := sess.Close(t)
+	require.NoError(t, err)
+
+	var traces trace.Spans
+	require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
+	t.Logf("Received %d traces", len(traces))
+
+	for _, expected := range tc.ExpectedTraces() {
+		expected.RequireAnyMatch(t, traces)
 	}
 }

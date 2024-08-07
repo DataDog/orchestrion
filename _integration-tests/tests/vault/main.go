@@ -7,10 +7,10 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
+	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
 	"github.com/hashicorp/vault/api"
@@ -32,20 +32,20 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testvault.Run(ctx,
 		"vault:1.7.3",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		testcontainers.WithLogConsumers(testLogConsumer{t}),
+		utils.WithTestLogConsumer(t),
 		testvault.WithToken("root"),
 	)
 	if err != nil {
 		t.Skipf("Failed to start vault test container: %v\n", err)
 	}
 
-	serverIP, err := tc.server.ContainerIP(ctx)
+	addr, err := tc.server.HttpHostAddress(ctx)
 	if err != nil {
-		t.Skipf("Failed to get vault container IP: %v\n", err)
+		defer tc.server.Terminate(ctx)
+		t.Skipf("Failed to get vault container address: %v\n", err)
 	}
-
 	c, err := api.NewClient(&api.Config{
-		Address: fmt.Sprintf("http://%s:8200", serverIP),
+		Address: addr,
 	})
 	c.SetToken("root")
 	if err != nil {
@@ -93,12 +93,4 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 		},
 	}
-}
-
-type testLogConsumer struct {
-	*testing.T
-}
-
-func (t testLogConsumer) Accept(log testcontainers.Log) {
-	t.T.Log(string(log.Content))
 }
