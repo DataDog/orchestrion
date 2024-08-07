@@ -28,6 +28,6 @@ func Subscribe(serverURL string, conn *nats.Conn, stats *common.CacheStats) erro
 		serverURL: serverURL,
 	}
 
-	_, err := conn.Subscribe(resolveSubject, common.Fork(s.resolve))
+	_, err := conn.Subscribe(resolveSubject, common.HandleRequest(s.resolve))
 	return err
 }

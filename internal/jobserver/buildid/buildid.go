@@ -20,12 +20,12 @@ const (
 
 type service struct {
 	stats           *common.CacheStats
-	resolvedVersion string
+	resolvedVersion VersionSuffixResponse
 	mu              sync.Mutex
 }
 
 func Subscribe(conn *nats.Conn, stats *common.CacheStats) error {
 	s := &service{stats: stats}
-	_, err := conn.Subscribe(versionSubject, common.Fork(s.versionSuffix))
+	_, err := conn.Subscribe(versionSubject, common.HandleRequest(s.versionSuffix))
 	return err
 }

@@ -18,9 +18,6 @@ import (
 const (
 	USERNAME    = "orchestrion"
 	NO_PASSWORD = "" // We only use account management to have access to system events, not for security.
-
-	HDR_CLIENT_PID  = "client-pid"  // Header containing the client PID
-	HDR_CLIENT_PPID = "client-ppid" // Header containing the client parent PID
 )
 
 type Client struct {
@@ -49,12 +46,9 @@ type (
 	request interface {
 		Subject() string
 	}
-	responseTo[Req request] interface {
-		IsResponseTo(Req)
-	}
 )
 
-func Request[Req request, Res responseTo[Req]](ctx context.Context, client *Client, req Req) (Res, error) {
+func Request[Req request, Res common.ResponseTo[Req]](ctx context.Context, client *Client, req Req) (Res, error) {
 	reqData, err := json.Marshal(req)
 	if err != nil {
 		var zero Res

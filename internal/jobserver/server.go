@@ -303,6 +303,8 @@ func (s *Server) startShutdownTimer() {
 func init() {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
+		log.Warnf("Could not determine list of network interface addresses: %v\n", err)
+		log.Warnf("Orchestrion requires at least one loopback interface to be available.\n")
 		return
 	}
 	for _, addr := range addrs {

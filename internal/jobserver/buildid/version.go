@@ -19,10 +19,8 @@ import (
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/builtin"
-	"github.com/datadog/orchestrion/internal/jobserver/common"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/version"
-	"github.com/nats-io/nats.go"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -39,14 +37,13 @@ func (VersionSuffixResponse) IsResponseTo(*VersionSuffixRequest) {}
 
 var tagSuffix string
 
-func (s *service) versionSuffix(msg *nats.Msg) {
+func (s *service) versionSuffix(req *VersionSuffixRequest) (VersionSuffixResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.resolvedVersion != "" {
 		s.stats.RecordHit()
-		common.RespondJSON(msg, s.resolvedVersion)
-		return
+		return s.resolvedVersion, nil
 	}
 	s.stats.RecordMiss()
 
@@ -58,8 +55,7 @@ func (s *service) versionSuffix(msg *nats.Msg) {
 		builtin.InjectedPaths[:]...,
 	)
 	if err != nil {
-		common.RespondError(msg, err)
-		return
+		return "", err
 	}
 
 	modules := make(map[string]*moduleInfo)
@@ -76,28 +72,25 @@ func (s *service) versionSuffix(msg *nats.Msg) {
 	for _, name := range names {
 		mod := modules[name]
 		if _, err := fmt.Fprintf(sha, "\x01%s\x02", name); err != nil {
-			common.RespondError(msg, err)
-			return
+			return "", err
 		}
 
 		if data, err := json.Marshal(mod); err != nil {
-			common.RespondError(msg, err)
-			return
+			return "", err
 		} else if _, err := sha.Write(data); err != nil {
-			common.RespondError(msg, err)
-			return
+			return "", err
 		}
 	}
 	var data [sha512.Size]byte
 	sum := base64.StdEncoding.EncodeToString(sha.Sum(data[:0]))
 
-	s.resolvedVersion = fmt.Sprintf(
+	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf(
 		"orchestrion@%s%s;injectables=%s;rules=%s",
 		version.Tag, tagSuffix,
 		sum,
 		builtin.Checksum,
-	)
-	common.RespondJSON(msg, s.resolvedVersion)
+	))
+	return s.resolvedVersion, nil
 }
 
 type moduleInfo struct {
