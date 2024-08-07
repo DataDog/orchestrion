@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ['1.21', '1.22', '1.23.0-rc.2']
+        go-version: ['~1.21.13', '~1.22.6', '1.23.0-rc.2']
     name: Unit tests (go${{ matrix.go-version }})
     steps:
       - name: Checkout
@@ -64,10 +64,8 @@ jobs:
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
-        run: echo "version=${COMPLETE_VERSION:0:4}" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
-        env:
-          COMPLETE_VERSION: ${{ matrix.go-version }}
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always() && github.event_name != 'merge_group'
@@ -83,15 +81,15 @@ jobs:
       fail-fast: false
       matrix:
         runs-on: [macos, ubuntu, windows]
-        go-version: ['1.21', '1.22', '1.23.0-rc.2']
+        go-version: ['~1.21.13', '~1.22.6', '1.23.0-rc.2']
         build-mode: [DRIVER]
         include:
           # Alternate build modes (only on ubuntu, latest go; to save CI time)
           - runs-on: ubuntu
-            go-version: '1.22'
+            go-version: '~1.22.6'
             build-mode: TOOLEXEC
           - runs-on: ubuntu
-            go-version: '1.22'
+            go-version: '~1.22.6'
             build-mode: GOFLAGS
     runs-on: ${{ matrix.runs-on }}-latest
     name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
@@ -138,18 +136,12 @@ jobs:
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
-        # Using gotip because the fix for https://github.com/golang/go/issues/68468 is not yet released.
-        run: |-
-          go install golang.org/dl/gotip@latest
-          gotip download
-          gotip tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
+        run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: simple-go-version
-        run: echo "version=${COMPLETE_VERSION:0:4}" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
-        env:
-          COMPLETE_VERSION: ${{ matrix.go-version }}
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
