@@ -8,5 +8,5 @@ package code
 
 // AST returns the raw AST node that `.` represents in the template.
 func (d *dot) AST() any {
-	return newProxy[any](d.node.Node, &d.placeholders)
+	return newProxy[any](d.context.Node(), &d.placeholders)
 }

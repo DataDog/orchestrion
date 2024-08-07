@@ -10,7 +10,6 @@ package injector
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"go/parser"
@@ -21,8 +20,8 @@ import (
 
 	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/injector/aspect"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
-	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -157,6 +156,7 @@ type (
 		References typed.ReferenceMap // New package references injected into the file and what kind of reference they are
 		Filename   string             // The file name of the output file (may be different from the input file)
 		Modified   bool               // Whether the file was modified
+		NewFiles   map[string][]byte  // New source files to be compiled
 	}
 )
 
@@ -173,8 +173,10 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 		return res, err
 	}
 
-	ctx := typed.ContextWithValue(context.Background(), decorator)
-	if res.Modified, res.References, err = i.inject(ctx, file, decorator, rootConfig); err != nil {
+	if res.NewFiles == nil {
+		res.NewFiles = make(map[string][]byte)
+	}
+	if res.Modified, res.References, err = i.inject(file, decorator, rootConfig, res.NewFiles); err != nil {
 		return res, err
 	}
 
@@ -233,9 +235,8 @@ func (i *Injector) lookupDecoratedFile(filename string) (*dst.File, *decorator.D
 // inject performs all configured injections on the specified file. It returns whether the file was
 // modified, any import references introduced by modifications. In case of an error, the
 // trasnformation aborts as quickly as possible and returns the error.
-func (i *Injector) inject(ctx context.Context, file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
-	ctx = typed.ContextWithValue(ctx, &refs)
-	var chain *node.Chain
+func (i *Injector) inject(file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string, newFiles map[string][]byte) (mod bool, refs typed.ReferenceMap, err error) {
+	var chain *context.NodeChain
 
 	dstutil.Apply(
 		file,
@@ -243,12 +244,10 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, decorator *decora
 			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
 				return false
 			}
-			chain = chain.ChildFromCursor(csor, decorator.Path)
-			if _, ok := csor.Node().(*dst.File); ok {
-				// This is the root node, so we set the root configuration on it...
-				for k, v := range rootConfig {
-					chain.SetConfig(k, v)
-				}
+			root := chain == nil
+			chain = chain.Child(csor)
+			if root {
+				chain.SetConfig(rootConfig)
 			}
 			return true
 		},
@@ -261,7 +260,13 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, decorator *decora
 			defer func() { chain = chain.Parent() }()
 
 			var changed bool
-			changed, err = i.injectNode(ctx, chain, csor)
+			changed, err = i.injectNode(chain.Context(
+				csor,
+				decorator.Path,
+				file,
+				&refs,
+				decorator,
+			))
 			mod = mod || changed
 
 			return err == nil
@@ -285,14 +290,14 @@ func (i *Injector) inject(ctx context.Context, file *dst.File, decorator *decora
 // injectNode assesses all configured injections agaisnt the current node, and performs any AST
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
-func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (mod bool, err error) {
+func (i *Injector) injectNode(ctx context.AdviceContext) (mod bool, err error) {
 	for _, inj := range i.opts.Aspects {
-		if !inj.JoinPoint.Matches(chain) {
+		if !inj.JoinPoint.Matches(ctx) {
 			continue
 		}
 		for _, act := range inj.Advice {
 			var changed bool
-			changed, err = act.Apply(ctx, chain, csor)
+			changed, err = act.Apply(ctx)
 			if changed {
 				mod = true
 			}

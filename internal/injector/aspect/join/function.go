@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -50,22 +50,24 @@ func (s *funcDecl) ImpliesImported() (list []string) {
 	return
 }
 
-func (s *funcDecl) Matches(chain *node.Chain) bool {
+func (s *funcDecl) Matches(ctx context.AspectContext) bool {
 	info := functionInformation{
-		ImportPath:  chain.ImportPath(),
-		Decorations: []*dst.NodeDecs{chain.Decorations()},
+		ImportPath:  ctx.ImportPath(),
+		Decorations: []*dst.NodeDecs{ctx.Node().Decorations()},
 	}
 
-	if decl, ok := node.As[*dst.FuncDecl](chain); ok {
+	if decl, ok := ctx.Node().(*dst.FuncDecl); ok {
 		if decl.Recv != nil && len(decl.Recv.List) == 1 {
 			info.Receiver = decl.Recv.List[0].Type
 		}
 		info.Name = decl.Name.Name
 		info.Type = decl.Type
-	} else if lit, ok := node.As[*dst.FuncLit](chain); ok {
+	} else if lit, ok := ctx.Node().(*dst.FuncLit); ok {
 		info.Type = lit.Type
-		if parent, ok := node.As[*dst.AssignStmt](chain.Parent()); ok {
-			info.Decorations = append(info.Decorations, parent.Decorations())
+		if parent := ctx.Parent(); parent != nil {
+			if parent, ok := parent.Node().(*dst.AssignStmt); ok {
+				info.Decorations = append(info.Decorations, parent.Decorations())
+			}
 		}
 	} else {
 		return false
@@ -379,16 +381,16 @@ func (s *funcBody) ImpliesImported() []string {
 	return s.up.ImpliesImported()
 }
 
-func (s *funcBody) Matches(chain *node.Chain) bool {
-	if parent := chain.Parent(); parent == nil || !s.up.Matches(parent) {
+func (s *funcBody) Matches(ctx context.AspectContext) bool {
+	if parent := ctx.Parent(); parent == nil || !s.up.Matches(parent) {
 		return false
 	}
 
-	switch parent := chain.Parent().Node.(type) {
+	switch parent := ctx.Parent().Node().(type) {
 	case *dst.FuncDecl:
-		return chain.Node == parent.Body
+		return ctx.Node() == parent.Body
 	case *dst.FuncLit:
-		return chain.Node == parent.Body
+		return ctx.Node() == parent.Body
 	default:
 		return false
 	}

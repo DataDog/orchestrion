@@ -8,7 +8,7 @@ package code
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )
@@ -22,13 +22,13 @@ type (
 	}
 
 	dot struct {
-		node         *node.Chain // The node in context of which the template is rendered
-		placeholders             // Placeholders used by the template
+		context      context.AdviceContext // The node in context of which the template is rendered
+		placeholders                       // Placeholders used by the template
 	}
 )
 
 func (d *dot) String() string {
-	return d.placeholders.forNode(d.node.Node, true)
+	return d.placeholders.forNode(d.context.Node(), true)
 }
 
 // forNode obtains the placeholder syntax to use for referencing the given node. If singleton is

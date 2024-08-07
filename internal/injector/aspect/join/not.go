@@ -8,7 +8,7 @@ package join
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -25,8 +25,8 @@ func (not) ImpliesImported() []string {
 	return nil
 }
 
-func (n not) Matches(node *node.Chain) bool {
-	return !n.jp.Matches(node)
+func (n not) Matches(ctx context.AspectContext) bool {
+	return !n.jp.Matches(ctx)
 }
 
 func (n not) AsCode() jen.Code {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -33,8 +33,8 @@ func (i *functionCall) ImpliesImported() []string {
 	return []string{i.path}
 }
 
-func (i *functionCall) Matches(chain *node.Chain) bool {
-	call, ok := node.As[*dst.CallExpr](chain)
+func (i *functionCall) Matches(ctx context.AspectContext) bool {
+	call, ok := ctx.Node().(*dst.CallExpr)
 	if !ok {
 		return false
 	}

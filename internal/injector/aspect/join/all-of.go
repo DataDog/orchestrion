@@ -8,7 +8,7 @@ package join
 import (
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -26,9 +26,9 @@ func (o allOf) ImpliesImported() (list []string) {
 	return
 }
 
-func (o allOf) Matches(node *node.Chain) bool {
+func (o allOf) Matches(ctx context.AspectContext) bool {
 	for _, candidate := range o {
-		if !candidate.Matches(node) {
+		if !candidate.Matches(ctx) {
 			return false
 		}
 	}

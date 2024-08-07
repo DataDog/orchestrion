@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -33,13 +33,13 @@ func (s *structDefinition) ImpliesImported() []string {
 	return nil
 }
 
-func (s *structDefinition) Matches(chain *node.Chain) bool {
+func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 	if s.typeName.pointer {
 		// We can't ever match a pointer definition
 		return false
 	}
 
-	spec, ok := chain.Node.(*dst.TypeSpec)
+	spec, ok := ctx.Node().(*dst.TypeSpec)
 	if !ok || spec.Name == nil || spec.Name.Name != s.typeName.name {
 		return false
 	}
@@ -48,7 +48,7 @@ func (s *structDefinition) Matches(chain *node.Chain) bool {
 		return false
 	}
 
-	return chain.ImportPath() == s.typeName.path
+	return ctx.ImportPath() == s.typeName.path
 }
 
 func (s *structDefinition) AsCode() jen.Code {
@@ -78,17 +78,17 @@ func (s *structLiteral) ImpliesImported() []string {
 	return nil
 }
 
-func (s *structLiteral) Matches(chain *node.Chain) bool {
+func (s *structLiteral) Matches(ctx context.AspectContext) bool {
 	if s.field == "" {
-		return s.matchesLiteral(chain.Node)
+		return s.matchesLiteral(ctx.Node())
 	}
 
-	kve, ok := node.As[*dst.KeyValueExpr](chain)
+	kve, ok := ctx.Node().(*dst.KeyValueExpr)
 	if !ok {
 		return false
 	}
 
-	if parent := chain.Parent(); parent == nil || !s.matchesLiteral(parent.Node) {
+	if parent := ctx.Parent(); parent == nil || !s.matchesLiteral(parent.Node()) {
 		return false
 	}
 

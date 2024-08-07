@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -39,9 +39,9 @@ func (o oneOf) ImpliesImported() []string {
 	return list
 }
 
-func (o oneOf) Matches(node *node.Chain) bool {
+func (o oneOf) Matches(ctx context.AspectContext) bool {
 	for _, candidate := range o {
-		if candidate.Matches(node) {
+		if candidate.Matches(ctx) {
 			return true
 		}
 	}

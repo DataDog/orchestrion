@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 )
@@ -32,7 +32,7 @@ type Point interface {
 	// Matches determines whether the injection should be performed on the given
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.
-	Matches(node *node.Chain) bool
+	Matches(ctx context.AspectContext) bool
 
 	// RenderHTML renders an HTML block containing the join point's description
 	// for documentation purposes.

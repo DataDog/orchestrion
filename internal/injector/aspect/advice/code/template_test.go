@@ -6,13 +6,11 @@
 package code_test
 
 import (
-	"context"
-	"go/token"
+	"errors"
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/stretchr/testify/require"
@@ -20,14 +18,51 @@ import (
 )
 
 func TestTemplate(t *testing.T) {
-	ctx := context.Background()
-	ctx = typed.ContextWithValue(ctx, decorator.NewDecorator(token.NewFileSet()))
+	ctx := mockAdviceContext{}
 
 	t.Run("ParseError", func(t *testing.T) {
 		tmpl := code.MustTemplate(`this.IsNotValidGo("because it's missing a closing parenthesis"`, nil)
-		stmt, err := tmpl.CompileBlock(ctx, &node.Chain{Node: &dst.File{}})
+		stmt, err := tmpl.CompileBlock(ctx)
 		require.Nil(t, stmt)
 		require.Error(t, err)
 		golden.Assert(t, err.Error(), "parse_error.txt")
 	})
+}
+
+type mockAdviceContext struct{}
+
+func (mockAdviceContext) ParseSource(src []byte) (*dst.File, error) {
+	return decorator.Parse(src)
+}
+
+// The rest is not used by the tests as of now...
+func (mockAdviceContext) Node() dst.Node {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) Parent() context.AspectContext {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) Config(string) (string, bool) {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) File() *dst.File {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) ImportPath() string {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) Package() string {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) ReplaceNode(dst.Node) {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) AddImport(path string, alias string) bool {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) AddLink(string) bool {
+	panic(errors.ErrUnsupported)
 }

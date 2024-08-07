@@ -6,13 +6,11 @@
 package advice
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/aspect/join"
-	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -27,10 +25,10 @@ func AddStructField(fieldName string, fieldType join.TypeName) *addStuctField {
 	return &addStuctField{fieldName, fieldType}
 }
 
-func (a *addStuctField) Apply(_ context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
-	node, ok := chain.Node.(*dst.TypeSpec)
+func (a *addStuctField) Apply(ctx context.AdviceContext) (bool, error) {
+	node, ok := ctx.Node().(*dst.TypeSpec)
 	if !ok {
-		return false, fmt.Errorf("add-struct-field advice can only be applied to *dst.TypeSpec (got %T)", chain.Node)
+		return false, fmt.Errorf("add-struct-field advice can only be applied to *dst.TypeSpec (got %T)", ctx.Node())
 	}
 
 	typeDef, ok := node.Type.(*dst.StructType)

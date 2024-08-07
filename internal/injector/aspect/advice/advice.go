@@ -8,11 +8,8 @@
 package advice
 
 import (
-	"context"
-
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/dave/dst/dstutil"
 )
 
 const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/advice"
@@ -27,7 +24,7 @@ type Advice interface {
 	// boolean indicating whether the node was modified or not (some actions may
 	// short-circuit and not do anything; e.g. import injection may be skipped if
 	// the import already exists).
-	Apply(context.Context, *node.Chain, *dstutil.Cursor) (bool, error)
+	Apply(context.AdviceContext) (bool, error)
 
 	// RenderHTML renders and HTML representation of this advice for documentation
 	// purposes.
