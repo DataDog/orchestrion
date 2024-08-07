@@ -7,11 +7,9 @@ codecov:
     wait_for_ci: true
 
 ignore:
-  - '**/generator/main.go' # Generators are not actually part of the product
   - 'samples/**' # This is sample code for instrumentable things
   - 'tools/**' # Repository maintenance tooling
   - 'internal/injector/aspect/advice/code/dot_ast.proxies.go' # Auto-generated proxy code
-  - '_integration-tests/tests/**' # Cannot collect coverage in integrationt tests due to a bug in the Go toolchain
 
 coverage:
   status:
@@ -44,3 +42,6 @@ component_management:
     - component_id: injector
       name: Injector
       paths: [internal/injector/**]
+    - component_id: integration-tests
+      name: Integration Tests
+      paths: [_integration-tests/**]
