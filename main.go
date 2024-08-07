@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/datadog/orchestrion/internal/cmd"
+	"github.com/datadog/orchestrion/internal/jobserver/client"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/version"
 	"github.com/urfave/cli/v2"
@@ -41,6 +42,17 @@ func main() {
 		HideVersion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
+				Category: "Advanced",
+				Name:     "job-server-url",
+				EnvVars:  []string{client.ENV_VAR_JOBSERVER_URL},
+				Usage:    "Set the job server URL",
+				Hidden:   true, // Users don't normally need to use this.
+				Action: func(_ *cli.Context, url string) error {
+					// Forward the value to the environment variable, so that all child processes see it.
+					return os.Setenv(client.ENV_VAR_JOBSERVER_URL, url)
+				},
+			},
+			&cli.StringFlag{
 				Category: "Logging",
 				Name:     "log-level",
 				EnvVars:  []string{envVarOrchestrionLogLevel},
@@ -61,6 +73,7 @@ func main() {
 			cmd.Pin,
 			cmd.Toolexec,
 			cmd.Version,
+			cmd.Server,
 		},
 	}
 	// Run the CLI application

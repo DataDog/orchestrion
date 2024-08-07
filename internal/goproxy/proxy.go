@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/jobserver"
+	"github.com/datadog/orchestrion/internal/jobserver/client"
 	"github.com/datadog/orchestrion/internal/log"
 )
 
@@ -69,6 +71,7 @@ func Run(goArgs []string, opts ...Option) error {
 		goArgs...,
 	)
 
+	env := os.Environ()
 	if len(argv) > 1 {
 		// The command may not be at index 0, if the `-C` flag is used (it is REQUIRED to occur first
 		// before anything else on the go command)
@@ -97,12 +100,24 @@ func Run(goArgs []string, opts ...Option) error {
 				// Fill in the two slots for toolexec.
 				argv[cmdIdx+1] = "-toolexec"
 				argv[cmdIdx+2] = cfg.toolexec
+
+				// We'll need a job server to support toolexec operations
+				server, err := jobserver.New(&jobserver.Options{ServerName: fmt.Sprintf("orchestrion[%d]", os.Getpid())})
+				if err != nil {
+					return err
+				}
+				defer func() {
+					server.Shutdown()
+					log.Tracef("[JOBSERVER]: %s\n", server.CacheStats.String())
+				}()
+				env = append(env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, server.ClientURL()))
 			}
 		}
 	}
 
 	log.Tracef("exec: %q\n", argv)
 	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd.Env = env
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

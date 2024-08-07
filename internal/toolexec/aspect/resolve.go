@@ -6,74 +6,49 @@
 package aspect
 
 import (
-	"bytes"
-	"errors"
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/datadog/orchestrion/internal/goflags"
-	"github.com/datadog/orchestrion/internal/golist"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/datadog/orchestrion/internal/jobserver/client"
+	"github.com/datadog/orchestrion/internal/jobserver/pkgs"
 )
 
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
 // to locate the archive for `importPath` and its dependencies using `go list`. If that fails, it
 // will try to resolve it using `go get`.
-func resolvePackageFiles(importPath string) (map[string]string, error) {
-	// Apply quoting as appropriate to avoid shell interpretation issues...
-	toolexec := fmt.Sprintf("%q %q", os.Args[0], os.Args[1])
-
-	// Retrieve parent Go command flags
-	args, err := prepareGoCommandArgs("list", "-toolexec", toolexec, "-json", "-deps", "-export", "--", importPath)
-	if err != nil {
-		return nil, fmt.Errorf("preparing go command %v: %w", args, err)
-	}
-
-	cmd := exec.Command("go", args...)
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-	log.Tracef("Attempting to resolve %q using %q\n", importPath, cmd.Args)
-	if err = cmd.Run(); err != nil {
-		return nil, fmt.Errorf("running %q: %w", cmd.Args, err)
-	}
-	log.Tracef("Command successful, parsing output...\n")
-
-	items, err := golist.ParseJSON(&stdout)
+func resolvePackageFiles(importPath string, workDir string) (map[string]string, error) {
+	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
-	output := make(map[string]string, len(items))
-	for _, item := range items {
-		if item.Standard && item.ImportPath == "unsafe" && item.Export == "" {
-			// Special-casing "unsafe", because it's not provided like other modules
-			continue
-		}
-		if item.Export == "" {
-			err = errors.Join(err, fmt.Errorf("%s (%s) has no export file", item.ImportPath, item.BuildID))
-			continue
-		}
-		output[item.ImportPath] = item.Export
-	}
 
+	conn, err := client.FromEnvironment(workDir)
 	if err != nil {
 		return nil, err
 	}
-	return output, nil
-}
 
-// prepareGoCommandArgs injects the parent Go command's flags into the provided arguments
-// The result can be passed as args to a Go invocation through exec.Command()
-func prepareGoCommandArgs(cmd string, args ...string) ([]string, error) {
 	flags, err := goflags.Flags()
 	if err != nil {
 		return nil, fmt.Errorf("retrieving go command flags: %w", err)
 	}
-	slice := flags.Slice()
 
-	compound := make([]string, 1, 1+len(slice)+len(args))
-	compound[0] = cmd
-	compound = append(compound, slice...)
-	compound = append(compound, args...)
-	return compound, nil
+	archives, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		context.Background(),
+		conn,
+		pkgs.NewResolveRequest(cwd, flags.Slice(), importPath),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for missing archives...
+	for ip, arch := range archives {
+		if arch == "" {
+			return nil, fmt.Errorf("failed to resolve archive for %q", ip)
+		}
+	}
+
+	return archives, nil
 }
