@@ -7,7 +7,9 @@ package join
 
 import (
 	"fmt"
-	"regexp"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/dave/dst"
@@ -15,21 +17,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type directive struct {
-	name string
-	re   *regexp.Regexp
-}
+type directive string
 
 func Directive(name string) directive {
-	return directive{
-		name: name,
-		re:   regexp.MustCompile(fmt.Sprintf(`\s*//%s(?:\s.*)?$`, regexp.QuoteMeta(name))),
-	}
+	return directive(name)
 }
 
 func (d directive) Matches(node *node.Chain) bool {
 	for _, dec := range node.Node.Decorations().Start.All() {
-		if d.re.MatchString(dec) {
+		if d.matches(dec) {
 			return true
 		}
 	}
@@ -49,16 +45,37 @@ func (d directive) Matches(node *node.Chain) bool {
 	return false
 }
 
+func (d directive) matches(dec string) bool {
+	// Trim leading white space
+	rest := strings.TrimLeftFunc(dec, unicode.IsSpace)
+
+	// Check we have a single-line comment
+	if !strings.HasPrefix(rest, "//") {
+		return false
+	}
+
+	// Check the // is followed immediately by the directive name
+	rest = rest[2:]
+	if !strings.HasPrefix(rest, string(d)) {
+		return false
+	}
+
+	// If there is something after the directive name, it must be white space
+	rest = rest[len(d):]
+	rune, size := utf8.DecodeRuneInString(rest)
+	return size == 0 || unicode.IsSpace(rune)
+}
+
 func (directive) ImpliesImported() []string {
 	return nil
 }
 
 func (d directive) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(d.name))
+	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(string(d)))
 }
 
 func (d directive) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point directive"><span class="type">Has directive</span><code>//%s</code></div>`, d.name)
+	return fmt.Sprintf(`<div class="flex join-point directive"><span class="type">Has directive</span><code>//%s</code></div>`, string(d))
 }
 
 func init() {
