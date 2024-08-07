@@ -16,6 +16,18 @@ import (
 
 // Aspects is the list of built-in aspects.
 var Aspects = [...]aspect.Aspect{
+	// From api/vault.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), ""),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"HttpClient\" }}\n  {{- $hasField = true -}}\n  HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  HttpClient: vaulttrace.NewHTTPClient(),\n  {{- end }}\n}",
+				map[string]string{
+					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -160,9 +172,12 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()",
+				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()\n\nswitch os.Getenv(\"DD_PROFILING_ENABLED\") {\ncase \"1\", \"true\", \"auto\":\n  // The \"auto\" value can be set if profiling is enabled via the\n  // Datadog Admission Controller. We always turn on the profiler in\n  // the \"auto\" case since we only send profiles after at least a\n  // minute, and we assume anything running that long is worth\n  // profiling.\n  err := profiler.Start(\n    profiler.WithProfileTypes(\n      profiler.CPUProfile,\n      profiler.HeapProfile,\n      // Non-default profiles which are highly likely to be useful:\n      profiler.GoroutineProfile,\n      profiler.MutexProfile,\n    ),\n    profiler.WithTags(\"orchestrion:true\"),\n  )\n  if err != nil {\n    // TODO: is there a better reporting mechanism?\n    // The tracer and profiler already use the stdlib logger, so\n    // we're not adding anything new. But users might be using a\n    // different logger.\n    log.Printf(\"failed to start profiling: %s\", err)\n  }\n  defer profiler.Stop()\n}",
 				map[string]string{
-					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"log":      "log",
+					"os":       "os",
+					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
+					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
 		},
@@ -557,6 +572,18 @@ var Aspects = [...]aspect.Aspect{
 			), []string{}),
 		},
 	},
+	// From stdlib/slog.yml
+	{
+		JoinPoint: join.FunctionCall("log/slog.New"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{ .AST.Fun }}(slogtrace.WrapHandler({{ index .AST.Args 0 }}))",
+				map[string]string{
+					"slogtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
+				},
+			)),
+		},
+	},
 }
 
 // RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess
@@ -603,11 +630,13 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
@@ -617,7 +646,9 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+	"gopkg.in/DataDog/dd-trace-go.v1/profiler",
 	"k8s.io/client-go/transport",
+	"log",
 	"math",
 	"net/http",
 	"os",
@@ -625,4 +656,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:vY0X5F36jq6Wn+CjLP591EDCT0uTMjRMDHEL/2kRyj66A/OxqV5eTEZIRtS0N6+G6GY1PY8cn3D4KQq6WkUtGQ=="
+const Checksum = "sha512:FyI3iq6sI96F0IcItrSAqpwn4S5OHY9RkYZL3IG4ASaovvQRnFThDI2eN46iO8s5om9IHooQTk6mgq4MUf5L7Q=="

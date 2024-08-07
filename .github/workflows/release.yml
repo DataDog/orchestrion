@@ -1,23 +1,24 @@
 name: Release
 on:
   pull_request:
-    paths: ['internal/version/version.go']
+    paths: [internal/version/version.go]
   push:
-    branches: ['main']
-    paths: ['internal/version/version.go']
+    branches: [main]
+    paths: [internal/version/version.go]
 
 permissions: read-all
 
 jobs:
   validate:
+    name: Validate Release
     runs-on: ubuntu-latest
     permissions:
       contents: write # To be able to create draft releases
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           cache-dependency-path: '**/*.sum'
 
@@ -29,7 +30,7 @@ jobs:
           set -euo pipefail
           # From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string, with added v prefix.
           VERSION_TAG_REGEX='^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
-          version=$(grep -E "${VERSION_TAG_REGEX}" <(go run . version))
+          version=$(grep -E "${VERSION_TAG_REGEX}" <(go run . version | cut -d' ' -f 2))
           echo "tag=${version}" >> "${GITHUB_OUTPUT}"
           if gh release view "${version}" --json isDraft; then
             echo "exists=true" >> "${GITHUB_OUTPUT}"

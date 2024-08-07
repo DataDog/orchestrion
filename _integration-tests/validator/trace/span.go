@@ -79,9 +79,8 @@ func (span *Span) into(tree treeprint.Tree) {
 		}
 	}
 	sort.Strings(keys)
-	format := fmt.Sprintf("%%-%ds = %%q", maxLen)
 	for _, tag := range keys {
-		tree.AddNode(fmt.Sprintf(format, tag, span.Tags[tag]))
+		tree.AddNode(fmt.Sprintf("%-*s = %q", maxLen, tag, span.Tags[tag]))
 	}
 
 	if len(span.Meta) > 0 {
@@ -94,10 +93,9 @@ func (span *Span) into(tree treeprint.Tree) {
 			}
 		}
 		sort.Strings(keys)
-		format = fmt.Sprintf("%%-%ds = %%q", maxLen)
 		meta := tree.AddBranch("meta")
 		for _, key := range keys {
-			meta.AddNode(fmt.Sprintf(format, key, span.Meta[key]))
+			meta.AddNode(fmt.Sprintf("%-*s = %q", maxLen, key, span.Meta[key]))
 		}
 	}
 	if len(span.Children) > 0 {
