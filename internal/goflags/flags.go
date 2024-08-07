@@ -15,7 +15,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -153,7 +153,7 @@ func isShort(str string) bool {
 // parentGoCommandFlags backtracks through the process tree
 // to find a parent go command invocation and returns its arguments
 func parentGoCommandFlags() (flags CommandFlags, err error) {
-	goBin, err := goproxy.GoBin()
+	goBin, err := goenv.GoBinPath()
 	if err != nil {
 		return flags, err
 	}

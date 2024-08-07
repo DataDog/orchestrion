@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/datadog/orchestrion/internal/jobserver"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
 	"github.com/datadog/orchestrion/internal/log"
@@ -57,7 +58,7 @@ func Run(goArgs []string, opts ...Option) error {
 		opt(&cfg)
 	}
 
-	goBin, err := GoBin()
+	goBin, err := goenv.GoBinPath()
 	if err != nil {
 		return fmt.Errorf("locating 'go' binary: %w", err)
 	}
@@ -129,20 +130,4 @@ func Run(goArgs []string, opts ...Option) error {
 	}
 
 	return nil
-}
-
-var goBinPath string
-
-// GoBin returns the resolved path to the `go` command's binary. The result is cached to avoid
-// looking it up multiple times. If the lookup fails, the error is returned and the result is not
-// cached.
-func GoBin() (string, error) {
-	if goBinPath == "" {
-		goBin, err := exec.LookPath("go")
-		if err != nil {
-			return "", err
-		}
-		goBinPath = goBin
-	}
-	return goBinPath, nil
 }
