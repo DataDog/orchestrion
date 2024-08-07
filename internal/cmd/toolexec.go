@@ -41,9 +41,12 @@ var Toolexec = &cli.Command{
 
 		if proxyCmd.ShowVersion() {
 			log.Tracef("Toolexec version command: %q\n", proxyCmd)
-			fullVersion := toolexec.ComputeVersion(proxyCmd, orchestrionBinPath)
+			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
+			if err != nil {
+				return err
+			}
 			log.Tracef("Complete version output: %s\n", fullVersion)
-			_, err := fmt.Println(fullVersion)
+			_, err = fmt.Println(fullVersion)
 			return err
 		}
 

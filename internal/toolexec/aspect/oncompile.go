@@ -145,7 +145,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 		if kind == typed.ImportStatement {
 			// Imported packages need to be provided in the compilation's importcfg file
-			deps, err := resolvePackageFiles(depImportPath)
+			deps, err := resolvePackageFiles(depImportPath, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 			}

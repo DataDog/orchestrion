@@ -51,7 +51,7 @@ func (w Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 				continue
 			}
 
-			deps, err := resolvePackageFiles(depPath)
+			deps, err := resolvePackageFiles(depPath, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)
 			}
