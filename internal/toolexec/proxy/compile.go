@@ -25,6 +25,8 @@ type CompileCommand struct {
 	Flags compileFlagSet
 	// SourceDir is the directory containing source files that are in the command's inputs.
 	SourceDir string
+	// WorkDir is the $WORK directory managed by the go toolchain.
+	WorkDir string
 }
 
 func (cmd *CompileCommand) Type() CommandType { return CommandTypeCompile }
@@ -68,8 +70,11 @@ func parseCompileCommand(args []string) (Command, error) {
 	parseFlags(&cmd.Flags, args[1:])
 	files := cmd.GoFiles()
 
-	// Some commands just print the tool version, in which case no go file will be provided as arg
-	stageDir := filepath.Dir(cmd.Flags.Output)
+	// The ImportCfg file is rooted in the stage directory
+	stageDir := filepath.Dir(cmd.Flags.ImportCfg)
+	// The WorkDir is the parent of the stage directory
+	cmd.WorkDir = filepath.Dir(stageDir)
+	// NOTE: Some commands just print the tool version, in which case no go file will be provided as arg
 	for _, f := range files {
 		if dir := filepath.Dir(f); dir != stageDir {
 			cmd.SourceDir = dir
