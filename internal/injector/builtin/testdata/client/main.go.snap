@@ -15,6 +15,8 @@ import (
 	"time"
 //line <generated>:1
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
+	__orchestrion_log "log"
 )
 
 //line samples/client/main.go:18
@@ -23,6 +25,27 @@ func main() {
 	{
 		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 		defer __orchestrion_tracer.Stop()
+
+		switch os.Getenv("DD_PROFILING_ENABLED") {
+		case "1", "true", "auto":
+			// The "auto" value can be set if profiling is enabled via the
+			// Datadog Admission Controller. We always turn on the profiler in
+			// the "auto" case since we only send profiles after at least a
+			// minute, and we assume anything running that long is worth
+			// profiling.
+			err := __orchestrion_profiler.Start(
+				__orchestrion_profiler.WithProfileTypes(__orchestrion_profiler.CPUProfile, __orchestrion_profiler.HeapProfile, __orchestrion_profiler.GoroutineProfile, __orchestrion_profiler.MutexProfile),
+				__orchestrion_profiler.WithTags("orchestrion:true"),
+			)
+			if err != nil {
+				// TODO: is there a better reporting mechanism?
+				// The tracer and profiler already use the stdlib logger, so
+				// we're not adding anything new. But users might be using a
+				// different logger.
+				__orchestrion_log.Printf("failed to start profiling: %s", err)
+			}
+			defer __orchestrion_profiler.Stop()
+		}
 	}
 //line samples/client/main.go:19
 	if len(os.Args) < 2 {
