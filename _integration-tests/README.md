@@ -14,7 +14,7 @@ First, install the `ddapm-test-agent` if you haven't already:
 ``` console
 $ python3 -m venv venv
 $ source ./venv/bin/activate
-$ pip install -r ./utils/agent/requirementes.txt
+$ pip install -r ./utils/agent/requirements.txt
 ```
 
 Then, ensure that Docker is installed and the daemon is running.
@@ -45,6 +45,10 @@ See the existing tests for examples of how the interface is implemented.
 After implementing the test, run `go generate ./tests` to add the test to the suite.
 Be sure to run `go get` and `go mod tidy` as needed if the test adds new dependencies,
 or if the Orchestrion dependencies have changed.
+
+You can also create multiple test cases in the same package by creating any number of exported types named with
+the prefix `TestCase`. Example: `TestCaseClient`, `TestCaseServer`, etc. The corresponding tests will be named
+`my_package/Client` and `my_package/Server` in this example.
 
 Use the [testcontainers](https://pkg.go.dev/github.com/testcontainers/testcontainers-go) package to create Docker containers,
 if the test requires external services.

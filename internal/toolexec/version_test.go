@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/jobserver/client"
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,8 @@ func init() {
 }
 
 func Test(t *testing.T) {
+	t.Setenv(client.ENV_VAR_JOBSERVER_URL, "") // Make sure we don't accidentally connect to an external jobserver...
+
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
 
@@ -56,12 +59,16 @@ func Test(t *testing.T) {
 	require.NoError(t, err)
 
 	// Compute the initial version string...
-	initial := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
+	initial := inDir(t, tmp, func() string {
+		v, err := ComputeVersion(cmd)
+		require.NoError(t, err)
+		return v
+	})
 	require.NotEmpty(t, initial)
 
 	copyDir := t.TempDir()
 	require.NoError(t, copy.Copy(rootDir, copyDir, copy.Options{
-		Skip: func(src string) (bool, error) {
+		Skip: func(_ os.FileInfo, src string, _ string) (bool, error) {
 			return filepath.Base(src) == ".git", nil
 		},
 	}))
@@ -71,13 +78,21 @@ func Test(t *testing.T) {
 	// Replace the orchestrion package with the copy we just made...
 	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", copyDir))
 	runGo(t, tmp, "mod", "tidy") // The hash of the dependency has changed... go list would complain...
-	updated := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
+	updated := inDir(t, tmp, func() string {
+		v, err := ComputeVersion(cmd)
+		require.NoError(t, err)
+		return v
+	})
 	require.NotEmpty(t, updated)
 	require.NotEqual(t, initial, updated)
 
 	// Modify the beacon
 	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 1337"), 0o644))
-	final := inDir(t, tmp, func() string { return ComputeVersion(cmd, "/dev/null") })
+	final := inDir(t, tmp, func() string {
+		v, err := ComputeVersion(cmd)
+		require.NoError(t, err)
+		return v
+	})
 	require.NotEmpty(t, final)
 	require.NotEqual(t, initial, final)
 	require.NotEqual(t, updated, final)

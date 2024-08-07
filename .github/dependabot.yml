@@ -5,39 +5,3 @@ updates:
     directory: /
     schedule:
       interval: daily
-
-  - package-ecosystem: gomod
-    directory: /
-    schedule:
-      interval: daily
-    allow:
-      - dependency-type: direct
-    groups:
-      dependencies:
-        applies-to: version-updates
-        exclude-patterns:
-          - 'github.com/docker/*' # Not go module-compatible
-
-  - package-ecosystem: gomod
-    directory: /_integration-tests
-    schedule:
-      interval: daily
-    allow:
-      - dependency-type: direct
-    groups:
-      dependencies:
-        applies-to: version-updates
-        exclude-patterns:
-          - 'github.com/docker/*' # Not go module-compatible
-
-  - package-ecosystem: gomod
-    directory: /samples
-    schedule:
-      interval: daily
-    allow:
-      - dependency-type: direct
-    groups:
-      dependencies:
-        applies-to: version-updates
-        exclude-patterns:
-          - 'github.com/docker/*' # Not go module-compatible

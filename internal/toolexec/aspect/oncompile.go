@@ -157,7 +157,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 		if kind == typed.ImportStatement {
 			// Imported packages need to be provided in the compilation's importcfg file
-			deps, err := resolvePackageFiles(depImportPath)
+			deps, err := resolvePackageFiles(depImportPath, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 			}
@@ -166,7 +166,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				if err != nil {
 					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.LinkDepsFilename, dep, archive, err)
 				}
-				log.Debugf("Processing %s dependencies from %s...", linkdeps.LinkDepsFilename, dep)
+				log.Debugf("Processing %s dependencies from %s...\n", linkdeps.LinkDepsFilename, dep)
 				for _, tDep := range deps.Dependencies() {
 					if _, found := reg.PackageFile[tDep]; !found {
 						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath, dep)

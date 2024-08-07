@@ -10,10 +10,10 @@ package tests
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"orchestrion/integration/utils/agent"
 	"orchestrion/integration/validator/trace"
-
-	"github.com/stretchr/testify/require"
 )
 
 //dd:orchestrion-enabled
@@ -40,21 +40,20 @@ func Test(t *testing.T) {
 
 			sess, err := mockAgent.NewSession(t)
 			require.NoError(t, err)
-			defer func() {
-				jsonTraces, err := sess.Close(t)
-				require.NoError(t, err)
-
-				var traces trace.Spans
-				require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
-				t.Logf("Received %d traces", len(traces))
-
-				for _, expected := range tc.ExpectedTraces() {
-					expected.RequireAnyMatch(t, traces)
-				}
-			}()
 
 			t.Log("Running test")
 			tc.Run(t)
+
+			jsonTraces, err := sess.Close(t)
+			require.NoError(t, err)
+
+			var traces trace.Spans
+			require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
+			t.Logf("Received %d traces", len(traces))
+
+			for _, expected := range tc.ExpectedTraces() {
+				expected.RequireAnyMatch(t, traces)
+			}
 		})
 	}
 }

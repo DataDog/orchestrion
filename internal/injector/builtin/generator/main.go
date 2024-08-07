@@ -27,12 +27,13 @@ type globs []string
 
 func main() {
 	var (
-		pkg     string
-		glob    globs
-		output  string
-		deps    string
-		docsDir string
-		chomp   int
+		pkg           string
+		glob          globs
+		output        string
+		deps          string
+		docsDir       string
+		schemadocsDir string
+		chomp         int
 	)
 
 	flag.StringVar(&pkg, "p", "", "package name")
@@ -40,11 +41,18 @@ func main() {
 	flag.StringVar(&output, "o", "", "output file")
 	flag.StringVar(&deps, "d", "", "dependencies file")
 	flag.StringVar(&docsDir, "docs", "", "directory to write documentation files to")
+	flag.StringVar(&schemadocsDir, "schemadocs", "", "directory to write schema documentation files to")
 	flag.IntVar(&chomp, "C", 0, "number of leading path components to strip from matched file names")
 	flag.Parse()
 
 	if len(glob) == 0 {
 		log.Fatalln("Missing -i option!")
+	}
+
+	if schemadocsDir != "" {
+		if err := documentSchema(schemadocsDir); err != nil {
+			log.Fatalln(err)
+		}
 	}
 
 	matches, err := glob.glob()
@@ -103,6 +111,10 @@ func main() {
 			data, err := os.ReadFile(match)
 			if err != nil {
 				log.Fatalf("failed to read input file %q: %v\n", match, err)
+			}
+
+			if err := validateSchema(data); err != nil {
+				log.Fatalf("failed to validate contents of %q: %v\n", match, err)
 			}
 
 			// Checksum body -- <data> ETX
@@ -173,8 +185,8 @@ func main() {
 		g.Line().Empty()
 	})
 
-	file.Comment("InjectedPaths is a set of import paths that may be injected by built-in aspects.")
-	file.Comment("This list is used to ensure `orchestrion warmup` includes all interesting packages.")
+	file.Comment("InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper")
+	file.Comment("invalidation of cached artifacts when injected dependencies change.")
 	file.Var().Id("InjectedPaths").Op("=").Index(jen.Op("...")).String().ValuesFunc(func(g *jen.Group) {
 		paths := make([]string, 0, len(injectedPaths))
 		for path := range injectedPaths {

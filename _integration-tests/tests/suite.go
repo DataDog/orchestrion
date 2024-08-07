@@ -11,7 +11,7 @@ import (
 	"orchestrion/integration/validator/trace"
 )
 
-//go:generate go run ../utils/generator
+//go:generate go run ../utils/generator .
 
 // testCase describes the general contract for tests. Each package in this
 // directory is expected to export a `TestCase` structure implementing this
