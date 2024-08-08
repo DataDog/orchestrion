@@ -123,6 +123,52 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
+	// From datastreams/sarama.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/Shopify/sarama.NewConsumer"),
+			join.FunctionCall("github.com/Shopify/sarama.NewConsumerClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(c sarama.Consumer, err error) (sarama.Consumer, error) {\n  if c != nil {\n    c = saramatrace.WrapConsumer(c)\n  }\n  return c, err\n}({{ . }})",
+				map[string]string{
+					"sarama":      "github.com/Shopify/sarama",
+					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/Shopify/sarama.NewSyncProducer"),
+			join.FunctionCall("github.com/Shopify/sarama.NewSyncProducerFromClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapSyncProducer(p)\n  }\n  return p, err\n}({{ . }})",
+				map[string]string{
+					"sarama":      "github.com/Shopify/sarama",
+					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/Shopify/sarama.NewAsyncProducer"),
+			join.FunctionCall("github.com/Shopify/sarama.NewAsyncProducerFromClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapAsyncProducer(p)\n  }\n  return p, err\n}({{ . }})",
+				map[string]string{
+					"sarama":      "github.com/Shopify/sarama",
+					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
+				},
+			)),
+		},
+	},
 	// From dd-span.yml
 	{
 		JoinPoint: join.FunctionBody(join.AllOf(
@@ -632,6 +678,7 @@ var InjectedPaths = [...]string{
 	"github.com/datadog/orchestrion/instrument/event",
 	"github.com/datadog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
@@ -670,4 +717,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:4Gi3IVMUORbzxWjHQbXgEgYMSTVz9W/vGmoeH+0ipdwC/ap6CwnYKop/THjVNFxAHS47zLj/m29sAl3dFROSnA=="
+const Checksum = "sha512:GpwhvFkEJmcA+pCH3ZRItIT7UueHodxxoAHySm8rlTU0hFcd7ZxB9JKJdPI/vZIbsZ8zFmS8v9ll8AkbCPRdIQ=="
