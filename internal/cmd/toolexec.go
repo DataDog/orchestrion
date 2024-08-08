@@ -40,7 +40,7 @@ var Toolexec = &cli.Command{
 		pin.AutoPinOrchestrion()
 
 		if proxyCmd.ShowVersion() {
-			log.Tracef("Toolexec version command: %q\n", proxyCmd)
+			log.Tracef("Toolexec version requested for %q\n", proxyCmd.Args()[0])
 			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
 			if err != nil {
 				return err
@@ -63,7 +63,7 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Tracef("Toolexec final command:    %q/n", proxyCmd.Args())
+		log.Tracef("Toolexec final command: %q\n", proxyCmd.Args())
 		return proxy.RunCommand(proxyCmd)
 	},
 }

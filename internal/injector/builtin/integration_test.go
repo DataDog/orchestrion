@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,6 +20,7 @@ import (
 	"github.com/datadog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/go/packages"
 )
 
 var (
@@ -44,50 +46,63 @@ func Test(t *testing.T) {
 			pkgDir := filepath.Join(samplesDir, dir)
 
 			tmp := t.TempDir()
-			inj, err := injector.New(pkgDir, injector.Options{
+			inj := injector.Injector{
 				Aspects: builtin.Aspects[:],
-				Dir:     pkgDir,
 				ModifiedFile: func(filename string) string {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},
+				RootConfig:       map[string]string{"httpmode": "wrap"},
 				PreserveLineInfo: true,
-			})
-			require.NoError(t, err)
+				ImportPath:       fmt.Sprintf("github.com/datadog/orchestrion/samples/%s", dir),
+				LookupImport: func(path string) (io.ReadCloser, error) {
+					pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedExportFile, Dir: pkgDir}, path)
+					if err != nil {
+						return nil, err
+					}
+					file := pkgs[0].ExportFile
+					if file == "" {
+						return nil, fmt.Errorf("no export data for %s", path)
+					}
+					return os.Open(file)
+				},
+			}
 
 			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
-			for _, filename := range files {
-				t.Run(filepath.Base(filename), func(t *testing.T) {
-					res, err := inj.InjectFile(filename, map[string]string{"httpmode": "wrap"})
-					require.NoError(t, err)
 
-					referenceFile := filepath.Join(referenceDir, dir, filepath.Base(filename)) + ".snap"
-					if !res.Modified {
-						_, err := os.Stat(referenceFile)
-						if updateSnapshots && err == nil {
-							require.NoError(t, os.Remove(referenceFile))
-						}
-						require.ErrorIs(t, err, os.ErrNotExist)
-						return
+			res, err := inj.InjectFiles(files)
+			require.NoError(t, err)
+			require.Len(t, res, len(files))
+
+			for idx, filename := range files {
+				res := res[idx]
+
+				referenceFile := filepath.Join(referenceDir, dir, filepath.Base(filename)) + ".snap"
+				if !res.Modified {
+					_, err := os.Stat(referenceFile)
+					if updateSnapshots && err == nil {
+						require.NoError(t, os.Remove(referenceFile))
 					}
+					require.ErrorIs(t, err, os.ErrNotExist)
+					return
+				}
 
-					data, err := os.ReadFile(res.Filename)
-					require.NoError(t, err)
+				data, err := os.ReadFile(res.Filename)
+				require.NoError(t, err)
 
-					data = bytes.ReplaceAll(data, []byte(samplesDir), []byte("samples"))
-					data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag)), []byte("\"<version.Tag>\""))
+				data = bytes.ReplaceAll(data, []byte(samplesDir), []byte("samples"))
+				data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag)), []byte("\"<version.Tag>\""))
 
-					reference, err := os.ReadFile(referenceFile)
-					if updateSnapshots && errors.Is(err, os.ErrNotExist) {
-						require.NoError(t, os.MkdirAll(filepath.Dir(referenceFile), 0o755))
-						require.NoError(t, os.WriteFile(referenceFile, data, 0o644))
-					}
-					require.NoError(t, err)
+				reference, err := os.ReadFile(referenceFile)
+				if updateSnapshots && errors.Is(err, os.ErrNotExist) {
+					require.NoError(t, os.MkdirAll(filepath.Dir(referenceFile), 0o755))
+					require.NoError(t, os.WriteFile(referenceFile, data, 0o644))
+				}
+				require.NoError(t, err)
 
-					if !assert.Equal(t, string(reference), string(data)) && updateSnapshots {
-						require.NoError(t, os.WriteFile(referenceFile, data, 0o644))
-					}
-				})
+				if !assert.Equal(t, string(reference), string(data)) && updateSnapshots {
+					require.NoError(t, os.WriteFile(referenceFile, data, 0o644))
+				}
 			}
 		})
 	}

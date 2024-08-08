@@ -6,10 +6,15 @@
 package proxy
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+
+	"github.com/datadog/orchestrion/internal/log"
 )
 
 type compileFlagSet struct {
@@ -17,14 +22,14 @@ type compileFlagSet struct {
 	ImportCfg string `ddflag:"-importcfg"`
 	Output    string `ddflag:"-o"`
 	TrimPath  string `ddflag:"-trimpath"`
+	GoVersion string `ddflag:"-goversion"`
 }
 
 // CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
+	// Command flags
 	Flags compileFlagSet
-	// SourceDir is the directory containing source files that are in the command's inputs.
-	SourceDir string
 	// WorkDir is the $WORK directory managed by the go toolchain.
 	WorkDir string
 }
@@ -68,18 +73,50 @@ func parseCompileCommand(args []string) (Command, error) {
 	}
 	cmd := CompileCommand{command: NewCommand(args)}
 	parseFlags(&cmd.Flags, args[1:])
-	files := cmd.GoFiles()
 
 	// The ImportCfg file is rooted in the stage directory
 	stageDir := filepath.Dir(cmd.Flags.ImportCfg)
 	// The WorkDir is the parent of the stage directory
 	cmd.WorkDir = filepath.Dir(stageDir)
-	// NOTE: Some commands just print the tool version, in which case no go file will be provided as arg
-	for _, f := range files {
-		if dir := filepath.Dir(f); dir != stageDir {
-			cmd.SourceDir = dir
-			break
-		}
-	}
+
 	return &cmd, nil
+}
+
+// Used to extract the filename from a //line directive comment
+var lineTargetRe = regexp.MustCompile(`^(.+\.[Gg][Oo])(?:[:]\d+(?:[:]\d+)?)?$`)
+
+func originalFilePath(file string) string {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		log.Warnf("Error reading %q: %v\n", file, err)
+		return file
+	}
+
+	const (
+		lineDirectivePrefix    = "//line "
+		lineDirectivePrefixLen = len(lineDirectivePrefix)
+	)
+	if !bytes.HasPrefix(data, []byte(lineDirectivePrefix)) {
+		return file
+	}
+	nl := bytes.IndexRune(data, '\n')
+	if nl < 0 {
+		return file
+	}
+
+	matches := lineTargetRe.FindStringSubmatch(string(data[lineDirectivePrefixLen:nl]))
+	if matches == nil || matches[1] == "" {
+		return file
+	}
+	original := matches[1]
+	if !filepath.IsAbs(original) {
+		wd, err := os.Getwd()
+		if err != nil {
+			log.Warnf("Failed to determine current working directory: %v\n", err)
+			return file
+		}
+		original = filepath.Join(wd, original)
+	}
+	return original
+
 }

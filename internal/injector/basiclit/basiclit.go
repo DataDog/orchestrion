@@ -6,9 +6,9 @@
 package basiclit
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/token"
+	"strconv"
 
 	"github.com/dave/dst"
 )
@@ -18,21 +18,5 @@ func String(lit *dst.BasicLit) (string, error) {
 	if lit.Kind != token.STRING {
 		return "", fmt.Errorf("not a string literal: %s", lit.Kind.String())
 	}
-	if len(lit.Value) < 2 {
-		return "", fmt.Errorf("malformed string literal (too short): %s", lit.Value)
-	}
-
-	switch lit.Value[0] {
-	case '`':
-		return lit.Value[1 : len(lit.Value)-1], nil
-	case '"':
-		// Note: We blindly assume that Go string literals have the same syntax as JSON here...
-		var str string
-		if err := json.Unmarshal([]byte(lit.Value), &str); err != nil {
-			return "", fmt.Errorf("failed to parse string literal %s: %w", lit.Value, err)
-		}
-		return str, nil
-	default:
-		return "", fmt.Errorf("unknown string delimiter: %q", lit.Value[0])
-	}
+	return strconv.Unquote(lit.Value)
 }

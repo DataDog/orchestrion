@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/datadog/orchestrion/internal/version"
@@ -47,10 +48,25 @@ func (s *service) versionSuffix(req *VersionSuffixRequest) (VersionSuffixRespons
 	}
 	s.stats.RecordMiss()
 
+	cwd, _ := os.Getwd()
+	log.Tracef("[JOBSERVER/%s] Starting resolution of the version suffix (PWD=%q)...\n", versionSubject, cwd)
+
+	// We need to forward go flags that are relevant to this build... For example, if this is a coverage-enabled build,
+	// we need to ensure the build ID reflects that (injected packages need to be coverage-enabled, too).
+	var buildFlags []string
+	if flags, err := goflags.Flags(); err != nil {
+		log.Errorf("Failed to retrieve go command flags: %v\n", err)
+	} else {
+		buildFlags = flags.Slice()
+	}
+	// Explicitly disable toolexec to avoid infinite recursion
+	buildFlags = append(buildFlags, "-toolexec=")
+
+	log.Tracef("[JOBSERVER/%s] Loading dependencies with build flags: %q\n", versionSubject, buildFlags)
 	pkgs, err := packages.Load(
 		&packages.Config{
 			Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
-			BuildFlags: []string{"-toolexec="}, // Explicitly disable toolexec to avoid infinite recursion
+			BuildFlags: buildFlags,
 		},
 		builtin.InjectedPaths[:]...,
 	)
@@ -90,6 +106,8 @@ func (s *service) versionSuffix(req *VersionSuffixRequest) (VersionSuffixRespons
 		sum,
 		builtin.Checksum,
 	))
+
+	log.Tracef("[JOBSERVER/%s] Resolved version suffix: %s\n", versionSubject, s.resolvedVersion)
 	return s.resolvedVersion, nil
 }
 
