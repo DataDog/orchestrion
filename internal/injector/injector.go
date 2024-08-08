@@ -20,6 +20,7 @@ import (
 	"go/token"
 	"go/types"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 
@@ -215,6 +216,9 @@ func (i *Injector) writeModifiedFile(filename string, file *dst.File, rest *deco
 
 	if i.ModifiedFile != nil {
 		filename = i.ModifiedFile(filename)
+		if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+			return filename, err
+		}
 	}
 	if err := os.WriteFile(filename, postProcess(buf.Bytes()), 0o644); err != nil {
 		return "", fmt.Errorf("writing %q: %w", filename, err)
