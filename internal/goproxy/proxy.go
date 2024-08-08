@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/goenv"
+	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/jobserver"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
 	"github.com/datadog/orchestrion/internal/log"
@@ -49,13 +50,37 @@ func WithToolexec(bin string, args ...string) Option {
 	}
 }
 
-// Run takes a go directive (go build, go install, etc...) and applies
-// changes specified through opts to the command before running it in a
-// different process
+// Run takes a go sub-command (build, install, etc...) with its arguments, and
+// applies changes specified through opts to the command before running it in a
+// different process.
 func Run(goArgs []string, opts ...Option) error {
 	var cfg config
 	for _, opt := range opts {
 		opt(&cfg)
+	}
+
+	if len(goArgs) > 0 && strings.HasPrefix(goArgs[0], "-C") {
+		// If the first argument is "-C", we'll change working directories of the
+		// child process before spawning it. Normally, the `go` command does this, but
+		// we'd need to detect the "-C" argument and skip it to identify the go
+		// command name anyway, so...
+		var dir string
+		if goArgs[0] == "-C" && len(goArgs) > 1 {
+			// ["-C", dir]
+			dir = goArgs[1]
+			goArgs = goArgs[2:]
+		} else if strings.HasPrefix(goArgs[0], "-C=") {
+			// ["-C=dir"]
+			dir = goArgs[0][3:]
+			goArgs = goArgs[1:]
+		}
+
+		if dir != "" {
+			if err := os.Chdir(dir); err != nil {
+				return fmt.Errorf("failed to change directory to %q: %w", dir, err)
+			}
+			log.Tracef("Changed directory to %q\n", dir)
+		}
 	}
 
 	goBin, err := goenv.GoBinPath()
@@ -74,20 +99,7 @@ func Run(goArgs []string, opts ...Option) error {
 
 	env := os.Environ()
 	if len(argv) > 1 {
-		// The command may not be at index 0, if the `-C` flag is used (it is REQUIRED to occur first
-		// before anything else on the go command)
-		cmdIdx := 1
-		for {
-			if cmdIdx+2 < len(argv) && argv[cmdIdx] == "-C" {
-				cmdIdx += 2
-			} else if cmdIdx+1 < len(argv) && strings.HasPrefix(argv[cmdIdx], "-C") {
-				cmdIdx++
-			} else {
-				break
-			}
-		}
-
-		switch cmd := argv[cmdIdx]; cmd {
+		switch cmd := argv[1]; cmd {
 		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
 		case "build", "clean", "get", "install", "list", "run", "test":
 			if cfg.toolexec != "" {
@@ -97,10 +109,10 @@ func Run(goArgs []string, opts ...Option) error {
 				// Add two slots to the argV array
 				argv = append(argv, "", "")
 				// Move all values after the cmdIdx 2 slots forward
-				copy(argv[cmdIdx+3:], argv[cmdIdx+1:oldLen])
+				copy(argv[4:], argv[2:oldLen])
 				// Fill in the two slots for toolexec.
-				argv[cmdIdx+1] = "-toolexec"
-				argv[cmdIdx+2] = cfg.toolexec
+				argv[2] = "-toolexec"
+				argv[3] = cfg.toolexec
 
 				// We'll need a job server to support toolexec operations
 				server, err := jobserver.New(&jobserver.Options{ServerName: fmt.Sprintf("orchestrion[%d]", os.Getpid())})
@@ -112,6 +124,8 @@ func Run(goArgs []string, opts ...Option) error {
 					log.Tracef("[JOBSERVER]: %s\n", server.CacheStats.String())
 				}()
 				env = append(env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, server.ClientURL()))
+				// Set the `goflags` since we already know what they are...
+				goflags.SetFlags(argv[2:])
 			}
 		}
 	}

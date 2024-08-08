@@ -7,6 +7,7 @@ package injector_test
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/go/packages"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/golden"
 )
@@ -73,17 +75,29 @@ func Test(t *testing.T) {
 			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
 			runGo(t, tmp, "mod", "tidy")
 
-			inj, err := injector.New(tmp, injector.Options{
+			inj := injector.Injector{
 				Aspects:          config.Aspects,
-				Dir:              tmp,
 				PreserveLineInfo: config.PreserveLineInfo,
 				ModifiedFile:     func(path string) string { return path + ".edited.go" },
-			})
-			require.NoError(t, err, "failed to create injector")
+				ImportPath:       "dummy/test/module",
+				LookupImport: func(path string) (io.ReadCloser, error) {
+					pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedExportFile, Dir: tmp}, path)
+					if err != nil {
+						return nil, err
+					}
+					file := pkgs[0].ExportFile
+					if file == "" {
+						return nil, fmt.Errorf("no export data for %s", path)
+					}
+					return os.Open(file)
+				},
+			}
 
-			res, err := inj.InjectFile(inputFile, nil)
+			results, err := inj.InjectFiles([]string{inputFile})
 			require.NoError(t, err, "failed to inject file")
+			require.Len(t, results, 1, "expected exactly one result item")
 
+			res := results[0]
 			if res.Modified {
 				assert.Equal(t, inputFile+".edited.go", res.Filename)
 			} else {

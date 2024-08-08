@@ -94,6 +94,23 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 	return
 }
 
+// Lookup opens the archive file for the provided import path.
+func (r *ImportConfig) Lookup(path string) (io.ReadCloser, error) {
+	lookup := path
+	if p, mapped := r.ImportMap[lookup]; mapped {
+		lookup = p
+	}
+	filename := r.PackageFile[lookup]
+	if filename == "" {
+		suffix := ""
+		if lookup != path {
+			suffix = fmt.Sprintf(" (as %q)", lookup)
+		}
+		return nil, fmt.Errorf("no package file found for %q%s", path, suffix)
+	}
+	return os.Open(filename)
+}
+
 // CombinePackageFile copies `packagefile` entries from other into the receiver unless it already
 // has an entry with the same import path.
 func (r *ImportConfig) CombinePackageFile(other *ImportConfig) (changed bool) {

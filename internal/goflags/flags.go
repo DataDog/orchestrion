@@ -123,12 +123,21 @@ func ParseCommandFlags(args []string) CommandFlags {
 	return flags
 }
 
-// Flags return the top level go command flags
+// Flags return the top level go command flags.
 func Flags() (CommandFlags, error) {
 	once.Do(func() {
 		flags, flagsErr = parentGoCommandFlags()
 	})
 	return flags, flagsErr
+}
+
+// SetFlags sets the top level go command flags to the specified value. Does nothing if the flags are already set,
+// either because `SetFlags` has already been called, or because `Flags` has been called and the flags have been set by
+// it.
+func SetFlags(args []string) {
+	once.Do(func() {
+		flags = ParseCommandFlags(args)
+	})
 }
 
 func isAssigned(str string) bool {
@@ -155,12 +164,12 @@ func isShort(str string) bool {
 func parentGoCommandFlags() (flags CommandFlags, err error) {
 	goBin, err := goenv.GoBinPath()
 	if err != nil {
-		return flags, err
+		return flags, fmt.Errorf("failed to resolve go command path: %w", err)
 	}
 
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
-		return flags, err
+		return flags, fmt.Errorf("failed to get process handle:%w", err)
 	}
 
 	// Backtrack through the process stack until we find the parent Go command
@@ -168,15 +177,15 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 	for {
 		p, err = p.Parent()
 		if err != nil {
-			return flags, err
+			return flags, fmt.Errorf("failed to access parent process: %w", err)
 		}
 		args, err = p.CmdlineSlice()
 		if err != nil {
-			return flags, err
+			return flags, fmt.Errorf("failed to read process %d command line: %w", p.Pid, err)
 		}
 		cmd, err := exec.LookPath(args[0])
 		if err != nil {
-			return flags, err
+			return flags, fmt.Errorf("failed to resolve %q: %w", args[0], err)
 		}
 		// Found the go command process, break out of backtracking
 		if cmd == goBin {

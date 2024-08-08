@@ -85,22 +85,27 @@ func main() {
 
 var logLevelSet bool
 
-func actionSetLogLevel(_ *cli.Context, level string) error {
-	if level, valid := log.LevelNamed(level); valid {
+func actionSetLogLevel(_ *cli.Context, levelName string) error {
+	if level, valid := log.LevelNamed(levelName); valid {
 		logLevelSet = true
 		log.SetLevel(level)
+		// Forward to environment so child processes use the same setting...
+		os.Setenv(envVarOrchestrionLogLevel, levelName)
 		return nil
 	}
-	return fmt.Errorf("invalid log level specified: %q", level)
+	return fmt.Errorf("invalid log level specified: %q", levelName)
 }
 
 func actionSetLogFile(_ *cli.Context, path string) error {
 	if !filepath.IsAbs(path) {
 		if wd, err := os.Getwd(); err == nil {
 			path = filepath.Join(wd, path)
-			os.Setenv(envVarOrchestrionLogFile, path)
 		}
 	}
+
+	// Forward to environment so child processes use the same setting...
+	os.Setenv(envVarOrchestrionLogFile, path)
+
 	filename := os.Expand(path, func(name string) string {
 		switch name {
 		case "PID":

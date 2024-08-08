@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/jobserver/client"
+	"github.com/datadog/orchestrion/internal/log"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -118,6 +119,8 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		env = append(env, fmt.Sprintf("%s=%s", envVarParentId, req.toolexecImportpath))
 	}
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
+		log.Tracef("[JOBSERVER/%s] Resolving %q with build flags %q\n", resolveSubject, req.Pattern, req.BuildFlags)
+
 		pkgs, err := packages.Load(
 			&packages.Config{
 				Mode:
@@ -141,6 +144,8 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		for _, pkg := range pkgs {
 			resp.mergeFrom(pkg)
 		}
+
+		log.Tracef("[JOBSERVER/%s] Done resolving %q: %v (and %d dependencies)\n", resolveSubject, req.Pattern, resp[req.Pattern], len(resp)-1)
 		return resp, nil
 	})
 	if err != nil {

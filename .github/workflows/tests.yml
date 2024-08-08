@@ -115,16 +115,17 @@ jobs:
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
+          export GOFLAGS="-cover -covermode=atomic -coverprofile='${{ github.workspace }}/coverage/integration-run.out' ${GOFLAGS}"
           case "${{ matrix.build-mode }}" in
           "DRIVER")
-            bin/orchestrion.exe go -C=_integration-tests test -cover -covermode=atomic -coverprofile="${{ github.workspace }}/coverage/integration-run.out" -shuffle=on ./...
+            bin/orchestrion.exe go -C=_integration-tests test -shuffle=on ./...
             ;;
           "TOOLEXEC")
-            go -C=_integration-tests test -cover -covermode=atomic -coverprofile="${{ github.workspace }}/coverage/integration-run.out" -shuffle=on -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
+            go -C=_integration-tests test -shuffle=on -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
             ;;
           "GOFLAGS")
             export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion.exe toolexec' ${GOFLAGS}"
-            go -C=_integration-tests test -cover -covermode=atomic -coverprofile="${{ github.workspace }}/coverage/integration-run.out" -shuffle=on ./...
+            go -C=_integration-tests test -shuffle=on ./...
             ;;
           *)
             echo "Unknown build mode: ${{ matrix.build-mode }}"
