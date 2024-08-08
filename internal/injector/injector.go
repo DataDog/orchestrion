@@ -374,6 +374,11 @@ type resolver struct {
 
 // ResolvePackage retrieves the package name from the provided import path.
 func (r *resolver) ResolvePackage(path string) (string, error) {
+	// Special case -- the "unsafe" package does not have an export file
+	if path == "unsafe" {
+		return "unsafe", nil
+	}
+
 	rd, err := r.lookup(path)
 	if err != nil {
 		return "", err
