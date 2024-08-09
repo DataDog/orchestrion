@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      all-of:
+        - directive: dd:orchestrion-enabled
+        - value-declaration: bool
+    advice:
+      - assign-value:
+          template: 'true'
+
+preserveLineInfo: true
+mustCompile: true
+
+syntheticReferences:
+  fmt: true
+
+code: |-
+  package test
+
+  //This is a comment
+  //
+  //dd:orchestrion-enabled
+  var orchestrionEnabled1 = false
+
+  //dd:orchestrion-enabled
+  var orchestrionEnabled2 bool
+
+  //This is a comment
+  //
+  //dd:orchestrion-enabled
+  const orchestrionEnabled3 = false

@@ -1,0 +1,26 @@
+--- input.go
++++ output.go
+@@ -3,12 +3,20 @@
+ //This is a comment
+ //
+ //dd:orchestrion-enabled
+-var orchestrionEnabled1 = false
++var orchestrionEnabled1 =
++//line <generated>:1
++true
+
+ //dd:orchestrion-enabled
+-var orchestrionEnabled2 bool
++//line input.go:9
++var orchestrionEnabled2 bool =
++//line <generated>:1
++true
+
+ //This is a comment
+ //
+ //dd:orchestrion-enabled
+-const orchestrionEnabled3 = false
++//line input.go:14
++const orchestrionEnabled3 =
++//line <generated>:1
++true

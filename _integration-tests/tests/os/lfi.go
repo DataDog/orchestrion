@@ -27,8 +27,7 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	t.Setenv("DD_APPSEC_ENABLED", "true")
-	t.Setenv("DD_APPSEC_RULES", "../testdata/rasp.json")
+
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
 		Addr:    "127.0.0.1:8080",
@@ -44,7 +43,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	tc.T = t
 	resp, err := http.Get(fmt.Sprintf("http://%s/?path=/etc/passwd", tc.Server.Addr))
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
@@ -76,11 +75,11 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "web",
 					},
 					Meta: map[string]any{
-						"component":           "net/http",
-						"span.kind":           "server",
-						"_dd.appsec.enabled:": "1",
-						"appsec.blocked":      "true",
-						"is.security.error":   "true",
+						"component":          "net/http",
+						"span.kind":          "server",
+						"_dd.appsec.enabled": "1",
+						"appsec.blocked":     "true",
+						"is.security.error":  "true",
 					},
 				},
 			},
@@ -88,14 +87,14 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	}
 }
 
-func (tc *TestCase) handleRoot(w http.ResponseWriter, _ *http.Request) {
+func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
 
 	fp, err := os.Open("/etc/passwd")
 
 	require.ErrorIs(tc.T, err, &events.BlockingSecurityEvent{})
 	if events.IsSecurityError(err) { // TODO: response writer instrumentation to not have to do that
-		span, _ := tracer.SpanFromContext(nil)
-		span.SetTag("is.security.error", true)
+		span, _ := tracer.SpanFromContext(r.Context())
+		span.SetTag("is.security.error", "true")
 		return
 	}
 

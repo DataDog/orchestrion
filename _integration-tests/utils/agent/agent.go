@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -79,6 +80,10 @@ func New(t *testing.T) (*MockAgent, error) {
 		ddapmTestAgent,
 		fmt.Sprintf("--port=%d", agent.port),
 	)
+
+	agent.process.Stdout = os.Stdout
+	agent.process.Stderr = os.Stderr
+
 	if err = agent.process.Start(); err != nil {
 		return nil, err
 	}

@@ -45,6 +45,8 @@ func (span *Span) UnmarshalJSON(data []byte) error {
 			err = json.Unmarshal(value, &span.Children)
 		case "meta":
 			err = json.Unmarshal(value, &span.Meta)
+		case "meta_struct":
+			err = json.Unmarshal(value, &span.Meta)
 		case "span_id":
 			err = json.Unmarshal(value, &span.ID)
 			if err == nil {

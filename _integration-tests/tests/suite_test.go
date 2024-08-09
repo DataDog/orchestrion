@@ -8,6 +8,7 @@
 package tests
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,6 +19,11 @@ import (
 
 //dd:orchestrion-enabled
 const orchestrionEnabled = false
+
+func init() {
+	os.Setenv("DD_APPSEC_ENABLED", "true")
+	os.Setenv("DD_APPSEC_RULES", "../testdata/rasp.json")
+}
 
 func Test(t *testing.T) {
 	require.True(t, orchestrionEnabled, "this test suite must be run with orchestrion enabled")
@@ -58,7 +64,7 @@ func checkTrace(t *testing.T, tc testCase, sess *agent.Session) {
 	require.NoError(t, err)
 
 	var traces trace.Spans
-	require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
+	require.NoError(t, trace.ParseRaw(jsonTraces, &traces), "unable to parse json: %q", jsonTraces)
 	t.Logf("Received %d traces", len(traces))
 
 	for _, expected := range tc.ExpectedTraces() {

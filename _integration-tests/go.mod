@@ -331,3 +331,5 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
 )
+
+replace gopkg.in/DataDog/dd-trace-go.v1 => ../../dd-trace-go/

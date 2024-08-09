@@ -170,6 +170,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{},
 			)),
 		},
+		TracerInternal: true,
 	},
 	// From go-main.yml
 	{
@@ -583,7 +584,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"println(\"os.OpenFile\")\nparent, _ := dyngo.FromContext(nil)\nif parent != nil {\n    println(\"os.OpenFile: parent is not nil\")\n\top := &ossec.OpenOperation{\n        Operation: dyngo.NewOperation(parent),\n    }\n\n    var __dd_block bool\n    dyngo.OnData(op, func(_ *events.BlockingSecurityEvent) {\n        __dd_block = true\n    })\n\n    dyngo.StartOperation(op, ossec.OpenOperationArgs{\n        Path: {{ .Function.Argument 0 }},\n        Flags: {{ .Function.Argument 1 }},\n        Perms: {{ .Function.Argument 2 }},\n    })\n\n    var __dd_file any = {{ .Function.Returns 0 }}\n    defer dyngo.FinishOperation(op, ossec.OpenOperationRes{\n        File: &__dd_file,\n        Err: &{{ .Function.Returns 1 }},\n    })\n\n    if __dd_block {\n        return\n    }\n}",
+				"parent, _ := dyngo.FromContext(nil)\nif parent != nil {\n\top := &ossec.OpenOperation{\n        Operation: dyngo.NewOperation(parent),\n    }\n\n    var __dd_block bool\n    dyngo.OnData(op, func(_ *events.BlockingSecurityEvent) {\n        __dd_block = true\n    })\n\n    dyngo.StartOperation(op, ossec.OpenOperationArgs{\n        Path: {{ .Function.Argument 0 }},\n        Flags: {{ .Function.Argument 1 }},\n        Perms: {{ .Function.Argument 2 }},\n    })\n\n    var __dd_file any = {{ .Function.Returns 0 }}\n    defer dyngo.FinishOperation(op, ossec.OpenOperationRes{\n        File: &__dd_file,\n        Err: &{{ .Function.Returns 1 }},\n    })\n\n    if __dd_block {\n        return\n    }\n}",
 				map[string]string{
 					"dyngo":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
 					"events": "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
@@ -691,4 +692,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:VsMepJyMOWnk98taMcYIoQsbvYha7AZbtvrNmFUpPNoVMSpdm06C/XyYzk6bFTmP0yFd/RQ7oqxR2apv0FkF3A=="
+const Checksum = "sha512:DK82BXwgehaBQRDUIwnboKXMk3+0gxkK5Pt+8sViKuoIaNkaRmTGlt5cAmbtqZaesFlcZnNYBoomIbEmNWJIYA=="
