@@ -6,7 +6,9 @@
 package goflags
 
 import (
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,6 +46,9 @@ func TestTrim(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
+	_, thisFile, _, _ := runtime.Caller(0)
+	thisDir := filepath.Dir(thisFile)
+
 	for name, tc := range map[string]struct {
 		flags    []string
 		goflags  string
@@ -101,16 +106,18 @@ func TestParse(t *testing.T) {
 			},
 		},
 		"cover-dash-c": {
-			flags: []string{"-C", "..", "run", "-cover", "-covermode=atomic", ".."},
+			flags: []string{"-C", "..", "run", "-cover", "-covermode=atomic"},
 			expected: CommandFlags{
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion"},
+				// Note - the "-C" flags has no effect at this stage, so it's expected coverpkg is this package.
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
 		"cover-dash-c-alt": {
-			flags: []string{"-C=..", "run", "-cover", "-covermode=atomic", ".."},
+			flags: []string{"-C=..", "run", "-cover", "-covermode=atomic", "."},
 			expected: CommandFlags{
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion"},
+				// Note - the "-C" flags has no effect at this stage, so it's expected coverpkg is this package.
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
@@ -132,7 +139,7 @@ func TestParse(t *testing.T) {
 			}
 
 			t.Setenv("GOFLAGS", tc.goflags)
-			flags := ParseCommandFlags("", tc.flags)
+			flags := ParseCommandFlags(thisDir, tc.flags)
 			if len(tc.expected.Short) > 0 {
 				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short), "expected:\n%#v\nactual:\n%#v", tc.expected.Short, flags.Short)
 			}
