@@ -95,11 +95,28 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 		Long:  make(map[string]string, len(args)),
 		Short: make(map[string]struct{}, len(args)),
 	}
+	if len(args) == 0 {
+		return flags
+	}
+
+	if arg := args[0]; strings.HasPrefix(arg, "-C") {
+		// The first argument is a change directory flag, which we'll ignore...
+		if arg == "-C" && len(args) > 1 {
+			// In this case, the value of `-C` is the next argument, so skip both.
+			args = args[2:]
+			log.Tracef("Skipping -C flag arguments %q %q\n", arg, args[1])
+		} else {
+			log.Tracef("Skipping -C flag argument %q\n", arg)
+			args = args[1:]
+		}
+	}
+
+	// The next argument immediately after a possible `-C` flags is the go command itself, which we are not interested in.
+	log.Tracef("The go command is %q\n", args[0])
 
 	var positional []string
-	for i := 0; i < len(args); i += 1 {
+	for i := 1; i < len(args); i += 1 {
 		arg := args[i]
-
 		if arg == "--" {
 			// Everything after "--" is positional arguments...
 			positional = args[i+1:]
@@ -237,7 +254,7 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	return ParseCommandFlags(wd, args[2:]), nil
+	return ParseCommandFlags(wd, args[1:]), nil
 }
 
 var (

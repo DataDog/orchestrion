@@ -49,50 +49,50 @@ func TestParse(t *testing.T) {
 		expected CommandFlags
 	}{
 		"short": {
-			flags:    []string{"-short1", "--short2"},
+			flags:    []string{"run", "-short1", "--short2"},
 			expected: CommandFlags{Short: map[string]struct{}{"-short1": {}, "-short2": {}}},
 		},
 		"long": {
-			flags:    []string{"-long1", "longval1", "--long2", "longval2"},
+			flags:    []string{"run", "-long1", "longval1", "--long2", "longval2"},
 			expected: CommandFlags{Long: map[string]string{"-long1": "longval1", "-long2": "longval2"}},
 		},
 		"long-assigned": {
-			flags:    []string{"-long1=longval1", "--long2=longval2"},
+			flags:    []string{"run", "-long1=longval1", "--long2=longval2"},
 			expected: CommandFlags{Long: map[string]string{"-long1": "longval1", "-long2": "longval2"}},
 		},
 		"long-mixed": {
-			flags:    []string{"-long1=longval1", "-long2", "longval2"},
+			flags:    []string{"run", "-long1=longval1", "-long2", "longval2"},
 			expected: CommandFlags{Long: map[string]string{"-long1": "longval1", "-long2": "longval2"}},
 		},
 		"special": {
-			flags: []string{"-gcflags", "-N -l -other", "-ldflags", "-extldflags '-lm -lstdc++ -static'"},
+			flags: []string{"run", "-gcflags", "-N -l -other", "-ldflags", "-extldflags '-lm -lstdc++ -static'"},
 			expected: CommandFlags{
 				Long: map[string]string{"-gcflags": "-N -l -other", "-ldflags": "-extldflags '-lm -lstdc++ -static'"},
 			},
 		},
 		"combined": {
-			flags: []string{"-short1", "-gcflags", "-N -l -other", "-ldflags", "-extldflags '-lm -lstdc++ -static'", "-long1=longval1", "-short2", "-long2", "longval2"},
+			flags: []string{"run", "-short1", "-gcflags", "-N -l -other", "-ldflags", "-extldflags '-lm -lstdc++ -static'", "-long1=longval1", "-short2", "-long2", "longval2"},
 			expected: CommandFlags{
 				Long:  map[string]string{"-gcflags": "-N -l -other", "-ldflags": "-extldflags '-lm -lstdc++ -static'", "-long1": "longval1", "-long2": "longval2"},
 				Short: map[string]struct{}{"-short1": {}, "-short2": {}},
 			},
 		},
 		"combined-and-unknown": {
-			flags: []string{"-unknown1", "-short1", "-long1=longval1", "-unknown2", "-short2", "-long2", "longval2", "unknown3"},
+			flags: []string{"run", "-unknown1", "-short1", "-long1=longval1", "-unknown2", "-short2", "-long2", "longval2", "unknown3"},
 			expected: CommandFlags{
 				Long:  map[string]string{"-long1": "longval1", "-long2": "longval2"},
 				Short: map[string]struct{}{"-short1": {}, "-short2": {}},
 			},
 		},
 		"cover": {
-			flags: []string{"-cover", "-covermode=atomic"},
+			flags: []string{"run", "-cover", "-covermode=atomic"},
 			expected: CommandFlags{
 				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
 		"cover-other": {
-			flags: []string{"-cover", "-covermode=atomic", "../.."},
+			flags: []string{"run", "-cover", "-covermode=atomic", "../.."},
 			expected: CommandFlags{
 				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion"},
 				Short: map[string]struct{}{"-cover": {}},

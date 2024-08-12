@@ -119,7 +119,6 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		env = append(env, req.Env...)
 		env = append(env, fmt.Sprintf("%s=%s", envVarParentId, req.toolexecImportpath))
 	}
-	env = append(env, "ORCHESTRION_LOG_FILE=/Users/romain.marcadier/Development/Datadog/orchestrion/_integration-tests/orchestrion.log", "ORCHESTRION_LOG_LEVEL=TRACE")
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
 		log.Tracef("[JOBSERVER/%s] Resolving %q with build flags %q\n", resolveSubject, req.Pattern, req.BuildFlags)
 
@@ -135,6 +134,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 				Dir:        req.Dir,
 				Env:        env,
 				BuildFlags: req.BuildFlags,
+				Logf:       func(format string, args ...any) { log.Tracef(format, args...) },
 			},
 			req.Pattern,
 		)

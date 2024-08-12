@@ -136,6 +136,7 @@ jobs:
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+          ORCHESTRION_LOG_LEVEL: warn
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration-build.out
