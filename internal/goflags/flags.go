@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -107,22 +106,16 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 
 	if len(args) > 0 {
 		if arg := args[0]; strings.HasPrefix(arg, "-C") {
-			// The first argument is a change directory flag, which we'll ignore...
-			var cdir string
+			// The first argument is a change directory flag, which we'll ignore... We also don't update `wd` based on this,
+			// because the `go` command (or the `goproxy` package) has already done this.
 			if arg == "-C" && len(args) > 1 {
 				// In this case, the value of `-C` is the next argument, so skip both.
-				cdir = args[1]
 				args = args[2:]
-				log.Tracef("Skipping -C flag arguments %q %q\n", arg, cdir)
+				log.Tracef("Skipping -C flag arguments %q %q\n", arg, args[1])
 			} else {
 				log.Tracef("Skipping -C flag argument %q\n", arg)
-				cdir = arg[3:] // Skip over `-C=`
 				args = args[1:]
 			}
-			if !filepath.IsAbs(cdir) {
-				cdir = filepath.Join(wd, cdir)
-			}
-			wd = cdir
 		}
 	}
 
