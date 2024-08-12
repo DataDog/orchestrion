@@ -92,10 +92,10 @@ func (f CommandFlags) Slice() []string {
 
 // ParseCommandFlags parses a slice representing a go command invocation
 // and returns its flags. Direct arguments to the command are ignored
-func ParseCommandFlags(wd string, args []string, goflags string) CommandFlags {
-	goflagsArgs, err := quoted.Split(goflags)
+func ParseCommandFlags(wd string, args []string) CommandFlags {
+	goflagsArgs, err := quoted.Split(os.Getenv("GOFLAGS"))
 	if err != nil {
-		log.Warnf("Failed to interpret quoted strings in GOFLAGS=%q: %v\n", goflags, err)
+		log.Warnf("Failed to interpret quoted strings in GOFLAGS: %v\n", err)
 	} else {
 		log.Tracef("Parsed GOFLAGS contents is %q\n", goflagsArgs)
 	}
@@ -186,7 +186,7 @@ func ParseCommandFlags(wd string, args []string, goflags string) CommandFlags {
 	// link-time fingerprint mismatches.
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: wd, Logf: func(format string, args ...any) { log.Tracef(format, args...) }}, positional...)
 	if err != nil {
-		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\n", positional, err)
+		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\nAll arguments: %q\n", positional, err, args)
 		return flags
 	}
 	coverpkg := make([]string, len(pkgs))
@@ -211,9 +211,9 @@ func Flags() (CommandFlags, error) {
 // SetFlags sets the top level go command flags to the specified value. Does nothing if the flags are already set,
 // either because `SetFlags` has already been called, or because `Flags` has been called and the flags have been set by
 // it.
-func SetFlags(wd string, args []string, goflags string) {
+func SetFlags(wd string, args []string) {
 	once.Do(func() {
-		flags = ParseCommandFlags(wd, args, goflags)
+		flags = ParseCommandFlags(wd, args)
 	})
 }
 
@@ -275,19 +275,7 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	env, err := p.Environ()
-	if err != nil {
-		return flags, fmt.Errorf("failed to get environment of %d: %w", p.Pid, err)
-	}
-	goflags := ""
-	for _, env := range env {
-		key, val, _ := strings.Cut(env, "=")
-		if key == "GOFLAGS" {
-			goflags = val
-		}
-	}
-
-	return ParseCommandFlags(wd, args[1:], goflags), nil
+	return ParseCommandFlags(wd, args[1:]), nil
 }
 
 var (
