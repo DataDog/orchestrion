@@ -55,7 +55,14 @@ func Test(t *testing.T) {
 				PreserveLineInfo: true,
 				ImportPath:       fmt.Sprintf("github.com/datadog/orchestrion/samples/%s", dir),
 				LookupImport: func(path string) (io.ReadCloser, error) {
-					pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedExportFile, Dir: pkgDir}, path)
+					pkgs, err := packages.Load(
+						&packages.Config{
+							Mode: packages.NeedExportFile,
+							Dir:  pkgDir,
+							Logf: t.Logf,
+						},
+						path,
+					)
 					if err != nil {
 						return nil, err
 					}

@@ -81,7 +81,14 @@ func Test(t *testing.T) {
 				ModifiedFile:     func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
 				ImportPath:       "dummy/test/module",
 				LookupImport: func(path string) (io.ReadCloser, error) {
-					pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedExportFile, Dir: tmp}, path)
+					pkgs, err := packages.Load(
+						&packages.Config{
+							Mode: packages.NeedExportFile,
+							Dir:  tmp,
+							Logf: t.Logf,
+						},
+						path,
+					)
 					if err != nil {
 						return nil, err
 					}

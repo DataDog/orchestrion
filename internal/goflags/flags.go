@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -101,14 +102,21 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 
 	if arg := args[0]; strings.HasPrefix(arg, "-C") {
 		// The first argument is a change directory flag, which we'll ignore...
+		var cdir string
 		if arg == "-C" && len(args) > 1 {
 			// In this case, the value of `-C` is the next argument, so skip both.
+			cdir = args[1]
 			args = args[2:]
-			log.Tracef("Skipping -C flag arguments %q %q\n", arg, args[1])
+			log.Tracef("Skipping -C flag arguments %q %q\n", arg, cdir)
 		} else {
 			log.Tracef("Skipping -C flag argument %q\n", arg)
+			cdir = arg[3:] // Skip over `-C=`
 			args = args[1:]
 		}
+		if !filepath.IsAbs(cdir) {
+			cdir = filepath.Join(wd, cdir)
+		}
+		wd = cdir
 	}
 
 	// The next argument immediately after a possible `-C` flags is the go command itself, which we are not interested in.
@@ -163,7 +171,7 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 	// `-coverpkg` argument to imitate the default behavior, for otherwise our attempts at resolving
 	// dependencies might not uniformly apply `-cover` (and `-covermode` if set), which would lead to
 	// link-time fingerprint mismatches.
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: wd}, positional...)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: wd, Logf: func(format string, args ...any) { log.Tracef(format, args...) }}, positional...)
 	if err != nil {
 		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\n", positional, err)
 		return flags

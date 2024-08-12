@@ -91,8 +91,15 @@ func TestParse(t *testing.T) {
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
-		"cover-other": {
-			flags: []string{"run", "-cover", "-covermode=atomic", "../.."},
+		"cover-dash-c": {
+			flags: []string{"-C", "..", "run", "-cover", "-covermode=atomic", ".."},
+			expected: CommandFlags{
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion"},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+		},
+		"cover-dash-c-alt": {
+			flags: []string{"-C=..", "run", "-cover", "-covermode=atomic", ".."},
 			expected: CommandFlags{
 				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion"},
 				Short: map[string]struct{}{"-cover": {}},
