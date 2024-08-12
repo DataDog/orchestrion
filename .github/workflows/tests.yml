@@ -115,7 +115,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
-          export GOFLAGS="-cover -covermode=atomic -coverprofile=${{ github.workspace }}/coverage/integration-run.out ${GOFLAGS}"
+          export GOFLAGS="-cover -covermode=atomic -coverpkg="./... github.com/datadog/orchestrion/..." -coverprofile=${{ github.workspace }}/coverage/integration-run.out ${GOFLAGS}"
 
           case "${{ matrix.build-mode }}" in
           "DRIVER")
