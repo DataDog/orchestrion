@@ -11,6 +11,7 @@ import (
 	"context"
 	"log"
 	"net/url"
+	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
@@ -36,7 +37,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testredis.RunContainer(ctx,
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		testcontainers.WithImage("redis:7"),
-		testcontainers.WithLogConsumers(testLogConsumer{t}),
+		utils.WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
 				wait.ForLog("* Ready to accept connections"),
@@ -140,12 +141,4 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 		},
 	}
-}
-
-type testLogConsumer struct {
-	*testing.T
-}
-
-func (t testLogConsumer) Accept(log testcontainers.Log) {
-	t.T.Log(string(log.Content))
 }

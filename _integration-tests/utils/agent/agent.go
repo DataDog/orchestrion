@@ -30,11 +30,11 @@ type MockAgent struct {
 	virtualEnv     string
 	process        *exec.Cmd
 	processCancel  context.CancelFunc
-	currentSession atomic.Pointer[mockSession]
+	currentSession atomic.Pointer[Session]
 	port           int
 }
 
-type mockSession struct {
+type Session struct {
 	agent *MockAgent
 	token uuid.UUID
 }
@@ -88,12 +88,12 @@ func New(t *testing.T) (*MockAgent, error) {
 	return &agent, nil
 }
 
-func (a *MockAgent) NewSession(t *testing.T) (session *mockSession, err error) {
+func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 	token, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
-	session = &mockSession{agent: a, token: token}
+	session = &Session{agent: a, token: token}
 	if !a.currentSession.CompareAndSwap(nil, session) {
 		return nil, errors.New("a test session is already in progress")
 	}
@@ -165,11 +165,11 @@ func (a *MockAgent) Close() error {
 	return nil
 }
 
-func (s *mockSession) Port() int {
+func (s *Session) Port() int {
 	return s.agent.port
 }
 
-func (s *mockSession) Close(t *testing.T) ([]byte, error) {
+func (s *Session) Close(t *testing.T) ([]byte, error) {
 	if !s.agent.currentSession.CompareAndSwap(s, nil) {
 		return nil, errors.New("cannot close session that is not the currently active one")
 	}

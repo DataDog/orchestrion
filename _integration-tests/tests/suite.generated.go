@@ -10,6 +10,7 @@
 package tests
 
 import (
+	awsv1 "orchestrion/integration/tests/aws.v1"
 	chiv5 "orchestrion/integration/tests/chi.v5"
 	ddspan "orchestrion/integration/tests/dd-span"
 	echov4 "orchestrion/integration/tests/echo.v4"
@@ -31,6 +32,7 @@ import (
 )
 
 var suite = map[string]testCase{
+	"aws.v1":                               new(awsv1.TestCase),
 	"chi.v5":                               new(chiv5.TestCase),
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),

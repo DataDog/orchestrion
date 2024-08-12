@@ -11,6 +11,7 @@ import (
 	"context"
 	"log"
 	"net/url"
+	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
@@ -38,7 +39,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testmongo.Run(ctx,
 		"mongo:6",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		testcontainers.WithLogConsumers(testLogConsumer{t}),
+		utils.WithTestLogConsumer(t),
 	)
 	if err != nil {
 		t.Skipf("Failed to start mongo test container: %v\n", err)
@@ -119,12 +120,4 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 			},
 		},
 	}
-}
-
-type testLogConsumer struct {
-	*testing.T
-}
-
-func (t testLogConsumer) Accept(log testcontainers.Log) {
-	t.T.Log(string(log.Content))
 }
