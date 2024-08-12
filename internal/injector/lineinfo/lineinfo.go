@@ -42,6 +42,9 @@ func AnnotateMovedNodes(
 	// the original source file's.
 	annotator := annotationVisitor{dec: decorator, res: res}
 	ast.Walk(&annotator, astFile)
+	if len(annotator.stack) != 0 {
+		panic("noempty stack after annotation visit is complete")
+	}
 
 	return file, nil
 }
