@@ -158,10 +158,11 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 			normArg = arg[1:]
 		}
 
-		if isAssigned(normArg) {
-			key, val, found := strings.Cut(normArg, "=")
-			if found {
+		if key, val, isAssigned := strings.Cut(normArg, "="); isAssigned {
+			if isLong(key) {
 				flags.Long[key] = val
+			} else {
+				flags.Unknown = append(flags.Unknown, arg)
 			}
 		} else if isLong(normArg) {
 			flags.Long[normArg] = args[i+1]
@@ -171,6 +172,13 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 		} else {
 			// We intentionally keep the original arg value in this case instead of the normalized one.
 			flags.Unknown = append(flags.Unknown, arg)
+			if len(args) > i {
+				// If the next entry does not have a "-" prefix, we'll assume it's the value for the current flag.
+				if !strings.HasPrefix(args[i+1], "-") {
+					flags.Unknown = append(flags.Unknown, args[i+1])
+					i++
+				}
+			}
 		}
 	}
 
@@ -215,15 +223,6 @@ func SetFlags(wd string, args []string) {
 	once.Do(func() {
 		flags = ParseCommandFlags(wd, args)
 	})
-}
-
-func isAssigned(str string) bool {
-	if !strings.HasPrefix(str, "-") {
-		return false
-	}
-	flag, _, ok := strings.Cut(str, "=")
-	// An assigned flag is a long flag using the '=' separator
-	return ok && isLong(flag)
 }
 
 func isLong(str string) bool {

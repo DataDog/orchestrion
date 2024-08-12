@@ -131,7 +131,8 @@ func TestParse(t *testing.T) {
 				longFlags[flag] = struct{}{}
 			}
 
-			flags := ParseCommandFlags("", tc.flags, tc.goflags)
+			t.Setenv("GOFLAGS", tc.goflags)
+			flags := ParseCommandFlags("", tc.flags)
 			if len(tc.expected.Short) > 0 {
 				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short), "expected:\n%#v\nactual:\n%#v", tc.expected.Short, flags.Short)
 			}
