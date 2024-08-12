@@ -67,7 +67,7 @@ func (s *service) versionSuffix(req *VersionSuffixRequest) (VersionSuffixRespons
 		&packages.Config{
 			Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
 			BuildFlags: buildFlags,
-			Logf:       func(format string, args ...any) { log.Tracef(format, args...) },
+			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 		},
 		builtin.InjectedPaths[:]...,
 	)

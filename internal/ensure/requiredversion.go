@@ -132,7 +132,7 @@ func goModVersion(dir string) (moduleVersion string, moduleDir string, err error
 		&packages.Config{
 			Dir:  dir,
 			Mode: packages.NeedModule,
-			Logf: func(format string, args ...any) { log.Tracef(format, args...) },
+			Logf: func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 		},
 		orchestrionPkgPath,
 	)

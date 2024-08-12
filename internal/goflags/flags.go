@@ -192,7 +192,14 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 	// `-coverpkg` argument to imitate the default behavior, for otherwise our attempts at resolving
 	// dependencies might not uniformly apply `-cover` (and `-covermode` if set), which would lead to
 	// link-time fingerprint mismatches.
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: wd, Logf: func(format string, args ...any) { log.Tracef(format, args...) }}, positional...)
+	pkgs, err := packages.Load(
+		&packages.Config{
+			Mode:       packages.NeedName,
+			Dir:        wd,
+			BuildFlags: append(flags.Slice(), "-toolexec"), // make sure we satisfy the same build constraints as we're parsing, but no -toolexec to avoid endless loop.
+			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) }},
+		positional...,
+	)
 	if err != nil {
 		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\nWD: %q\nAll arguments: %q\n", positional, err, wd, args)
 		return flags
