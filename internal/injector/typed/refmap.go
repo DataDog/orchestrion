@@ -78,8 +78,8 @@ func (r *ReferenceMap) AddLink(file *dst.File, path string) bool {
 }
 
 // AddSyntheticImports adds the registered imports to the provided *dst.File. This is not safe to
-// call during an AST traversal by dstutil.Apply, as this may offset the declaration list by 1 in
-// case a new import declaration needs to be added, which would result in re-traversing current
+// call during an AST traversal by dstutil.Apply, as this will offset the declaration list by 1 in
+// since a new import declaration needs to be added, and that would result in re-traversing current
 // declaration when the cursor moves forward. Instead, it is advise to call this method after
 // dstutil.Apply has returned.
 func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
@@ -105,31 +105,37 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 		return strings.Compare(l.Path.Value, r.Path.Value)
 	})
 
+	// Add the imports to the file's Imports map...
+	file.Imports = append(file.Imports, toAdd...)
+
 	// Find the last import declaration in the file...
-	var imports *dst.GenDecl
-	for _, decl := range file.Decls {
+	insertAt := -1
+	for idx, decl := range file.Decls {
 		if genDecl, ok := decl.(*dst.GenDecl); ok && genDecl.Tok == token.IMPORT {
-			imports = genDecl
-		} else {
-			break
+			continue
 		}
-	}
-	// ...or create a new one if none is found...
-	if imports == nil {
-		imports = &dst.GenDecl{Tok: token.IMPORT}
-		list := make([]dst.Decl, len(file.Decls)+1)
-		list[0] = imports
-		copy(list[1:], file.Decls)
-		file.Decls = list
+		insertAt = idx
+		break
 	}
 
-	// Add the necessary imports
-	file.Imports = append(file.Imports, toAdd...)
-	newSpecs := make([]dst.Spec, len(toAdd))
-	for i, spec := range toAdd {
-		newSpecs[i] = spec
+	newImport := &dst.GenDecl{
+		Tok:   token.IMPORT,
+		Specs: make([]dst.Spec, len(toAdd)),
 	}
-	imports.Specs = append(imports.Specs, newSpecs...)
+	for i, spec := range toAdd {
+		newImport.Specs[i] = spec
+	}
+
+	newDecls := make([]dst.Decl, 0, len(file.Decls)+1)
+	if insertAt <= 0 {
+		newDecls = append(newDecls, newImport)
+		newDecls = append(newDecls, file.Decls...)
+	} else {
+		newDecls = append(newDecls, file.Decls[:insertAt]...)
+		newDecls = append(newDecls, newImport)
+		newDecls = append(newDecls, file.Decls[insertAt:]...)
+	}
+	file.Decls = newDecls
 
 	return true
 }

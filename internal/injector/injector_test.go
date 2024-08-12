@@ -78,7 +78,7 @@ func Test(t *testing.T) {
 			inj := injector.Injector{
 				Aspects:          config.Aspects,
 				PreserveLineInfo: config.PreserveLineInfo,
-				ModifiedFile:     func(path string) string { return path + ".edited.go" },
+				ModifiedFile:     func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
 				ImportPath:       "dummy/test/module",
 				LookupImport: func(path string) (io.ReadCloser, error) {
 					pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedExportFile, Dir: tmp}, path)
@@ -99,7 +99,7 @@ func Test(t *testing.T) {
 
 			res := results[0]
 			if res.Modified {
-				assert.Equal(t, inputFile+".edited.go", res.Filename)
+				assert.NotEqual(t, inputFile, res.Filename)
 			} else {
 				assert.Equal(t, inputFile, res.Filename)
 			}

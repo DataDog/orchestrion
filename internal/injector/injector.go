@@ -9,30 +9,30 @@
 package injector
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/importer"
 	"go/parser"
 	"go/token"
 	"go/types"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect"
+	"github.com/datadog/orchestrion/internal/injector/lineinfo"
 	"github.com/datadog/orchestrion/internal/injector/node"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/gotypes"
 	"github.com/dave/dst/dstutil"
-	"golang.org/x/tools/go/gccgoexportdata"
-	"golang.org/x/tools/go/gcexportdata"
 )
 
 type (
@@ -112,11 +112,9 @@ func (i *Injector) InjectFiles(goFiles []string) ([]Result, error) {
 		}
 	}
 
-	res := decorator.NewRestorerWithImports(i.ImportPath, &resolver{fset: fset, lookup: i.LookupImport})
-
 	results := make([]Result, len(dstFiles))
 	for idx, dstFile := range dstFiles {
-		results[idx], err = i.injectFile(fset, dstFile, dec, res)
+		results[idx], err = i.injectFile(dstFile, dec)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +135,8 @@ func (i *Injector) parseFiles(fset *token.FileSet, filenames []string) ([]*ast.F
 	return astFiles, nil
 }
 
-var reFileLineCol = regexp.MustCompile(`(?i)^(.+\.go)(?:[:]\d+){0,2}$`)
+// Matches the line (and optionally column) information off a line directive.
+var reLineCol = regexp.MustCompile(`[:]\d+([:]\d+)?$`)
 
 func (*Injector) parseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 	file, err := os.Open(filename)
@@ -146,22 +145,12 @@ func (*Injector) parseFile(fset *token.FileSet, filename string) (*ast.File, err
 	}
 	defer file.Close()
 
-	// If the first line is a `//line` directive, extract the original file name from it, and use it
-	// as the parsed file name instead of the original file system path.
-	scanner := bufio.NewScanner(file)
-	if scanner.Scan() {
-		firstLine := scanner.Bytes()
-		if bytes.HasPrefix(firstLine, []byte("//line ")) {
-			fileLineCol := firstLine[7:]
-			if matches := reFileLineCol.FindSubmatch(fileLineCol); matches != nil {
-				filename = string(matches[1])
-			}
-		}
-	}
-
-	// Rewind to the start of the file
-	if _, err := file.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("seeking to start of file: %w", err)
+	// If the file starts with a `//line` directive, we consume it and then proceed with the file as
+	// if its name was the one from the directive.
+	if fileLineCol, err := consumeLineDirective(file); err != nil {
+		return nil, err
+	} else if fileLineCol != "" {
+		filename = reLineCol.ReplaceAllLiteralString(fileLineCol, "")
 	}
 
 	astFile, err := parser.ParseFile(fset, filename, file, parser.ParseComments)
@@ -169,6 +158,52 @@ func (*Injector) parseFile(fset *token.FileSet, filename string) (*ast.File, err
 		return nil, err
 	}
 	return astFile, nil
+}
+
+// consumeLineDirective consumes the first line from `r` if it is a `//line` directive, and returns
+// the adjusted file name with line and column information. If the first line is not a `//line`
+// directive, it rewinds the reader to absolute offset 0, and returns a blank string.
+func consumeLineDirective(r io.ReadSeeker) (string, error) {
+	var buf [7]byte
+	n, err := r.Read(buf[:])
+	if err != nil {
+		return "", err
+	}
+
+	// Is this a line directive?
+	if string(buf[:n]) != "//line " {
+		// Rewind to the start of the file
+		if _, err := r.Seek(0, io.SeekStart); err != nil {
+			return "", fmt.Errorf("seeking to start of file: %w", err)
+		}
+		return "", nil
+	}
+
+	var filename []byte
+	var carriageReturn bool
+	for {
+		if n, err := r.Read(buf[:1]); err != nil {
+			return "", err
+		} else if n == 0 {
+			return string(filename), nil
+		}
+		c := buf[0]
+		switch c {
+		case '\n':
+			return string(filename), nil
+		case '\r':
+			carriageReturn = true
+		default:
+			// Previous char was CR, so we roll back one & break out...
+			if carriageReturn {
+				if _, err := r.Seek(-1, io.SeekCurrent); err != nil {
+					return "", err
+				}
+				return string(filename), nil
+			}
+			filename = append(filename, c)
+		}
+	}
 }
 
 func (i *Injector) typeCheckFiles(fset *token.FileSet, files []*ast.File) (map[*ast.Ident]types.Object, error) {
@@ -189,35 +224,65 @@ func (i *Injector) typeCheckFiles(fset *token.FileSet, files []*ast.File) (map[*
 	return typeInfo.Uses, checker.Files(files)
 }
 
-func (i *Injector) injectFile(fset *token.FileSet, file *dst.File, dec *decorator.Decorator, rest *decorator.Restorer) (Result, error) {
-	res := Result{Filename: fset.Position(dec.Ast.Nodes[file].Pos()).Filename}
+func (i *Injector) injectFile(file *dst.File, dec *decorator.Decorator) (Result, error) {
+	result := Result{Filename: dec.Fset.Position(dec.Ast.Nodes[file].Pos()).Filename}
 
 	ctx := typed.ContextWithValue(context.Background(), dec)
 	var err error
-	if res.Modified, res.References, err = i.inject(ctx, fset, file, dec, i.RootConfig); err != nil {
-		return res, err
+	if result.Modified, result.References, err = i.inject(ctx, file, dec, i.RootConfig); err != nil {
+		return result, err
 	}
 
-	if res.Modified {
-		res.Filename, err = i.writeModifiedFile(res.Filename, file, rest)
+	if result.Modified {
+		result.Filename, err = i.writeModifiedFile(dec, file)
 		if err != nil {
-			return res, err
+			return result, err
 		}
 	}
 
-	return res, nil
+	return result, nil
 }
 
-func (i *Injector) writeModifiedFile(filename string, file *dst.File, rest *decorator.Restorer) (string, error) {
+func (i *Injector) newRestorer(filename string) *decorator.FileRestorer {
+	return &decorator.FileRestorer{
+		Restorer: decorator.NewRestorerWithImports(
+			i.ImportPath,
+			&lookupResolver{lookup: i.LookupImport},
+		),
+		Name: filename,
+	}
+}
+
+func (i *Injector) writeModifiedFile(dec *decorator.Decorator, file *dst.File) (string, error) {
+	filename := dec.Filenames[file]
+
+	// Ensure the restorer does not break due to multiple imports of the same package
+	normalizeImports(file)
+
+	if i.PreserveLineInfo {
+		var err error
+		file, err = lineinfo.AnnotateMovedNodes(dec, file, i.newRestorer)
+		if err != nil {
+			return filename, err
+		}
+	}
+
+	res := i.newRestorer(filename)
+	astFile, err := res.RestoreFile(file)
+	if err != nil {
+		return filename, fmt.Errorf("restoring %q: %w", filename, err)
+	}
+
 	var buf bytes.Buffer
-	if err := rest.Fprint(&buf, file); err != nil {
-		return "", fmt.Errorf("restoring %q: %w", filename, err)
+	if err := format.Node(&buf, res.Fset, astFile); err != nil {
+		return "", fmt.Errorf("formatting AST of %q: %w", filename, err)
 	}
 
 	if i.ModifiedFile != nil {
 		filename = i.ModifiedFile(filename)
-		if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
-			return filename, err
+		filedir := filepath.Dir(filename)
+		if err := os.MkdirAll(filedir, 0o755); err != nil {
+			return filename, fmt.Errorf("creating %q: %w", filedir, err)
 		}
 	}
 	if err := os.WriteFile(filename, postProcess(buf.Bytes()), 0o644); err != nil {
@@ -230,7 +295,7 @@ func (i *Injector) writeModifiedFile(filename string, file *dst.File, rest *deco
 // inject performs all configured injections on the specified file. It returns whether the file was
 // modified, any import references introduced by modifications. In case of an error, the
 // trasnformation aborts as quickly as possible and returns the error.
-func (i *Injector) inject(ctx context.Context, fset *token.FileSet, file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
+func (i *Injector) inject(ctx context.Context, file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
 	ctx = typed.ContextWithValue(ctx, &refs)
 	var chain *node.Chain
 
@@ -272,10 +337,6 @@ func (i *Injector) inject(ctx context.Context, fset *token.FileSet, file *dst.Fi
 		mod = true
 	}
 
-	if mod && i.PreserveLineInfo {
-		i.addLineDirectives(fset, file, decorator)
-	}
-
 	return
 }
 
@@ -300,121 +361,4 @@ func (i *Injector) injectNode(ctx context.Context, chain *node.Chain, csor *dstu
 	}
 
 	return
-}
-
-// addLineDirectives travers a transformed AST and adds "//line file:line" directives where
-// necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
-// within a `<generated>` pseudo-file.
-func (i *Injector) addLineDirectives(fset *token.FileSet, file *dst.File, decorator *decorator.Decorator) {
-	var (
-		// Whether we are in generated code or not
-		inGen = false
-		// Force emitting a generated code line directive even if we are already in generated code. This
-		// is necessary when original AST nodes are inlined within generated code (usually by
-		// a wrap-expression advice), so we appropriately resume generated code tagging afterwards.
-		forceGen = false
-	)
-
-	var stack []bool
-	dst.Inspect(file, func(node dst.Node) bool {
-		if node == nil {
-			if len(stack) == 0 {
-				panic("popping empty stack")
-			}
-			forceGen = !inGen && stack[len(stack)-1]
-			inGen, stack = inGen || stack[len(stack)-1], stack[:len(stack)-1]
-			return true
-		}
-
-		// Push the current node onto the stack
-		defer func() {
-			stack = append(stack, inGen)
-			// The forceGen flag is reset after any node is processed, as at this stage we have resumed
-			// normal operations.
-			forceGen = false
-		}()
-
-		ast := decorator.Ast.Nodes[node]
-		if ast != nil {
-			position := fset.Position(ast.Pos())
-			// Generated nodes from templates may have a corresponding AST node, with a blank filename.
-			// Those should be treated as synthetic nodes (they are!).
-			if position.Filename != "" {
-				if inGen {
-					// We need to properly re-position this node (previous node was synthetic)
-					deco := node.Decorations()
-					if deco.Before == dst.None {
-						deco.Before = dst.NewLine
-					}
-					deco.Start.Append(fmt.Sprintf("//line %s:%d", position.Filename, position.Line))
-					inGen = false
-				}
-				return true
-			}
-		}
-
-		if !inGen || forceGen {
-			deco := node.Decorations()
-			if deco.Before == dst.None {
-				deco.Before = dst.NewLine
-			}
-			deco.Start.Prepend("//line <generated>:1")
-			inGen = true
-		}
-
-		return true
-	})
-
-	if len(stack) != 0 {
-		panic("finished with non-zero stack!")
-	}
-}
-
-type resolver struct {
-	fset    *token.FileSet
-	lookup  importer.Lookup
-	imports map[string]*types.Package
-}
-
-// ResolvePackage retrieves the package name from the provided import path.
-func (r *resolver) ResolvePackage(path string) (string, error) {
-	// Special case -- the "unsafe" package does not have an export file
-	if path == "unsafe" {
-		return "unsafe", nil
-	}
-
-	rd, err := r.lookup(path)
-	if err != nil {
-		return "", err
-	}
-	defer rd.Close()
-
-	if r.imports == nil {
-		r.imports = make(map[string]*types.Package)
-	}
-
-	switch runtime.Compiler {
-	case "gc":
-		rd, err := gcexportdata.NewReader(rd)
-		if err != nil {
-			return "", err
-		}
-		pkg, err := gcexportdata.Read(rd, r.fset, r.imports, path)
-		if err != nil {
-			return "", err
-		}
-		return pkg.Name(), nil
-	case "gccgo":
-		rd, err := gccgoexportdata.NewReader(rd)
-		if err != nil {
-			return "", err
-		}
-		pkg, err := gccgoexportdata.Read(rd, r.fset, r.imports, path)
-		if err != nil {
-			return "", err
-		}
-		return pkg.Name(), nil
-	default:
-		return "", fmt.Errorf("%s: %w", runtime.Compiler, errors.ErrUnsupported)
-	}
 }

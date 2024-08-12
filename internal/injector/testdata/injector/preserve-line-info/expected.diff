@@ -1,0 +1,38 @@
+--- input.go
++++ output.go
+@@ -1,14 +1,29 @@
+ //line original-input.go:1:1
+-package test; import _cover_atomic_ "sync/atomic"; import _ "runtime/coverage"
++package test
+ 
+-import (
+-  "sync/atomic"
+-)
++//line original-input.go:1
++import _cover_atomic_ "sync/atomic"
+ 
+-var counter atomic.Uint64
++//line original-input.go:1
++import _ "runtime/coverage"
+ 
++//line <generated>
++import __orchestrion_fmt "fmt"
++
++//line original-input.go:7
++var counter _cover_atomic_.Uint64
++
+ //dd:span
+-func incrementCounter() {_cover_atomic_.AddUint32(&coverageVar.Count[0], 1);_cover_atomic_.AddUint32(&coverageVar.Count[1], 1);
++func incrementCounter() {
++//line <generated>
++  {
++    __orchestrion_fmt.Print("Hello, ")
++    __orchestrion_fmt.Println("World!")
++  }
++//line original-input.go:10
++  _cover_atomic_.AddUint32(&coverageVar.Count[0], 1)
++//line original-input.go:10
++  _cover_atomic_.AddUint32(&coverageVar.Count[1], 1)
+   counter.Add(1)
+ }
+ 

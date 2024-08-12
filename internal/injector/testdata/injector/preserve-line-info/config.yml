@@ -1,0 +1,44 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-body:
+        all-of:
+          - directive: 'dd:span'
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Print("Hello, ")
+            fmt.Println("World!")
+
+preserveLineInfo: true
+mustCompile: true
+
+syntheticReferences:
+  fmt: true
+
+# This simulates code produced by `go tool cover -mode=atomic original-input.go`
+code: |-
+  //line original-input.go:1:1
+  package test; import _cover_atomic_ "sync/atomic"; import _ "runtime/coverage"
+
+  import (
+    "sync/atomic"
+  )
+
+  var counter atomic.Uint64
+
+  //dd:span
+  func incrementCounter() {_cover_atomic_.AddUint32(&coverageVar.Count[0], 1);_cover_atomic_.AddUint32(&coverageVar.Count[1], 1);
+    counter.Add(1)
+  }
+
+  var coverageVar = struct {
+    Count   [23]uint32
+    Pos     [3 * 23]uint32
+    NumStmt [23]uint16
+  }{
+    /* elided */
+  }

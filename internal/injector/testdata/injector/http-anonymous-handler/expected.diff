@@ -1,15 +1,15 @@
 --- input.go
 +++ output.go
-@@ -6,6 +6,8 @@
-   "log"
-   "net/http"
- 
-+  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
-+  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
+@@ -9,10 +9,33 @@
    "orchestrion/integration"
  )
  
-@@ -13,6 +15,24 @@
++import (
++  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
++  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
++)
++
+ func main() {
    s := &http.Server{
      Addr: ":8085",
      Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

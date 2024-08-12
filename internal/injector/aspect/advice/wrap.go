@@ -43,8 +43,14 @@ func (a *wrapExpression) Apply(ctx context.Context, node *node.Chain, csor *dstu
 	}
 
 	if kve == nil {
+		if csor.Node() == repl {
+			return false, nil
+		}
 		csor.Replace(repl)
 	} else {
+		if kve.Value == repl {
+			return false, nil
+		}
 		kve.Value = repl
 	}
 
