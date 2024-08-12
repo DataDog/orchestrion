@@ -194,7 +194,7 @@ func ParseCommandFlags(wd string, args []string) CommandFlags {
 	// link-time fingerprint mismatches.
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: wd, Logf: func(format string, args ...any) { log.Tracef(format, args...) }}, positional...)
 	if err != nil {
-		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\nAll arguments: %q\n", positional, err, args)
+		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\nWD: %q\nAll arguments: %q\n", positional, err, wd, args)
 		return flags
 	}
 	coverpkg := make([]string, len(pkgs))
