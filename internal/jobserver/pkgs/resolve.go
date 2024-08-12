@@ -24,8 +24,9 @@ const (
 )
 
 var envIgnoreList = map[string]func(*ResolveRequest, string){
-	// We don't use this, instead rely on the `Dir` field.
-	"PWD": nil,
+	// We don't use these, instead rely on the `Dir` field.
+	"PWD":    nil,
+	"OLDPWD": nil,
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
 	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
 	envVarParentId:        func(r *ResolveRequest, id string) { r.resolveParentId = id },
@@ -118,6 +119,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		env = append(env, req.Env...)
 		env = append(env, fmt.Sprintf("%s=%s", envVarParentId, req.toolexecImportpath))
 	}
+	env = append(env, "ORCHESTRION_LOG_FILE=/Users/romain.marcadier/Development/Datadog/orchestrion/_integration-tests/orchestrion.log", "ORCHESTRION_LOG_LEVEL=TRACE")
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
 		log.Tracef("[JOBSERVER/%s] Resolving %q with build flags %q\n", resolveSubject, req.Pattern, req.BuildFlags)
 
@@ -153,16 +155,6 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	}
 
 	return resp, nil
-}
-
-func hashArray(items []string) string {
-	h := sha512.New512_224()
-
-	for idx, item := range items {
-		fmt.Fprintf(h, "\x01%d\x02%s\x03", idx, item)
-	}
-
-	return base64.URLEncoding.EncodeToString(h.Sum(nil))
 }
 
 func (r *ResolveRequest) canonicalize() {

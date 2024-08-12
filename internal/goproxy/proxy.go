@@ -125,7 +125,7 @@ func Run(goArgs []string, opts ...Option) error {
 				}()
 				env = append(env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, server.ClientURL()))
 				// Set the `goflags` since we already know what they are...
-				goflags.SetFlags(argv[2:])
+				goflags.SetFlags("", argv[2:])
 			}
 		}
 	}

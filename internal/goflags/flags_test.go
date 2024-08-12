@@ -78,10 +78,24 @@ func TestParse(t *testing.T) {
 			},
 		},
 		"combined-and-unknown": {
-			flags: []string{"unknown1", "-short1", "-long1=longval1", "unknown2", "-short2", "-long2", "longval2", "unknown3"},
+			flags: []string{"-unknown1", "-short1", "-long1=longval1", "-unknown2", "-short2", "-long2", "longval2", "unknown3"},
 			expected: CommandFlags{
 				Long:  map[string]string{"-long1": "longval1", "-long2": "longval2"},
 				Short: map[string]struct{}{"-short1": {}, "-short2": {}},
+			},
+		},
+		"cover": {
+			flags: []string{"-cover", "-covermode=atomic"},
+			expected: CommandFlags{
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+		},
+		"cover-other": {
+			flags: []string{"-cover", "-covermode=atomic", "../.."},
+			expected: CommandFlags{
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion"},
+				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
 	} {
@@ -93,12 +107,12 @@ func TestParse(t *testing.T) {
 				longFlags[flag] = struct{}{}
 			}
 
-			flags := ParseCommandFlags(tc.flags)
+			flags := ParseCommandFlags("", tc.flags)
 			if len(tc.expected.Short) > 0 {
-				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short))
+				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short), "expected:\n%#v\nactual:\n%#v", tc.expected.Short, flags.Short)
 			}
 			if len(tc.expected.Long) > 0 {
-				require.True(t, reflect.DeepEqual(tc.expected.Long, flags.Long))
+				require.True(t, reflect.DeepEqual(tc.expected.Long, flags.Long), "expected:\n%#v\nactual:\n%#v", tc.expected.Long, flags.Long)
 				for key, val := range tc.expected.Long {
 					actual, _ := flags.Get(key)
 					require.Equal(t, val, actual)

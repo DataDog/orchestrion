@@ -16,7 +16,9 @@ import (
 	"sync"
 
 	"github.com/datadog/orchestrion/internal/goenv"
+	"github.com/datadog/orchestrion/internal/log"
 	"github.com/shirou/gopsutil/v3/process"
+	"golang.org/x/tools/go/packages"
 )
 
 // CommandFlags represents the flags provided to a go command invocation
@@ -88,14 +90,28 @@ func (f CommandFlags) Slice() []string {
 
 // ParseCommandFlags parses a slice representing a go command invocation
 // and returns its flags. Direct arguments to the command are ignored
-func ParseCommandFlags(args []string) CommandFlags {
+func ParseCommandFlags(wd string, args []string) CommandFlags {
 	flags := CommandFlags{
 		Long:  make(map[string]string, len(args)),
 		Short: make(map[string]struct{}, len(args)),
 	}
 
+	var positional []string
 	for i := 0; i < len(args); i += 1 {
 		arg := args[i]
+
+		if arg == "--" {
+			// Everything after "--" is positional arguments...
+			positional = args[i+1:]
+			break
+		}
+		if !strings.HasPrefix(arg, "-") {
+			// No leading - means this is actually a positional argument, and go CLI
+			// requires all flags are provided before positional arguments, so
+			// everything from now on is a positional argument.
+			positional = args[i:]
+			break
+		}
 
 		normArg := arg
 		if strings.HasPrefix(arg, "--") {
@@ -120,6 +136,29 @@ func ParseCommandFlags(args []string) CommandFlags {
 		}
 	}
 
+	if _, hasCover := flags.Short["-cover"]; !hasCover {
+		return flags
+	}
+	if _, hasCoverPkg := flags.Long["-coverpkg"]; hasCoverPkg {
+		return flags
+	}
+	// At this point, we have `-cover` but not `-coverpkg`, so we need to infer the correct
+	// `-coverpkg` argument to imitate the default behavior, for otherwise our attempts at resolving
+	// dependencies might not uniformly apply `-cover` (and `-covermode` if set), which would lead to
+	// link-time fingerprint mismatches.
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: wd}, positional...)
+	if err != nil {
+		log.Warnf("Failed to infer -coverpkg argument from positional arguments %q: %v\n", positional, err)
+		return flags
+	}
+	coverpkg := make([]string, len(pkgs))
+	for i, pkg := range pkgs {
+		coverpkg[i] = pkg.PkgPath
+	}
+	val := strings.Join(coverpkg, " ")
+	flags.Long["-coverpkg"] = val
+	log.Debugf("Inferred -coverpkg=%q from positional arguments %q\n", val, positional)
+
 	return flags
 }
 
@@ -134,9 +173,9 @@ func Flags() (CommandFlags, error) {
 // SetFlags sets the top level go command flags to the specified value. Does nothing if the flags are already set,
 // either because `SetFlags` has already been called, or because `Flags` has been called and the flags have been set by
 // it.
-func SetFlags(args []string) {
+func SetFlags(wd string, args []string) {
 	once.Do(func() {
-		flags = ParseCommandFlags(args)
+		flags = ParseCommandFlags(wd, args)
 	})
 }
 
@@ -193,7 +232,12 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		}
 	}
 
-	return ParseCommandFlags(args[2:]), nil
+	wd, err := p.Cwd()
+	if err != nil {
+		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
+	}
+
+	return ParseCommandFlags(wd, args[2:]), nil
 }
 
 var (
