@@ -1,3 +1,4 @@
+//line samples/server/main.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -9,7 +10,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-//line <generated>:1
+)
+
+//line <generated>
+import (
 	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
@@ -18,7 +22,7 @@ import (
 
 //line samples/server/main.go:14
 func main() {
-//line <generated>:1
+//line <generated>
 	{
 		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 		defer __orchestrion_tracer.Stop()
@@ -48,8 +52,8 @@ func main() {
 	s := &http.Server{
 		Addr: ":8080",
 		Handler:
-//line <generated>:1
 		//dd:startwrap
+//line <generated>
 		__orchestrion_instrument.WrapHandler(
 //line samples/server/main.go:17
 			http.HandlerFunc(myHandler)),

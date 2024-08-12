@@ -75,6 +75,12 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 		return v
 	}
 
+	// Emit a `//line <file>:1:1` directive at start of file to act as a base for all subsequent declarations.
+	if prevInfo.adjFile == "" {
+		prevInfo.adjFile, prevInfo.adjLine = curPosition.Filename, 1
+		dstNode.Decorations().Start.Prepend(prevInfo.directive(true))
+	}
+
 	var adjPosition token.Position
 	if orgNode := v.dec.Ast.Nodes[dstNode]; orgNode != nil {
 		adjPosition = v.dec.Fset.Position(orgNode.Pos())
@@ -104,8 +110,7 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 	// Update the adjusted position to the current observed one...
 	v.adjFile, v.adjLine = adjPosition.Filename, adjPosition.Line
 
-	if prevInfo.adjFile != "" &&
-		curPosition.Line == adjPosition.Line && curPosition.Filename == adjPosition.Filename &&
+	if curPosition.Line == adjPosition.Line && curPosition.Filename == adjPosition.Filename &&
 		adjPosition.Filename == prevInfo.adjFile {
 		// Current & adjusted positions match, and we've not changed adjusted files -- nothing to do!
 		return v
@@ -119,7 +124,7 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 
 	decs := dstNode.Decorations()
-	decs.Start.Append(v.directive(prevInfo.adjFile == ""))
+	decs.Start.Append(v.directive(false))
 	if decs.Before == dst.None {
 		decs.Before = dst.NewLine
 	}

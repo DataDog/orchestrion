@@ -1,3 +1,4 @@
+//line samples/server/chiv5.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -9,7 +10,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-//line <generated>:1
+)
+
+//line <generated>
+import (
 	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 	__orchestrion_chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
 )
@@ -17,23 +21,22 @@ import (
 //line samples/server/chiv5.go:14
 func chiV5Server() {
 	router :=
-//line <generated>:1
+//line <generated>
 		func() *chi.Mux {
 			mux :=
 //line samples/server/chiv5.go:15
 				chi.NewRouter()
-//line <generated>:1
+//line <generated>
 			mux.Use(__orchestrion_chitrace.Middleware())
 			return mux
 		}()
 //line samples/server/chiv5.go:16
 	router.Get("/",
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/chiv5.go:16
 			func(w http.ResponseWriter, _ *http.Request) {
 				w.Write([]byte("Hello World!\n"))
 			}))
-//line samples/server/chiv5.go:19
 	http.ListenAndServe(":8080", router)
 }

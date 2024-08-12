@@ -30,3 +30,24 @@ multiple changes:
     //line :100
     }
     //line :1000
+
+remove redundant directives:
+  source: |
+    package dummy
+
+    //line <generated>
+    //line :0
+    func foo() {
+      //line :10
+      //line :20
+      //line <generated>
+      return
+    }
+  expected: |
+    package dummy
+
+    //line :0
+    func foo() {
+    //line <generated>
+      return
+    }
