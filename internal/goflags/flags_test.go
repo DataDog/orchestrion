@@ -46,6 +46,7 @@ func TestTrim(t *testing.T) {
 func TestParse(t *testing.T) {
 	for name, tc := range map[string]struct {
 		flags    []string
+		goflags  string
 		expected CommandFlags
 	}{
 		"short": {
@@ -91,6 +92,14 @@ func TestParse(t *testing.T) {
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
+		"cover-with-coverpkg": {
+			flags:   []string{"run", "-cover", "-covermode=atomic", "--", "-some.go"},
+			goflags: "-coverpkg=std",
+			expected: CommandFlags{
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "std"},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+		},
 		"cover-dash-c": {
 			flags: []string{"-C", "..", "run", "-cover", "-covermode=atomic", ".."},
 			expected: CommandFlags{
@@ -105,6 +114,14 @@ func TestParse(t *testing.T) {
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
+		"goflags": {
+			flags:   []string{"run", "."},
+			goflags: "-cover -covermode=atomic -tags=integration '-toolexec=foo bar'",
+			expected: CommandFlags{
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags", "-tags": "integration", "-toolexec": "foo bar"},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			defer restore(shortFlags, longFlags)
@@ -114,7 +131,7 @@ func TestParse(t *testing.T) {
 				longFlags[flag] = struct{}{}
 			}
 
-			flags := ParseCommandFlags("", tc.flags)
+			flags := ParseCommandFlags("", tc.flags, tc.goflags)
 			if len(tc.expected.Short) > 0 {
 				require.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short), "expected:\n%#v\nactual:\n%#v", tc.expected.Short, flags.Short)
 			}

@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/datadog/orchestrion/internal/goenv"
+	"github.com/datadog/orchestrion/internal/goflags/quoted"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/tools/go/packages"
@@ -91,39 +92,51 @@ func (f CommandFlags) Slice() []string {
 
 // ParseCommandFlags parses a slice representing a go command invocation
 // and returns its flags. Direct arguments to the command are ignored
-func ParseCommandFlags(wd string, args []string) CommandFlags {
+func ParseCommandFlags(wd string, args []string, goflags string) CommandFlags {
+	goflagsArgs, err := quoted.Split(goflags)
+	if err != nil {
+		log.Warnf("Failed to interpret quoted strings in GOFLAGS=%q: %v\n", goflags, err)
+	} else {
+		log.Tracef("Parsed GOFLAGS contents is %q\n", goflagsArgs)
+	}
+
 	flags := CommandFlags{
-		Long:  make(map[string]string, len(args)),
-		Short: make(map[string]struct{}, len(args)),
-	}
-	if len(args) == 0 {
-		return flags
+		Long:  make(map[string]string, len(args)+len(goflagsArgs)),
+		Short: make(map[string]struct{}, len(args)+len(goflagsArgs)),
 	}
 
-	if arg := args[0]; strings.HasPrefix(arg, "-C") {
-		// The first argument is a change directory flag, which we'll ignore...
-		var cdir string
-		if arg == "-C" && len(args) > 1 {
-			// In this case, the value of `-C` is the next argument, so skip both.
-			cdir = args[1]
-			args = args[2:]
-			log.Tracef("Skipping -C flag arguments %q %q\n", arg, cdir)
-		} else {
-			log.Tracef("Skipping -C flag argument %q\n", arg)
-			cdir = arg[3:] // Skip over `-C=`
-			args = args[1:]
+	if len(args) > 0 {
+		if arg := args[0]; strings.HasPrefix(arg, "-C") {
+			// The first argument is a change directory flag, which we'll ignore...
+			var cdir string
+			if arg == "-C" && len(args) > 1 {
+				// In this case, the value of `-C` is the next argument, so skip both.
+				cdir = args[1]
+				args = args[2:]
+				log.Tracef("Skipping -C flag arguments %q %q\n", arg, cdir)
+			} else {
+				log.Tracef("Skipping -C flag argument %q\n", arg)
+				cdir = arg[3:] // Skip over `-C=`
+				args = args[1:]
+			}
+			if !filepath.IsAbs(cdir) {
+				cdir = filepath.Join(wd, cdir)
+			}
+			wd = cdir
 		}
-		if !filepath.IsAbs(cdir) {
-			cdir = filepath.Join(wd, cdir)
-		}
-		wd = cdir
 	}
 
-	// The next argument immediately after a possible `-C` flags is the go command itself, which we are not interested in.
-	log.Tracef("The go command is %q\n", args[0])
+	if len(args) > 0 {
+		// The next argument immediately after a possible `-C` flags is the go command itself, which we are not interested in.
+		log.Tracef("The go command is %q\n", args[0])
+		args = args[1:]
+	}
+
+	// Prepend the goflags arguments ahead of the actual command line...
+	args = append(append(make([]string, 0, len(goflagsArgs)+len(args)), goflagsArgs...), args...)
 
 	var positional []string
-	for i := 1; i < len(args); i += 1 {
+	for i := 0; i < len(args); i += 1 {
 		arg := args[i]
 		if arg == "--" {
 			// Everything after "--" is positional arguments...
@@ -198,9 +211,9 @@ func Flags() (CommandFlags, error) {
 // SetFlags sets the top level go command flags to the specified value. Does nothing if the flags are already set,
 // either because `SetFlags` has already been called, or because `Flags` has been called and the flags have been set by
 // it.
-func SetFlags(wd string, args []string) {
+func SetFlags(wd string, args []string, goflags string) {
 	once.Do(func() {
-		flags = ParseCommandFlags(wd, args)
+		flags = ParseCommandFlags(wd, args, goflags)
 	})
 }
 
@@ -262,7 +275,19 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	return ParseCommandFlags(wd, args[1:]), nil
+	env, err := p.Environ()
+	if err != nil {
+		return flags, fmt.Errorf("failed to get environment of %d: %w", p.Pid, err)
+	}
+	goflags := ""
+	for _, env := range env {
+		key, val, _ := strings.Cut(env, "=")
+		if key == "GOFLAGS" {
+			goflags = val
+		}
+	}
+
+	return ParseCommandFlags(wd, args[1:], goflags), nil
 }
 
 var (
