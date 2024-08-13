@@ -6,17 +6,12 @@
 package advice
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/datadog/orchestrion/internal/injector/typed"
-	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -32,27 +27,25 @@ func InjectDeclarations(template code.Template, links []string) injectDeclaratio
 	return injectDeclarations{template, links}
 }
 
-func (a injectDeclarations) Apply(ctx context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
-	decls, err := a.template.CompileDeclarations(ctx, chain)
+func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
+	decls, err := a.template.CompileDeclarations(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	file, ok := node.Find[*dst.File](chain)
-	if !ok {
-		return false, errors.New("cannot inject source file: no *dst.File in context")
+	if len(decls) == 0 {
+		return false, nil
 	}
 
+	// Add the declarations to the file
+	file := ctx.File()
 	file.Decls = append(file.Decls, decls...)
 
+	// Register any link-time dependencies that were declared...
 	if len(a.links) > 0 {
-		refMap, found := typed.ContextValue[*typed.ReferenceMap](ctx)
-		if !found {
-			return true, errors.New("unable to register link requirements, no *typed.ReferenceMap in context")
-		}
-		refMap.AddImport(file, "unsafe", "_") // We use go:linkname so we have an implicit dependency on unsafe.
+		ctx.AddImport("unsafe", "_") // For go:linkname
 		for _, link := range a.links {
-			refMap.AddLink(file, link)
+			ctx.AddLink(link)
 		}
 	}
 

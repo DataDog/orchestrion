@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 )
 
@@ -41,8 +42,8 @@ type (
 var errNotMethod = errors.New("the function in this context is not a method")
 
 func (d *dot) Function() function {
-	for curr := d.node; curr != nil; curr = curr.Parent() {
-		switch node := curr.Node.(type) {
+	for curr := context.AspectContext(d.context); curr != nil; curr = curr.Parent() {
+		switch node := curr.Node().(type) {
 		case *dst.FuncDecl:
 			return &declaredFunc{node}
 		case *dst.FuncLit:

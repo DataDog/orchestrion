@@ -6,17 +6,14 @@
 package advice
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/aspect/join"
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -32,16 +29,16 @@ func AppendArgs(typeName join.TypeName, templates ...code.Template) *appendArgs 
 	return &appendArgs{typeName, templates}
 }
 
-func (a *appendArgs) Apply(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (bool, error) {
-	call, ok := chain.Node.(*dst.CallExpr)
+func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
+	call, ok := ctx.Node().(*dst.CallExpr)
 	if !ok {
-		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", chain.Node)
+		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", ctx.Node())
 	}
 
 	newArgs := make([]dst.Expr, len(a.templates))
 	var err error
 	for i, t := range a.templates {
-		newArgs[i], err = t.CompileExpression(ctx, chain)
+		newArgs[i], err = t.CompileExpression(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -93,11 +90,7 @@ func (a *appendArgs) Apply(ctx context.Context, chain *node.Chain, csor *dstutil
 	}
 
 	if importPath := a.typeName.ImportPath(); importPath != "" {
-		if file, ok := typed.ContextValue[*dst.File](ctx); ok {
-			if refMap, ok := typed.ContextValue[*typed.ReferenceMap](ctx); ok {
-				refMap.AddImport(file, importPath, inferPkgName(importPath))
-			}
-		}
+		ctx.AddImport(importPath, inferPkgName(importPath))
 	}
 
 	return true, nil
@@ -152,12 +145,10 @@ func ReplaceFunction(path, name string) *redirectCall {
 	return &redirectCall{path, name}
 }
 
-func (r *redirectCall) Apply(ctx context.Context, chain *node.Chain, csor *dstutil.Cursor) (bool, error) {
-	file, hasFile := node.Find[*dst.File](chain)
-
-	node, ok := chain.Node.(*dst.CallExpr)
+func (r *redirectCall) Apply(ctx context.AdviceContext) (bool, error) {
+	node, ok := ctx.Node().(*dst.CallExpr)
 	if !ok {
-		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", chain.Node)
+		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", ctx.Node())
 	}
 
 	if id, ok := node.Fun.(*dst.Ident); ok {
@@ -168,10 +159,8 @@ func (r *redirectCall) Apply(ctx context.Context, chain *node.Chain, csor *dstut
 		node.Fun = &dst.Ident{Path: r.path, Name: r.name}
 	}
 
-	if r.path != "" && hasFile {
-		if refMap, found := typed.ContextValue[*typed.ReferenceMap](ctx); found {
-			refMap.AddImport(file, r.path, inferPkgName(r.path))
-		}
+	if r.path != "" {
+		ctx.AddImport(r.path, inferPkgName(r.path))
 	}
 
 	return true, nil
