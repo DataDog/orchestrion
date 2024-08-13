@@ -285,9 +285,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/apimachinery v0.23.17 // indirect
+	k8s.io/apimachinery v0.26.2 // indirect
 	k8s.io/client-go v0.23.17 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
+	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
 	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
 )
