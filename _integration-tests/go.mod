@@ -24,6 +24,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
@@ -284,7 +285,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tdewolff/minify/v2 v2.20.37 // indirect
 	github.com/tdewolff/parse/v2 v2.7.15 // indirect
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.32.0 // indirect
 	github.com/tinylib/msgp v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
