@@ -31,3 +31,15 @@ func saramaConsumer() {
 	}
 	defer consumer.Close()
 }
+
+func saramaConsumerFromClient() {
+	client, err := sarama.NewClient([]string{"localhost:9092"}, nil)
+	if err != nil {
+		panic(err)
+	}
+	consumer, err := sarama.NewConsumerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	defer consumer.Close()
+}

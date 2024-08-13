@@ -18,11 +18,41 @@ func saramaProducer() {
 	defer producer.Close()
 }
 
+func saramaProducerFromClient() {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Return.Successes = true
+
+	client, err := sarama.NewClient([]string{"localhost:9092"}, cfg)
+	if err != nil {
+		panic(err)
+	}
+	producer, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
+}
+
 func saramaAsyncProducer() {
 	cfg := sarama.NewConfig()
 	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
 
 	producer, err := sarama.NewAsyncProducer([]string{"localhost:9092"}, cfg)
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
+}
+
+func saramaAsyncProducerFromClient() {
+	cfg := sarama.NewConfig()
+	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
+
+	client, err := sarama.NewClient([]string{"localhost:9092"}, cfg)
+	if err != nil {
+		panic(err)
+	}
+	producer, err := sarama.NewAsyncProducerFromClient(client)
 	if err != nil {
 		panic(err)
 	}
