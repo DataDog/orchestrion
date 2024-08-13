@@ -35,6 +35,11 @@ func (r *lookupResolver) ResolvePackage(path string) (string, error) {
 		return "unsafe", nil
 	}
 
+	if pkg := r.imports[path]; pkg != nil {
+		// We already resolved this package; so we'll just re-use the result.
+		return pkg.Name(), nil
+	}
+
 	rd, err := r.lookup(path)
 	if err != nil {
 		return "", err

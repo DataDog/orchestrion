@@ -31,6 +31,7 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/dave/dst/decorator/resolver"
 	"github.com/dave/dst/decorator/resolver/gotypes"
 	"github.com/dave/dst/dstutil"
 )
@@ -62,6 +63,10 @@ type (
 		// that stack traces resolve to the original source code. This is strongly recommended when performing compile-time
 		// injection.
 		PreserveLineInfo bool
+
+		// restorerResolver is the resolver to use when restoring modified files. It is created on-demand then stored in
+		// this field so it can be re-used.
+		restorerResolver resolver.RestorerResolver
 	}
 
 	// ModifiedFileFn is called with the original file and must return the path to use when writing a modified version.
@@ -244,10 +249,14 @@ func (i *Injector) injectFile(file *dst.File, dec *decorator.Decorator) (Result,
 }
 
 func (i *Injector) newRestorer(filename string) *decorator.FileRestorer {
+	if i.restorerResolver == nil {
+		i.restorerResolver = &lookupResolver{lookup: i.LookupImport}
+	}
+
 	return &decorator.FileRestorer{
 		Restorer: decorator.NewRestorerWithImports(
 			i.ImportPath,
-			&lookupResolver{lookup: i.LookupImport},
+			i.restorerResolver,
 		),
 		Name: filename,
 	}
