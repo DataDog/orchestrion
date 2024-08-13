@@ -12,6 +12,11 @@ concurrency:
 
 permissions: read-all
 
+env:
+  # Ensure tests run with the toolchain we expect; not possibly with one that was downloaded as a result of some
+  # dependency having a `toolchain` directive in its go.mod file.
+  GOTOOLCHAIN: local
+
 jobs:
   lint:
     runs-on: ubuntu-latest
