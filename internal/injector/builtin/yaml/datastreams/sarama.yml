@@ -38,9 +38,17 @@ aspects:
             saramatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama
             sarama: github.com/Shopify/sarama
           template: |-
+            {{- $cfg := .FindArgument "sarama.Config" -}}
             func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
               if p != nil {
-                p = saramatrace.WrapSyncProducer(p)
+                p = saramatrace.WrapSyncProducer(
+                  {{- if $cfg -}}
+                  {{ $cfg }},
+                  {{- else -}}
+                  nil,
+                  {{- end -}}
+                  p,
+                )
               }
               return p, err
             }({{ . }})
@@ -55,9 +63,17 @@ aspects:
             saramatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama
             sarama: github.com/Shopify/sarama
           template: |-
+            {{- $cfg := .FindArgument "sarama.Config" -}}
             func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
               if p != nil {
-                p = saramatrace.WrapAsyncProducer(p)
+                p = saramatrace.WrapAsyncProducer(
+                  {{- if $cfg -}}
+                  {{ $cfg }},
+                  {{- else -}}
+                  nil,
+                  {{- end -}}
+                  p,
+                )
               }
               return p, err
             }({{ . }})

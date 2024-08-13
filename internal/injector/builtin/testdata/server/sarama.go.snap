@@ -21,7 +21,7 @@ func saramaProducer() {
 //line <generated>:1
 		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
 			if p != nil {
-				p = __orchestrion_saramatrace.WrapSyncProducer(p)
+				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
 			}
 			return p, err
 		}(
@@ -42,7 +42,7 @@ func saramaAsyncProducer() {
 //line <generated>:1
 		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
 			if p != nil {
-				p = __orchestrion_saramatrace.WrapAsyncProducer(p)
+				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)
 			}
 			return p, err
 		}(

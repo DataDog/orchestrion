@@ -8,7 +8,8 @@ package main
 import "github.com/Shopify/sarama"
 
 func saramaConsumer() {
-	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, nil)
+	cfg := sarama.NewConfig()
+	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, cfg)
 	if err != nil {
 		panic(err)
 	}

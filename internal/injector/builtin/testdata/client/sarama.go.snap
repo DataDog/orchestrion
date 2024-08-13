@@ -14,6 +14,7 @@ import (
 
 //line samples/client/sarama.go:10
 func saramaConsumer() {
+	cfg := sarama.NewConfig()
 	consumer, err :=
 //line <generated>:1
 		func(c sarama.Consumer, err error) (sarama.Consumer, error) {
@@ -22,9 +23,9 @@ func saramaConsumer() {
 			}
 			return c, err
 		}(
-//line samples/client/sarama.go:11
-			sarama.NewConsumer([]string{"localhost:9092"}, nil))
 //line samples/client/sarama.go:12
+			sarama.NewConsumer([]string{"localhost:9092"}, cfg))
+//line samples/client/sarama.go:13
 	if err != nil {
 		panic(err)
 	}

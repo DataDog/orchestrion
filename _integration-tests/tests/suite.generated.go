@@ -24,6 +24,7 @@ import (
 	mux "orchestrion/integration/tests/mux"
 	nethttp "orchestrion/integration/tests/net_http"
 	redigo "orchestrion/integration/tests/redigo"
+	sarama "orchestrion/integration/tests/sarama"
 	slog "orchestrion/integration/tests/slog"
 	sql "orchestrion/integration/tests/sql"
 	vault "orchestrion/integration/tests/vault"
@@ -48,6 +49,7 @@ var suite = map[string]testCase{
 	"mux":      new(mux.TestCase),
 	"net_http": new(nethttp.TestCase),
 	"redigo":   new(redigo.TestCase),
+	"sarama":   new(sarama.TestCase),
 	"slog":     new(slog.TestCase),
 	"sql":      new(sql.TestCase),
 	"vault":    new(vault.TestCase),

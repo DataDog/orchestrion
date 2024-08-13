@@ -146,7 +146,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapSyncProducer(p)\n  }\n  return p, err\n}({{ . }})",
+				"{{- $cfg := .FindArgument \"sarama.Config\" -}}\nfunc(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapSyncProducer(\n      {{- if $cfg -}}\n      {{ $cfg }},\n      {{- else -}}\n      nil,\n      {{- end -}}\n      p,\n    )\n  }\n  return p, err\n}({{ . }})",
 				map[string]string{
 					"sarama":      "github.com/Shopify/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
@@ -161,7 +161,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapAsyncProducer(p)\n  }\n  return p, err\n}({{ . }})",
+				"{{- $cfg := .FindArgument \"sarama.Config\" -}}\nfunc(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapAsyncProducer(\n      {{- if $cfg -}}\n      {{ $cfg }},\n      {{- else -}}\n      nil,\n      {{- end -}}\n      p,\n    )\n  }\n  return p, err\n}({{ . }})",
 				map[string]string{
 					"sarama":      "github.com/Shopify/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
@@ -717,4 +717,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:GpwhvFkEJmcA+pCH3ZRItIT7UueHodxxoAHySm8rlTU0hFcd7ZxB9JKJdPI/vZIbsZ8zFmS8v9ll8AkbCPRdIQ=="
+const Checksum = "sha512:gF69t3d9gCKQ+4AA8R64gw4easVuad6wAy5k7xEPfE82uoGIqLqtr6m/LmXUszXT3UCmYJvrRddZqJ3F0J/mXw=="
