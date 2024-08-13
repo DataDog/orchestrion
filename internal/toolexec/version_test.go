@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -20,13 +21,22 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/go/packages"
 )
 
-var rootDir string
+var (
+	rootDir        string
+	localToolchain bool
+	goMinorVersion int
+)
 
 func init() {
 	_, file, _, _ := runtime.Caller(0)
 	rootDir = filepath.Join(file, "..", "..", "..")
+
+	localToolchain = os.Getenv("GOTOOLCHAIN") == "local"
+
+	goMinorVersion, _ = strconv.Atoi(strings.Split(runtime.Version(), ".")[1])
 }
 
 func Test(t *testing.T) {
@@ -35,14 +45,33 @@ func Test(t *testing.T) {
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
 
-	getArgs := []string{"get", fmt.Sprintf("go@%s", runtime.Version()[2:])}
-	for _, pkg := range builtin.InjectedPaths {
-		// We don't want to try to "go get" standard library packages; these don't contain a ".".
-		if strings.Contains(pkg, ".") {
-			getArgs = append(getArgs, pkg)
+	// We "go get" the same versions of the dependencies of this package, so that we don't need them resolved again. This
+	// helps avoid issues where `go get` may fail on packages such as `k8s.io/client-go` because it decided to declare
+	// `toolchain 1.22.0` starting at v0.33.0, but we need `go1.21`-compatible packages only at this point.
+	getArgs := append(make([]string, 0, len(builtin.InjectedPaths)), "get", fmt.Sprintf("go@%s", runtime.Version()[2:]))
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedModule, Logf: t.Logf}, builtin.InjectedPaths[:]...)
+	require.NoError(t, err)
+	dedup := make(map[string]struct{}, len(pkgs))
+	for _, pkg := range pkgs {
+		if pkg.Module == nil {
+			// Those are the standard library packages!
+			continue
 		}
+
+		spec := pkg.Module.Path
+		if _, isDup := dedup[spec]; isDup {
+			continue
+		}
+		dedup[spec] = struct{}{}
+
+		if pkg.Module.Version != "" {
+			spec = fmt.Sprintf("%s@%s", spec, pkg.Module.Version)
+		}
+
+		getArgs = append(getArgs, spec)
 	}
 	runGo(t, tmp, getArgs...)
+
 	// Add a go source file to make sure the toolchain doesn't complain we need to run `go mod tidy`...
 	var depsGo bytes.Buffer
 	fmt.Fprintln(&depsGo, "//go:build tools")
