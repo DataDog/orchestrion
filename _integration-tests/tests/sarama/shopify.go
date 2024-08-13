@@ -17,42 +17,63 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testkafka "github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type TestCase struct {
 	server *testkafka.KafkaContainer
 	cfg    *sarama.Config
+	addrs  []string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	ctx := context.Background()
+	var (
+		err error
+		ctx = context.Background()
+	)
+	tc.cfg = sarama.NewConfig()
+	tc.cfg.Version = sarama.V0_11_0_0
+	tc.cfg.Producer.Return.Successes = true
 
-	var err error
 	tc.server, err = testkafka.Run(ctx,
-		"darccio/kafka:2.13-2.8.1",
+		"confluentinc/confluent-local:7.5.0",
+		testkafka.WithClusterID("test-cluster"),
+		testcontainers.WithWaitStrategy(wait.ForListeningPort("9093/tcp")),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
 	)
 	if err != nil {
 		t.Skipf("Failed to start kafka test container: %v\n", err)
 	}
+
+	state, err := tc.server.State(ctx)
+	require.NoError(t, err)
+
+	if !state.Running {
+		t.Skip("Failed to start kafka test container")
+	}
+
+	addr, err := tc.server.Host(ctx)
+	require.NoError(t, err)
+	port, err := tc.server.MappedPort(ctx, "9093/tcp")
+	require.NoError(t, err)
+	tc.addrs = []string{
+		addr + ":" + port.Port(),
+	}
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	var (
+		topic     = "gotest"
+		partition = int32(0)
+	)
+	consumer, err := sarama.NewConsumer(tc.addrs, tc.cfg)
+	require.NoError(t, err)
 	defer consumer.Close()
 
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer producer.Close()
+	producer, err := sarama.NewSyncProducer(tc.addrs, tc.cfg)
+	require.NoError(t, err)
 
-	topic := "test"
-	partition := int32(0)
 	producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: partition,
@@ -60,9 +81,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	})
 
 	partitionConsumer, err := consumer.ConsumePartition(topic, partition, sarama.OffsetOldest)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer partitionConsumer.Close()
 
 	select {
@@ -84,7 +103,24 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
-				"name": "test.root",
+				"name":    "kafka.produce",
+				"type":    "queue",
+				"service": "kafka",
+			},
+			Meta: map[string]any{
+				"span.kind": "producer",
+			},
+			Children: trace.Spans{
+				{
+					Tags: map[string]any{
+						"name":    "kafka.consume",
+						"type":    "queue",
+						"service": "kafka",
+					},
+					Meta: map[string]any{
+						"span.kind": "consumer",
+					},
+				},
 			},
 		},
 	}
