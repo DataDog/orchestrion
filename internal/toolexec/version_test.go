@@ -35,7 +35,7 @@ func Test(t *testing.T) {
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
 
-	getArgs := []string{"get"}
+	getArgs := []string{"get", fmt.Sprintf("go@%s", runtime.Version()[2:])}
 	for _, pkg := range builtin.InjectedPaths {
 		// We don't want to try to "go get" standard library packages; these don't contain a ".".
 		if strings.Contains(pkg, ".") {
