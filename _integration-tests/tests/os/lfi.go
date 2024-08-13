@@ -27,8 +27,7 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	t.Setenv("DD_APPSEC_ENABLED", "true")
-	t.Setenv("DD_APPSEC_RULES", "../testdata/rasp.json")
+	t.Setenv("DD_APPSEC_RULES", "./testdata/rasp.json")
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
 		Addr:    "127.0.0.1:8080",
@@ -76,11 +75,10 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "web",
 					},
 					Meta: map[string]any{
-						"component":           "net/http",
-						"span.kind":           "server",
-						"_dd.appsec.enabled:": "1",
-						"appsec.blocked":      "true",
-						"is.security.error":   "true",
+						"component":         "net/http",
+						"span.kind":         "server",
+						"appsec.blocked":    "true",
+						"is.security.error": "true",
 					},
 				},
 			},
