@@ -6,13 +6,11 @@
 package advice
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -25,13 +23,13 @@ func AssignValue(template code.Template) *assignValue {
 	return &assignValue{template}
 }
 
-func (a *assignValue) Apply(ctx context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
-	spec, ok := chain.Node.(*dst.ValueSpec)
+func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
+	spec, ok := ctx.Node().(*dst.ValueSpec)
 	if !ok {
-		return false, fmt.Errorf("expected *dst.ValueSpec, got %T", chain.Node)
+		return false, fmt.Errorf("expected *dst.ValueSpec, got %T", ctx.Node())
 	}
 
-	expr, err := a.template.CompileExpression(ctx, chain)
+	expr, err := a.template.CompileExpression(ctx)
 	if err != nil {
 		return false, err
 	}

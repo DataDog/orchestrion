@@ -8,6 +8,7 @@ package code
 import (
 	"fmt"
 
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
 )
@@ -20,9 +21,9 @@ func (d *dot) FindArgument(typename string) (string, error) {
 		return "", err
 	}
 
-	for curr := d.node; curr != nil; curr = curr.Parent() {
+	for curr := context.AspectContext(d.context); curr != nil; curr = curr.Parent() {
 		var funcType *dst.FuncType
-		switch node := curr.Node.(type) {
+		switch node := curr.Node().(type) {
 		case *dst.FuncDecl:
 			funcType = node.Type
 		case *dst.FuncLit:

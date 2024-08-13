@@ -6,13 +6,11 @@
 package advice
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -25,28 +23,28 @@ func WrapExpression(template code.Template) *wrapExpression {
 	return &wrapExpression{template: template}
 }
 
-func (a *wrapExpression) Apply(ctx context.Context, node *node.Chain, csor *dstutil.Cursor) (bool, error) {
+func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 	var (
 		kve *dst.KeyValueExpr
 		ok  bool
 	)
 
-	if kve, ok = csor.Node().(*dst.KeyValueExpr); ok {
-		node = node.Child(kve.Value, node.ImportPath(), "Value", -1)
-	} else if _, ok = csor.Node().(dst.Expr); !ok {
-		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", csor.Node())
+	if kve, ok = ctx.Node().(*dst.KeyValueExpr); ok {
+		ctx = ctx.Child(kve.Value, "Value", -1)
+	} else if _, ok = ctx.Node().(dst.Expr); !ok {
+		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", ctx.Node())
 	}
 
-	repl, err := a.template.CompileExpression(ctx, node)
+	repl, err := a.template.CompileExpression(ctx)
 	if err != nil {
 		return false, err
 	}
 
 	if kve == nil {
-		if csor.Node() == repl {
+		if ctx.Node() == repl {
 			return false, nil
 		}
-		csor.Replace(repl)
+		ctx.ReplaceNode(repl)
 	} else {
 		if kve.Value == repl {
 			return false, nil

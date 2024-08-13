@@ -104,11 +104,6 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return nil
 	}
 
-	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
-	if err != nil {
-		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
-	}
-
 	var (
 		linkDeps   linkdeps.LinkDeps
 		regUpdated bool
@@ -119,14 +114,14 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 			continue
 		}
 
-		if archive, ok := reg.PackageFile[depImportPath]; ok {
+		if archive, ok := imports.PackageFile[depImportPath]; ok {
 			deps, err := linkdeps.FromArchive(archive)
 			if err != nil {
 				return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, depImportPath, err)
 			}
 			log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.LinkDepsFilename, depImportPath, archive)
 			for _, tDep := range deps.Dependencies() {
-				if _, found := reg.PackageFile[tDep]; !found {
+				if _, found := imports.PackageFile[tDep]; !found {
 					log.Debugf("Copying %s dependency on %q inherited from %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath)
 					linkDeps.Add(tDep)
 				}
@@ -152,18 +147,18 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				}
 				log.Debugf("Processing %s dependencies from %s...\n", linkdeps.LinkDepsFilename, dep)
 				for _, tDep := range deps.Dependencies() {
-					if _, found := reg.PackageFile[tDep]; !found {
+					if _, found := imports.PackageFile[tDep]; !found {
 						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath, dep)
 						linkDeps.Add(tDep)
 					}
 				}
 
-				if _, ok := reg.PackageFile[dep]; ok {
+				if _, ok := imports.PackageFile[dep]; ok {
 					// Already part of natural dependencies, nothing to do...
 					continue
 				}
 				log.Debugf("Recording transitive dependency of %q: %q => %q\n", depImportPath, dep, archive)
-				reg.PackageFile[dep] = archive
+				imports.PackageFile[dep] = archive
 				regUpdated = true
 			}
 		}
@@ -177,7 +172,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 	if regUpdated {
 		// Creating updated version of the importcfg file, with new dependencies
-		if err := writeUpdatedImportConfig(reg, cmd.Flags.ImportCfg); err != nil {
+		if err := writeUpdatedImportConfig(imports, cmd.Flags.ImportCfg); err != nil {
 			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 		}
 	}
