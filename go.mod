@@ -52,6 +52,7 @@ require (
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/DataDog/sketches-go v1.4.6 // indirect
+	github.com/IBM/sarama v1.40.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Shopify/sarama v1.38.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect

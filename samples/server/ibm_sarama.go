@@ -5,9 +5,9 @@
 
 package main
 
-import "github.com/Shopify/sarama"
+import "github.com/IBM/sarama"
 
-func saramaProducer() {
+func ibmSaramaProducer() {
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
 
@@ -18,7 +18,7 @@ func saramaProducer() {
 	defer producer.Close()
 }
 
-func saramaProducerFromClient() {
+func ibmSaramaProducerFromClient() {
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
 
@@ -33,7 +33,7 @@ func saramaProducerFromClient() {
 	defer producer.Close()
 }
 
-func saramaAsyncProducer() {
+func ibmSaramaAsyncProducer() {
 	cfg := sarama.NewConfig()
 	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
 
@@ -44,7 +44,7 @@ func saramaAsyncProducer() {
 	defer producer.Close()
 }
 
-func saramaAsyncProducerFromClient() {
+func ibmSaramaAsyncProducerFromClient() {
 	cfg := sarama.NewConfig()
 	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
 

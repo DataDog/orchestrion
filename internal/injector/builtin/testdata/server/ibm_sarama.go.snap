@@ -1,0 +1,106 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"github.com/IBM/sarama"
+
+//line <generated>:1
+	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
+)
+
+//line samples/server/ibm_sarama.go:10
+func ibmSaramaProducer() {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Return.Successes = true
+
+	producer, err :=
+//line <generated>:1
+		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
+			if p != nil {
+				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
+			}
+			return p, err
+		}(
+//line samples/server/ibm_sarama.go:14
+			sarama.NewSyncProducer([]string{"localhost:9092"}, cfg))
+//line samples/server/ibm_sarama.go:15
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
+}
+
+func ibmSaramaProducerFromClient() {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Return.Successes = true
+
+	client, err := sarama.NewClient([]string{"localhost:9092"}, cfg)
+	if err != nil {
+		panic(err)
+	}
+	producer, err :=
+//line <generated>:1
+		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
+			if p != nil {
+				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
+			}
+			return p, err
+		}(
+//line samples/server/ibm_sarama.go:29
+			sarama.NewSyncProducerFromClient(client))
+//line samples/server/ibm_sarama.go:30
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
+}
+
+func ibmSaramaAsyncProducer() {
+	cfg := sarama.NewConfig()
+	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
+
+	producer, err :=
+//line <generated>:1
+		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
+			if p != nil {
+				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)
+			}
+			return p, err
+		}(
+//line samples/server/ibm_sarama.go:40
+			sarama.NewAsyncProducer([]string{"localhost:9092"}, cfg))
+//line samples/server/ibm_sarama.go:41
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
+}
+
+func ibmSaramaAsyncProducerFromClient() {
+	cfg := sarama.NewConfig()
+	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
+
+	client, err := sarama.NewClient([]string{"localhost:9092"}, cfg)
+	if err != nil {
+		panic(err)
+	}
+	producer, err :=
+//line <generated>:1
+		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
+			if p != nil {
+				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)
+			}
+			return p, err
+		}(
+//line samples/server/ibm_sarama.go:55
+			sarama.NewAsyncProducerFromClient(client))
+//line samples/server/ibm_sarama.go:56
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
+}

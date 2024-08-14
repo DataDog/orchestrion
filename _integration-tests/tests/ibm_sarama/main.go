@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package sarama
+package ibm_sarama
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testkafka "github.com/testcontainers/testcontainers-go/modules/kafka"
@@ -109,6 +109,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 			Meta: map[string]any{
 				"span.kind": "producer",
+				"component": "IBM/sarama",
 			},
 			Children: trace.Spans{
 				{
@@ -119,6 +120,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 					},
 					Meta: map[string]any{
 						"span.kind": "consumer",
+						"component": "IBM/sarama",
 					},
 				},
 			},

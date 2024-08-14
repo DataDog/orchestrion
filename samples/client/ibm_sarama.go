@@ -5,9 +5,9 @@
 
 package main
 
-import "github.com/Shopify/sarama"
+import "github.com/IBM/sarama"
 
-func saramaConsumer() {
+func ibmSaramaConsumer() {
 	cfg := sarama.NewConfig()
 	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, cfg)
 	if err != nil {
@@ -16,7 +16,7 @@ func saramaConsumer() {
 	defer consumer.Close()
 }
 
-func saramaConsumerFromClient() {
+func ibmSaramaConsumerFromClient() {
 	client, err := sarama.NewClient([]string{"localhost:9092"}, nil)
 	if err != nil {
 		panic(err)

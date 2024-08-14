@@ -123,7 +123,53 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
-	// From datastreams/sarama.yml
+	// From datastreams/ibm_sarama.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/IBM/sarama.NewConsumer"),
+			join.FunctionCall("github.com/IBM/sarama.NewConsumerClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(c sarama.Consumer, err error) (sarama.Consumer, error) {\n  if c != nil {\n    c = saramatrace.WrapConsumer(c)\n  }\n  return c, err\n}({{ . }})",
+				map[string]string{
+					"sarama":      "github.com/IBM/sarama",
+					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/IBM/sarama.NewSyncProducer"),
+			join.FunctionCall("github.com/IBM/sarama.NewSyncProducerFromClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- $cfg := .FindArgument \"sarama.Config\" -}}\nfunc(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapSyncProducer(\n      {{- if $cfg -}}\n      {{ $cfg }},\n      {{- else -}}\n      nil,\n      {{- end -}}\n      p,\n    )\n  }\n  return p, err\n}({{ . }})",
+				map[string]string{
+					"sarama":      "github.com/IBM/sarama",
+					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/IBM/sarama.NewAsyncProducer"),
+			join.FunctionCall("github.com/IBM/sarama.NewAsyncProducerFromClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- $cfg := .FindArgument \"sarama.Config\" -}}\nfunc(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {\n  if p != nil {\n    p = saramatrace.WrapAsyncProducer(\n      {{- if $cfg -}}\n      {{ $cfg }},\n      {{- else -}}\n      nil,\n      {{- end -}}\n      p,\n    )\n  }\n  return p, err\n}({{ . }})",
+				map[string]string{
+					"sarama":      "github.com/IBM/sarama",
+					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
+				},
+			)),
+		},
+	},
+	// From datastreams/shopify_sarama.yml
 	{
 		JoinPoint: join.OneOf(
 			join.FunctionCall("github.com/Shopify/sarama.NewConsumer"),
@@ -678,6 +724,7 @@ var InjectedPaths = [...]string{
 	"github.com/datadog/orchestrion/instrument/event",
 	"github.com/datadog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
@@ -717,4 +764,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:gF69t3d9gCKQ+4AA8R64gw4easVuad6wAy5k7xEPfE82uoGIqLqtr6m/LmXUszXT3UCmYJvrRddZqJ3F0J/mXw=="
+const Checksum = "sha512:wbkfjDjV3+GQ36tmhe3yOJDfllvuJ8Tt8Q6WjcsZyNbP2JLK5IKQU5+Ns5PTdZJiwCZ0BnRyCwYSOV/rx9aNzQ=="

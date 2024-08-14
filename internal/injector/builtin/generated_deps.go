@@ -15,6 +15,7 @@ import (
 	_ "github.com/datadog/orchestrion/instrument/event"
 	_ "github.com/datadog/orchestrion/instrument/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
