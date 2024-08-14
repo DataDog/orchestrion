@@ -101,6 +101,11 @@ func main() {
 			cmd.Server,
 		},
 		Before: func(ctx *cli.Context) error {
+			profiles := ctx.StringSlice("profile")
+			if len(profiles) == 0 {
+				return nil
+			}
+
 			profilePath, err := filepath.Abs(ctx.String("profile-path"))
 			if err != nil {
 				return err
@@ -109,8 +114,6 @@ func main() {
 				return err
 			}
 			os.Setenv(envVarProfilePath, profilePath)
-
-			profiles := ctx.StringSlice("profile")
 			for _, p := range profiles {
 				var err error
 				switch p {
