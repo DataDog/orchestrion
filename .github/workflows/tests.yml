@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ['1.21', '1.22', '1.23.0-rc.2']
+        go-version: ['1.22', '1.23']
     name: Unit tests (go${{ matrix.go-version }})
     steps:
       - name: Checkout
@@ -83,7 +83,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on: [macos, ubuntu, windows]
-        go-version: ['1.21', '1.22', '1.23.0-rc.2']
+        go-version: ['1.22', '1.23']
         build-mode: [DRIVER]
         include:
           # Alternate build modes (only on ubuntu, latest go; to save CI time)

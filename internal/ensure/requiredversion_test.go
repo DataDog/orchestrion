@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -38,7 +39,7 @@ func TestGoModVersion(t *testing.T) {
 			goMod := []string{
 				"module test_case",
 				"",
-				"go 1.21",
+				fmt.Sprintf("go %s", runtime.Version()[2:]),
 				"",
 			}
 			if test.version != "" {
