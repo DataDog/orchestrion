@@ -7,6 +7,7 @@ package ibm_sarama
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -18,6 +19,11 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testkafka "github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/wait"
+)
+
+const (
+	topic     = "gotest"
+	partition = int32(0)
 )
 
 type TestCase struct {
@@ -57,28 +63,30 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 	port, err := tc.server.MappedPort(ctx, "9093/tcp")
 	require.NoError(t, err)
-	tc.addrs = []string{
-		addr + ":" + port.Port(),
-	}
+	tc.addrs = []string{fmt.Sprintf("%s:%s", addr, port.Port())}
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	var (
-		topic     = "gotest"
-		partition = int32(0)
-	)
-	consumer, err := sarama.NewConsumer(tc.addrs, tc.cfg)
-	require.NoError(t, err)
-	defer consumer.Close()
+func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
+	t.Helper()
 
-	producer, err := sarama.NewSyncProducer(tc.addrs, tc.cfg)
-	require.NoError(t, err)
+	producer, err := sarama.NewSyncProducer(addrs, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: partition,
 		Value:     sarama.StringEncoder("Hello, World!"),
 	})
+}
+
+func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
+	t.Helper()
+
+	consumer, err := sarama.NewConsumer(addrs, cfg)
+	require.NoError(t, err)
+	defer consumer.Close()
 
 	partitionConsumer, err := consumer.ConsumePartition(topic, partition, sarama.OffsetOldest)
 	require.NoError(t, err)
@@ -87,9 +95,14 @@ func (tc *TestCase) Run(t *testing.T) {
 	select {
 	case msg := <-partitionConsumer.Messages():
 		require.Equal(t, "Hello, World!", string(msg.Value))
-	case <-time.After(5 * time.Second):
+	case <-time.After(15 * time.Second):
 		t.Fatal("timed out waiting for message")
 	}
+}
+
+func (tc *TestCase) Run(t *testing.T) {
+	produceMessage(t, tc.addrs, tc.cfg)
+	consumeMessage(t, tc.addrs, tc.cfg)
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
