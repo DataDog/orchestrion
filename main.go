@@ -7,9 +7,14 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
+	"runtime/trace"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/cmd"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
@@ -19,9 +24,12 @@ import (
 )
 
 const (
-	envVarOrchestrionLogFile  = "ORCHESTRION_LOG_FILE"
-	envVarOrchestrionLogLevel = "ORCHESTRION_LOG_LEVEL"
-	envVarToolexecImportPath  = "TOOLEXEC_IMPORTPATH"
+	envVarOrchestrionLogFile         = "ORCHESTRION_LOG_FILE"
+	envVarOrchestrionLogLevel        = "ORCHESTRION_LOG_LEVEL"
+	envVarOrchestrionProfilePath     = "ORCHESTRION_PROFILE_PATH"
+	envVarOrchestrionEnabledProfiles = "ORCHESTRION_ENABLED_PROFILES"
+
+	envVarToolexecImportPath = "TOOLEXEC_IMPORTPATH"
 )
 
 func main() {
@@ -32,6 +40,11 @@ func main() {
 		log.SetContext(envVarToolexecImportPath, val)
 	}
 	defer log.Close()
+
+	var (
+		cpuProfile     *os.File
+		executionTrace *os.File
+	)
 
 	// Setup the CLI application
 	app := cli.App{
@@ -67,6 +80,20 @@ func main() {
 				Usage:    "Send logging output to a file instead of STDERR. Unless --log-level is also specified, the default log level changed to WARN.",
 				Action:   actionSetLogFile,
 			},
+			&cli.StringFlag{
+				Category: "Profiling",
+				Name:     "profile-path",
+				EnvVars:  []string{envVarOrchestrionProfilePath},
+				Usage:    "Path for profiling data. Defaults to the current working directory",
+				Hidden:   true,
+			},
+			&cli.StringSliceFlag{
+				Category: "Profiling",
+				Name:     "profile",
+				EnvVars:  []string{envVarOrchestrionEnabledProfiles},
+				Usage:    "Enable the given profiler. Valid options are \"cpu\", \"heap\", and \"trace\". Can be specified multiple times.",
+				Hidden:   true,
+			},
 		},
 		Commands: []*cli.Command{
 			cmd.Go,
@@ -74,6 +101,61 @@ func main() {
 			cmd.Toolexec,
 			cmd.Version,
 			cmd.Server,
+		},
+		Before: func(ctx *cli.Context) error {
+			profiles := ctx.StringSlice("profile")
+			if len(profiles) == 0 {
+				return nil
+			}
+
+			profilePath, err := filepath.Abs(ctx.String("profile-path"))
+			if err != nil {
+				return err
+			}
+			if err := os.MkdirAll(profilePath, 0775); err != nil && !os.IsExist(err) {
+				return err
+			}
+			os.Setenv(envVarOrchestrionProfilePath, profilePath)
+			for _, p := range profiles {
+				var err error
+				switch p {
+				case "heap":
+					// Nothing to do; this is dealt with only in After
+				case "cpu":
+					cpuProfile, err = startCPUProfiling(ctx, profilePath)
+				case "trace":
+					executionTrace, err = startExecutionTracing(ctx, profilePath)
+				default:
+					return fmt.Errorf("unrecognized profile type %s", p)
+				}
+				if err != nil {
+					return fmt.Errorf("enabling profile %s: %w", p, err)
+				}
+			}
+			os.Setenv(envVarOrchestrionEnabledProfiles, strings.Join(profiles, ","))
+			return nil
+		},
+		After: func(ctx *cli.Context) error {
+			// Stop profiling, execution tracing, if they were started
+			if cpuProfile != nil {
+				pprof.StopCPUProfile()
+				cpuProfile.Close()
+			}
+			if executionTrace != nil {
+				trace.Stop()
+				executionTrace.Close()
+			}
+			if slices.Contains(ctx.StringSlice("profile"), "heap") {
+				filename := profilePath(ctx.String("profile-path"), "orchestrion-heap-%d.pprof")
+				f, err := profileToFile(filename, func(w io.Writer) error {
+					return pprof.Lookup("heap").WriteTo(w, 0)
+				})
+				if err != nil {
+					return fmt.Errorf("writing heap profile: %w", err)
+				}
+				f.Close()
+			}
+			return nil
 		},
 	}
 	// Run the CLI application
@@ -124,4 +206,39 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 	}
 
 	return nil
+}
+
+func profilePath(path, nameFormat string) string {
+	return filepath.Join(path, fmt.Sprintf(nameFormat, os.Getpid()))
+}
+
+func profileToFile(filename string, collect func(io.Writer) error) (*os.File, error) {
+	f, err := os.Create(filename)
+	if err != nil {
+		return nil, fmt.Errorf("creating file %s: %w", filename, err)
+	}
+	if err := collect(f); err != nil {
+		f.Close()
+		os.Remove(filename)
+		return nil, fmt.Errorf("starting collection: %w", err)
+	}
+	return f, nil
+}
+
+func startCPUProfiling(ctx *cli.Context, prefix string) (*os.File, error) {
+	filename := profilePath(prefix, "orchestrion-cpu-%d.pprof")
+	f, err := profileToFile(filename, pprof.StartCPUProfile)
+	if err != nil {
+		return nil, fmt.Errorf("starting CPU profiling: %w", err)
+	}
+	return f, nil
+}
+
+func startExecutionTracing(ctx *cli.Context, prefix string) (*os.File, error) {
+	filename := profilePath(prefix, "orchestrion-%d.trace")
+	f, err := profileToFile(filename, trace.Start)
+	if err != nil {
+		return nil, fmt.Errorf("starting execution tracing: %w", err)
+	}
+	return f, nil
 }
