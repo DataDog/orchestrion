@@ -14,6 +14,7 @@ import (
 	"runtime/pprof"
 	"runtime/trace"
 	"strconv"
+	"strings"
 
 	"github.com/datadog/orchestrion/internal/cmd"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
@@ -26,13 +27,9 @@ const (
 	envVarOrchestrionLogFile  = "ORCHESTRION_LOG_FILE"
 	envVarOrchestrionLogLevel = "ORCHESTRION_LOG_LEVEL"
 	envVarToolexecImportPath  = "TOOLEXEC_IMPORTPATH"
-	envVarCPUProfiling        = "CPU_PROFILING"
-	envVarHeapProfiling       = "HEAP_PROFILING"
-	envVarExecutionTracing    = "EXECUTION_TRACING"
-	envVarProfilePrefix       = "PROFILE_PREFIX"
+	envVarProfilePath         = "ORCHESTRION_PROFILE_PATH"
+	envVarEnabledProfiles     = "ORCHESTRION_ENABLED_PROFILES"
 )
-
-var profilePrefix string
 
 type ctxKeyCPUProfiling struct{}
 type ctxKeyHeapProfiling struct{}
@@ -82,41 +79,17 @@ func main() {
 				Action:   actionSetLogFile,
 			},
 			&cli.StringFlag{
-				Category:    "Profiling",
-				Name:        "profile-prefix",
-				EnvVars:     []string{envVarProfilePrefix},
-				Usage:       "Path prefix for profiling data",
-				Value:       "",
-				Destination: &profilePrefix,
-				Action: func(ctx *cli.Context, s string) error {
-					// Set the env var so child processes get it
-					os.Setenv(envVarProfilePrefix, s)
-					return nil
-				},
-				Hidden: true,
-			},
-			&cli.BoolFlag{
 				Category: "Profiling",
-				Name:     "cpu-profiling",
-				EnvVars:  []string{envVarCPUProfiling},
-				Usage:    "Enable the CPU profiler. Profiles are recorded to file \"orchestrion-cpu-${pid}.pprof\"",
-				Action:   actionCPUProfiling,
+				Name:     "profile-path",
+				EnvVars:  []string{envVarProfilePath},
+				Usage:    "Path for profiling data. Defaults to the current working directory",
 				Hidden:   true,
 			},
-			&cli.BoolFlag{
+			&cli.StringSliceFlag{
 				Category: "Profiling",
-				Name:     "heap-profiling",
-				EnvVars:  []string{envVarHeapProfiling},
-				Usage:    "Enable the heap profiler. Profiles are recorded to file \"orchestrion-heap-${pid}.pprof\"",
-				Action:   actionHeapProfiling,
-				Hidden:   true,
-			},
-			&cli.BoolFlag{
-				Category: "Profiling",
-				Name:     "execution-tracing",
-				EnvVars:  []string{envVarExecutionTracing},
-				Usage:    "Enable the execution tracer. Traces are recorded to file \"orchestrion-${pid}.trace\"",
-				Action:   actionExecutionTracing,
+				Name:     "profile",
+				EnvVars:  []string{envVarEnabledProfiles},
+				Usage:    "Enable the given profiler. Valid options are \"cpu\", \"heap\", and \"trace\"",
 				Hidden:   true,
 			},
 		},
@@ -126,6 +99,36 @@ func main() {
 			cmd.Toolexec,
 			cmd.Version,
 			cmd.Server,
+		},
+		Before: func(ctx *cli.Context) error {
+			profilePath, err := filepath.Abs(ctx.String("profile-path"))
+			if err != nil {
+				return err
+			}
+			if err := os.MkdirAll(profilePath, 0775); err != nil && !os.IsExist(err) {
+				return err
+			}
+			os.Setenv(envVarProfilePath, profilePath)
+
+			profiles := ctx.StringSlice("profile")
+			for _, p := range profiles {
+				var err error
+				switch p {
+				case "heap":
+					err = enableHeapProfiling(ctx, profilePath)
+				case "cpu":
+					err = enableCPUProfiling(ctx, profilePath)
+				case "trace":
+					err = enableExecutionTracing(ctx, profilePath)
+				default:
+					return fmt.Errorf("unrecognized profile type %s", p)
+				}
+				if err != nil {
+					return fmt.Errorf("enabling profile %s: %w", p, err)
+				}
+			}
+			os.Setenv(envVarEnabledProfiles, strings.Join(profiles, ","))
+			return nil
 		},
 		After: func(ctx *cli.Context) error {
 			// Stop profiling, execution tracing, if they were started
@@ -200,12 +203,8 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 	return nil
 }
 
-func profilePath(nameFormat string) string {
-	filename := fmt.Sprintf(nameFormat, os.Getpid())
-	if profilePrefix != "" {
-		filename = filepath.Join(profilePrefix, filename)
-	}
-	return filename
+func profilePath(path, nameFormat string) string {
+	return filepath.Join(path, fmt.Sprintf(nameFormat, os.Getpid()))
 }
 
 func profileToFile(filename string, collect func(io.Writer) error) (*os.File, error) {
@@ -221,40 +220,28 @@ func profileToFile(filename string, collect func(io.Writer) error) (*os.File, er
 	return f, nil
 }
 
-func actionCPUProfiling(ctx *cli.Context, enabled bool) error {
-	if !enabled {
-		return nil
-	}
-	filename := profilePath("orchestrion-cpu-%d.pprof")
+func enableCPUProfiling(ctx *cli.Context, prefix string) error {
+	filename := profilePath(prefix, "orchestrion-cpu-%d.pprof")
 	f, err := profileToFile(filename, pprof.StartCPUProfile)
 	if err != nil {
 		return fmt.Errorf("starting CPU profiling: %w", err)
 	}
 	ctx.Context = context.WithValue(ctx.Context, ctxKeyCPUProfiling{}, f)
-	os.Setenv(envVarCPUProfiling, "true")
 	return nil
 }
 
-func actionHeapProfiling(ctx *cli.Context, enabled bool) error {
-	if !enabled {
-		return nil
-	}
-	filename := profilePath("orchestrion-heap-%d.pprof")
+func enableHeapProfiling(ctx *cli.Context, prefix string) error {
+	filename := profilePath(prefix, "orchestrion-heap-%d.pprof")
 	ctx.Context = context.WithValue(ctx.Context, ctxKeyHeapProfiling{}, filename)
-	os.Setenv(envVarHeapProfiling, "true")
 	return nil
 }
 
-func actionExecutionTracing(ctx *cli.Context, enabled bool) error {
-	if !enabled {
-		return nil
-	}
-	filename := profilePath("orchestrion-%d.trace")
+func enableExecutionTracing(ctx *cli.Context, prefix string) error {
+	filename := profilePath(prefix, "orchestrion-%d.trace")
 	f, err := profileToFile(filename, trace.Start)
 	if err != nil {
 		return fmt.Errorf("starting execution tracing: %w", err)
 	}
 	ctx.Context = context.WithValue(ctx.Context, ctxKeyExecutionTracing{}, f)
-	os.Setenv(envVarExecutionTracing, "true")
 	return nil
 }
