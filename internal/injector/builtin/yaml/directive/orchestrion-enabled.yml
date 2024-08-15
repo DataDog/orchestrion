@@ -21,3 +21,4 @@ aspects:
     advice:
       - assign-value:
           template: 'true'
+    tracer-internal: true
