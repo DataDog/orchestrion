@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unsafe"
 
 	"github.com/datadog/orchestrion/internal/injector"
 	"github.com/datadog/orchestrion/internal/injector/aspect"
@@ -92,13 +93,24 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 			return fmt.Errorf("weaving aspects in %q: %w", gofile, err)
 		}
 
-		if !res.Modified {
-			continue
+		if res.Modified {
+			log.Debugf("Modified source code: %q => %q\n", gofile, res.Filename)
+			if err := cmd.ReplaceParam(gofile, res.Filename); err != nil {
+				return fmt.Errorf("replacing %q with %q: %w", gofile, res.Filename, err)
+			}
 		}
 
-		log.Debugf("Modified source code: %q => %q\n", gofile, res.Filename)
-		if err := cmd.ReplaceParam(gofile, res.Filename); err != nil {
-			return fmt.Errorf("replacing %q with %q: %w", gofile, res.Filename, err)
+		outDir := filepath.Join(orchestrionDir, "src", "synthetic")
+		for name, data := range res.NewFiles {
+			log.Debugf("New source file: %q\n%s\n", name, unsafe.String(unsafe.SliceData(data), len(data)))
+			if err := os.MkdirAll(outDir, 0o755); err != nil {
+				return fmt.Errorf("creating synthetic source directory %q: %w", outDir, err)
+			}
+			filename := filepath.Join(outDir, name)
+			if err := os.WriteFile(filename, data, 0o644); err != nil {
+				return fmt.Errorf("writing synthetic source file %q: %w", filename, err)
+			}
+			cmd.AddFiles([]string{filename})
 		}
 
 		references.Merge(res.References)

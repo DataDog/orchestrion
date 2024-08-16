@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -24,9 +24,9 @@ func (configuration) ImpliesImported() []string {
 	return nil
 }
 
-func (jp configuration) Matches(chain *node.Chain) bool {
+func (jp configuration) Matches(ctx context.AspectContext) bool {
 	for k, v := range jp {
-		cfg, found := chain.Config(k)
+		cfg, found := ctx.Config(k)
 		if !found || cfg != v {
 			return false
 		}

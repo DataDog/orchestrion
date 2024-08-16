@@ -57,14 +57,14 @@ orchestrion,github.com/urfave/cli/v2,MIT,Copyright (c) 2022 urfave/cli maintaine
 orchestrion,github.com/xrash/smetrics,MIT,Copyright (C) 2016 Felipe da Cunha Gonçalves
 orchestrion,github.com/yusufpapurcu/wmi,MIT,Copyright (c) 2013 Stack Exchange
 orchestrion,go.uber.org/atomic,MIT,"Copyright (c) 2016 Uber Technologies, Inc."
-orchestrion,golang.org/x/crypto,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
+orchestrion,golang.org/x/crypto,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/sync/errgroup,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/sys,BSD-3-Clause,Copyright 2009 The Go Authors.
-orchestrion,golang.org/x/term,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
-orchestrion,golang.org/x/text,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
+orchestrion,golang.org/x/term,BSD-3-Clause,Copyright 2009 The Go Authors.
+orchestrion,golang.org/x/text,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/time/rate,BSD-3-Clause,Copyright 2009 The Go Authors.
-orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved.
+orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/xerrors,BSD-3-Clause,Copyright 2019 The Go Authors.
 orchestrion,google.golang.org/protobuf,BSD-3-Clause,Copyright (c) 2018 The Go Authors. All rights reserved.
 orchestrion,gopkg.in/DataDog/dd-trace-go.v1,Apache-2.0,"Copyright 2016 Datadog, Inc. | Copyright (c) 2016-Present, Datadog <info@datadoghq.com> | Copyright 2016-Present Datadog, Inc."

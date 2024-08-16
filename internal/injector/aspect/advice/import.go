@@ -8,14 +8,9 @@
 package advice
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/node"
-	"github.com/datadog/orchestrion/internal/injector/typed"
-	"github.com/dave/dst"
-	"github.com/dave/dst/dstutil"
+	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -26,19 +21,9 @@ func AddBlankImport(path string) addBlankImport {
 	return addBlankImport(path)
 }
 
-func (a addBlankImport) Apply(ctx context.Context, chain *node.Chain, _ *dstutil.Cursor) (bool, error) {
-	file, hasFile := node.Find[*dst.File](chain)
-	if !hasFile {
-		return false, errors.New("cannot add import: no *dst.File found in node.Chain")
-	}
-
-	refMap, hasMap := typed.ContextValue[*typed.ReferenceMap](ctx)
-	if !hasMap {
-		return false, errors.New("cannot add import: no *typed.ReferenceMap found in context")
-	}
-
-	refMap.AddImport(file, string(a), "_")
-	return true, nil
+func (a addBlankImport) Apply(ctx context.AdviceContext) (bool, error) {
+	added := ctx.AddImport(string(a), "_")
+	return added, nil
 }
 
 func (a addBlankImport) AsCode() jen.Code {
