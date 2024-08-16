@@ -18,12 +18,12 @@ import (
 //line samples/client/http.go:16
 func shortHandsWithContext(
 //line <generated>:1
-	_arg_0 context. //line samples/client/http.go:16
-			Context) {
+	__argument__0 context. //line samples/client/http.go:16
+				Context) {
 	resp, err :=
 //line <generated>:1
 		__orchestrion_instrument.Get(
-			_arg_0,
+			__argument__0,
 //line samples/client/http.go:17
 			"http://localhost:8080")
 //line samples/client/http.go:18
@@ -35,7 +35,7 @@ func shortHandsWithContext(
 	resp, err =
 //line <generated>:1
 		__orchestrion_instrument.Head(
-			_arg_0,
+			__argument__0,
 //line samples/client/http.go:23
 			"http://localhost:8080")
 //line samples/client/http.go:24
@@ -47,7 +47,7 @@ func shortHandsWithContext(
 	resp, err =
 //line <generated>:1
 		__orchestrion_instrument.Post(
-			_arg_0,
+			__argument__0,
 //line samples/client/http.go:29
 			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
 //line samples/client/http.go:30
@@ -59,7 +59,7 @@ func shortHandsWithContext(
 	resp, err =
 //line <generated>:1
 		__orchestrion_instrument.PostForm(
-			_arg_0,
+			__argument__0,
 //line samples/client/http.go:35
 			"http://localhost:8080", url.Values{"key": {"value"}})
 //line samples/client/http.go:36
@@ -69,11 +69,11 @@ func shortHandsWithContext(
 	resp.Body.Close()
 }
 
-func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
+func shortHandsWithRequest(__argument__0 *http.Request /* for context */) {
 	resp, err :=
 //line <generated>:1
 		__orchestrion_instrument.Get(
-			_arg_0.Context(),
+			__argument__0.Context(),
 //line samples/client/http.go:43
 			"http://localhost:8080")
 //line samples/client/http.go:44
@@ -85,7 +85,7 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 	resp, err =
 //line <generated>:1
 		__orchestrion_instrument.Head(
-			_arg_0.Context(),
+			__argument__0.Context(),
 //line samples/client/http.go:49
 			"http://localhost:8080")
 //line samples/client/http.go:50
@@ -97,7 +97,7 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 	resp, err =
 //line <generated>:1
 		__orchestrion_instrument.Post(
-			_arg_0.Context(),
+			__argument__0.Context(),
 //line samples/client/http.go:55
 			"http://localhost:8080", "text/plain", strings.NewReader("Body"))
 //line samples/client/http.go:56
@@ -109,7 +109,7 @@ func shortHandsWithRequest(_arg_0 *http.Request /* for context */) {
 	resp, err =
 //line <generated>:1
 		__orchestrion_instrument.PostForm(
-			_arg_0.Context(),
+			__argument__0.Context(),
 //line samples/client/http.go:61
 			"http://localhost:8080", url.Values{"key": {"value"}})
 //line samples/client/http.go:62

@@ -8,8 +8,7 @@
 package ddspan
 
 import (
-	"context"
-
+	"errors"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -38,6 +37,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 }
 
 //dd:span variant:tag
-func tagSpecificSpan(context.Context) string {
-	return "Variant Tag"
+func tagSpecificSpan() (string, error) {
+	return "Variant Tag", errors.New("Artificial error for testing!")
 }

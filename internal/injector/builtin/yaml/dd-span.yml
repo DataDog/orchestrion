@@ -9,50 +9,53 @@ meta:
   description: Monitor a function using a custom span.
   icon: cog
 aspects:
-  - id: Using context.Context
+  - id: Annotated with `dd:span`
     join-point:
       function-body:
-        all-of:
-          - directive: 'dd:span'
-          - function:
-              - receives: context.Context
+        directive: 'dd:span'
     advice:
       - prepend-statements:
           imports:
-            event: github.com/datadog/orchestrion/instrument/event
-            instrument: github.com/datadog/orchestrion/instrument
+            context: context
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
-            {{- $ctx := .FindArgument "context.Context" -}}
-            {{- $name := .Function.Name -}}
-            {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
-            defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
+            {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- $req := .Function.ArgumentOfType "*net/http.Request" -}}
+            {{- if (eq $ctx "") -}}
+              {{- $ctx = "ctx" -}}
+              ctx := {{- with $req -}}
+                {{ $req }}.Context()
+              {{- else -}}
+                context.TODO()
+              {{- end }}
+            {{ end -}}
 
-  - id: Using *http.Request
-    join-point:
-      function-body:
-        all-of:
-          - directive: 'dd:span'
-          - function:
-              - receives: '*net/http.Request'
-    advice:
-      - prepend-statements:
-          imports:
-            event: github.com/datadog/orchestrion/instrument/event
-            instrument: github.com/datadog/orchestrion/instrument
-          template: |-
-            {{- $req := .FindArgument "*net/http.Request" -}}
-            {{- $name := .Function.Name -}}
-            {{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+            {{ $functionName := .Function.Name -}}
+            {{- $opName := $functionName -}}
             {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}}))
-            defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
+              {{- if eq $opName "" -}}
+                {{ $opName = .Value }}
+              {{- end -}}
+              {{- if eq .Key "operation" -}}
+                {{- $opName = .Value -}}
+                {{- break -}}
+              {{- end -}}
+            {{- end -}}
+
+            var span tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf "%q" $opName }},
+              {{- range .DirectiveArgs "dd:span" }}
+                tracer.Tag({{ printf "%q" .Key }}, {{ printf "%q" .Value }}),
+              {{- end }}
+            )
+            {{- with $req }}
+              {{ $req }} = {{ $req }}.WithContext({{ $ctx }})
+            {{- end }}
+
+            {{ with .Function.ResultOfType "error" -}}
+              defer func(){
+                span.Finish(tracer.WithError({{ . }}))
+              }()
+            {{ else -}}
+              defer span.Finish()
+            {{- end -}}

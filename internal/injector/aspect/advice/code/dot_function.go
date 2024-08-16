@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/context"
+	"github.com/datadog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
 )
 
@@ -20,37 +21,50 @@ type (
 		Receiver() (string, error)
 		// Name returns the name of this function, or an empty string if it is a function literal.
 		Name() (string, error)
-		// Argument returns the name of the argument at the given index in this function's type, returning
-		// an error if the index is out of bounds.
+
+		// Argument returns the name of the argument at the given index in this function's type,
+		// returningan error if the index is out of bounds.
 		Argument(int) (string, error)
-		// Returns returns the name of the return value at the given index in this function's type,
+		// ArgumentOfType returns the name of the first argument in this function that has the provided
+		// type, or an empty string if none is found.
+		ArgumentOfType(string) (string, error)
+
+		// Result returns the name of the return value at the given index in this function's type,
 		// returning an error if the index is out of bounds.
-		Returns(int) (string, error)
+		Result(int) (string, error)
+		// ResultOfType returns the name of the first return value in this function that has the
+		// provided type, or a empty string if none is found.
+		ResultOfType(string) (string, error)
 	}
 
 	declaredFunc struct {
+		signature
 		Decl *dst.FuncDecl
 	}
 
 	literalFunc struct {
+		signature
 		Lit *dst.FuncLit
 	}
 
 	noFunc struct{}
 )
 
-var errNotMethod = errors.New("the function in this context is not a method")
+var (
+	errNoFunction = errors.New("no function is present in this node chain")
+	errNotMethod  = errors.New("the function in this context is not a method")
+)
 
 func (d *dot) Function() function {
 	for curr := context.AspectContext(d.context); curr != nil; curr = curr.Parent() {
 		switch node := curr.Node().(type) {
 		case *dst.FuncDecl:
-			return &declaredFunc{node}
+			return &declaredFunc{signature{node.Type}, node}
 		case *dst.FuncLit:
-			return &literalFunc{node}
+			return &literalFunc{signature{node.Type}, node}
 		}
 	}
-	return &noFunc{}
+	return noFunc{}
 }
 
 func (f *declaredFunc) Receiver() (string, error) {
@@ -64,16 +78,6 @@ func (f *declaredFunc) Name() (string, error) {
 	return f.Decl.Name.Name, nil
 }
 
-func (f *declaredFunc) Argument(index int) (name string, err error) {
-	name, err = argument(f.Decl.Type, index)
-	return
-}
-
-func (f *declaredFunc) Returns(index int) (name string, err error) {
-	name, err = returns(f.Decl.Type, index)
-	return
-}
-
 func (f *literalFunc) Receiver() (string, error) {
 	return "", errNotMethod
 }
@@ -82,51 +86,58 @@ func (f *literalFunc) Name() (string, error) {
 	return "", nil
 }
 
-func (f *literalFunc) Argument(index int) (name string, err error) {
-	name, err = argument(f.Lit.Type, index)
-	return
-}
-
-func (f *literalFunc) Returns(index int) (name string, err error) {
-	name, err = returns(f.Lit.Type, index)
-	return
-}
-
-var errNoFunction = errors.New("no function is present in this node chain")
-
-func (f *noFunc) Receiver() (string, error) {
+func (noFunc) Receiver() (string, error) {
 	return "", errNoFunction
 }
 
-func (f *noFunc) Name() (string, error) {
+func (noFunc) Name() (string, error) {
 	return "", errNoFunction
 }
 
-func (f *noFunc) Argument(index int) (string, error) {
+func (noFunc) Argument(index int) (string, error) {
 	return "", errNoFunction
 }
 
-func (f *noFunc) Returns(index int) (string, error) {
+func (noFunc) ArgumentOfType(string) (string, error) {
 	return "", errNoFunction
 }
 
-func argument(ft *dst.FuncType, index int) (name string, err error) {
-	name, err = fieldAt(ft.Params, index, "argument")
-	return
+func (noFunc) Result(index int) (string, error) {
+	return "", errNoFunction
 }
 
-func returns(ft *dst.FuncType, index int) (name string, err error) {
-	name, err = fieldAt(ft.Results, index, "returns")
-	return
+func (noFunc) ResultOfType(string) (string, error) {
+	return "", errNoFunction
 }
 
-func fieldAt(fields *dst.FieldList, index int, use string) (name string, err error) {
-	if fields == nil || len(fields.List) == 0 {
+type signature struct {
+	*dst.FuncType
+}
+
+func (s signature) Argument(index int) (string, error) {
+	return fieldAt(s.Params, index, "argument")
+}
+
+func (s signature) ArgumentOfType(name string) (string, error) {
+	return fieldOfType(s.Params, name, "argument")
+}
+
+func (s signature) Result(index int) (name string, err error) {
+	return fieldAt(s.Results, index, "result")
+}
+
+func (s signature) ResultOfType(name string) (string, error) {
+	return fieldOfType(s.Results, name, "result")
+}
+
+func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
+	if fields == nil {
 		return "", fmt.Errorf("index out of bounds: %d (empty set)", index)
 	}
 
 	idx := 0
 	anonymous := false
+	name := ""
 	for _, field := range fields.List {
 		if len(field.Names) == 0 {
 			anonymous = true
@@ -143,11 +154,44 @@ func fieldAt(fields *dst.FieldList, index int, use string) (name string, err err
 				name = ident.Name
 				if !anonymous {
 					// If the items were not anonymous, we can return immediately!
-					return
+					return name, nil
 				}
 			}
 			idx += 1
 		}
 	}
-	return
+
+	if idx < index {
+		return "", fmt.Errorf("index out of bounds: %d (only %d items)", index, idx+1)
+	}
+
+	return name, nil
+}
+
+func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, error) {
+	tn, err := join.NewTypeName(typeName)
+	if err != nil {
+		return "", err
+	}
+
+	if fields == nil {
+		// No fields, no match!
+		return "", nil
+	}
+
+	index := 0
+	for _, field := range fields.List {
+		if tn.Matches(field.Type) {
+			return fieldAt(fields, index, use)
+		}
+		switch count := len(field.Names); count {
+		case 0, 1:
+			index += 1
+		default:
+			index += count
+		}
+	}
+
+	// Not found!
+	return "", nil
 }

@@ -125,35 +125,13 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From dd-span.yml
 	{
-		JoinPoint: join.FunctionBody(join.AllOf(
-			join.Directive("dd:span"),
-			join.Function(
-				join.Receives(join.MustTypeName("context.Context")),
-			),
-		)),
+		JoinPoint: join.FunctionBody(join.Directive("dd:span")),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $ctx := .FindArgument \"context.Context\" -}}\n{{- $name := .Function.Name -}}\n{{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  , {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}\n{{- end -}})\ndefer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  , {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}\n{{- end -}})",
+				"{{- $ctx := .Function.ArgumentOfType \"context.Context\" -}}\n{{- $req := .Function.ArgumentOfType \"*net/http.Request\" -}}\n{{- if (eq $ctx \"\") -}}\n  {{- $ctx = \"ctx\" -}}\n  ctx := {{- with $req -}}\n    {{ $req }}.Context()\n  {{- else -}}\n    context.TODO()\n  {{- end }}\n{{ end -}}\n\n{{ $functionName := .Function.Name -}}\n{{- $opName := $functionName -}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  {{- if eq $opName \"\" -}}\n    {{ $opName = .Value }}\n  {{- end -}}\n  {{- if eq .Key \"operation\" -}}\n    {{- $opName = .Value -}}\n    {{- break -}}\n  {{- end -}}\n{{- end -}}\n\nvar span tracer.Span\nspan, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf \"%q\" $opName }},\n  {{- range .DirectiveArgs \"dd:span\" }}\n    tracer.Tag({{ printf \"%q\" .Key }}, {{ printf \"%q\" .Value }}),\n  {{- end }}\n)\n{{- with $req }}\n  {{ $req }} = {{ $req }}.WithContext({{ $ctx }})\n{{- end }}\n\n{{ with .Function.ResultOfType \"error\" -}}\n  defer func(){\n    span.Finish(tracer.WithError({{ . }}))\n  }()\n{{ else -}}\n  defer span.Finish()\n{{- end -}}",
 				map[string]string{
-					"event":      "github.com/datadog/orchestrion/instrument/event",
-					"instrument": "github.com/datadog/orchestrion/instrument",
-				},
-			)),
-		},
-	},
-	{
-		JoinPoint: join.FunctionBody(join.AllOf(
-			join.Directive("dd:span"),
-			join.Function(
-				join.Receives(join.MustTypeName("*net/http.Request")),
-			),
-		)),
-		Advice: []advice.Advice{
-			advice.PrependStmts(code.MustTemplate(
-				"{{- $req := .FindArgument \"*net/http.Request\" -}}\n{{- $name := .Function.Name -}}\n{{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  , {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}\n{{- end -}}))\ndefer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, \"function-name\", {{printf \"%q\" .}}{{end}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  , {{printf \"%q\" .Key}}, {{printf \"%q\" .Value}}\n{{- end -}})",
-				map[string]string{
-					"event":      "github.com/datadog/orchestrion/instrument/event",
-					"instrument": "github.com/datadog/orchestrion/instrument",
+					"context": "context",
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
 		},
@@ -355,7 +333,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $res := .Function.Returns 0 -}}\ndefer func() {\n  var analyticsRate float64\n  if internal.BoolEnv(\"DD_TRACE_MUX_ANALYTICS_ENABLED\", false) {\n    analyticsRate = 1.0\n  } else {\n    analyticsRate = globalconfig.AnalyticsRate()\n  }\n\n  {{ $res }}.__dd_config.headerTags = globalconfig.HeaderTagMap()\n  {{ $res }}.__dd_config.ignoreRequest = func(*http.Request) bool { return false }\n  {{ $res }}.__dd_config.resourceNamer = ddDefaultResourceNamer\n  {{ $res }}.__dd_config.serviceName = namingschema.ServiceName(\"mux.router\")\n  {{ $res }}.__dd_config.spanOpts = []ddtrace.StartSpanOption{\n    tracer.Tag(ext.Component, \"gorilla/mux\"),\n    tracer.Tag(ext.SpanKind, ext.SpanKindServer),\n  }\n  if !math.IsNaN(analyticsRate) {\n    {{ $res }}.__dd_config.spanOpts = append(\n      {{ $res }}.__dd_config.spanOpts,\n      tracer.Tag(ext.EventSampleRate, analyticsRate),\n    )\n  }\n}()",
+				"{{- $res := .Function.Result 0 -}}\ndefer func() {\n  var analyticsRate float64\n  if internal.BoolEnv(\"DD_TRACE_MUX_ANALYTICS_ENABLED\", false) {\n    analyticsRate = 1.0\n  } else {\n    analyticsRate = globalconfig.AnalyticsRate()\n  }\n\n  {{ $res }}.__dd_config.headerTags = globalconfig.HeaderTagMap()\n  {{ $res }}.__dd_config.ignoreRequest = func(*http.Request) bool { return false }\n  {{ $res }}.__dd_config.resourceNamer = ddDefaultResourceNamer\n  {{ $res }}.__dd_config.serviceName = namingschema.ServiceName(\"mux.router\")\n  {{ $res }}.__dd_config.spanOpts = []ddtrace.StartSpanOption{\n    tracer.Tag(ext.Component, \"gorilla/mux\"),\n    tracer.Tag(ext.SpanKind, ext.SpanKindServer),\n  }\n  if !math.IsNaN(analyticsRate) {\n    {{ $res }}.__dd_config.spanOpts = append(\n      {{ $res }}.__dd_config.spanOpts,\n      tracer.Tag(ext.EventSampleRate, analyticsRate),\n    )\n  }\n}()",
 				map[string]string{
 					"ddtrace":      "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 					"ext":          "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
@@ -463,7 +441,7 @@ var Aspects = [...]aspect.Aspect{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
 			}),
 			advice.PrependStmts(code.MustTemplate(
-				"{{- /* Largely copied from https://github.com/DataDog/dd-trace-go/blob/v1.65.0-rc.2/contrib/net/http/roundtripper.go#L28-L104 */ -}}\n{{- $t := .Function.Receiver -}}\n{{- $req := .Function.Argument 0 -}}\n{{- $res := .Function.Returns 0 -}}\n{{- $err := .Function.Returns 1 -}}\nif !{{ $t }}.DD__tracer_internal {\n  resourceName := fmt.Sprintf(\"%s %s\", {{ $req }}.Method, {{ $req }}.URL.Path)\n  spanName := namingschema.OpName(namingschema.HTTPClient)\n  // Copy the URL so we don't modify the outgoing request\n  url := *{{ $req }}.URL\n  url.User = nil // Don't include userinfo in the http.url tag\n  opts := []ddtrace.StartSpanOption{\n    __dd_tracer_SpanType(ext.SpanTypeHTTP),\n    __dd_tracer_ResourceName(resourceName),\n    __dd_tracer_Tag(ext.HTTPMethod, {{ $req }}.Method),\n    __dd_tracer_Tag(ext.HTTPURL, url.String()),\n    __dd_tracer_Tag(ext.Component, \"net/http\"),\n    __dd_tracer_Tag(ext.SpanKind, ext.SpanKindClient),\n    __dd_tracer_Tag(ext.NetworkDestinationName, url.Hostname()),\n  }\n  if analyticsRate := globalconfig.AnalyticsRate(); !math.IsNaN(analyticsRate) {\n    opts = append(opts, __dd_tracer_Tag(ext.EventSampleRate, analyticsRate))\n  }\n  if port, err := strconv.Atoi(url.Port()); err == nil {\n    opts = append(opts, __dd_tracer_Tag(ext.NetworkDestinationPort, port))\n  }\n  span, ctx := __dd_tracer_StartSpanFromContext({{ $req }}.Context(), spanName, opts...)\n  {{ $req }} = {{ $req }}.Clone(ctx)\n  defer func() {\n    if !events.IsSecurityError({{ $err }}) {\n      span.Finish(__dd_tracer_WithError({{ $err }}))\n    } else {\n      span.Finish()\n    }\n  }()\n\n  if {{ $err }} = __dd_tracer_Inject(span.Context(), __dd_tracer_HTTPHeadersCarrier({{ $req }}.Header)); {{ $err }} != nil {\n    fmt.Fprintf(os.Stderr, \"contrib/net/http.Roundtrip: failed to inject http headers: %v\\n\", {{ $err }})\n  }\n\n  if __dd_appsec_RASPEnabled() {\n    if err := __dd_httpsec_ProtectRoundTrip(ctx, {{ $req }}.URL.String()); err != nil {\n      return nil, err\n    }\n  }\n\n  defer func() {\n    if {{ $err }} != nil {\n      span.SetTag(\"http.errors\", {{ $err }}.Error())\n      span.SetTag(ext.Error, {{ $err }})\n    } else {\n      span.SetTag(ext.HTTPCode, strconv.Itoa({{ $res }}.StatusCode))\n      if {{ $res }}.StatusCode >= 500 && {{ $res}}.StatusCode < 600 {\n        // Treat HTTP 5XX as errors\n        span.SetTag(\"http.errors\", {{ $res }}.Status)\n        span.SetTag(ext.Error, fmt.Errorf(\"%d: %s\", {{ $res }}.StatusCode, StatusText({{ $res }}.StatusCode)))\n      }\n    }\n  }()\n}",
+				"{{- /* Largely copied from https://github.com/DataDog/dd-trace-go/blob/v1.65.0-rc.2/contrib/net/http/roundtripper.go#L28-L104 */ -}}\n{{- $t := .Function.Receiver -}}\n{{- $req := .Function.Argument 0 -}}\n{{- $res := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\nif !{{ $t }}.DD__tracer_internal {\n  resourceName := fmt.Sprintf(\"%s %s\", {{ $req }}.Method, {{ $req }}.URL.Path)\n  spanName := namingschema.OpName(namingschema.HTTPClient)\n  // Copy the URL so we don't modify the outgoing request\n  url := *{{ $req }}.URL\n  url.User = nil // Don't include userinfo in the http.url tag\n  opts := []ddtrace.StartSpanOption{\n    __dd_tracer_SpanType(ext.SpanTypeHTTP),\n    __dd_tracer_ResourceName(resourceName),\n    __dd_tracer_Tag(ext.HTTPMethod, {{ $req }}.Method),\n    __dd_tracer_Tag(ext.HTTPURL, url.String()),\n    __dd_tracer_Tag(ext.Component, \"net/http\"),\n    __dd_tracer_Tag(ext.SpanKind, ext.SpanKindClient),\n    __dd_tracer_Tag(ext.NetworkDestinationName, url.Hostname()),\n  }\n  if analyticsRate := globalconfig.AnalyticsRate(); !math.IsNaN(analyticsRate) {\n    opts = append(opts, __dd_tracer_Tag(ext.EventSampleRate, analyticsRate))\n  }\n  if port, err := strconv.Atoi(url.Port()); err == nil {\n    opts = append(opts, __dd_tracer_Tag(ext.NetworkDestinationPort, port))\n  }\n  span, ctx := __dd_tracer_StartSpanFromContext({{ $req }}.Context(), spanName, opts...)\n  {{ $req }} = {{ $req }}.Clone(ctx)\n  defer func() {\n    if !events.IsSecurityError({{ $err }}) {\n      span.Finish(__dd_tracer_WithError({{ $err }}))\n    } else {\n      span.Finish()\n    }\n  }()\n\n  if {{ $err }} = __dd_tracer_Inject(span.Context(), __dd_tracer_HTTPHeadersCarrier({{ $req }}.Header)); {{ $err }} != nil {\n    fmt.Fprintf(os.Stderr, \"contrib/net/http.Roundtrip: failed to inject http headers: %v\\n\", {{ $err }})\n  }\n\n  if __dd_appsec_RASPEnabled() {\n    if err := __dd_httpsec_ProtectRoundTrip(ctx, {{ $req }}.URL.String()); err != nil {\n      return nil, err\n    }\n  }\n\n  defer func() {\n    if {{ $err }} != nil {\n      span.SetTag(\"http.errors\", {{ $err }}.Error())\n      span.SetTag(ext.Error, {{ $err }})\n    } else {\n      span.SetTag(ext.HTTPCode, strconv.Itoa({{ $res }}.StatusCode))\n      if {{ $res }}.StatusCode >= 500 && {{ $res}}.StatusCode < 600 {\n        // Treat HTTP 5XX as errors\n        span.SetTag(\"http.errors\", {{ $res }}.Status)\n        span.SetTag(ext.Error, fmt.Errorf(\"%d: %s\", {{ $res }}.StatusCode, StatusText({{ $res }}.StatusCode)))\n      }\n    }\n  }()\n}",
 				map[string]string{
 					"ddtrace":      "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 					"events":       "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
@@ -490,7 +468,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"{{- $ctx := .FindArgument \"context.Context\" -}}\n{{- $req := .FindArgument \"*net/http.Request\" }}\n{{- if $ctx -}}\n  instrument.{{ .AST.Fun.Name }}(\n    {{ $ctx }},\n    {{ range .AST.Args }}{{ . }},\n    {{ end }}\n  )\n{{- else if $req -}}\n  instrument.{{ .AST.Fun.Name }}(\n    {{ $req }}.Context(),\n    {{ range .AST.Args }}{{ . }},\n    {{ end }}\n  )\n{{- else -}}\n  {{ . }}\n{{- end -}}",
+				"{{- $ctx := .Function.ArgumentOfType \"context.Context\" -}}\n{{- $req := .Function.ArgumentOfType \"*net/http.Request\" }}\n{{- if $ctx -}}\n  instrument.{{ .AST.Fun.Name }}(\n    {{ $ctx }},\n    {{ range .AST.Args }}{{ . }},\n    {{ end }}\n  )\n{{- else if $req -}}\n  instrument.{{ .AST.Fun.Name }}(\n    {{ $req }}.Context(),\n    {{ range .AST.Args }}{{ . }},\n    {{ end }}\n  )\n{{- else -}}\n  {{ . }}\n{{- end -}}",
 				map[string]string{
 					"instrument": "github.com/datadog/orchestrion/instrument/net/http",
 				},
@@ -627,6 +605,7 @@ var RestorerMap = map[string]string{
 // InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper
 // invalidation of cached artifacts when injected dependencies change.
 var InjectedPaths = [...]string{
+	"context",
 	"fmt",
 	"github.com/datadog/orchestrion/instrument",
 	"github.com/datadog/orchestrion/instrument/event",
@@ -670,4 +649,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:4Gi3IVMUORbzxWjHQbXgEgYMSTVz9W/vGmoeH+0ipdwC/ap6CwnYKop/THjVNFxAHS47zLj/m29sAl3dFROSnA=="
+const Checksum = "sha512:Du4oGWv2lJy8fFVbwTRmRIDHNpz7EyqGWI0LWUFIA/d/XXAf+iR749T3YqNlF4z12k6Sf8N+ADZCrwS+wk0ZLw=="

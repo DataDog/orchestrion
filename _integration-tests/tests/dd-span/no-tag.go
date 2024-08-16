@@ -8,8 +8,6 @@
 package ddspan
 
 import (
-	"context"
-
 	"orchestrion/integration/validator/trace"
 )
 
@@ -38,6 +36,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 }
 
 //dd:span variant:notag
-func tagSpecificSpan(context.Context) string {
-	return "Variant NoTag"
+func tagSpecificSpan() (string, error) {
+	return "Variant NoTag", nil
 }
