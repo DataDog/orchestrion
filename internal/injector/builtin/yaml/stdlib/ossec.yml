@@ -45,9 +45,8 @@ aspects:
                     Perms: {{ .Function.Argument 2 }},
                 })
 
-                var __dd_file any = {{ .Function.Returns 0 }}
-                defer dyngo.FinishOperation(op, ossec.OpenOperationRes{
-                    File: &__dd_file,
+                defer dyngo.FinishOperation(op, ossec.OpenOperationRes[*File]{
+                    File: &{{ .Function.Returns 0 }},
                     Err: &{{ .Function.Returns 1 }},
                 })
 
