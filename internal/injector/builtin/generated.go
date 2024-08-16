@@ -666,4 +666,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:XQgPavegbCZoeG2FTiTEKKCZxOi21s6c8tWZoP+T1Au8bQw5082pHvZEspGosanKdIMAanyanXUR+IJMQGKJBA=="
+const Checksum = "sha512:w3PDyuICrksBlmbfVpI4UZmCr0O7pTEraiPKAy7/PG7WSjPZgzW4YQnDYAd57lyGkLINtLidPH2OHSTCaTuv2g=="

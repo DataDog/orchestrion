@@ -9,11 +9,25 @@ meta:
   description: |-
     Create a span surrounding all calls to the annotated function by adding a `//dd:span` directive on the function
     declaration. The default operation (span) name is the name of the function, but this can be overridden by specifying
-    a `span.name` argument.
+    a `span.name` argument:
 
-    Function literal expressions don't have a function name, and theird default operation name is the value of the very
+    ```go
+    //dd:span span.name:custom-operation-name other:tag
+    func myFunction() {
+      // The default operation name would have been "myFunction"
+    }
+    ```
+
+    Function literal expressions don't have a function name, and their default operation name is the value of the very
     first directive argument (if there is one). If there are no directive arguments, the operation name will remain
     blank.
+
+    ```go
+    //dd:span other:tag span.name:custom-operation-name
+    myOp := func() {
+      // The default operation name would have been "tag"
+    }
+    ```
   icon: cog
 aspects:
   - id: Annotated with `dd:span`
