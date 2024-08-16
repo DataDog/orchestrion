@@ -136,6 +136,20 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From directive/orchestrion-enabled.yml
+	{
+		JoinPoint: join.AllOf(
+			join.Directive("dd:orchestrion-enabled"),
+			join.ValueDeclaration(join.MustTypeName("bool")),
+		),
+		Advice: []advice.Advice{
+			advice.AssignValue(code.MustTemplate(
+				"true",
+				map[string]string{},
+			)),
+		},
+		TracerInternal: true,
+	},
 	{
 		JoinPoint: join.FunctionBody(join.AllOf(
 			join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/orchestrion"),
@@ -147,20 +161,6 @@ var Aspects = [...]aspect.Aspect{
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
 				"{{- $recv := .Function.Receiver -}}\nif {{ $recv }} == nil {\n  {{ $recv }} = getDDContextStack()\n}\nif *{{ $recv }} == nil {\n  *{{ $recv }} = make(contextStack)\n}",
-				map[string]string{},
-			)),
-		},
-		TracerInternal: true,
-	},
-	// From directive/orchestrion-enabled.yml
-	{
-		JoinPoint: join.AllOf(
-			join.Directive("dd:orchestrion-enabled"),
-			join.ValueDeclaration(join.MustTypeName("bool")),
-		),
-		Advice: []advice.Advice{
-			advice.AssignValue(code.MustTemplate(
-				"true",
 				map[string]string{},
 			)),
 		},
@@ -666,4 +666,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:w3PDyuICrksBlmbfVpI4UZmCr0O7pTEraiPKAy7/PG7WSjPZgzW4YQnDYAd57lyGkLINtLidPH2OHSTCaTuv2g=="
+const Checksum = "sha512:FxkverWIItrBT5iEar5qrXjFJy9bqXv9+0kK4mrihvQ0twa9LVrBA7M9NrvCUEtdzIbaBEwmpLD5NHNH5OUkMQ=="
