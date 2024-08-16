@@ -1,1 +1,1 @@
-ddapm-test-agent~=1.17.0
+git+https://github.com/DataDog/dd-apm-test-agent.git
