@@ -114,6 +114,7 @@ func myFunc(__argument__0 context.Context, name string) {
 	{
 		var span __orchestrion_tracer.Span
 		span, __argument__0 = __orchestrion_tracer.StartSpanFromContext(__argument__0, "myFunc",
+			__orchestrion_tracer.Tag("function-name", "myFunc"),
 			__orchestrion_tracer.Tag("foo", "bar"),
 			__orchestrion_tracer.Tag("type", "potato"),
 		)
@@ -131,6 +132,7 @@ func myFunc2(name string, __argument__1 *http.Request) {
 		ctx := __argument__1.Context()
 		var span __orchestrion_tracer.Span
 		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "myFunc2",
+			__orchestrion_tracer.Tag("function-name", "myFunc2"),
 			__orchestrion_tracer.Tag("foo2", "bar2"),
 			__orchestrion_tracer.Tag("type", "request"),
 		)
@@ -142,7 +144,7 @@ func myFunc2(name string, __argument__1 *http.Request) {
 	fmt.Println(name)
 }
 
-//dd:span foo3:bar3 type:request
+//dd:span foo3:bar3 type:request span.name:customName
 func myFunc3(name string) (
 //line <generated>:1
 	__result__0 error) { //line samples/server/other_handlers.go:86
@@ -151,7 +153,8 @@ func myFunc3(name string) (
 	{
 		ctx := context.TODO()
 		var span __orchestrion_tracer.Span
-		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "myFunc3",
+		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "customName",
+			__orchestrion_tracer.Tag("function-name", "myFunc3"),
 			__orchestrion_tracer.Tag("foo3", "bar3"),
 			__orchestrion_tracer.Tag("type", "request"),
 		)

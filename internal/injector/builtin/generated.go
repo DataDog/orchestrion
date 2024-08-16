@@ -128,13 +128,29 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionBody(join.Directive("dd:span")),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $ctx := .Function.ArgumentOfType \"context.Context\" -}}\n{{- $req := .Function.ArgumentOfType \"*net/http.Request\" -}}\n{{- if (eq $ctx \"\") -}}\n  {{- $ctx = \"ctx\" -}}\n  ctx := {{- with $req -}}\n    {{ $req }}.Context()\n  {{- else -}}\n    context.TODO()\n  {{- end }}\n{{ end -}}\n\n{{ $functionName := .Function.Name -}}\n{{- $opName := $functionName -}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  {{- if eq $opName \"\" -}}\n    {{ $opName = .Value }}\n  {{- end -}}\n  {{- if eq .Key \"operation\" -}}\n    {{- $opName = .Value -}}\n    {{- break -}}\n  {{- end -}}\n{{- end -}}\n\nvar span tracer.Span\nspan, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf \"%q\" $opName }},\n  {{- range .DirectiveArgs \"dd:span\" }}\n    tracer.Tag({{ printf \"%q\" .Key }}, {{ printf \"%q\" .Value }}),\n  {{- end }}\n)\n{{- with $req }}\n  {{ $req }} = {{ $req }}.WithContext({{ $ctx }})\n{{- end }}\n\n{{ with .Function.ResultOfType \"error\" -}}\n  defer func(){\n    span.Finish(tracer.WithError({{ . }}))\n  }()\n{{ else -}}\n  defer span.Finish()\n{{- end -}}",
+				"{{- $ctx := .Function.ArgumentOfType \"context.Context\" -}}\n{{- $req := .Function.ArgumentOfType \"*net/http.Request\" -}}\n{{- if (eq $ctx \"\") -}}\n  {{- $ctx = \"ctx\" -}}\n  ctx := {{- with $req -}}\n    {{ $req }}.Context()\n  {{- else -}}\n    context.TODO()\n  {{- end }}\n{{ end -}}\n\n{{ $functionName := .Function.Name -}}\n{{- $opName := $functionName -}}\n{{- range .DirectiveArgs \"dd:span\" -}}\n  {{- if eq $opName \"\" -}}\n    {{ $opName = .Value }}\n  {{- end -}}\n  {{- if eq .Key \"span.name\" -}}\n    {{- $opName = .Value -}}\n    {{- break -}}\n  {{- end -}}\n{{- end -}}\n\nvar span tracer.Span\nspan, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf \"%q\" $opName }},\n  {{- with $functionName }}\n    tracer.Tag(\"function-name\", {{ printf \"%q\" $functionName }}),\n  {{ end -}}\n  {{- range .DirectiveArgs \"dd:span\" }}\n    {{ if eq .Key \"span.name\" -}}{{- continue -}}{{- end -}}\n    tracer.Tag({{ printf \"%q\" .Key }}, {{ printf \"%q\" .Value }}),\n  {{- end }}\n)\n{{- with $req }}\n  {{ $req }} = {{ $req }}.WithContext({{ $ctx }})\n{{- end }}\n\n{{ with .Function.ResultOfType \"error\" -}}\n  defer func(){\n    span.Finish(tracer.WithError({{ . }}))\n  }()\n{{ else -}}\n  defer span.Finish()\n{{- end -}}",
 				map[string]string{
 					"context": "context",
 					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
 		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.AllOf(
+			join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/orchestrion"),
+			join.Function(
+				join.Name("Push"),
+				join.Receiver(join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/internal/orchestrion.contextStack")),
+			),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $recv := .Function.Receiver -}}\nif {{ $recv }} == nil {\n  {{ $recv }} = getDDContextStack()\n}\nif *{{ $recv }} == nil {\n  *{{ $recv }} = make(contextStack)\n}",
+				map[string]string{},
+			)),
+		},
+		TracerInternal: true,
 	},
 	// From directive/orchestrion-enabled.yml
 	{
@@ -148,6 +164,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{},
 			)),
 		},
+		TracerInternal: true,
 	},
 	// From go-main.yml
 	{
@@ -649,4 +666,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:Du4oGWv2lJy8fFVbwTRmRIDHNpz7EyqGWI0LWUFIA/d/XXAf+iR749T3YqNlF4z12k6Sf8N+ADZCrwS+wk0ZLw=="
+const Checksum = "sha512:XQgPavegbCZoeG2FTiTEKKCZxOi21s6c8tWZoP+T1Au8bQw5082pHvZEspGosanKdIMAanyanXUR+IJMQGKJBA=="

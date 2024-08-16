@@ -31,12 +31,6 @@ func (tc *TestCase) Run(t *testing.T) {
 func (tc *TestCase) Teardown(t *testing.T) {}
 
 //dd:span foo:bar
-func spanFromHttpRequest(req *http.Request) (string, error) {
-	body, err := req.GetBody()
-	if err != nil {
-		return "", err
-	}
-	defer body.Close()
-
+func spanFromHttpRequest(*http.Request) (string, error) {
 	return tagSpecificSpan()
 }
