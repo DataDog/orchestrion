@@ -7,7 +7,6 @@ package ibm_sarama
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -15,10 +14,10 @@ import (
 	"orchestrion/integration/validator/trace"
 
 	"github.com/IBM/sarama"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	testkafka "github.com/testcontainers/testcontainers-go/modules/kafka"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 )
 
 const (
@@ -27,7 +26,7 @@ const (
 )
 
 type TestCase struct {
-	server *testkafka.KafkaContainer
+	server *redpanda.Container
 	cfg    *sarama.Config
 	addrs  []string
 }
@@ -41,10 +40,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.cfg.Version = sarama.V0_11_0_0
 	tc.cfg.Producer.Return.Successes = true
 
-	tc.server, err = testkafka.Run(ctx,
-		"confluentinc/confluent-local:7.5.0",
-		testkafka.WithClusterID("test-cluster"),
-		testcontainers.WithWaitStrategy(wait.ForListeningPort("9093/tcp")),
+	tc.server, err = redpanda.Run(ctx,
+		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
+		redpanda.WithAutoCreateTopics(),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
 	)
@@ -52,45 +50,37 @@ func (tc *TestCase) Setup(t *testing.T) {
 		t.Skipf("Failed to start kafka test container: %v\n", err)
 	}
 
-	state, err := tc.server.State(ctx)
-	require.NoError(t, err)
+	addr, err := tc.server.KafkaSeedBroker(ctx)
+	require.NoError(t, err, "failed to get seed broker address")
 
-	if !state.Running {
-		t.Skip("Failed to start kafka test container")
-	}
-
-	addr, err := tc.server.Host(ctx)
-	require.NoError(t, err)
-	port, err := tc.server.MappedPort(ctx, "9093/tcp")
-	require.NoError(t, err)
-	tc.addrs = []string{fmt.Sprintf("%s:%s", addr, port.Port())}
+	tc.addrs = []string{addr}
 }
 
 func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
 	producer, err := sarama.NewSyncProducer(addrs, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, "fauked to create producer")
+	defer func() { assert.NoError(t, producer.Close(), "failed to close producer") }()
 
-	producer.SendMessage(&sarama.ProducerMessage{
+	_, _, err = producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: partition,
 		Value:     sarama.StringEncoder("Hello, World!"),
 	})
+	require.NoError(t, err, "failed to send message")
 }
 
 func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
 	consumer, err := sarama.NewConsumer(addrs, cfg)
-	require.NoError(t, err)
-	defer consumer.Close()
+	require.NoError(t, err, "failed to create consumer")
+	defer func() { assert.NoError(t, consumer.Close(), "failed to close consumer") }()
 
 	partitionConsumer, err := consumer.ConsumePartition(topic, partition, sarama.OffsetOldest)
-	require.NoError(t, err)
-	defer partitionConsumer.Close()
+	require.NoError(t, err, "failed to create partition consumer")
+	defer func() { assert.NoError(t, partitionConsumer.Close(), "failed to close partition consumer") }()
 
 	select {
 	case msg := <-partitionConsumer.Messages():
