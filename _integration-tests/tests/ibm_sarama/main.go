@@ -98,11 +98,11 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 			require.Equal(t, expectedMessages[i], string(msg.Value))
 			i++
 			if i == len(expectedMessages) {
-				break
+				return
 			}
 		case <-time.After(15 * time.Second):
 			t.Fatal("timed out waiting for message")
-			break
+			return
 		}
 	}
 }
