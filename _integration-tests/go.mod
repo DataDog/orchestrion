@@ -30,7 +30,7 @@ require (
 	go.mongodb.org/mongo-driver v1.16.1
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20240813234153-3cb33421c5d3
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0-rc.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.67.0-rc.4
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/v3 v3.5.1

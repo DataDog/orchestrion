@@ -32,9 +32,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
-	tc.server, err = testredis.RunContainer(ctx,
+	tc.server, err = testredis.Run(ctx,
+		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		testcontainers.WithImage("redis:7"),
 		utils.WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
@@ -119,23 +119,23 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"span.kind":         "client",
 					},
 				},
-			},
-		},
-		{
-			Tags: map[string]any{
-				"resource": "redigo.Conn.Flush",
-				"type":     "redis",
-				"name":     "redis.command",
-				"service":  "redis.conn",
-			},
-			Meta: map[string]any{
-				"redis.raw_command": "",
-				"db.system":         "redis",
-				"component":         "gomodule/redigo",
-				"out.network":       "tcp",
-				"out.host":          "localhost",
-				"redis.args_length": "0",
-				"span.kind":         "client",
+				{
+					Tags: map[string]any{
+						"resource": "redigo.Conn.Flush",
+						"type":     "redis",
+						"name":     "redis.command",
+						"service":  "redis.conn",
+					},
+					Meta: map[string]any{
+						"redis.raw_command": "",
+						"db.system":         "redis",
+						"component":         "gomodule/redigo",
+						"out.network":       "tcp",
+						"out.host":          "localhost",
+						"redis.args_length": "0",
+						"span.kind":         "client",
+					},
+				},
 			},
 		},
 	}

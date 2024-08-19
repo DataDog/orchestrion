@@ -150,22 +150,6 @@ var Aspects = [...]aspect.Aspect{
 		},
 		TracerInternal: true,
 	},
-	{
-		JoinPoint: join.FunctionBody(join.AllOf(
-			join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/orchestrion"),
-			join.Function(
-				join.Name("Push"),
-				join.Receiver(join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/internal/orchestrion.contextStack")),
-			),
-		)),
-		Advice: []advice.Advice{
-			advice.PrependStmts(code.MustTemplate(
-				"{{- $recv := .Function.Receiver -}}\nif {{ $recv }} == nil {\n  {{ $recv }} = getDDContextStack()\n}\nif *{{ $recv }} == nil {\n  *{{ $recv }} = make(contextStack)\n}",
-				map[string]string{},
-			)),
-		},
-		TracerInternal: true,
-	},
 	// From go-main.yml
 	{
 		JoinPoint: join.AllOf(
@@ -666,4 +650,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:FxkverWIItrBT5iEar5qrXjFJy9bqXv9+0kK4mrihvQ0twa9LVrBA7M9NrvCUEtdzIbaBEwmpLD5NHNH5OUkMQ=="
+const Checksum = "sha512:OtyO0M+glxuUcEEcDj7D9mJkFJszrAKl0nbruZ/n4W8/sNJtN4Bjc8O2ExjU37yE3k7fVZXUwxVPGrJ/cv/k8A=="

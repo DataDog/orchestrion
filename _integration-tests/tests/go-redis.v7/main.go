@@ -33,9 +33,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
-	tc.server, err = testredis.RunContainer(ctx,
+	tc.server, err = testredis.Run(ctx,
+		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		testcontainers.WithImage("redis:7"),
 		utils.WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(

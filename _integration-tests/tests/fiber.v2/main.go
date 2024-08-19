@@ -42,7 +42,6 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 			Tags: map[string]any{
 				"name":     "http.request",
 				"resource": "GET /ping",
-				"service":  "tests.test",
 				"type":     "http",
 			},
 			Meta: map[string]any{

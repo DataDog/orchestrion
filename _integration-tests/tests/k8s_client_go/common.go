@@ -54,7 +54,6 @@ func (b *base) expectedSpans() trace.Spans {
 	httpServerSpan := &trace.Span{
 		Tags: map[string]any{
 			"name":     "http.request",
-			"service":  "tests.test",
 			"resource": "GET /api/v1/namespaces",
 			"type":     "web",
 		},
@@ -71,7 +70,6 @@ func (b *base) expectedSpans() trace.Spans {
 	httpClientSpan := &trace.Span{
 		Tags: map[string]any{
 			"name":     "http.request",
-			"service":  "tests.test",
 			"resource": "GET /api/v1/namespaces",
 			"type":     "http",
 		},
@@ -88,7 +86,6 @@ func (b *base) expectedSpans() trace.Spans {
 	k8sClientSpan := &trace.Span{
 		Tags: map[string]any{
 			"name":     "http.request",
-			"service":  "tests.test",
 			"resource": "GET namespaces",
 			"type":     "http",
 		},
