@@ -43,6 +43,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = redpanda.Run(ctx,
 		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
 		redpanda.WithAutoCreateTopics(),
+		testcontainers.WithWaitStrategy(wait.ForListeningPort("9093/tcp")),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
 	)
@@ -60,13 +61,19 @@ func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
 	producer, err := sarama.NewSyncProducer(addrs, cfg)
-	require.NoError(t, err, "fauked to create producer")
+	require.NoError(t, err, "failed to create producer")
 	defer func() { assert.NoError(t, producer.Close(), "failed to close producer") }()
 
 	_, _, err = producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: partition,
 		Value:     sarama.StringEncoder("Hello, World!"),
+	})
+	require.NoError(t, err, "failed to send message")
+	_, _, err = producer.SendMessage(&sarama.ProducerMessage{
+		Topic:     topic,
+		Partition: partition,
+		Value:     sarama.StringEncoder("Another message to avoid flaky tests"),
 	})
 	require.NoError(t, err, "failed to send message")
 }
@@ -82,11 +89,22 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	require.NoError(t, err, "failed to create partition consumer")
 	defer func() { assert.NoError(t, partitionConsumer.Close(), "failed to close partition consumer") }()
 
-	select {
-	case msg := <-partitionConsumer.Messages():
-		require.Equal(t, "Hello, World!", string(msg.Value))
-	case <-time.After(15 * time.Second):
-		t.Fatal("timed out waiting for message")
+	var (
+		expectedMessages = []string{"Hello, World!", "Another message to avoid flaky tests"}
+		i                = 0
+	)
+	for {
+		select {
+		case msg := <-partitionConsumer.Messages():
+			require.Equal(t, expectedMessages[i], string(msg.Value))
+			i++
+			if i == len(expectedMessages) {
+				break
+			}
+		case <-time.After(15 * time.Second):
+			t.Fatal("timed out waiting for message")
+			break
+		}
 	}
 }
 
