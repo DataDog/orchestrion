@@ -22,10 +22,10 @@ type (
 	// adjust their logical source location so it matches those of the original `*ast.File` tree.
 	annotationVisitor struct {
 		// dev is the decorator that transformed the original *ast.File into the visited *dst.File
-		dec *decorator.Decorator
-		// res is a restorer that was used to restore the visited *dst.File into an *ast.File, and hence
+		decorator *decorator.Decorator
+		// restorer is a restorer that was used to restore the visited *dst.File into an *ast.File, and hence
 		// provides source location information for the restored AST.
-		res *decorator.FileRestorer
+		restorer *decorator.FileRestorer
 
 		lineInfo
 		stack []dst.Node
@@ -64,10 +64,10 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 
 	prevInfo := v.lineInfo
 
-	curPosition := v.res.Fset.Position(node.Pos())
+	curPosition := v.restorer.Fset.Position(node.Pos())
 	v.curFile, v.curLine = curPosition.Filename, curPosition.Line
 
-	dstNode := v.res.Dst.Nodes[node]
+	dstNode := v.restorer.Dst.Nodes[node]
 	v.stack = append(v.stack, dstNode)
 	if dstNode == nil {
 		// Nodes such as `ast.FuncType` are not mapped directly by dst... They anyway do not represent
@@ -82,8 +82,8 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 	}
 
 	var adjPosition token.Position
-	if orgNode := v.dec.Ast.Nodes[dstNode]; orgNode != nil {
-		adjPosition = v.dec.Fset.Position(orgNode.Pos())
+	if orgNode := v.decorator.Ast.Nodes[dstNode]; orgNode != nil {
+		adjPosition = v.decorator.Fset.Position(orgNode.Pos())
 	}
 
 	if adjPosition.Filename == "" {

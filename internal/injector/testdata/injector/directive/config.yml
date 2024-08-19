@@ -24,8 +24,6 @@ aspects:
               , {{printf "%q" .Key}}, {{printf "%q" .Value}}
             {{- end -}})
 
-preserveLineInfo: true
-
 syntheticReferences:
   github.com/datadog/orchestrion/instrument: true
   github.com/datadog/orchestrion/instrument/event: true
