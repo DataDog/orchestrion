@@ -88,21 +88,13 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	require.NoError(t, err, "failed to create partition consumer")
 	defer func() { assert.NoError(t, partitionConsumer.Close(), "failed to close partition consumer") }()
 
-	var (
-		expectedMessages = []string{"Hello, World!", "Another message to avoid flaky tests"}
-		i                = 0
-	)
-	for {
+	expectedMessages := []string{"Hello, World!", "Another message to avoid flaky tests"}
+	for i := 0; i < len(expectedMessages); i++ {
 		select {
 		case msg := <-partitionConsumer.Messages():
 			require.Equal(t, expectedMessages[i], string(msg.Value))
-			i++
-			if i == len(expectedMessages) {
-				return
-			}
 		case <-time.After(15 * time.Second):
 			t.Fatal("timed out waiting for message")
-			return
 		}
 	}
 }
