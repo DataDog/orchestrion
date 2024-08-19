@@ -128,7 +128,11 @@ func requiredVersion(
 // working directory is used. The version may be blank if a replace directive is in effect; in which
 // case the path value may indicate the location of the source code that is being used instead.
 func goModVersion(dir string) (moduleVersion string, moduleDir string, err error) {
-	cfg := &packages.Config{Dir: dir, Mode: packages.NeedModule}
+	cfg := &packages.Config{
+		Dir:  dir,
+		Mode: packages.NeedModule,
+		Logf: func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+	}
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {
 		return "", "", err
