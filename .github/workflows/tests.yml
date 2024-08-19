@@ -21,8 +21,8 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
-          go-version: 'stable'
-          cache-dependency-path: "**/*.sum"
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
       - name: golangci-lint
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
         with:
@@ -46,8 +46,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ['1.22', '1.23']
-    name: Unit tests (go${{ matrix.go-version }})
+        go-version: [oldstable, stable]
+    name: Unit tests (go ${{ matrix.go-version }})
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -55,7 +55,7 @@ jobs:
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
-          cache-dependency-path: "**/*.sum"
+          cache-dependency-path: "**/go.mod"
       - name: Run unit tests
         run: |-
           mkdir -p coverage
@@ -64,10 +64,8 @@ jobs:
       - name: Determine simple go version
         if: always() && github.event_name != 'merge_group'
         id: simple-go-version
-        run: echo "version=${COMPLETE_VERSION:0:4}" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
-        env:
-          COMPLETE_VERSION: ${{ matrix.go-version }}
       - name: Upload coverage report
         # We want this even if the tests failed
         if: always() && github.event_name != 'merge_group'
@@ -76,25 +74,25 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
           files: ./coverage/unit.out,./coverage/integration.out
-          name: Unit Tests (go${{ matrix.go-version }})
+          name: Unit Tests (go ${{ matrix.go-version }})
 
   integration-tests:
     strategy:
       fail-fast: false
       matrix:
         runs-on: [macos, ubuntu, windows]
-        go-version: ['1.22', '1.23']
+        go-version: [oldstable, stable]
         build-mode: [DRIVER]
         include:
           # Alternate build modes (only on ubuntu, latest go; to save CI time)
           - runs-on: ubuntu
-            go-version: '1.22'
+            go-version: oldstable
             build-mode: TOOLEXEC
           - runs-on: ubuntu
-            go-version: '1.22'
+            go-version: oldstable
             build-mode: GOFLAGS
     runs-on: ${{ matrix.runs-on }}-latest
-    name: Integration tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
+    name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -102,7 +100,7 @@ jobs:
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
-          cache-dependency-path: "**/*.sum"
+          cache-dependency-path: "**/go.mod"
       - name: Setup python
         uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
         with:
@@ -146,10 +144,8 @@ jobs:
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: simple-go-version
-        run: echo "version=${COMPLETE_VERSION:0:4}" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
-        env:
-          COMPLETE_VERSION: ${{ matrix.go-version }}
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
@@ -157,7 +153,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
           files: ./coverage/integration.out
-          name: Integration Tests (go${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
+          name: Integration Tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
 
   # This is just a join point intended to simplify branch protection settings
   complete:
