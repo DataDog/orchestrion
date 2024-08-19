@@ -35,7 +35,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 							Meta: map[string]any{
 								"function-name": "tagSpecificSpan",
 								"variant":       "tag",
-								"error.message": "Artificial error for testing!"
+								"error.message": "Artificial error for testing!",
 							},
 						},
 					},
