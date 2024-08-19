@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"orchestrion/integration/validator/trace"
 )
@@ -50,6 +51,22 @@ func (b *base) run(t *testing.T) {
 }
 
 func (b *base) expectedSpans() trace.Spans {
+	httpServerSpan := &trace.Span{
+		Tags: map[string]any{
+			"name":     "http.request",
+			"resource": "GET /api/v1/namespaces",
+			"type":     "web",
+		},
+		Meta: map[string]any{
+			"component":        "net/http",
+			"span.kind":        "server",
+			"http.useragent":   rest.DefaultKubernetesUserAgent(),
+			"http.status_code": "200",
+			"http.host":        b.serverURL.Host,
+			"http.url":         fmt.Sprintf("%s/api/v1/namespaces", b.server.URL),
+			"http.method":      "GET",
+		},
+	}
 	httpClientSpan := &trace.Span{
 		Tags: map[string]any{
 			"name":     "http.request",
@@ -64,6 +81,7 @@ func (b *base) expectedSpans() trace.Spans {
 			"http.method":              "GET",
 			"http.url":                 fmt.Sprintf("%s/api/v1/namespaces", b.server.URL),
 		},
+		Children: trace.Spans{httpServerSpan},
 	}
 	k8sClientSpan := &trace.Span{
 		Tags: map[string]any{

@@ -564,6 +564,34 @@ var Aspects = [...]aspect.Aspect{
 			), []string{}),
 		},
 	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("runtime"),
+			join.Function(
+				join.Name("gfput"),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"gp.__dd_gls = nil",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.Function(
+				join.Name("newproc1"),
+			),
+			join.ImportPath("runtime"),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $newg := .Function.Result 0 -}}\ndefer func(){\n  if isSystemGoroutine({{ $newg }}, false) {\n    return\n  }\n  mp := acquirem()\n  defer releasemp(mp)\n  if mp.curg != nil {\n    {{ $newg }}.__dd_gls = mp.curg.__dd_gls\n  }\n}()",
+				map[string]string{},
+			)),
+		},
+	},
 	// From stdlib/slog.yml
 	{
 		JoinPoint: join.FunctionCall("log/slog.New"),
@@ -650,4 +678,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:OtyO0M+glxuUcEEcDj7D9mJkFJszrAKl0nbruZ/n4W8/sNJtN4Bjc8O2ExjU37yE3k7fVZXUwxVPGrJ/cv/k8A=="
+const Checksum = "sha512:CBGErRVI5CFFcDPE9IhqJLgJskqOascXqUChTNcFzX+yG/exG3UTDlbyDF59oYd4Rje0BBHesOLf3rd2xAOIrw=="
