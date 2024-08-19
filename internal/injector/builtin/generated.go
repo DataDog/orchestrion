@@ -587,7 +587,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $newg := .Function.Result 0 -}}\ndefer func(){\n  if isSystemGoroutine({{ $newg }}, false) {\n    return\n  }\n  mp := acquirem()\n  defer releasemp(mp)\n  if mp.curg != nil {\n    {{ $newg }}.__dd_gls = mp.curg.__dd_gls\n  }\n}()",
+				"{{- $newg := .Function.Result 0 -}}\ndefer func(){\n  if isSystemGoroutine({{ $newg }}, false) {\n    return\n  }\n  mp := acquirem()\n  defer releasem(mp)\n  if mp.curg != nil {\n    {{ $newg }}.__dd_gls = mp.curg.__dd_gls\n  }\n}()",
 				map[string]string{},
 			)),
 		},
@@ -678,4 +678,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:3Gei7SMkf5kxXp61l3MEHQM6BIb6JcO//FzmwTlBFQfMfT57oydOzUbhwHTOMzpwpdkGP/goQD2nSLGQr/fZbQ=="
+const Checksum = "sha512:V2fTVDU6oBMPZxianQdguQu7iDsqtVidmEbGUjUeFPVa/H95V6JOVyNGgx4YjPEBNdIz4YL9k2LFthttU+yOmQ=="
