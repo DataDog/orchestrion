@@ -1,3 +1,4 @@
+//line samples/client/vault.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -9,18 +10,18 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/vault/api"
-//line <generated>:1
+//line <generated>
 	__orchestrion_vaulttrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault"
 )
 
 //line samples/client/vault.go:14
 func vaultClient() {
 	c, err := api.NewClient(&
-//line <generated>:1
+//line <generated>
 //line samples/client/vault.go:15
 	api.Config{
 		Address: "http://vault.mydomain.com:8200",
-//line <generated>:1
+//line <generated>
 		HttpClient: __orchestrion_vaulttrace.NewHTTPClient(),
 	})
 //line samples/client/vault.go:18
@@ -32,17 +33,15 @@ func vaultClient() {
 
 func vaultProvidedClient() {
 	c, err := api.NewClient(&
-//line <generated>:1
+//line <generated>
 //line samples/client/vault.go:25
 	api.Config{
-//line <generated>:1
+//line <generated>
 		HttpClient: __orchestrion_vaulttrace.WrapHTTPClient(
 //line samples/client/vault.go:26
 			&http.Client{}),
-//line samples/client/vault.go:27
 		Address: "http://vault.mydomain.com:8200",
 	})
-//line samples/client/vault.go:29
 	if err != nil {
 		panic(err)
 	}

@@ -1,3 +1,4 @@
+//line samples/client/aws.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -9,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-//line <generated>:1
+//line <generated>
 	__orchestrion_awstrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws"
 )
 
@@ -17,7 +18,7 @@ import (
 func AWSClientV1() {
 	cfg := aws.NewConfig().WithRegion("us-west-2")
 	sess := session.Must(
-//line <generated>:1
+//line <generated>
 		func(sess *session.Session, err error) (*session.Session, error) {
 			if sess != nil {
 				sess = __orchestrion_awstrace.WrapSession(sess)
@@ -27,7 +28,6 @@ func AWSClientV1() {
 //line samples/client/aws.go:16
 			session.NewSession(cfg)))
 
-//line samples/client/aws.go:18
 	s3api := s3.New(sess)
 	s3api.CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String("shiny-bucket"),

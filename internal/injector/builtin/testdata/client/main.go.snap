@@ -1,3 +1,4 @@
+//line samples/client/main.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -13,7 +14,7 @@ import (
 	"os"
 	"strings"
 	"time"
-//line <generated>:1
+//line <generated>
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	__orchestrion_log "log"
@@ -21,7 +22,7 @@ import (
 
 //line samples/client/main.go:18
 func main() {
-//line <generated>:1
+//line <generated>
 	{
 		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 		defer __orchestrion_tracer.Stop()
