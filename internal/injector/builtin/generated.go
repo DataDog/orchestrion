@@ -567,9 +567,9 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.AllOf(
 			join.ImportPath("runtime"),
-			join.Function(
+			join.FunctionBody(join.Function(
 				join.Name("gfput"),
-			),
+			)),
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
@@ -580,9 +580,9 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.Function(
+			join.FunctionBody(join.Function(
 				join.Name("newproc1"),
-			),
+			)),
 			join.ImportPath("runtime"),
 		),
 		Advice: []advice.Advice{
@@ -678,4 +678,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:CBGErRVI5CFFcDPE9IhqJLgJskqOascXqUChTNcFzX+yG/exG3UTDlbyDF59oYd4Rje0BBHesOLf3rd2xAOIrw=="
+const Checksum = "sha512:3Gei7SMkf5kxXp61l3MEHQM6BIb6JcO//FzmwTlBFQfMfT57oydOzUbhwHTOMzpwpdkGP/goQD2nSLGQr/fZbQ=="
