@@ -43,7 +43,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = redpanda.Run(ctx,
 		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
 		redpanda.WithAutoCreateTopics(),
-		testcontainers.WithWaitStrategy(wait.ForListeningPort("9093/tcp")),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
 	)
