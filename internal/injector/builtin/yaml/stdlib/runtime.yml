@@ -64,7 +64,7 @@ aspects:
                 return
               }
               mp := acquirem()
-              defer releasemp(mp)
+              defer releasem(mp)
               if mp.curg != nil {
                 {{ $newg }}.__dd_gls = mp.curg.__dd_gls
               }
