@@ -1,0 +1,79 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+---
+# yaml-language-server: $schema=../../../../../docs/static/schema.json
+meta:
+  name: github.com/IBM/sarama
+  description: Sarama is a Go library for Apache Kafka
+  icon: fast-forward
+
+aspects:
+  - id: Wrap sarama.NewConsumer and sarama.NewConsumerClient
+    join-point:
+      one-of:
+        - function-call: github.com/IBM/sarama.NewConsumer
+        - function-call: github.com/IBM/sarama.NewConsumerClient
+    advice:
+      - wrap-expression:
+          imports:
+            saramatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1
+            sarama: github.com/IBM/sarama
+          template: |-
+            func(c sarama.Consumer, err error) (sarama.Consumer, error) {
+              if c != nil {
+                c = saramatrace.WrapConsumer(c)
+              }
+              return c, err
+            }({{ . }})
+  - id: Wrap sarama.NewSyncProducer and sarama.NewSyncProducerFromClient
+    join-point:
+      one-of:
+        - function-call: github.com/IBM/sarama.NewSyncProducer
+        - function-call: github.com/IBM/sarama.NewSyncProducerFromClient
+    advice:
+      - wrap-expression:
+          imports:
+            saramatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1
+            sarama: github.com/IBM/sarama
+          template: |-
+            {{- $cfg := .FindArgument "sarama.Config" -}}
+            func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
+              if p != nil {
+                p = saramatrace.WrapSyncProducer(
+                  {{- if $cfg -}}
+                  {{ $cfg }},
+                  {{- else -}}
+                  nil,
+                  {{- end -}}
+                  p,
+                )
+              }
+              return p, err
+            }({{ . }})
+  - id: Wrap sarama.NewAsyncProducer and sarama.NewAsyncProducerFromClient
+    join-point:
+      one-of:
+        - function-call: github.com/IBM/sarama.NewAsyncProducer
+        - function-call: github.com/IBM/sarama.NewAsyncProducerFromClient
+    advice:
+      - wrap-expression:
+          imports:
+            saramatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1
+            sarama: github.com/IBM/sarama
+          template: |-
+            {{- $cfg := .FindArgument "sarama.Config" -}}
+            func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
+              if p != nil {
+                p = saramatrace.WrapAsyncProducer(
+                  {{- if $cfg -}}
+                  {{ $cfg }},
+                  {{- else -}}
+                  nil,
+                  {{- end -}}
+                  p,
+                )
+              }
+              return p, err
+            }({{ . }})

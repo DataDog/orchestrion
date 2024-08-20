@@ -1,0 +1,45 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"github.com/Shopify/sarama"
+
+//line <generated>:1
+	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama"
+)
+
+//line samples/client/shopify_sarama.go:10
+func shopifySaramaConsumer() {
+	cfg := sarama.NewConfig()
+	consumer, err :=
+//line <generated>:1
+		func(c sarama.Consumer, err error) (sarama.Consumer, error) {
+			if c != nil {
+				c = __orchestrion_saramatrace.WrapConsumer(c)
+			}
+			return c, err
+		}(
+//line samples/client/shopify_sarama.go:12
+			sarama.NewConsumer([]string{"localhost:9092"}, cfg))
+//line samples/client/shopify_sarama.go:13
+	if err != nil {
+		panic(err)
+	}
+	defer consumer.Close()
+}
+
+func shopifySaramaConsumerFromClient() {
+	client, err := sarama.NewClient([]string{"localhost:9092"}, nil)
+	if err != nil {
+		panic(err)
+	}
+	consumer, err := sarama.NewConsumerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	defer consumer.Close()
+}

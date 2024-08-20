@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/jobserver/client"
+	"github.com/datadog/orchestrion/internal/log"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -130,6 +131,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 				Dir:        req.Dir,
 				Env:        env,
 				BuildFlags: req.BuildFlags,
+				Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 			},
 			req.Pattern,
 		)
