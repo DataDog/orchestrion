@@ -14,6 +14,7 @@ meta:
     generally be avoided.
 aspects:
   - id: Initialize to true
+    tracer-internal: true # This is safe to apply in the tracer itself.
     join-point:
       all-of:
         - directive: dd:orchestrion-enabled
@@ -21,4 +22,3 @@ aspects:
     advice:
       - assign-value:
           template: 'true'
-    tracer-internal: true
