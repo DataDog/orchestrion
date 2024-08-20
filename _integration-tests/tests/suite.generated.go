@@ -19,11 +19,13 @@ import (
 	gorm "orchestrion/integration/tests/gorm"
 	gormjinzhu "orchestrion/integration/tests/gorm.jinzhu"
 	grpc "orchestrion/integration/tests/grpc"
+	ibmsarama "orchestrion/integration/tests/ibm_sarama"
 	k8sclientgo "orchestrion/integration/tests/k8s_client_go"
 	mongo "orchestrion/integration/tests/mongo"
 	mux "orchestrion/integration/tests/mux"
 	nethttp "orchestrion/integration/tests/net_http"
 	redigo "orchestrion/integration/tests/redigo"
+	shopifysarama "orchestrion/integration/tests/shopify_sarama"
 	slog "orchestrion/integration/tests/slog"
 	sql "orchestrion/integration/tests/sql"
 	vault "orchestrion/integration/tests/vault"
@@ -41,14 +43,16 @@ var suite = map[string]testCase{
 	"gorm":                                 new(gorm.TestCase),
 	"gorm.jinzhu":                          new(gormjinzhu.TestCase),
 	"grpc":                                 new(grpc.TestCase),
+	"ibm_sarama":                           new(ibmsarama.TestCase),
 	"k8s_client_go/NewCfgFunc":             new(k8sclientgo.TestCaseNewCfgFunc),
 	"k8s_client_go/StructLiteralWithParam": new(k8sclientgo.TestCaseStructLiteralWithParam),
 	"k8s_client_go/StructLiteralWithoutParam": new(k8sclientgo.TestCaseStructLiteralWithoutParam),
-	"mongo":    new(mongo.TestCase),
-	"mux":      new(mux.TestCase),
-	"net_http": new(nethttp.TestCase),
-	"redigo":   new(redigo.TestCase),
-	"slog":     new(slog.TestCase),
-	"sql":      new(sql.TestCase),
-	"vault":    new(vault.TestCase),
+	"mongo":          new(mongo.TestCase),
+	"mux":            new(mux.TestCase),
+	"net_http":       new(nethttp.TestCase),
+	"redigo":         new(redigo.TestCase),
+	"shopify_sarama": new(shopifysarama.TestCase),
+	"slog":           new(slog.TestCase),
+	"sql":            new(sql.TestCase),
+	"vault":          new(vault.TestCase),
 }

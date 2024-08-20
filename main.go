@@ -168,6 +168,7 @@ func main() {
 var logLevelSet bool
 
 func actionSetLogLevel(_ *cli.Context, level string) error {
+	os.Setenv(envVarOrchestrionLogLevel, level)
 	if level, valid := log.LevelNamed(level); valid {
 		logLevelSet = true
 		log.SetLevel(level)
@@ -180,9 +181,9 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 	if !filepath.IsAbs(path) {
 		if wd, err := os.Getwd(); err == nil {
 			path = filepath.Join(wd, path)
-			os.Setenv(envVarOrchestrionLogFile, path)
 		}
 	}
+	os.Setenv(envVarOrchestrionLogFile, path)
 	filename := os.Expand(path, func(name string) string {
 		switch name {
 		case "PID":
