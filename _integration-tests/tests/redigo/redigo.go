@@ -3,7 +3,9 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package goredis
+//go:build integration
+
+package redigo
 
 import (
 	"context"
@@ -14,28 +16,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"github.com/go-redis/redis/v8"
 )
 
 type TestCase struct {
 	server *testredis.RedisContainer
-	*redis.Client
+	*redis.Pool
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
-	tc.server, err = testredis.RunContainer(ctx,
+	tc.server, err = testredis.Run(ctx,
+		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		testcontainers.WithImage("redis:7"),
 		utils.WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
@@ -48,7 +49,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 	if err != nil {
 		t.Skipf("Failed to start redis test container: %v\n", err)
 	}
-
 	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {
 		log.Fatalf("Failed to obtain connection string: %v\n", err)
@@ -57,27 +57,47 @@ func (tc *TestCase) Setup(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
 	}
-	addr := redisURL.Host
-	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
+
+	const network = "tcp"
+	address := redisURL.Host
+
+	tc.Pool = &redis.Pool{
+		Dial:        func() (redis.Conn, error) { return redis.Dial(network, address) },
+		DialContext: func(ctx context.Context) (redis.Conn, error) { return redis.DialContext(ctx, network, address) },
+		TestOnBorrow: func(c redis.Conn, _ time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
+
+	client := tc.Pool.Get()
+	defer func() { require.NoError(t, client.Close()) }()
+	_, err = client.Do("SET", "test_key", "test_value")
+	require.NoError(t, err)
 }
 
 func (tc *TestCase) Run(t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
 	defer span.Finish()
 
-	require.NoError(t, tc.Client.Set(ctx, "test_key", "test_value", 0).Err())
-	require.NoError(t, tc.Client.Get(ctx, "test_key").Err())
+	client, err := tc.Pool.GetContext(ctx)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, client.Close()) }()
+
+	res, err := client.Do("GET", "test_key", ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, res)
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	assert.NoError(t, tc.Client.Close())
+	assert.NoError(t, tc.Pool.Close())
 	assert.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
+func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
@@ -86,38 +106,38 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 			Children: trace.Spans{
 				{
 					Tags: map[string]any{
-						"name":     "redis.command",
-						"service":  "redis.client",
-						"resource": "set",
+						"resource": "GET",
 						"type":     "redis",
+						"name":     "redis.command",
+						"service":  "redis.conn",
 					},
 					Meta: map[string]any{
-						"redis.args_length": "3",
-						"component":         "go-redis/redis.v8",
-						"out.db":            "0",
-						"span.kind":         "client",
+						"redis.raw_command": "GET test_key",
 						"db.system":         "redis",
-						"redis.raw_command": "set test_key test_value:",
+						"component":         "gomodule/redigo",
+						"out.network":       "tcp",
 						"out.host":          "localhost",
+						"redis.args_length": "1",
+						"span.kind":         "client",
 					},
 				},
-				{
-					Tags: map[string]any{
-						"name":     "redis.command",
-						"service":  "redis.client",
-						"resource": "get",
-						"type":     "redis",
-					},
-					Meta: map[string]any{
-						"redis.args_length": "2",
-						"component":         "go-redis/redis.v8",
-						"out.db":            "0",
-						"span.kind":         "client",
-						"db.system":         "redis",
-						"redis.raw_command": "get test_key:",
-						"out.host":          "localhost",
-					},
-				},
+			},
+		},
+		{
+			Tags: map[string]any{
+				"resource": "redigo.Conn.Flush",
+				"type":     "redis",
+				"name":     "redis.command",
+				"service":  "redis.conn",
+			},
+			Meta: map[string]any{
+				"redis.raw_command": "",
+				"db.system":         "redis",
+				"component":         "gomodule/redigo",
+				"out.network":       "tcp",
+				"out.host":          "localhost",
+				"redis.args_length": "0",
+				"span.kind":         "client",
 			},
 		},
 	}
