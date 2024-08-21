@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/datadog/orchestrion/internal/goenv"
+	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/jobserver"
 	"github.com/datadog/orchestrion/internal/jobserver/client"
 	"github.com/datadog/orchestrion/internal/log"
@@ -48,16 +50,21 @@ func WithToolexec(bin string, args ...string) Option {
 	}
 }
 
-// Run takes a go directive (go build, go install, etc...) and applies
-// changes specified through opts to the command before running it in a
-// different process
+// Run takes a go command ("build", "install", etc...) with its arguments, and
+// applies changes specified through opts to the command before running it in a
+// different process.
 func Run(goArgs []string, opts ...Option) error {
 	var cfg config
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
-	goBin, err := GoBin()
+	goArgs, err := ProcessDashC(goArgs)
+	if err != nil {
+		return err
+	}
+
+	goBin, err := goenv.GoBinPath()
 	if err != nil {
 		return fmt.Errorf("locating 'go' binary: %w", err)
 	}
@@ -73,20 +80,7 @@ func Run(goArgs []string, opts ...Option) error {
 
 	env := os.Environ()
 	if len(argv) > 1 {
-		// The command may not be at index 0, if the `-C` flag is used (it is REQUIRED to occur first
-		// before anything else on the go command)
-		cmdIdx := 1
-		for {
-			if cmdIdx+2 < len(argv) && argv[cmdIdx] == "-C" {
-				cmdIdx += 2
-			} else if cmdIdx+1 < len(argv) && strings.HasPrefix(argv[cmdIdx], "-C") {
-				cmdIdx++
-			} else {
-				break
-			}
-		}
-
-		switch cmd := argv[cmdIdx]; cmd {
+		switch cmd := argv[1]; cmd {
 		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
 		case "build", "clean", "get", "install", "list", "run", "test":
 			if cfg.toolexec != "" {
@@ -96,10 +90,10 @@ func Run(goArgs []string, opts ...Option) error {
 				// Add two slots to the argV array
 				argv = append(argv, "", "")
 				// Move all values after the cmdIdx 2 slots forward
-				copy(argv[cmdIdx+3:], argv[cmdIdx+1:oldLen])
+				copy(argv[4:], argv[2:oldLen])
 				// Fill in the two slots for toolexec.
-				argv[cmdIdx+1] = "-toolexec"
-				argv[cmdIdx+2] = cfg.toolexec
+				argv[2] = "-toolexec"
+				argv[3] = cfg.toolexec
 
 				// We'll need a job server to support toolexec operations
 				server, err := jobserver.New(&jobserver.Options{ServerName: fmt.Sprintf("orchestrion[%d]", os.Getpid())})
@@ -111,6 +105,8 @@ func Run(goArgs []string, opts ...Option) error {
 					log.Tracef("[JOBSERVER]: %s\n", server.CacheStats.String())
 				}()
 				env = append(env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, server.ClientURL()))
+				// Set the process' goflags, since we know them already...
+				goflags.SetFlags("", argv[1:])
 			}
 		}
 	}
@@ -129,20 +125,4 @@ func Run(goArgs []string, opts ...Option) error {
 	}
 
 	return nil
-}
-
-var goBinPath string
-
-// GoBin returns the resolved path to the `go` command's binary. The result is cached to avoid
-// looking it up multiple times. If the lookup fails, the error is returned and the result is not
-// cached.
-func GoBin() (string, error) {
-	if goBinPath == "" {
-		goBin, err := exec.LookPath("go")
-		if err != nil {
-			return "", err
-		}
-		goBinPath = goBin
-	}
-	return goBinPath, nil
 }

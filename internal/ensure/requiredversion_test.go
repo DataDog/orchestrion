@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/datadog/orchestrion/internal/goenv"
 	"github.com/datadog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 )
@@ -80,7 +81,7 @@ func TestGoModVersion(t *testing.T) {
 }
 
 func TestRequiredVersion(t *testing.T) {
-	goBin, err := exec.LookPath("go")
+	goBin, err := goenv.GoBinPath()
 	require.NoError(t, err, "could not resolve go command path")
 
 	testError := errors.New("simulated failure")

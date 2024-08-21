@@ -15,8 +15,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/datadog/orchestrion/internal/goproxy"
+	"github.com/datadog/orchestrion/internal/goenv"
+	"github.com/datadog/orchestrion/internal/goflags/quoted"
+	"github.com/datadog/orchestrion/internal/log"
 	"github.com/shirou/gopsutil/v3/process"
+	"golang.org/x/tools/go/packages"
 )
 
 // CommandFlags represents the flags provided to a go command invocation
@@ -87,15 +90,65 @@ func (f CommandFlags) Slice() []string {
 }
 
 // ParseCommandFlags parses a slice representing a go command invocation
-// and returns its flags. Direct arguments to the command are ignored
-func ParseCommandFlags(args []string) CommandFlags {
+// and returns its flags. Direct arguments to the command are ignored. The value
+// of $GOFLAGS is also included in the returned flags.
+func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 	flags := CommandFlags{
-		Long:  make(map[string]string, len(args)),
-		Short: make(map[string]struct{}, len(args)),
+		Long:  make(map[string]string, len(longFlags)),
+		Short: make(map[string]struct{}, len(shortFlags)),
 	}
 
+	goflags := os.Getenv("GOFLAGS")
+	goflagsArgs, err := quoted.Split(goflags)
+	if err != nil {
+		log.Warnf("Failed to interpreted quoted strings in GOFLAGS=%q: %v\n", goflags, err)
+	} else {
+		log.Tracef("GOFLAGS arguments: %q\n", goflagsArgs)
+	}
+
+	// Remove any `-C` flag provided on the command line. This is required to immediately follow the `go` command, and
+	// can be present only once.
+	if len(args) > 0 {
+		if arg := args[0]; strings.HasPrefix(arg, "-C") {
+			if arg == "-C" && len(args) > 1 {
+				// ["-C", "directory", ...]
+				log.Tracef("Skipping -C %q flag\n", args[1])
+				args = args[2:]
+			} else if arg[:3] == "-C=" {
+				// ["-C=directory", ...]
+				log.Tracef("Skipping %q flag\n", arg)
+				args = args[1:]
+			}
+		}
+	}
+
+	// The next argument after a `-C` (if present) would be the go command name ("run", "test", "list", etc...). This is
+	// not interesting for our purposes, so we skip it.
+	if len(args) > 0 {
+		log.Tracef("The go command is %q\n", args[0])
+		args = args[1:]
+	}
+
+	// Compose the complete list of arguments: those from GOFLAGS, and the rest of the command line so far; in this order
+	// as the CLI arguments have precedence over those from GOFLAGS.
+	args = append(append(make([]string, 0, len(goflagsArgs)+len(args)), goflagsArgs...), args...)
+
+	var positional []string
 	for i := 0; i < len(args); i += 1 {
 		arg := args[i]
+
+		// Any argument after "--" is a positional argument, so we are done parsing.
+		if arg == "--" {
+			positional = args[i+1:]
+			break
+		}
+
+		// Any argument without a leading "-" is a positional argument, and the go CLI demands all flags are placed before
+		// positional arguments, so we are done parsing.
+		if !strings.HasPrefix(arg, "-") {
+			positional = args[i:]
+			break
+		}
 
 		normArg := arg
 		if strings.HasPrefix(arg, "--") {
@@ -104,10 +157,12 @@ func ParseCommandFlags(args []string) CommandFlags {
 			normArg = arg[1:]
 		}
 
-		if isAssigned(normArg) {
-			key, val, found := strings.Cut(normArg, "=")
-			if found {
+		if key, val, isAssigned := strings.Cut(normArg, "="); isAssigned {
+			if isLong(key) {
 				flags.Long[key] = val
+			} else {
+				// Intentionally the un-normalized variant in Unknown flags.
+				flags.Unknown = append(flags.Unknown, arg)
 			}
 		} else if isLong(normArg) {
 			flags.Long[normArg] = args[i+1]
@@ -115,12 +170,52 @@ func ParseCommandFlags(args []string) CommandFlags {
 		} else if isShort(normArg) {
 			flags.Short[normArg] = struct{}{}
 		} else {
-			// We intentionally keep the original arg value in this case instead of the normalized one.
+			// Intentionally the un-normalized variant in Unknown flags.
 			flags.Unknown = append(flags.Unknown, arg)
+			// If there's more args, and the next one does not have a leading -, we'll assume this is the value of this
+			// unknown flag and consume it.
+			if len(args) > i && !strings.HasPrefix(args[i+1], "-") {
+				flags.Unknown = append(flags.Unknown, args[i+1])
+				i++
+			}
 		}
 	}
 
-	return flags
+	return flags, flags.inferCoverpkg(wd, positional)
+}
+
+// inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and `-coverpkg` is not, as
+// otherwise, sub-commands triggered with these flags will not apply coverage to the intended packages.
+func (f *CommandFlags) inferCoverpkg(wd string, positionalArgs []string) error {
+	if _, hasCoverpkg := f.Long["-coverpkg"]; hasCoverpkg {
+		return nil
+	}
+	if _, isCover := f.Short["-cover"]; !isCover {
+		return nil
+	}
+
+	pkgs, err := packages.Load(
+		&packages.Config{
+			Mode:       packages.NeedName,
+			Dir:        wd,
+			BuildFlags: append(f.Slice(), "-toolexec"), // Make sure we satisfy the same build constraints; but don't run -toolexec
+			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+		},
+		positionalArgs...,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to resolve package list from %q: %w", positionalArgs, err)
+	}
+
+	coverpkg := make([]string, len(pkgs))
+	for i, pkg := range pkgs {
+		coverpkg[i] = pkg.PkgPath
+	}
+	val := strings.Join(coverpkg, ",")
+	log.Tracef("Inferred -coverpkg=%q from %q\n", val, positionalArgs)
+	f.Long["-coverpkg"] = val
+
+	return nil
 }
 
 // Flags return the top level go command flags
@@ -131,13 +226,12 @@ func Flags() (CommandFlags, error) {
 	return flags, flagsErr
 }
 
-func isAssigned(str string) bool {
-	if !strings.HasPrefix(str, "-") {
-		return false
-	}
-	flag, _, ok := strings.Cut(str, "=")
-	// An assigned flag is a long flag using the '=' separator
-	return ok && isLong(flag)
+// SetFlags sets the flags for this process to those parsed from the provided
+// slice. Does nothing if SetFlags or Flags has already been called once.
+func SetFlags(wd string, args []string) {
+	once.Do(func() {
+		flags, flagsErr = ParseCommandFlags(wd, args)
+	})
 }
 
 func isLong(str string) bool {
@@ -153,14 +247,14 @@ func isShort(str string) bool {
 // parentGoCommandFlags backtracks through the process tree
 // to find a parent go command invocation and returns its arguments
 func parentGoCommandFlags() (flags CommandFlags, err error) {
-	goBin, err := goproxy.GoBin()
+	goBin, err := goenv.GoBinPath()
 	if err != nil {
-		return flags, err
+		return flags, fmt.Errorf("failed to resolve go command path: %w", err)
 	}
 
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
-		return flags, err
+		return flags, fmt.Errorf("failed to get handle of the current process: %w", err)
 	}
 
 	// Backtrack through the process stack until we find the parent Go command
@@ -168,15 +262,15 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 	for {
 		p, err = p.Parent()
 		if err != nil {
-			return flags, err
+			return flags, fmt.Errorf("failed to find parent process of %d: %w", p.Pid, err)
 		}
 		args, err = p.CmdlineSlice()
 		if err != nil {
-			return flags, err
+			return flags, fmt.Errorf("failed to get command line of %d: %w", p.Pid, err)
 		}
 		cmd, err := exec.LookPath(args[0])
 		if err != nil {
-			return flags, err
+			return flags, fmt.Errorf("failed to resolve argv0 (%q) of %d: %w", args[0], p.Pid, err)
 		}
 		// Found the go command process, break out of backtracking
 		if cmd == goBin {
@@ -184,7 +278,12 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		}
 	}
 
-	return ParseCommandFlags(args[2:]), nil
+	wd, err := p.Cwd()
+	if err != nil {
+		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
+	}
+
+	return ParseCommandFlags(wd, args[2:])
 }
 
 var (
