@@ -24,6 +24,7 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/lineinfo"
 	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/datadog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver/guess"
@@ -80,6 +81,7 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 			packages.NeedSyntax |
 			packages.NeedTypesInfo,
 		Tests: opts.IncludeTests,
+		Logf:  func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 	}
 	if flags, err := goflags.Flags(); err == nil {
 		// Honor any `-tags`  flags provided by the user, as these may affect what

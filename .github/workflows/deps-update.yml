@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: stable # Minimum supported go release
-          cache-dependency-path: '**/*.sum'
+          cache-dependency-path: '**/go.mod'
 
       # Select the latest available version of gopkg.in/DataDog/dd-trace-go.v1, while ignoring all
       # the `v1.999.*` versions, which are experimental pre-releases.
