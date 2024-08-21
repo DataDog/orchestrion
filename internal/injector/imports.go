@@ -26,7 +26,7 @@ func canonicalizeImports(file *dst.File) {
 
 	retain := filterExtraneousImports(specsByPath)
 
-	file.Imports = make([]*dst.ImportSpec, 0, len(retain))
+	file.Imports = file.Imports[:0] // Re-use the backing store, we'll keep <= what was there.
 	for spec := range retain {
 		file.Imports = append(file.Imports, spec)
 	}
@@ -55,7 +55,7 @@ func filterExtraneousImports(byPath map[string][]*dst.ImportSpec) map[*dst.Impor
 	for _, specs := range byPath {
 		retain := specs[0]
 		for _, spec := range specs[1:] {
-			if spec.Name == nil || spec.Name.Name == "_" {
+			if (spec.Name == nil && (retain.Name == nil || retain.Name.Name != "_")) || spec.Name.Name == "_" {
 				continue
 			}
 			retain = spec
@@ -73,27 +73,45 @@ func filterDecls(file *dst.File, retain map[*dst.ImportSpec]struct{}) {
 		func(csor *dstutil.Cursor) bool {
 			switch node := csor.Node().(type) {
 			case *dst.GenDecl:
+				// Only visit the children of `import` declarations.
 				return node.Tok == token.IMPORT
 			case *dst.ImportSpec:
-				if _, ret := retain[node]; ret {
-					return false
+				// Filter out ImportSpec entries to keep only those in retain
+				if _, ret := retain[node]; !ret {
+					csor.Delete()
 				}
-				csor.Delete()
+				// No need to traverse children.
+				return false
+			case dst.Decl:
+				// No need to visit any other kind of declaration
+				return false
+			default:
+				// Visit other node types (e.g, the *ast.File)
+				return true
 			}
-			return false
 		},
 		func(csor *dstutil.Cursor) bool {
-			decl, ok := csor.Node().(*dst.GenDecl)
-			if !ok || decl.Tok != token.IMPORT {
-				return false
-			}
+			switch node := csor.Node().(type) {
+			case *dst.GenDecl:
+				if node.Tok != token.IMPORT {
+					// Imports are before any other kind of declaration, we can abort traversal as soon as we
+					// find a declaration that is not an `import` declaration.
+					return false
+				}
 
-			if len(decl.Specs) == 0 {
-				csor.Delete()
+				if len(node.Specs) == 0 {
+					csor.Delete()
+				}
+				// Proceed with the rest of the nodes (there may be more imports).
+				return true
+			case dst.Decl:
+				// Imports are before any other kind of declaration, we can abort traversal as soon as we
+				// find a declaration that is not an `import` declaration.
 				return false
+			default:
+				// Proceed with the rest of the nodes (there may be imports down there).
+				return true
 			}
-
-			return true
 		},
 	)
 }
