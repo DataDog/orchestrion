@@ -686,7 +686,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"gp.__dd_gls = nil",
+				"getg().__dd_gls = nil",
 				map[string]string{},
 			)),
 		},
@@ -778,4 +778,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:ZBwwLK9CLDaoHk6vCv6FoKoHsLN+kO3eBU1J3VL4KJrSsvrdSF3Q841rJBTpftyOX3Yer36STb4OpNUuk0CX9Q=="
+const Checksum = "sha512:quSpwHxYELyo6rzgDKUOgR3cGbimB2ugq8b2cpxX20EKOfflQSJNqnerpjjBn61LOb6MTf0Gk9E8LbJfRtHOSA=="
