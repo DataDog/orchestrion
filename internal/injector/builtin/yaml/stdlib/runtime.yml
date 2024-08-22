@@ -34,3 +34,15 @@ aspects:
             var __dd_orchestrion_gls_set = func(val any) {
               getg().m.curg.__dd_gls = val
             }
+  - id: Clear GLS slot on goroutine exit
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              # This is the function that finishes the execution of a goroutine.
+              # See: https://github.com/golang/go/blob/f38d42f2c4c6ad0d7cbdad5e1417cac3be2a5dcb/src/runtime/proc.go#L4264
+              - name: goexit1
+    advice:
+      - prepend-statements:
+          template: getg().__dd_gls = nil

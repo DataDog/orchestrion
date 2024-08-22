@@ -3,6 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
+//go:build integration
+
 package awsv1
 
 import (
@@ -34,7 +36,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "amazon/dynamodb-local:latest",
 			ExposedPorts: []string{port},
-			WaitingFor:   wait.ForListeningPort(nat.Port(port)),
+			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
 			Name:         "dynamodb-local",
 			WorkingDir:   "/home/dynamodblocal",
 			Cmd: []string{
