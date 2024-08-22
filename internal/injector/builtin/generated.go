@@ -677,6 +677,20 @@ var Aspects = [...]aspect.Aspect{
 			), []string{}),
 		},
 	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("runtime"),
+			join.FunctionBody(join.Function(
+				join.Name("goexit1"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"getg().__dd_gls = nil",
+				map[string]string{},
+			)),
+		},
+	},
 	// From stdlib/slog.yml
 	{
 		JoinPoint: join.FunctionCall("log/slog.New"),
@@ -764,4 +778,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:wbkfjDjV3+GQ36tmhe3yOJDfllvuJ8Tt8Q6WjcsZyNbP2JLK5IKQU5+Ns5PTdZJiwCZ0BnRyCwYSOV/rx9aNzQ=="
+const Checksum = "sha512:quSpwHxYELyo6rzgDKUOgR3cGbimB2ugq8b2cpxX20EKOfflQSJNqnerpjjBn61LOb6MTf0Gk9E8LbJfRtHOSA=="

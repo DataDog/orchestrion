@@ -36,7 +36,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "amazon/dynamodb-local:latest",
 			ExposedPorts: []string{port},
-			WaitingFor:   wait.ForListeningPort(nat.Port(port)),
+			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
 			Name:         "dynamodb-local",
 			WorkingDir:   "/home/dynamodblocal",
 			Cmd: []string{
