@@ -262,6 +262,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{},
 			)),
 		},
+		TracerInternal: true,
 	},
 	// From go-main.yml
 	{
@@ -778,4 +779,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:quSpwHxYELyo6rzgDKUOgR3cGbimB2ugq8b2cpxX20EKOfflQSJNqnerpjjBn61LOb6MTf0Gk9E8LbJfRtHOSA=="
+const Checksum = "sha512:1rr045miszvEWzw89RRL9FrGL4Mcg8d0JiSadIuBOAr8luZKk2kImnlnYuP4XTYRGqaSd+HUJDy9NBVtLjL43A=="
