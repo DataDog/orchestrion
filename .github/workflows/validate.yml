@@ -277,8 +277,10 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Checkout
+        if: github.event == 'pull_request'
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Download codecov CLI
+        if: github.event == 'pull_request'
         run: |-
           set -euo pipefail
 
@@ -298,7 +300,14 @@ jobs:
           BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
         working-directory: ${{ runner.temp }}
       - name: Trigger CodeCov notifications
-        run: ${{ runner.temp }}/codecov send-notifications --token=$CODECOV_TOKEN
+        if: github.event == 'pull_request'
+        run: |-
+          ${{ runner.temp }}/codecov send-notifications                         \
+            --token="${CODECOV_TOKEN}"                                          \
+            --fail-on-error                                                     \
+            --slug=${{ github.event.pull_request.base.repo.full_name }}         \
+            --sha=${{ github.event.pull_request.head.sha }}                     \
+            --pr=${{ github.event.pull_request.number }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Done
