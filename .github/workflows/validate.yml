@@ -287,7 +287,7 @@ jobs:
           curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "${dir}/codecov.SHA256SUM.sig"
 
           # Import the CodeCov security key
-          curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --import
+          curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --no-default-keyring --keyring trustedkeys.gpg --import
 
           # Verify the downloaded binary matches expected signatures
           gpgv "${dir}/codecov.SHA256SUM.sig" "${dir}/codecov.SHA256SUM"
