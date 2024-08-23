@@ -53,6 +53,7 @@ var suite = map[string]testCase{
 	"mongo":          new(mongo.TestCase),
 	"mux":            new(mux.TestCase),
 	"net_http":       new(nethttp.TestCase),
+	"os":             new(os.TestCase),
 	"redigo":         new(redigo.TestCase),
 	"shopify_sarama": new(shopifysarama.TestCase),
 	"slog":           new(slog.TestCase),

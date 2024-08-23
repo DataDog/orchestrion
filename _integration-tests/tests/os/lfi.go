@@ -3,6 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
+//go:build integration
+
 package os
 
 import (
@@ -43,7 +45,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	tc.T = t
 	resp, err := http.Get(fmt.Sprintf("http://%s/?path=/etc/passwd", tc.Server.Addr))
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
@@ -58,7 +60,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 		{
 			Tags: map[string]any{
 				"name":     "http.request",
-				"service":  "tests.test",
 				"resource": "GET /",
 				"type":     "http",
 			},
@@ -70,7 +71,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
-						"service":  "tests.test",
 						"resource": "GET /",
 						"type":     "web",
 					},
