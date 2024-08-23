@@ -283,15 +283,15 @@ jobs:
 
           dir=$(mktemp -d)
           curl -fSsL "${BASE_URL}" -o "${dir}/codecov"
-          curl -fSsL "${BASE_URL}.SHU256SUM" -o "${dir}/codecov.SHU256SUM"
-          curl -fSsL "${BASE_URL}.SHU256SUM.sig" -o "${dir}/codecov.SHU256SUM.sig"
+          curl -fSsL "${BASE_URL}.SHA256SUM" -o "${dir}/codecov.SHA256SUM"
+          curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "${dir}/codecov.SHA256SUM.sig"
 
           # Import the CodeCov security key
           curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --import
 
           # Verify the downloaded binary matches expected signatures
-          gpgv "${dir}/codecov.SHU256SUM.sig" "${dir}/codecov.SHU256SUM"
-          shasum -a 256 -c "${dir}/codecov.SHU256SUM"
+          gpgv "${dir}/codecov.SHA256SUM.sig" "${dir}/codecov.SHA256SUM"
+          shasum -a 256 -c "${dir}/codecov.SHA256SUM"
 
           chmod a+x "${dir}/codecov"
           echo "cli=${dir}/covecov" > "${GITHUB_OUTPUT}"
