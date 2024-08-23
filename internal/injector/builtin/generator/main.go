@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
-	"golang.org/x/tools/go/packages"
 	"gopkg.in/yaml.v3"
 )
 
@@ -162,29 +161,6 @@ func main() {
 		g.Empty().Line()
 	})
 
-	file.Comment("RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess")
-	file.Var().Id("RestorerMap").Op("=").Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
-		pkgs, err := packages.Load(&packages.Config{}, "gopkg.in/DataDog/dd-trace-go.v1/...")
-		if err != nil {
-			log.Fatalf("Failed to load packages: %v\n", err)
-		}
-		sort.Sort(sortable(pkgs))
-
-		for _, pkg := range pkgs {
-			if strings.HasSuffix(pkg.PkgPath, "/internal") || strings.Contains(pkg.PkgPath, "/internal/") {
-				// We don't care about internal packages here (at least for now)
-				continue
-			}
-			if strings.HasSuffix(pkg.PkgPath, "/"+pkg.Name) {
-				// We don't care about packages for which `restorer.Guess` would infer the right name.
-				continue
-			}
-			g.Line().Lit(pkg.PkgPath).Op(":").Lit(pkg.Name)
-		}
-
-		g.Line().Empty()
-	})
-
 	file.Comment("InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper")
 	file.Comment("invalidation of cached artifacts when injected dependencies change.")
 	file.Var().Id("InjectedPaths").Op("=").Index(jen.Op("...")).String().ValuesFunc(func(g *jen.Group) {
@@ -211,20 +187,6 @@ func main() {
 			log.Fatalf("Error writing output file %q: %v\n", deps, err)
 		}
 	}
-}
-
-type sortable []*packages.Package
-
-func (s sortable) Len() int {
-	return len(s)
-}
-
-func (s sortable) Less(i, j int) bool {
-	return s[i].PkgPath < s[j].PkgPath
-}
-
-func (s sortable) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
 }
 
 func writeAll(w io.Writer, data []byte) {

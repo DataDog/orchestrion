@@ -691,31 +691,6 @@ var Aspects = [...]aspect.Aspect{
 	},
 }
 
-// RestorerMap is a set of import path to name mappings for packages that would be incorrectly named by restorer.Guess
-var RestorerMap = map[string]string{
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1":                            "sarama",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1":            "pubsub",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2": "kafka",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/dimfeld/httptreemux.v5":                   "httptreemux",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6":              "elastic",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/emicklei/go-restful":                      "restful",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/emicklei/go-restful.v3":                   "restful",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5":                            "chi",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-pg/pg.v10":                             "pg",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7":                        "redis",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8":                        "redis",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2":                         "fiber",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc.v12":               "grpc",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gopkg.in/jinzhu/gorm.v1":                  "gorm",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1":                          "gorm",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go":                 "graphql",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5":                             "pgx",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4":                         "echo",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9":                        "redis",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0":                    "kafka",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/valyala/fasthttp.v1":                      "fasthttp",
-}
-
 // InjectedPaths is a set of import paths that may be injected by built-in aspects. This list is used to ensure proper
 // invalidation of cached artifacts when injected dependencies change.
 var InjectedPaths = [...]string{
