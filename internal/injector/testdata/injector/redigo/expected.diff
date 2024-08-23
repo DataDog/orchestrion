@@ -1,10 +1,14 @@
 --- input.go
 +++ output.go
-@@ -4,10 +4,13 @@
+@@ -1,13 +1,17 @@
++//line input.go:1:1
+ package test
+ 
+ import (
    "context"
  
    "github.com/gomodule/redigo/redis"
-+//line <generated>:1
++//line <generated>
 +  __orchestrion_redigo "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
  )
  
@@ -15,7 +19,7 @@
    if err != nil {
      return err
    }
-@@ -16,7 +16,7 @@
+@@ -16,7 +11,7 @@
  }
  
  func dialContext(ctx context.Context, net, address string) error {
@@ -24,7 +28,7 @@
    if err != nil {
      return err
    }
-@@ -25,7 +25,7 @@
+@@ -25,7 +20,7 @@
  }
  
  func dialURL(url string) error {

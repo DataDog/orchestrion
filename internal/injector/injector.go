@@ -22,6 +22,7 @@ import (
 	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/datadog/orchestrion/internal/injector/aspect/context"
 	"github.com/datadog/orchestrion/internal/injector/builtin"
+	"github.com/datadog/orchestrion/internal/injector/lineinfo"
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/datadog/orchestrion/internal/log"
 	"github.com/dave/dst"
@@ -34,11 +35,11 @@ import (
 type (
 	// Injector injects go code into a program.
 	Injector struct {
-		fileset    *token.FileSet
-		decorators []*decorator.Decorator
-		restorer   *decorator.Restorer
-		opts       Options
-		mutex      sync.Mutex // Guards access to InjectFile
+		fileset     *token.FileSet
+		decorators  []*decorator.Decorator
+		newRestorer func(string) *decorator.FileRestorer
+		opts        Options
+		mutex       sync.Mutex // Guards access to InjectFile
 	}
 
 	// ModifiedFileFn is called with the original file and must return the path to use when writing a modified version.
@@ -147,8 +148,12 @@ func New(pkgDir string, opts Options) (*Injector, error) {
 	return &Injector{
 		fileset:    fileset,
 		decorators: decorators,
-		restorer:   decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)),
-		opts:       opts,
+		newRestorer: func(filename string) *decorator.FileRestorer {
+			res := decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)).FileRestorer()
+			res.Name = filename
+			return res
+		},
+		opts: opts,
 	}, nil
 }
 
@@ -158,7 +163,6 @@ type (
 		References typed.ReferenceMap // New package references injected into the file and what kind of reference they are
 		Filename   string             // The file name of the output file (may be different from the input file)
 		Modified   bool               // Whether the file was modified
-		NewFiles   map[string][]byte  // New source files to be compiled
 	}
 )
 
@@ -175,16 +179,13 @@ func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (re
 		return res, err
 	}
 
-	if res.NewFiles == nil {
-		res.NewFiles = make(map[string][]byte)
-	}
-	if res.Modified, res.References, err = i.inject(file, decorator, rootConfig, res.NewFiles); err != nil {
+	if res.Modified, res.References, err = i.inject(file, decorator, rootConfig); err != nil {
 		return res, err
 	}
 
 	if res.Modified {
 		buf := bytes.NewBuffer(nil)
-		if err = i.restorer.Fprint(buf, file); err != nil {
+		if err = i.newRestorer(filename).Fprint(buf, file); err != nil {
 			return res, err
 		}
 
@@ -237,7 +238,7 @@ func (i *Injector) lookupDecoratedFile(filename string) (*dst.File, *decorator.D
 // inject performs all configured injections on the specified file. It returns whether the file was
 // modified, any import references introduced by modifications. In case of an error, the
 // trasnformation aborts as quickly as possible and returns the error.
-func (i *Injector) inject(file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string, newFiles map[string][]byte) (mod bool, refs typed.ReferenceMap, err error) {
+func (i *Injector) inject(file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string) (mod bool, refs typed.ReferenceMap, err error) {
 	var chain *context.NodeChain
 
 	dstutil.Apply(
@@ -283,7 +284,9 @@ func (i *Injector) inject(file *dst.File, decorator *decorator.Decorator, rootCo
 	}
 
 	if mod && i.opts.PreserveLineInfo {
-		i.addLineDirectives(file, decorator)
+		if err := lineinfo.AnnotateMovedNodes(decorator, file, i.newRestorer); err != nil {
+			return mod, refs, err
+		}
 	}
 
 	return
@@ -310,74 +313,6 @@ func (i *Injector) injectNode(ctx context.AdviceContext) (mod bool, err error) {
 	}
 
 	return
-}
-
-// addLineDirectives travers a transformed AST and adds "//line file:line" directives where
-// necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
-// within a `<generated>` pseudo-file.
-func (i *Injector) addLineDirectives(file *dst.File, decorator *decorator.Decorator) {
-	var (
-		// Whether we are in generated code or not
-		inGen = false
-		// Force emitting a generated code line directive even if we are already in generated code. This
-		// is necessary when original AST nodes are inlined within generated code (usually by
-		// a wrap-expression advice), so we appropriately resume generated code tagging afterwards.
-		forceGen = false
-	)
-
-	var stack []bool
-	dst.Inspect(file, func(node dst.Node) bool {
-		if node == nil {
-			if len(stack) == 0 {
-				panic("popping empty stack")
-			}
-			forceGen = !inGen && stack[len(stack)-1]
-			inGen, stack = inGen || stack[len(stack)-1], stack[:len(stack)-1]
-			return true
-		}
-
-		// Push the current node onto the stack
-		defer func() {
-			stack = append(stack, inGen)
-			// The forceGen flag is reset after any node is processed, as at this stage we have resumed
-			// normal operations.
-			forceGen = false
-		}()
-
-		ast := decorator.Ast.Nodes[node]
-		if ast != nil {
-			position := i.fileset.Position(ast.Pos())
-			// Generated nodes from templates may have a corresponding AST node, with a blank filename.
-			// Those should be treated as synthetic nodes (they are!).
-			if position.Filename != "" {
-				if inGen {
-					// We need to properly re-position this node (previous node was synthetic)
-					deco := node.Decorations()
-					if deco.Before == dst.None {
-						deco.Before = dst.NewLine
-					}
-					deco.Start.Append(fmt.Sprintf("//line %s:%d", position.Filename, position.Line))
-					inGen = false
-				}
-				return true
-			}
-		}
-
-		if !inGen || forceGen {
-			deco := node.Decorations()
-			if deco.Before == dst.None {
-				deco.Before = dst.NewLine
-			}
-			deco.Start.Prepend("//line <generated>:1")
-			inGen = true
-		}
-
-		return true
-	})
-
-	if len(stack) != 0 {
-		panic("finished with non-zero stack!")
-	}
 }
 
 // outputFileFor returns the file name to be used when writing a modified file. It uses the options
