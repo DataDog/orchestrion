@@ -277,28 +277,25 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Download codecov CLI
-        id: codecov
         run: |-
           set -euo pipefail
 
-          dir=$(mktemp -d)
-          curl -fSsL "${BASE_URL}" -o "${dir}/codecov"
-          curl -fSsL "${BASE_URL}.SHA256SUM" -o "${dir}/codecov.SHA256SUM"
-          curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "${dir}/codecov.SHA256SUM.sig"
+          curl -fSsL "${BASE_URL}" -o "./codecov"
+          curl -fSsL "${BASE_URL}.SHA256SUM" -o "./codecov.SHA256SUM"
+          curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "./codecov.SHA256SUM.sig"
 
           # Import the CodeCov security key
           curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --no-default-keyring --keyring trustedkeys.gpg --import
 
           # Verify the downloaded binary matches expected signatures
-          gpgv "${dir}/codecov.SHA256SUM.sig" "${dir}/codecov.SHA256SUM"
-          shasum -a 256 -c "${dir}/codecov.SHA256SUM"
+          gpgv "./codecov.SHA256SUM.sig" "./codecov.SHA256SUM"
+          shasum -a 256 -c "./codecov.SHA256SUM"
 
-          chmod a+x "${dir}/codecov"
-          echo "cli=${dir}/covecov" > "${GITHUB_OUTPUT}"
+          chmod a+x "./codecov"
         env:
           BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
       - name: Trigger CodeCov notifications
-        run: ${{ steps.codecov.outputs.cli }} send-notifications --token=$CODECOV_TOKEN
+        run: ./codecov send-notifications --token=$CODECOV_TOKEN
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Done
