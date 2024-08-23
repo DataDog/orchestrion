@@ -306,8 +306,7 @@ jobs:
             --token="${CODECOV_TOKEN}"                                          \
             --fail-on-error                                                     \
             --slug=${{ github.event.pull_request.base.repo.full_name }}         \
-            --sha=${{ github.event.pull_request.head.sha }}                     \
-            --pr=${{ github.event.pull_request.number }}
+            --sha=${{ github.event.pull_request.head.sha }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Done
