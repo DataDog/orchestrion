@@ -296,14 +296,9 @@ jobs:
           chmod a+x "${dir}/codecov"
           echo "cli=${dir}/covecov" > "${GITHUB_OUTPUT}"
         env:
-          BASE_URL: https://cli.codecov.io/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/latest/codecov
+          BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
       - name: Trigger CodeCov notifications
-        run: |-
-          "${{ steps.codecov.outputs.cli }}"    \
-            send-notifications                  \
-              --token=$CODECOV_TOKEN            \
-              --slug=${{ github.repository }}   \
-              --sha=${{ github.sha }}
+        run: ${{ steps.codecov.outputs.cli }} send-notifications --token=$CODECOV_TOKEN
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Done
