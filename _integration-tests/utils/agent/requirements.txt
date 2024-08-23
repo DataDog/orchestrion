@@ -14,7 +14,7 @@ certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.3.2
 click==8.1.7
-cryptography==41.0.7
+cryptography==42.0.4
 ddapm-test-agent==1.17.0
 ddsketch==3.0.1
 Django==4.2.15
@@ -45,6 +45,6 @@ six==1.16.0
 sqlparse==0.4.4
 tomli==2.0.1
 typing_extensions==4.8.0
-urllib3==2.0.7
+urllib3==2.2.2
 yarl==1.9.4
 zipp==3.20.0
