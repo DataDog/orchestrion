@@ -1,3 +1,4 @@
+//line samples/server/fiberv2.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -7,19 +8,19 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
-//line <generated>:1
+//line <generated>
 	__orchestrion_fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
 )
 
 //line samples/server/fiberv2.go:12
 func fiberV2Server() {
 	r :=
-//line <generated>:1
+//line <generated>
 		func() *fiber.App {
 			app :=
 //line samples/server/fiberv2.go:13
 				fiber.New()
-//line <generated>:1
+//line <generated>
 			app.Use(__orchestrion_fibertrace.Middleware())
 			return app
 		}()
