@@ -13,7 +13,106 @@ concurrency:
 permissions: read-all
 
 jobs:
+  ##############################################################################
+  # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      has-patch: ${{ steps.is-tree-dirty.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Setup go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version: stable
+          cache-dependency-path: '**/go.mod'
+
+      - name: Run 'go generate ./...'
+        run: |-
+          mkdir -p ${GOCOVERDIR}
+          go generate ./...
+          go -C _integration-tests generate ./...
+        env:
+          GOFLAGS: -covermode=atomic -coverpkg=github.com/datadog/orchestrion/...
+          GOCOVERDIR: ${{ github.workspace }}/coverage
+      - name: Consolidate coverage report
+        if: always() && github.event_name != 'merge_group'
+        run: go tool covdata textfmt -i ./coverage -o ./coverage/generator.out
+      - name: Upload coverage report
+        # We want this even if the tests failed
+        if: always() && github.event_name != 'merge_group'
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ runner.os }},${{ runner.arch }},generator
+          file: ./coverage/generator.out
+          name: Generators
+
+      - name: Run 'go mod tidy'
+        # Don't run for push, it's not necessary
+        if: github.event_name != 'push'
+        run: find . -iname go.mod -execdir go mod tidy \;
+
+      - name: Refresh LICENSE-3rdparty.csv
+        run: ./tools/make-licenses.sh
+        env:
+          TMPDIR: ${{ runner.temp }}
+
+      - name: Check if working tree is dirty
+        # Don't run for push, it's not necessary
+        if: github.event_name != 'push'
+        id: is-tree-dirty
+        run: |-
+          git add .
+          git diff --staged --patch --exit-code > .repo.patch || echo "result=true" >> ${GITHUB_OUTPUT}
+      - name: Upload patch
+        if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
+        with:
+          name: repo.patch
+          path: .repo.patch
+      - name: Fail build if working tree is dirty
+        if: github.event_name == 'push' && steps.is-tree-dirty.outputs.result == 'true'
+        run: |-
+          echo "::error::Files have been modified by 'go generate ./...' (see logs)."
+          cat .repo.patch
+          exit 1
+  ##############################################################################
+  # If the generators changed anything, and we can update the PR, then we'll
+  # proactively do it with the mutator token.
+  self-mutation:
+    needs: generate
+    runs-on: ubuntu-latest
+    if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - name: Download patch
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: repo.patch
+          path: ${{ runner.temp }}
+      - name: Apply patch
+        run: |-
+          [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
+      # We use ghcommit to create signed commits directly using the GitHub API
+      - name: Push changes
+        uses: planetscale/ghcommit-action@c7915d6c18d5ce4eb42b0eff3f10a29fe0766e4c # v0.1.44
+        with:
+          commit_message: "chore: update generated files"
+          repo: ${{ github.event.pull_request.head.repo.full_name }}
+          branch: ${{ github.event.pull_request.head.ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
+
+  ##############################################################################
+  # Run the various linters we have set up...
   lint:
+    needs: generate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,6 +132,8 @@ jobs:
       - name: vet
         run: go vet ./...
 
+  ##############################################################################
+  # Verify all GitHub workflows have hash-pinned actions
   lint-workflows:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +142,10 @@ jobs:
       - name: Ensure SHA pinned actions
         uses: zgosalvez/github-actions-ensure-sha-pinned-actions@b88cd0aad2c36a63e42c71f81cb1958fed95ac87 # v3
 
+  ##############################################################################
+  # Run all unit tests with coverage enabled
   unit-tests:
+    needs: generate
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -76,7 +180,10 @@ jobs:
           files: ./coverage/unit.out,./coverage/integration.out
           name: Unit Tests (go ${{ matrix.go-version }})
 
+  ##############################################################################
+  # Run all integration tests and gather extensive coverage
   integration-tests:
+    needs: generate
     strategy:
       fail-fast: false
       matrix:
@@ -151,16 +258,49 @@ jobs:
           files: ./coverage/integration.out
           name: Integration Tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
 
-  # This is just a join point intended to simplify branch protection settings
+  ##############################################################################
+  # Assert everything is complete. This simplifies branch protection settings
+  # and allows us to have one single trigger for CodeCov reporting.
   complete:
     runs-on: ubuntu-latest
     needs:
+      - generate
       - lint
       - lint-workflows
       - unit-tests
       - integration-tests
     if: '!cancelled()'
     steps:
+      - name: Download codecov CLI
+        id: codecov
+        run: |-
+          set -euo pipefail
+
+          dir=$(mktemp -d)
+          curl -fSsL "${BASE_URL}" -o "${dir}/codecov"
+          curl -fSsL "${BASE_URL}.SHU256SUM" -o "${dir}/codecov.SHU256SUM"
+          curl -fSsL "${BASE_URL}.SHU256SUM.sig" -o "${dir}/codecov.SHU256SUM.sig"
+
+          # Import the CodeCov security key
+          curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --import
+
+          # Verify the downloaded binary matches expected signatures
+          gpgv "${dir}/codecov.SHU256SUM.sig" "${dir}/codecov.SHU256SUM"
+          shasum -a 256 -c "${dir}/codecov.SHU256SUM"
+
+          chmod a+x "${dir}/codecov"
+          echo "cli=${dir}/covecov" > "${GITHUB_OUTPUT}"
+        env:
+          BASE_URL: https://cli.codecov.io/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/latest/codecov
+      - name: Trigger CodeCov notifications
+        run: |-
+          "${{ steps.codecov.outputs.cli }}"    \
+            send-notifications                  \
+              --token=$CODECOV_TOKEN            \
+              --slug=${{ github.repository }}   \
+              --sha=${{ github.sha }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Done
         if: needs.lint.result == 'success' && needs.lint-workflows.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
         run: echo "OK"

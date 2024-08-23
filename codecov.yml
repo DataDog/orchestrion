@@ -3,7 +3,7 @@
 codecov:
   require_ci_to_pass: true
   notify:
-    wait_for_ci: true
+    manual_trigger: true
 
 ignore:
   - '**/generator/main.go' # Generators are not actually part of the product
