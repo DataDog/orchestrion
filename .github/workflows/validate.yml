@@ -17,6 +17,7 @@ jobs:
   # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
   generate:
     runs-on: ubuntu-latest
+    name: Run all generators
     outputs:
       has-patch: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
@@ -84,6 +85,7 @@ jobs:
   self-mutation:
     needs: generate
     runs-on: ubuntu-latest
+    name: Update PR with generated files
     if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
     steps:
       - name: Checkout
@@ -114,6 +116,7 @@ jobs:
   lint:
     needs: generate
     runs-on: ubuntu-latest
+    name: Go Linters
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -136,6 +139,7 @@ jobs:
   # Verify all GitHub workflows have hash-pinned actions
   lint-workflows:
     runs-on: ubuntu-latest
+    name: GitHub Workflow Linters
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
@@ -263,6 +267,7 @@ jobs:
   # and allows us to have one single trigger for CodeCov reporting.
   complete:
     runs-on: ubuntu-latest
+    name: Complete
     needs:
       - generate
       - lint

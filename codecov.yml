@@ -5,6 +5,10 @@ codecov:
   notify:
     manual_trigger: true
 
+comment:
+  layout: diff, components, files
+  behavior: new
+
 ignore:
   - '**/generator/main.go' # Generators are not actually part of the product
   - 'samples/**' # This is sample code for instrumentable things
@@ -22,9 +26,6 @@ coverage:
       default:
         target: auto
         informational: true
-
-comment:
-  require_changes: true
 
 component_management:
   individual_components:
