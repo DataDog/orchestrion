@@ -1,3 +1,4 @@
+//line samples/client/aws_v2.go:1:1
 package main
 
 import (
@@ -6,26 +7,25 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-//line <generated>:1
+//line <generated>
 	__orchestrion_awstrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws"
 )
 
 //line samples/client/aws_v2.go:11
 func AWSClientV2() {
 	cfg :=
-//line <generated>:1
-		func(cfg *aws.Config) aws.Config {
-			__orchestrion_awstrace.AppendMiddleware(cfg)
-			return *cfg
-		}(&
+//line <generated>
+		func(cfg aws.Config) aws.Config {
+			__orchestrion_awstrace.AppendMiddleware(&cfg)
+			return cfg
+		}(
 //line samples/client/aws_v2.go:12
-		aws.Config{
-			Region:       "test-region-1337",
-			Credentials:  aws.AnonymousCredentials{},
-			BaseEndpoint: aws.String("http://localhost:4566"),
-		})
+			aws.Config{
+				Region:       "test-region-1337",
+				Credentials:  aws.AnonymousCredentials{},
+				BaseEndpoint: aws.String("http://localhost:4566"),
+			})
 
-//line samples/client/aws_v2.go:18
 	s3api := s3.NewFromConfig(cfg)
 	res, err := s3api.CreateBucket(context.Background(), &s3.CreateBucketInput{
 		Bucket: aws.String("shiny-bucket"),
