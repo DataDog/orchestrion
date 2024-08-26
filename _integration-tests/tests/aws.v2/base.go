@@ -73,6 +73,9 @@ func (b *base) teardown(t *testing.T) {
 }
 
 func (b *base) run(t *testing.T) {
+	if len(b.cfg.APIOptions) == 0 {
+		t.Log("the AWS config is not traced")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	ddb := dynamodb.NewFromConfig(b.cfg)
