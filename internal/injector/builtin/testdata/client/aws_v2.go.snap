@@ -1,4 +1,9 @@
 //line samples/client/aws_v2.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 package main
 
 import (
@@ -11,7 +16,7 @@ import (
 	__orchestrion_awstrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws"
 )
 
-//line samples/client/aws_v2.go:11
+//line samples/client/aws_v2.go:16
 func AWSClientV2() {
 	cfg :=
 //line <generated>
@@ -19,7 +24,7 @@ func AWSClientV2() {
 			__orchestrion_awstrace.AppendMiddleware(&cfg)
 			return cfg
 		}(
-//line samples/client/aws_v2.go:12
+//line samples/client/aws_v2.go:17
 			aws.Config{
 				Region:       "test-region-1337",
 				Credentials:  aws.AnonymousCredentials{},
