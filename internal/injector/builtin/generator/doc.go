@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -36,16 +35,4 @@ func documentConfiguration(dir, yamlFile string, config *ConfigurationFile) erro
 		return err
 	}
 	return os.WriteFile(filename, buf.Bytes(), 0o644)
-}
-
-func writeFmt(buf io.Writer, format string, args ...any) {
-	if _, err := fmt.Fprintf(buf, format, args...); err != nil {
-		panic(err)
-	}
-}
-
-func writeLine(buf io.Writer, line string) {
-	if _, err := fmt.Fprintln(buf, line); err != nil {
-		panic(err)
-	}
 }

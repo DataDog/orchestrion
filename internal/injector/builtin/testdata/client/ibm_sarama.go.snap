@@ -1,3 +1,4 @@
+//line samples/client/ibm_sarama.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -8,7 +9,7 @@ package main
 import (
 	"github.com/IBM/sarama"
 
-//line <generated>:1
+//line <generated>
 	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
 )
 
@@ -16,7 +17,7 @@ import (
 func ibmSaramaConsumer() {
 	cfg := sarama.NewConfig()
 	consumer, err :=
-//line <generated>:1
+//line <generated>
 		func(c sarama.Consumer, err error) (sarama.Consumer, error) {
 			if c != nil {
 				c = __orchestrion_saramatrace.WrapConsumer(c)
@@ -25,7 +26,6 @@ func ibmSaramaConsumer() {
 		}(
 //line samples/client/ibm_sarama.go:12
 			sarama.NewConsumer([]string{"localhost:9092"}, cfg))
-//line samples/client/ibm_sarama.go:13
 	if err != nil {
 		panic(err)
 	}

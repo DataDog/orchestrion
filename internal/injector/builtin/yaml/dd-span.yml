@@ -6,53 +6,81 @@
 # yaml-language-server: $schema=../../../../docs/static/schema.json
 meta:
   name: //dd:span
-  description: Monitor a function using a custom span.
+  description: |-
+    Create a span surrounding all calls to the annotated function by adding a `//dd:span` directive on the function
+    declaration. The default operation (span) name is the name of the function, but this can be overridden by specifying
+    a `span.name` argument:
+
+    ```go
+    //dd:span span.name:custom-operation-name other:tag
+    func myFunction() {
+      // The default operation name would have been "myFunction"
+    }
+    ```
+
+    Function literal expressions don't have a function name, and their default operation name is the value of the very
+    first directive argument (if there is one). If there are no directive arguments, the operation name will remain
+    blank.
+
+    ```go
+    //dd:span other:tag span.name:custom-operation-name
+    myOp := func() {
+      // The default operation name would have been "tag"
+    }
+    ```
   icon: cog
 aspects:
-  - id: Using context.Context
+  - id: Annotated with `dd:span`
     join-point:
       function-body:
-        all-of:
-          - directive: 'dd:span'
-          - function:
-              - receives: context.Context
+        directive: 'dd:span'
     advice:
       - prepend-statements:
           imports:
-            event: github.com/datadog/orchestrion/instrument/event
-            instrument: github.com/datadog/orchestrion/instrument
+            context: context
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
-            {{- $ctx := .FindArgument "context.Context" -}}
-            {{- $name := .Function.Name -}}
-            {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
-            defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
+            {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- $req := .Function.ArgumentOfType "*net/http.Request" -}}
+            {{- if (eq $ctx "") -}}
+              {{- $ctx = "ctx" -}}
+              ctx := {{- with $req -}}
+                {{ $req }}.Context()
+              {{- else -}}
+                context.TODO()
+              {{- end }}
+            {{ end -}}
 
-  - id: Using *http.Request
-    join-point:
-      function-body:
-        all-of:
-          - directive: 'dd:span'
-          - function:
-              - receives: '*net/http.Request'
-    advice:
-      - prepend-statements:
-          imports:
-            event: github.com/datadog/orchestrion/instrument/event
-            instrument: github.com/datadog/orchestrion/instrument
-          template: |-
-            {{- $req := .FindArgument "*net/http.Request" -}}
-            {{- $name := .Function.Name -}}
-            {{$req}} = {{$req}}.WithContext(instrument.Report({{$req}}.Context(), event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
+            {{ $functionName := .Function.Name -}}
+            {{- $opName := $functionName -}}
             {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}}))
-            defer instrument.Report({{$req}}.Context(), event.EventEnd{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
+              {{- if eq $opName "" -}}
+                {{ $opName = .Value }}
+              {{- end -}}
+              {{- if eq .Key "span.name" -}}
+                {{- $opName = .Value -}}
+                {{- break -}}
+              {{- end -}}
+            {{- end -}}
+
+            var span tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf "%q" $opName }},
+              {{- with $functionName }}
+                tracer.Tag("function-name", {{ printf "%q" $functionName }}),
+              {{ end -}}
+              {{- range .DirectiveArgs "dd:span" }}
+                {{ if eq .Key "span.name" -}}{{- continue -}}{{- end -}}
+                tracer.Tag({{ printf "%q" .Key }}, {{ printf "%q" .Value }}),
+              {{- end }}
+            )
+            {{- with $req }}
+              {{ $req }} = {{ $req }}.WithContext({{ $ctx }})
+            {{- end }}
+
+            {{ with .Function.ResultOfType "error" -}}
+              defer func(){
+                span.Finish(tracer.WithError({{ . }}))
+              }()
+            {{ else -}}
+              defer span.Finish()
+            {{- end -}}

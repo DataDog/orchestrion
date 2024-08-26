@@ -74,7 +74,7 @@ aspects:
             namingschema: gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
-            {{- $res := .Function.Returns 0 -}}
+            {{- $res := .Function.Result 0 -}}
             defer func() {
               var analyticsRate float64
               if internal.BoolEnv("DD_TRACE_MUX_ANALYTICS_ENABLED", false) {

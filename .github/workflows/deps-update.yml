@@ -111,6 +111,7 @@ jobs:
       - name: Create PR
         run: |-
           git fetch origin "${{ steps.create-branch.outputs.branch }}"
+          git switch "${{ steps.create-branch.outputs.branch }}"
           gh pr create --title "chore: update all dependencies" \
                        --body "Updated all go.mod dependencies to latest." \
                        --head="${{ steps.create-branch.outputs.branch }}"

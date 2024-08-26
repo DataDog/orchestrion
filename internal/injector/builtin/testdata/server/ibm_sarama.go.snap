@@ -1,3 +1,4 @@
+//line samples/server/ibm_sarama.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -8,7 +9,7 @@ package main
 import (
 	"github.com/IBM/sarama"
 
-//line <generated>:1
+//line <generated>
 	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
 )
 
@@ -18,7 +19,7 @@ func ibmSaramaProducer() {
 	cfg.Producer.Return.Successes = true
 
 	producer, err :=
-//line <generated>:1
+//line <generated>
 		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
@@ -27,7 +28,6 @@ func ibmSaramaProducer() {
 		}(
 //line samples/server/ibm_sarama.go:14
 			sarama.NewSyncProducer([]string{"localhost:9092"}, cfg))
-//line samples/server/ibm_sarama.go:15
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func ibmSaramaProducerFromClient() {
 		panic(err)
 	}
 	producer, err :=
-//line <generated>:1
+//line <generated>
 		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
@@ -52,7 +52,6 @@ func ibmSaramaProducerFromClient() {
 		}(
 //line samples/server/ibm_sarama.go:29
 			sarama.NewSyncProducerFromClient(client))
-//line samples/server/ibm_sarama.go:30
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +63,7 @@ func ibmSaramaAsyncProducer() {
 	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
 
 	producer, err :=
-//line <generated>:1
+//line <generated>
 		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)
@@ -73,7 +72,6 @@ func ibmSaramaAsyncProducer() {
 		}(
 //line samples/server/ibm_sarama.go:40
 			sarama.NewAsyncProducer([]string{"localhost:9092"}, cfg))
-//line samples/server/ibm_sarama.go:41
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +87,7 @@ func ibmSaramaAsyncProducerFromClient() {
 		panic(err)
 	}
 	producer, err :=
-//line <generated>:1
+//line <generated>
 		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)
@@ -98,7 +96,6 @@ func ibmSaramaAsyncProducerFromClient() {
 		}(
 //line samples/server/ibm_sarama.go:55
 			sarama.NewAsyncProducerFromClient(client))
-//line samples/server/ibm_sarama.go:56
 	if err != nil {
 		panic(err)
 	}

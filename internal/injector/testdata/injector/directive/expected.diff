@@ -1,10 +1,12 @@
 --- input.go
 +++ output.go
-@@ -2,12 +2,28 @@
+@@ -1,13 +1,30 @@
++//line input.go:1:1
+ package test
  
  import (
    "context"
-+//line <generated>:1
++//line <generated>
 +  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 +  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
  )
@@ -12,7 +14,7 @@
  //dd:span foo:bar baz:qux
 +//line input.go:8
  func outer(ctx context.Context) {
-+//line <generated>:1
++//line <generated>
 +  {
 +    __orchestrion_instrument.Report(ctx, __orchestrion_event.EventStart, "name", "outer", "foo", "bar", "baz", "qux")
 +    defer __orchestrion_instrument.Report(ctx, __orchestrion_event.EventEnd, "name", "outer", "foo", "bar", "baz", "qux")
@@ -20,7 +22,7 @@
    //dd:span
 +//line input.go:10
    inner := func(c context.Context) {
-+//line <generated>:1
++//line <generated>
 +    {
 +      __orchestrion_instrument.Report(c, __orchestrion_event.EventStart)
 +      defer __orchestrion_instrument.Report(c, __orchestrion_event.EventEnd)
