@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestParseCompile(t *testing.T) {
 				Package:   "mypackage",
 				ImportCfg: "/buildDir/b002/importcfg",
 				Output:    "/buildDir/b002/a.out",
-				GoVersion: "go1.23.0",
+				GoVersion: runtime.Version(),
 			},
 		},
 	} {
