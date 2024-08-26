@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"reflect"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,14 +24,14 @@ func TestParseCompile(t *testing.T) {
 			stage: ".",
 		},
 		"compile": {
-			input:   []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-goversion", "1.23.4", "-importcfg", "/buildDir/b002/importcfg", "/source/dir/main.go", "/source/dir/file1.go"},
+			input:   []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-goversion", "go1.42.1337", "-importcfg", "/buildDir/b002/importcfg", "/source/dir/main.go", "/source/dir/file1.go"},
 			stage:   "b002",
 			goFiles: []string{"/source/dir/main.go", "/source/dir/file1.go"},
 			flags: compileFlagSet{
 				Package:   "mypackage",
 				ImportCfg: "/buildDir/b002/importcfg",
 				Output:    "/buildDir/b002/a.out",
-				GoVersion: runtime.Version(),
+				GoVersion: "go1.42.1337",
 			},
 		},
 	} {
