@@ -8,8 +8,6 @@
 package ddspan
 
 import (
-	"context"
-
 	"orchestrion/integration/validator/trace"
 )
 
@@ -21,13 +19,21 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 			Children: trace.Spans{
 				{
+					Tags: map[string]any{
+						"name": "spanFromHttpRequest",
+					},
 					Meta: map[string]any{
-						"foo": "bar",
+						"function-name": "spanFromHttpRequest",
+						"foo":           "bar",
 					},
 					Children: trace.Spans{
 						{
+							Tags: map[string]any{
+								"name": "tagSpecificSpan",
+							},
 							Meta: map[string]any{
-								"variant": "notag",
+								"function-name": "tagSpecificSpan",
+								"variant":       "notag",
 							},
 						},
 					},
@@ -38,6 +44,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 }
 
 //dd:span variant:notag
-func tagSpecificSpan(context.Context) string {
-	return "Variant NoTag"
+func tagSpecificSpan() (string, error) {
+	return "Variant NoTag", nil
 }

@@ -128,7 +128,7 @@ Here is an example of how this can be used, from the instrumentation of
 `//dd:span` directives:
 
 ```go-template
-{{- $ctx := .FindArgument "context.Context" -}}
+{{- $ctx := .Function.ArgumentOfType "context.Context" -}}
 {{- $name := .Function.Name -}}
 {{$ctx}} = instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "function-name", {{printf "%q" .}}{{end}}
 {{- range .DirectiveArgs "dd:span" -}}
@@ -138,18 +138,6 @@ defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "function-name",
 {{- range .DirectiveArgs "dd:span" -}}
   , {{printf "%q" .Key}}, {{printf "%q" .Value}}
 {{- end -}})
-```
-
-#### The `.FindArgument` method
-
-The `.FindArgument` method requires a single type name argument, and walks up
-the AST, looking for an argument of that time on the signature of an enclosing
-function. If such an argument is found, it returns the name of the closest found
-argument of the required type. Otherwise it returns an empty string.
-
-Here is an example of its usage to locate a `context.Context` argument:
-```go-template
-{{- $ctx := .FindArgument "context.Context" -}}
 ```
 
 #### The `.Function` method
@@ -163,16 +151,23 @@ function's signature details:
 
 - `.Function.Name` returns the function's name, or a blank string if the
   function is a function literal expression.
+- `Function.Receiver` returns the name of the receiver value for this function.
+  Returns an error if the surrounding function is not a method.
 - `.Function.Argument n` returns the name of the `n`th argument (`0`-based) of
   the function; and implicitly assigns it a name if the argument was anonymous
   or named `_`. Returns an error if the surrounding function does not have
   enough arguments.
-- `Function.Returns n` returns the name of the `n`th return value (`0`-based) of
+- `.Function.ArgumentOfType type` returns the name of the first argument that
+  has the specified type; or a blank string if no such argument exists. The type
+  is provided as a fully qualified type name (e.g, `*net/http.ResponseWriter`).
+- `Function.Result n` returns the name of the `n`th return value (`0`-based) of
   the function; and implicitly assigns it a name if the return value was
   anonymous or named `_`. Returns an error if the surrounding function does not
   have enough return values.
-- `Function.Receiver` returns the name of the receiver value for this function.
-  Returns an error if the surrounding function is not a method.
+- `.Function.ResultOfType type` returns the name of the first result value that
+  has the specified type; or a blank string if no such result value exists. The
+  type is provided as a fully qualified type name (e.g,
+  `*net/http.ResponseWriter`).
 
 ## Next
 

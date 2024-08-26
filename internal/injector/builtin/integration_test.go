@@ -121,6 +121,5 @@ func init() {
 	samplesDir = filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(filename)))), "samples")
 	referenceDir = filepath.Join(filepath.Dir(filename), "testdata")
 
-	updateSnapshots = os.Getenv("UPDATE_SNAPSHOTS") != ""
-	flag.BoolVar(&updateSnapshots, "update", updateSnapshots, "update snapshot files")
+	flag.BoolVar(&updateSnapshots, "update", os.Getenv("UPDATE_SNAPSHOTS") != "", "update snapshots")
 }
