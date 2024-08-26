@@ -11,6 +11,7 @@ package tests
 
 import (
 	awsv1 "orchestrion/integration/tests/aws.v1"
+	awsv2 "orchestrion/integration/tests/aws.v2"
 	chiv5 "orchestrion/integration/tests/chi.v5"
 	ddspan "orchestrion/integration/tests/dd-span"
 	echov4 "orchestrion/integration/tests/echo.v4"
@@ -35,6 +36,8 @@ import (
 
 var suite = map[string]testCase{
 	"aws.v1":                               new(awsv1.TestCase),
+	"aws.v2/LoadDefaultConfig":             new(awsv2.TestCaseLoadDefaultConfig),
+	"aws.v2/StructLiteral":                 new(awsv2.TestCaseStructLiteral),
 	"chi.v5":                               new(chiv5.TestCase),
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),

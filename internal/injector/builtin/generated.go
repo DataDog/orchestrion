@@ -28,6 +28,19 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From cloud/aws-sdk-v2.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), ""),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *aws.Config) (aws.Config) {\n  awstrace.AppendMiddleware(cfg)\n  return *cfg\n}(&{{ . }})",
+				map[string]string{
+					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
+					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
+				},
+			)),
+		},
+	},
 	// From cloud/aws-sdk.yml
 	{
 		JoinPoint: join.FunctionCall("github.com/aws/aws-sdk-go/aws/session.NewSession"),
@@ -741,6 +754,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
@@ -779,4 +793,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:1rr045miszvEWzw89RRL9FrGL4Mcg8d0JiSadIuBOAr8luZKk2kImnlnYuP4XTYRGqaSd+HUJDy9NBVtLjL43A=="
+const Checksum = "sha512:aVPyopHm/Lr8TsBJJ0qblgYjtHKs8F6yWiXWxFLaehFPE7JvVlj4nFympnNxUoMUXR3R/uItNDYBMLr03ey5bQ=="
