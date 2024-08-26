@@ -31,7 +31,7 @@ func TestParseCompile(t *testing.T) {
 				Package:   "mypackage",
 				ImportCfg: "/buildDir/b002/importcfg",
 				Output:    "/buildDir/b002/a.out",
-				GoVersion: "1.23.4",
+				GoVersion: "go1.23.0",
 			},
 		},
 	} {
