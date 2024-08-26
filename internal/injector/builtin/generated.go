@@ -262,6 +262,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{},
 			)),
 		},
+		TracerInternal: true,
 	},
 	// From go-main.yml
 	{
@@ -677,6 +678,20 @@ var Aspects = [...]aspect.Aspect{
 			), []string{}),
 		},
 	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("runtime"),
+			join.FunctionBody(join.Function(
+				join.Name("goexit1"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"getg().__dd_gls = nil",
+				map[string]string{},
+			)),
+		},
+	},
 	// From stdlib/slog.yml
 	{
 		JoinPoint: join.FunctionCall("log/slog.New"),
@@ -739,4 +754,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:wbkfjDjV3+GQ36tmhe3yOJDfllvuJ8Tt8Q6WjcsZyNbP2JLK5IKQU5+Ns5PTdZJiwCZ0BnRyCwYSOV/rx9aNzQ=="
+const Checksum = "sha512:1rr045miszvEWzw89RRL9FrGL4Mcg8d0JiSadIuBOAr8luZKk2kImnlnYuP4XTYRGqaSd+HUJDy9NBVtLjL43A=="

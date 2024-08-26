@@ -40,7 +40,7 @@ func AnnotateMovedNodes(
 
 	// Visit the AST to add `//line` directives where the updated line information no longer matches
 	// the original source file's.
-	annotator := annotationVisitor{decorator: decorator, restorer: res}
+	annotator := annotationVisitor{dec: decorator, res: res}
 	ast.Walk(&annotator, astFile)
 	if len(annotator.stack) != 0 {
 		panic("noempty stack after annotation visit is complete")
