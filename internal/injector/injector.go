@@ -74,7 +74,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 	}
 
 	fset := token.NewFileSet()
-	astFiles, err := i.parseFiles(fset, files)
+	astFiles, err := parseFiles(fset, files)
 	if err != nil {
 		return nil, err
 	}

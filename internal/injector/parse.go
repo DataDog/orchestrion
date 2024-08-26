@@ -17,11 +17,11 @@ import (
 
 // parseFiles parses all provided files, after having applied any leading
 // "//line" directives if present.
-func (i *Injector) parseFiles(fset *token.FileSet, files []string) ([]*ast.File, error) {
+func parseFiles(fset *token.FileSet, files []string) ([]*ast.File, error) {
 	result := make([]*ast.File, len(files))
 	for idx, file := range files {
 		var err error
-		result[idx], err = i.parseFile(fset, file)
+		result[idx], err = parseFile(fset, file)
 		if err != nil {
 			return nil, err
 		}
@@ -31,7 +31,7 @@ func (i *Injector) parseFiles(fset *token.FileSet, files []string) ([]*ast.File,
 
 // parseFile parses the provided filename, after having applied a leading
 // "//line" directive if one is present.
-func (i *Injector) parseFile(fset *token.FileSet, filename string) (*ast.File, error) {
+func parseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("open %q: %w", filename, err)
