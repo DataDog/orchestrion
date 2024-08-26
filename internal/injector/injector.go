@@ -159,10 +159,6 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 	}
 
 	post := func(csor *dstutil.Cursor) bool {
-		if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
-			return false
-		}
-
 		// Pop the ancestry stack now that we're done with this node.
 		defer func() { chain = chain.Parent() }()
 
