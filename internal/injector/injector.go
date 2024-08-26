@@ -65,7 +65,7 @@ type (
 	}
 )
 
-// InjectFile performs injections on the specified files. All provided file paths must belong to the import path set on
+// InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
 func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) {
@@ -117,7 +117,7 @@ func (i *Injector) validate() error {
 	return err
 }
 
-// Injects code in the specified file. This method can be called concurrently by multiple goroutines,
+// injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
 func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (result, error) {
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
