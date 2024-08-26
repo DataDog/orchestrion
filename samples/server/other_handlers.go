@@ -82,9 +82,10 @@ func myFunc2(name string, _ *http.Request) {
 	fmt.Println(name)
 }
 
-//dd:span foo3:bar3 type:request
-func myFunc3(name string) {
-	fmt.Println(name)
+//dd:span foo3:bar3 type:request span.name:customName
+func myFunc3(name string) error {
+	_, err := fmt.Println(name)
+	return err
 }
 
 func registerHandlers() {

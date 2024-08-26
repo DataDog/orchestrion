@@ -5,11 +5,11 @@
  )
  
 -func test() (interface{}, error) {
-+func test() (_ interface{}, __returns__1 error) {
++func test() (_ interface{}, __result__1 error) {
 +  {
 +    defer func() {
-+      if __returns__1 != nil {
-+        log.Println("error in test:", __returns__1)
++      if __result__1 != nil {
++        log.Println("error in test:", __result__1)
 +      }
 +    }()
 +  }

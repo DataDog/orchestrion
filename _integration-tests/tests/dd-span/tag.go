@@ -8,8 +8,7 @@
 package ddspan
 
 import (
-	"context"
-
+	"errors"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -21,13 +20,22 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 			Children: trace.Spans{
 				{
+					Tags: map[string]any{
+						"name": "spanFromHttpRequest",
+					},
 					Meta: map[string]any{
-						"foo": "bar",
+						"function-name": "spanFromHttpRequest",
+						"foo":           "bar",
 					},
 					Children: trace.Spans{
 						{
+							Tags: map[string]any{
+								"name": "functionWithBuildTag",
+							},
 							Meta: map[string]any{
-								"variant": "tag",
+								"function-name": "tagSpecificSpan",
+								"variant":       "tag",
+								"error.message": "Artificial error for testing!",
 							},
 						},
 					},
@@ -37,7 +45,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	}
 }
 
-//dd:span variant:tag
-func tagSpecificSpan(context.Context) string {
-	return "Variant Tag"
+//dd:span variant:tag span.name:functionWithBuildTag
+func tagSpecificSpan() (string, error) {
+	return "Variant Tag", errors.New("Artificial error for testing!")
 }
