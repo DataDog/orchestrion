@@ -14,7 +14,7 @@ meta:
     generally be avoided.
 aspects:
   - id: Initialize to true
-    tracer-internal: true # This can be safely woven in the tracer itself
+    tracer-internal: true # This is safe to apply in the tracer itself.
     join-point:
       all-of:
         - directive: dd:orchestrion-enabled

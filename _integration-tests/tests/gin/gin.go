@@ -3,33 +3,37 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package echo
+//go:build integration
+
+package gin
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
 type TestCase struct {
-	*echo.Echo
+	*http.Server
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	tc.Echo = echo.New()
-	tc.Echo.Logger.SetOutput(io.Discard)
+	gin.SetMode(gin.ReleaseMode) // Silence start-up logging
+	engine := gin.New()
 
-	tc.Echo.GET("/ping", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]any{"message": "pong"})
-	})
+	tc.Server = &http.Server{
+		Addr:    "127.0.0.1:8080",
+		Handler: engine.Handler(),
+	}
 
-	go func() { require.ErrorIs(t, tc.Echo.Start("127.0.0.1:8080"), http.ErrServerClosed) }()
+	engine.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
+
+	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -42,7 +46,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	require.NoError(t, tc.Echo.Shutdown(ctx))
+	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Spans {
@@ -54,11 +58,13 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"resource": "GET /ping",
 				"type":     "http",
 			},
+			Meta: map[string]any{
+				"http.url": "http://127.0.0.1:8080/ping",
+			},
 			Children: trace.Spans{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
-						"service":  "echo",
 						"resource": "GET /ping",
 						"type":     "web",
 					},

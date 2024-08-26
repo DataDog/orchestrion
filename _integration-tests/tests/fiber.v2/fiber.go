@@ -3,35 +3,28 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package gin
+//go:build integration
+
+package fiber
 
 import (
-	"context"
 	"net/http"
 	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/require"
 )
 
 type TestCase struct {
-	*http.Server
+	*fiber.App
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	gin.SetMode(gin.ReleaseMode) // Silence start-up logging
-	engine := gin.New()
-
-	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:8080",
-		Handler: engine.Handler(),
-	}
-
-	engine.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
-
-	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	tc.App = fiber.New(fiber.Config{DisableStartupMessage: true})
+	tc.App.Get("/ping", func(c *fiber.Ctx) error { return c.JSON(map[string]any{"message": "pong"}) })
+	go func() { require.NoError(t, tc.App.Listen("127.0.0.1:8080")) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -41,10 +34,7 @@ func (tc *TestCase) Run(t *testing.T) {
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.Server.Shutdown(ctx))
+	require.NoError(t, tc.App.ShutdownWithTimeout(time.Second))
 }
 
 func (*TestCase) ExpectedTraces() trace.Spans {
@@ -63,11 +53,12 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
+						"service":  "fiber",
 						"resource": "GET /ping",
 						"type":     "web",
 					},
 					Meta: map[string]any{
-						"http.url": "http://127.0.0.1:8080/ping",
+						"http.url": "/ping",
 					},
 				},
 			},

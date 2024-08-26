@@ -20,7 +20,8 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
-          cache-dependency-path: '**/*.sum'
+          go-version: stable
+          cache-dependency-path: '**/go.mod'
 
       # Obtains the current configured version tag from source, and verifies it is a valid tag name.
       # Also checks whether the tag already exists.

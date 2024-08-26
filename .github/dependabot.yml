@@ -5,3 +5,8 @@ updates:
     directory: /
     schedule:
       interval: daily
+
+  - package-ecosystem: pip
+    directory: /_integration-tests/utils/agent
+    schedule:
+      interval: daily

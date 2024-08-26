@@ -3,6 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
+//go:build integration
+
 package goredis
 
 import (
@@ -21,7 +23,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 type TestCase struct {
@@ -65,8 +67,8 @@ func (tc *TestCase) Run(t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
 	defer span.Finish()
 
-	require.NoError(t, tc.Client.WithContext(ctx).Set("test_key", "test_value", 0).Err())
-	require.NoError(t, tc.Client.WithContext(ctx).Get("test_key").Err())
+	require.NoError(t, tc.Client.Set(ctx, "test_key", "test_value", 0).Err())
+	require.NoError(t, tc.Client.Get(ctx, "test_key").Err())
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
@@ -93,11 +95,11 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 					},
 					Meta: map[string]any{
 						"redis.args_length": "3",
-						"component":         "go-redis/redis.v7",
+						"component":         "go-redis/redis.v8",
 						"out.db":            "0",
 						"span.kind":         "client",
 						"db.system":         "redis",
-						"redis.raw_command": "set test_key test_value: ",
+						"redis.raw_command": "set test_key test_value:",
 						"out.host":          "localhost",
 					},
 				},
@@ -110,11 +112,11 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 					},
 					Meta: map[string]any{
 						"redis.args_length": "2",
-						"component":         "go-redis/redis.v7",
+						"component":         "go-redis/redis.v8",
 						"out.db":            "0",
 						"span.kind":         "client",
 						"db.system":         "redis",
-						"redis.raw_command": "get test_key: ",
+						"redis.raw_command": "get test_key:",
 						"out.host":          "localhost",
 					},
 				},

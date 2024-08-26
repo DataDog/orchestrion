@@ -34,38 +34,15 @@ aspects:
             var __dd_orchestrion_gls_set = func(val any) {
               getg().m.curg.__dd_gls = val
             }
-  - id: Clear GLS slot on goroutine destroy
+  - id: Clear GLS slot on goroutine exit
     join-point:
       all-of:
         - import-path: runtime
         - function-body:
             function:
-              # This is the function that adds the g struct to the free list, so it can be re-used.
-              - name: gfput
+              # This is the function that finishes the execution of a goroutine.
+              # See: https://github.com/golang/go/blob/f38d42f2c4c6ad0d7cbdad5e1417cac3be2a5dcb/src/runtime/proc.go#L4264
+              - name: goexit1
     advice:
       - prepend-statements:
-          template: gp.__dd_gls = nil
-  - id: Copy GLS slot to new goroutines
-    join-point:
-      all-of:
-        - function-body:
-            function:
-              # This is the function that prepares a g struct, possibly from the free list, for use.
-              - name: newproc1
-        - import-path: runtime
-    advice:
-      - prepend-statements:
-          # Similar to how pprof labels are copied, see:
-          # https://github.com/golang/go/blob/3d9a89b05733f6787900ea7034aab0471e065946/src/runtime/proc.go#L5039-L5041
-          template: |-
-            {{- $newg := .Function.Result 0 -}}
-            defer func(){
-              if isSystemGoroutine({{ $newg }}, false) {
-                return
-              }
-              mp := acquirem()
-              defer releasem(mp)
-              if mp.curg != nil {
-                {{ $newg }}.__dd_gls = mp.curg.__dd_gls
-              }
-            }()
+          template: getg().__dd_gls = nil
