@@ -9,8 +9,6 @@ import (
 	"go/token"
 	"strconv"
 
-	_ "unsafe"
-
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )
