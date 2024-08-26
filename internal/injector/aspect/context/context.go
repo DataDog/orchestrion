@@ -6,6 +6,8 @@
 package context
 
 import (
+	"go/types"
+
 	"github.com/datadog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
@@ -34,6 +36,10 @@ type AspectContext interface {
 
 	// Package returns the name of the package containing this node.
 	Package() string
+
+	// TypeOf attempts to resolve the type of the provided expression. Returns nil
+	// if no type information could be determined.
+	TypeOf(dst.Expr) types.Type
 }
 
 type AdviceContext interface {
@@ -66,6 +72,7 @@ type context struct {
 	refMap       *typed.ReferenceMap
 	sourceParser SourceParser
 	importPath   string
+	typeOf       func(dst.Expr) types.Type
 }
 
 type SourceParser interface {
@@ -78,6 +85,7 @@ func (n *NodeChain) Context(
 	file *dst.File,
 	refMap *typed.ReferenceMap,
 	sourceParser SourceParser,
+	typeOf func(dst.Expr) types.Type,
 ) *context {
 	return &context{
 		NodeChain:    n,
@@ -86,6 +94,7 @@ func (n *NodeChain) Context(
 		refMap:       refMap,
 		sourceParser: sourceParser,
 		importPath:   importPath,
+		typeOf:       typeOf,
 	}
 }
 
@@ -102,6 +111,7 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		refMap:       c.refMap,
 		sourceParser: c.sourceParser,
 		importPath:   c.importPath,
+		typeOf:       c.typeOf,
 	}
 }
 
@@ -149,4 +159,8 @@ func (c *context) AddImport(path string, alias string) bool {
 
 func (c *context) AddLink(path string) bool {
 	return c.refMap.AddLink(c.file, path)
+}
+
+func (c *context) TypeOf(expr dst.Expr) types.Type {
+	return c.typeOf(expr)
 }

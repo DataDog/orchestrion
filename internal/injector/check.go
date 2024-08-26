@@ -16,9 +16,12 @@ import (
 
 // typeCheck runs the Go type checker on the provided files, and returns the
 // Uses type information map that is built in the process.
-func (i *Injector) typeCheck(fset *token.FileSet, files []*ast.File) (map[*ast.Ident]types.Object, error) {
+func (i *Injector) typeCheck(fset *token.FileSet, files []*ast.File) (map[*ast.Ident]types.Object, map[ast.Expr]types.TypeAndValue, error) {
 	pkg := types.NewPackage(i.ImportPath, i.Name)
-	typeInfo := types.Info{Uses: make(map[*ast.Ident]types.Object)}
+	typeInfo := types.Info{
+		Types: make(map[ast.Expr]types.TypeAndValue),
+		Uses:  make(map[*ast.Ident]types.Object),
+	}
 
 	checkerCfg := types.Config{
 		GoVersion: i.GoVersion,
@@ -27,8 +30,8 @@ func (i *Injector) typeCheck(fset *token.FileSet, files []*ast.File) (map[*ast.I
 	checker := types.NewChecker(&checkerCfg, fset, pkg, &typeInfo)
 
 	if err := checker.Files(files); err != nil {
-		return nil, fmt.Errorf("type-checking files: %w", err)
+		return nil, nil, fmt.Errorf("type-checking files: %w", err)
 	}
 
-	return typeInfo.Uses, nil
+	return typeInfo.Uses, typeInfo.Types, nil
 }

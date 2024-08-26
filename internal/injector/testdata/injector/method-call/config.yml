@@ -1,0 +1,40 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      method-call:
+        receiver: '*github.com/gocql/gocql.ClusterConfig'
+        name: CreateSession
+    advice:
+      - wrap-expression:
+          imports:
+            gocql: github.com/gocql/gocql
+            gocqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql
+          template: gocqltrace.CreateTracedSession({{ .AST.Fun.X }})
+
+code: |-
+  package test
+
+  import "github.com/gocql/gocql"
+
+  type testSubject struct {
+    cluster *gocql.ClusterConfig
+  }
+
+  func (s *testSubject) Cluster() *gocql.ClusterConfig {
+    return s.cluster
+  }
+
+  func TestMain() {
+    subject := &testSubject{cluster: gocql.NewCluster("127.0.0.1")}
+
+    session, err := subject.Cluster().CreateSession()
+    if err != nil {
+      panic(err)
+    }
+    defer session.Close()
+
+    if err := session.Query("CREATE TABLE IF NOT EXISTS test.test (name TEXT PRIMARY KEY)").Exec(); err != nil {
+      panic(err)
+    }
+  }

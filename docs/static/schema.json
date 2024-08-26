@@ -357,6 +357,7 @@
         { "$ref": "#/$defs/join-point/function" },
         { "$ref": "#/$defs/join-point/function-call" },
         { "$ref": "#/$defs/join-point/import-path" },
+        { "$ref": "#/$defs/join-point/method-call" },
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
@@ -562,6 +563,32 @@
         "examples": [
           { "import-path": "net/http" },
           { "import-path": "github.com/gorilla/mux" }
+        ]
+      },
+      "method-call": {
+        "required": ["method-call"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "method-call": {
+            "title": "Target method calls",
+            "markdownDescription": "The `method-call` join point matches method call nodes that represent a call to the specified method. It only matches `Call` nodes.",
+            "type": "object",
+            "unevaluatedProperties": false,
+            "required": ["receiver", "name"],
+            "properties": {
+              "receiver": {
+                "description": "The type of the method receiver. Only nodes that exactly match this type will match, so special care must be taken when dealing with interfaces.",
+                "$ref": "#/$defs/go/type-ref"
+              },
+              "name": {
+                "description": "Name of the method",
+                "$ref": "#/$defs/go/identifier"
+              }
+            }
+          }
+        },
+        "examples": [
+          { "method-call": { "receiver": "*github.com/gocql/gocql.ClusterConfig", "name": "CreateSession" } }
         ]
       },
       "not": {

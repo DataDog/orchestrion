@@ -11,8 +11,10 @@ package injector
 import (
 	"errors"
 	"fmt"
+	"go/ast"
 	"go/importer"
 	"go/token"
+	"go/types"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/datadog/orchestrion/internal/injector/aspect/context"
@@ -79,7 +81,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 		return nil, err
 	}
 
-	uses, err := i.typeCheck(fset, astFiles)
+	uses, types, err := i.typeCheck(fset, astFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +97,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 
 	result := make(map[string]InjectedFile, len(files))
 	for idx, dstFile := range dstFiles {
-		res, err := i.injectFile(decorator, dstFile)
+		res, err := i.injectFile(decorator, dstFile, types)
 		if err != nil {
 			return nil, err
 		}
@@ -119,11 +121,11 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (result, error) {
+func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, types map[ast.Expr]types.TypeAndValue) (result, error) {
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
 	var err error
-	result.Modified, result.References, err = i.applyAspects(decorator, file, i.RootConfig)
+	result.Modified, result.References, err = i.applyAspects(decorator, file, i.RootConfig, types)
 	if err != nil {
 		return result, err
 	}
@@ -138,7 +140,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (r
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, error) {
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, typesMap map[ast.Expr]types.TypeAndValue) (bool, typed.ReferenceMap, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
@@ -169,6 +171,18 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 			file,
 			&references,
 			decorator,
+			func(expr dst.Expr) types.Type {
+				astNode := decorator.Ast.Nodes[expr]
+				if astNode == nil {
+					return nil
+				}
+				typeAndValue, found := typesMap[astNode.(ast.Expr)]
+				if !found {
+					return nil
+				}
+
+				return typeAndValue.Type
+			},
 		))
 		modified = modified || changed
 

@@ -10,6 +10,7 @@ package join
 import (
 	"bytes"
 	"fmt"
+	"go/types"
 	"regexp"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/context"
@@ -115,6 +116,29 @@ func (n *TypeName) Matches(node dst.Expr) bool {
 		}
 		return n.path == "" && n.name == "any"
 
+	default:
+		return false
+	}
+}
+
+func (n *TypeName) matchesType(typ types.Type) bool {
+	if n.pointer {
+		ptrTyp, ok := typ.(*types.Pointer)
+		if !ok {
+			return false
+		}
+		typ = ptrTyp.Elem()
+	}
+
+	switch typ := typ.(type) {
+	case *types.Pointer:
+		return false
+	case *types.Named:
+		obj := typ.Obj()
+		if obj.Pkg().Path() != n.path {
+			return false
+		}
+		return obj.Name() == n.name
 	default:
 		return false
 	}
