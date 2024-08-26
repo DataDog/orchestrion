@@ -6,16 +6,11 @@
 package injector
 
 import (
-	"errors"
-	"fmt"
 	"go/importer"
 	"go/token"
 	"go/types"
-	"runtime"
 
 	"github.com/dave/dst/decorator"
-	"golang.org/x/tools/go/gccgoexportdata"
-	"golang.org/x/tools/go/gcexportdata"
 )
 
 type lookupResolver struct {
@@ -60,28 +55,9 @@ func (r *lookupResolver) ResolvePackage(path string) (string, error) {
 		r.imports = make(map[string]*types.Package)
 	}
 
-	switch runtime.Compiler {
-	case "gc":
-		rd, err := gcexportdata.NewReader(rd)
-		if err != nil {
-			return "", err
-		}
-		pkg, err := gcexportdata.Read(rd, r.fset, r.imports, path)
-		if err != nil {
-			return "", err
-		}
-		return pkg.Name(), nil
-	case "gccgo":
-		rd, err := gccgoexportdata.NewReader(rd)
-		if err != nil {
-			return "", err
-		}
-		pkg, err := gccgoexportdata.Read(rd, r.fset, r.imports, path)
-		if err != nil {
-			return "", err
-		}
-		return pkg.Name(), nil
-	default:
-		return "", fmt.Errorf("unknown compiler %q: %w", runtime.Compiler, errors.ErrUnsupported)
+	pkg, err := r.readPackageInfo(rd, path)
+	if err != nil {
+		return "", err
 	}
+	return pkg.Name(), nil
 }
