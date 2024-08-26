@@ -6,11 +6,16 @@
 package injector
 
 import (
+	"errors"
+	"fmt"
 	"go/importer"
 	"go/token"
 	"go/types"
+	"runtime"
 
 	"github.com/dave/dst/decorator"
+	"golang.org/x/tools/go/gccgoexportdata"
+	"golang.org/x/tools/go/gcexportdata"
 )
 
 type lookupResolver struct {
@@ -42,12 +47,6 @@ func (r *lookupResolver) ResolvePackage(path string) (string, error) {
 		return pkg.Name(), nil
 	}
 
-	rd, err := r.lookup(path)
-	if err != nil {
-		return "", err
-	}
-	defer rd.Close()
-
 	if r.fset == nil {
 		r.fset = token.NewFileSet()
 	}
@@ -55,9 +54,66 @@ func (r *lookupResolver) ResolvePackage(path string) (string, error) {
 		r.imports = make(map[string]*types.Package)
 	}
 
-	pkg, err := r.readPackageInfo(rd, path)
-	if err != nil {
-		return "", err
+	var err error
+	for _, res := range resolvers {
+		pkg, resolveErr := res(r.lookup, r.fset, r.imports, path)
+		if resolveErr != nil {
+			err = errors.Join(err, resolveErr)
+			continue
+		}
+		return pkg.Name(), nil
 	}
-	return pkg.Name(), nil
+
+	return "", err
+}
+
+var resolvers []resolverFunc
+
+type resolverFunc = func(importer.Lookup, *token.FileSet, map[string]*types.Package, string) (*types.Package, error)
+
+func resolveGc(lookup importer.Lookup, fset *token.FileSet, imports map[string]*types.Package, path string) (*types.Package, error) {
+	rd, err := lookup(path)
+	if err != nil {
+		return nil, err
+	}
+	defer rd.Close()
+
+	gcr, err := gcexportdata.NewReader(rd)
+	if err != nil {
+		return nil, fmt.Errorf("locating gc export data: %w", err)
+	}
+	pkg, err := gcexportdata.Read(gcr, fset, imports, path)
+	if err != nil {
+		return nil, fmt.Errorf("reading gc export data: %w", err)
+	}
+	return pkg, nil
+}
+
+func resolveGccgo(lookup importer.Lookup, fset *token.FileSet, imports map[string]*types.Package, path string) (*types.Package, error) {
+	rd, err := lookup(path)
+	if err != nil {
+		return nil, err
+	}
+	defer rd.Close()
+
+	gcr, err := gccgoexportdata.NewReader(rd)
+	if err != nil {
+		return nil, fmt.Errorf("locating gc export data: %w", err)
+	}
+	pkg, err := gccgoexportdata.Read(gcr, fset, imports, path)
+	if err != nil {
+		return nil, fmt.Errorf("reading gc export data: %w", err)
+	}
+	return pkg, nil
+}
+
+func init() {
+	// We assume code built with orchestrion is likely to use the same compiler as
+	// the one used ot build orchestrion itself, so we'll attempt resolving using
+	// that compiler's export data first.
+	if runtime.Compiler == "gc" {
+		resolvers = []resolverFunc{resolveGc, resolveGccgo}
+	} else {
+		resolvers = []resolverFunc{resolveGccgo, resolveGc}
+	}
 }

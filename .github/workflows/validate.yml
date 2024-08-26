@@ -202,16 +202,24 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
+          - runs-on: ubuntu
+            go-version: gccgo
+            build-mode: DRIVER
     runs-on: ${{ matrix.runs-on }}-latest
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
+        if: matrix.go-version != 'gccgo'
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
+      - name: Setup gccgo
+        if: matrix.go-version == 'gccgo'
+        # This is only used on Linux, so we can safely assume apt
+        run: apt install -y gccgo-go
       - name: Setup python
         uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
         with:
