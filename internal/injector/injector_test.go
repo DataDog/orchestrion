@@ -7,6 +7,7 @@ package injector_test
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,16 +24,18 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/go/packages"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/golden"
 )
 
 type testConfig struct {
 	Aspects             []aspect.Aspect                `yaml:"aspects"`
-	PreserveLineInfo    bool                           `yaml:"preserveLineInfo"`
 	SyntheticReferences map[string]typed.ReferenceKind `yaml:"syntheticReferences"`
 	Code                string                         `yaml:"code"`
 }
+
+const testModuleName = "dummy/test/module"
 
 func Test(t *testing.T) {
 	t.Parallel()
@@ -58,13 +61,33 @@ func Test(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
+			tmp := t.TempDir()
+
+			testLookup := func(path string) (io.ReadCloser, error) {
+				pkgs, err := packages.Load(
+					&packages.Config{
+						Mode: packages.NeedExportFile,
+						Dir:  tmp,
+						Logf: t.Logf,
+					},
+					path,
+				)
+				if err != nil {
+					return nil, err
+				}
+				file := pkgs[0].ExportFile
+				if file == "" {
+					return nil, fmt.Errorf("no export file found for %q", path)
+				}
+				return os.Open(file)
+			}
+
 			data, err := os.ReadFile(filepath.Join(testPath, "config.yml"))
 			require.NoError(t, err, "failed to read test configuration")
 			var config testConfig
 			require.NoError(t, yaml.Unmarshal(data, &config), "failed to parse test configuration")
 
-			tmp := t.TempDir()
-			runGo(t, tmp, "mod", "init", "dummy/test/module")
+			runGo(t, tmp, "mod", "init", testModuleName)
 			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", rootDir))
 			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("orchestrion/integration=%s", integDir))
 
@@ -73,39 +96,37 @@ func Test(t *testing.T) {
 			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
 			runGo(t, tmp, "mod", "tidy")
 
-			inj, err := injector.New(tmp, injector.Options{
-				Aspects:          config.Aspects,
-				Dir:              tmp,
-				PreserveLineInfo: config.PreserveLineInfo,
-				ModifiedFile:     func(path string) string { return path + ".edited.go" },
-			})
-			require.NoError(t, err, "failed to create injector")
-
-			res, err := inj.InjectFile(inputFile, nil)
-			require.NoError(t, err, "failed to inject file")
-
-			if res.Modified {
-				assert.Equal(t, inputFile+".edited.go", res.Filename)
-			} else {
-				assert.Equal(t, inputFile, res.Filename)
+			inj := injector.Injector{
+				Aspects:      config.Aspects,
+				ModifiedFile: func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
+				ImportPath:   testModuleName,
+				Lookup:       testLookup,
 			}
 
-			modifiedData, err := os.ReadFile(res.Filename)
+			res, err := inj.InjectFiles([]string{inputFile})
+			require.NoError(t, err, "failed to inject file")
+
+			resFile, modified := res[inputFile]
+			if !modified {
+				golden.Assert(t, "", filepath.Join(dirName, testName, "expected.diff"))
+				return
+			}
+
+			assert.Equal(t, filepath.Join(tmp, filepath.Base(inputFile)+".edited.go"), resFile.Filename)
+			assert.Equal(t, config.SyntheticReferences, resFile.References.Map())
+
+			modifiedData, err := os.ReadFile(resFile.Filename)
 			require.NoError(t, err, "failed to read modified file")
-			modified := normalize(modifiedData, inputFile)
+			normalized := normalize(modifiedData, inputFile)
 
-			assert.Equal(t, config.SyntheticReferences, res.References.Map())
-
-			edits := myers.ComputeEdits(span.URIFromPath("input.go"), original, modified)
+			edits := myers.ComputeEdits(span.URIFromPath("input.go"), original, normalized)
 			diff := gotextdiff.ToUnified("input.go", "output.go", original, edits)
 			golden.Assert(t, fmt.Sprint(diff), filepath.Join(dirName, testName, "expected.diff"))
 
-			if res.Modified {
-				// Verify that the modified code compiles...
-				os.Rename(res.Filename, inputFile)
-				runGo(t, tmp, "mod", "tidy")
-				runGo(t, tmp, "build", inputFile)
-			}
+			// Verify that the modified code compiles...
+			os.Rename(resFile.Filename, inputFile)
+			runGo(t, tmp, "mod", "tidy")
+			runGo(t, tmp, "build", inputFile)
 		})
 	}
 }
