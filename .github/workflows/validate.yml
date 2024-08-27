@@ -451,11 +451,11 @@ jobs:
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             send-notifications                                                  \
-            --sha=${{ github.event.pull_request.head.sha }}                     \
+            --sha=${{ github.sha }}                                             \
             --fail-on-error                                                     \
             --git-service=github                                                \
             --token="${CODECOV_TOKEN}"                                          \
-            --slug=${{ github.event.pull_request.base.repo.full_name }}
+            --slug=${{ github.repository }}
           echo "::endgroup::"
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
