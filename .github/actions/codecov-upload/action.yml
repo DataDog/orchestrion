@@ -48,7 +48,7 @@ runs:
           --auto-load-params-from=GithubActions                                 \
           --verbose                                                             \
           do-upload                                                             \
-          --dir="${dir}"                                                        \
+          --disable-search                                                      \
           "${file[@]}"                                                          \
           --name="${{ inputs.name }}"                                           \
           "${pr[@]}"                                                            \
