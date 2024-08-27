@@ -18,7 +18,7 @@ runs:
   using: composite
   steps:
     - name: Install CodeCov CLI
-      id: codecov
+      id: codecov-cli
       uses: ./.github/actions/codecov-cli
     - name: Upload coverage report
       shell: bash
