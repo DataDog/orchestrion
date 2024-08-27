@@ -11,7 +11,7 @@ Automatic compile-time instrumentation of Go code.
 
 [Orchestrion](https://en.wikipedia.org/wiki/Orchestrion) processes Go source code at compilation time and automatically
 inserts instrumentation. This instrumentation produces Datadog APM traces from the instrumented code and supports
-Datadog Application Security Management. Future work will include support for OpenTelemetry tracing as well.
+Datadog Application Security Management.
 
 > [!IMPORTANT]
 > Orchestrion is under active development. The supported features are rapidly growing, and the user experiece may evolve
