@@ -368,7 +368,7 @@ jobs:
         shell: bash
         run: |-
           pr=()
-          if [ "${{ github.event_name }}" -eq "pull_request" ]; then
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
             pr+=("--pr=${{ github.event.pull_request.number }}")
           fi
 
@@ -379,7 +379,6 @@ jobs:
             create-commit                                                       \
             --parent-sha="${{ github.event.pull_request.base.sha }}"            \
             "${pr[@]}"                                                          \
-            --branch="${{ github.ref_name }}"                                   \
             --sha="${{ github.sha }}"                                           \
             --fail-on-error                                                     \
             --git-service=github                                                \
@@ -400,15 +399,14 @@ jobs:
             --slug="${{ github.repository }}"
           echo "::endgroup::"
 
-          echo "::group::Upload the coverage reports to CodeCov"
           for dir in coverage/coverage-reports.*; do
+            echo "::group::Upload ${dir/coverage-reports.} to CodeCov"
             ${{ runner.temp }}/codecov                                          \
               --auto-load-params-from=GithubActions                             \
               --verbose                                                         \
               do-upload                                                         \
               --dir="coverage/${dir}"                                           \
               --name="${dir}"                                                   \
-              --branch="${{ github.ref_name }}"                                 \
               "${pr[@]}"                                                        \
               --flag="${dir/coverage-reports.}"                                 \
               --sha="${{ github.sha }}"                                         \
@@ -416,8 +414,8 @@ jobs:
               --git-service=github                                              \
               --token="${CODECOV_TOKEN}"                                        \
               --slug="${{ github.repository }}"
+            echo "::endgroup::"
           done
-          echo "::endgroup::"
 
           echo "::group::Create CodeCov report results"
           ${{ runner.temp }}/codecov                                            \
