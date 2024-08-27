@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 permissions: read-all
@@ -368,8 +368,11 @@ jobs:
         shell: bash
         run: |-
           pr=()
+          sha="${{ github.sha }}"
+          parentsha="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            pr+=("--pr=${{ github.event.pull_request.number }}")
+            pr+=("--pr=${{ github.event.number }}")
+            sha="${{ github.event.pull_request.head.sha }}"
           fi
 
           echo "::group::Register commit metadata with CodeCov"
@@ -377,9 +380,9 @@ jobs:
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             create-commit                                                       \
-            --parent-sha="${{ github.event.pull_request.base.sha }}"            \
+            --parent-sha="${parentsha}"                                         \
             "${pr[@]}"                                                          \
-            --sha="${{ github.sha }}"                                           \
+            --sha="${sha}"                                                      \
             --fail-on-error                                                     \
             --git-service=github                                                \
             --token="${CODECOV_TOKEN}"                                          \
@@ -392,7 +395,7 @@ jobs:
             --verbose                                                           \
             create-report                                                       \
             "${pr[@]}"                                                          \
-            --sha="${{ github.sha }}"                                           \
+            --sha="${sha}"                                                      \
             --fail-on-error                                                     \
             --git-service=github                                                \
             --token="${CODECOV_TOKEN}"                                          \
@@ -414,7 +417,7 @@ jobs:
               --name="${dir#coverage/}"                                         \
               "${pr[@]}"                                                        \
               --flag="${dir#coverage/coverage-reports.}"                        \
-              --sha="${{ github.sha }}"                                         \
+              --sha="${sha}"                                                    \
               --fail-on-error                                                   \
               --git-service=github                                              \
               --token="${CODECOV_TOKEN}"                                        \
@@ -427,19 +430,7 @@ jobs:
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             create-report-results                                               \
-            --sha="${{ github.sha }}"                                           \
-            --fail-on-error                                                     \
-            --git-service=github                                                \
-            --token="${CODECOV_TOKEN}"                                          \
-            --slug="${{ github.repository }}"
-          echo "::endgroup::"
-
-          echo "::group::Get CodeCov report results"
-          ${{ runner.temp }}/codecov                                            \
-            --auto-load-params-from=GithubActions                               \
-            --verbose                                                           \
-            get-report-results                                                  \
-            --sha="${{ github.sha }}"                                           \
+            --sha="${sha}"                                                      \
             --fail-on-error                                                     \
             --git-service=github                                                \
             --token="${CODECOV_TOKEN}"                                          \
