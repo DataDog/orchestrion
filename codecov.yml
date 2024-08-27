@@ -1,7 +1,6 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/codecov
 codecov:
-  require_ci_to_pass: true
   notify:
     manual_trigger: true
 

@@ -38,17 +38,20 @@ jobs:
           GOFLAGS: -covermode=atomic -coverpkg=github.com/datadog/orchestrion/...
           GOCOVERDIR: ${{ github.workspace }}/coverage
       - name: Consolidate coverage report
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         run: go tool covdata textfmt -i ./coverage -o ./coverage/generator.out
+      - name: Determine simple go version
+        if: github.event_name != 'merge_group'
+        id: simple-go-version
+        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
+        shell: bash
       - name: Upload coverage report
-        # We want this even if the tests failed
-        if: always() && github.event_name != 'merge_group'
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        if: github.event_name != 'merge_group'
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ runner.os }},${{ runner.arch }},generator
-          file: ./coverage/generator.out
-          name: Generators
+          if-no-files-found: error
+          name: coverage-reports.generator,go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }}
+          path: ./coverage/generator.out
 
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
@@ -170,19 +173,19 @@ jobs:
           go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=${{ github.workspace }}/coverage/unit.out -race ./...
           go -C _integration-tests test -shuffle=on -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile=${{ github.workspace }}/coverage/integration.out -race ./...
       - name: Determine simple go version
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         id: simple-go-version
         run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
       - name: Upload coverage report
-        # We want this even if the tests failed
-        if: always() && github.event_name != 'merge_group'
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        if: github.event_name != 'merge_group'
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
-          files: ./coverage/unit.out,./coverage/integration.out
-          name: Unit Tests (go ${{ matrix.go-version }})
+          if-no-files-found: error
+          name: coverage-reports.unit,go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }}
+          path: |-
+            ./coverage/unit.out
+            ./coverage/integration.out
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
@@ -226,16 +229,19 @@ jobs:
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
+
+          test_args=("-shuffle=on" "-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
+
           case "${{ matrix.build-mode }}" in
           "DRIVER")
-            bin/orchestrion.exe go -C=_integration-tests test -shuffle=on ./...
+            bin/orchestrion.exe go -C=_integration-tests test "${test_args[@]}" ./...
             ;;
           "TOOLEXEC")
-            go -C=_integration-tests test -shuffle=on -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
+            go -C=_integration-tests test "${test_args[@]}" -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
             ;;
           "GOFLAGS")
             export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion.exe toolexec' ${GOFLAGS}"
-            go -C=_integration-tests test -shuffle=on ./...
+            go -C=_integration-tests test "${test_args[@]}" ./...
             ;;
           *)
             echo "Unknown build mode: ${{ matrix.build-mode }}"
@@ -255,12 +261,13 @@ jobs:
         shell: bash
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
-          files: ./coverage/integration.out
-          name: Integration Tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
+          if-no-files-found: error
+          name: coverage-reports.integration,go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }}
+          path: |-
+            ./coverage/integration.out
+            ./coverage/integration.run.out
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
@@ -277,8 +284,14 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Checkout
-        if: github.event_name == 'pull_request'
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Download coverage reports
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          merge-multiple: false # Extract in per-artifact directories
+          pattern: coverage-reports.*
+          path: coverage
       - name: Download codecov CLI
         if: github.event_name == 'pull_request'
         run: |-
@@ -299,21 +312,99 @@ jobs:
         env:
           BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
         working-directory: ${{ runner.temp }}
-      - name: Trigger CodeCov notifications
-        if: github.event_name == 'pull_request'
+      - name: Upload coverage reports
+        if: github.event_name == 'pull_request' && needs.generate.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
+        shell: bash
         run: |-
-          ${{ runner.temp }}/codecov send-notifications                         \
-            --token="${CODECOV_TOKEN}"                                          \
+          echo "::group::Register commit metadata with CodeCov"
+          ${{ runner.temp }}/codecov                                            \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            create-commit                                                       \
+            --parent-sha="${{ github.event.pull_request.base.sha }}"            \
+            --pr="${{ github.event.pull_request.number }}"                      \
+            --branch="${{ github.ref_name }}"                                   \
+            --sha="${{ github.sha }}"                                           \
             --fail-on-error                                                     \
-            --slug=${{ github.event.pull_request.base.repo.full_name }}         \
-            --sha=${{ github.event.pull_request.head.sha }}
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+
+          echo "::group::Create a new blank CodeCov report"
+          ${{ runner.temp }}/codecov                                            \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            create-report                                                       \
+            --pr="${{ github.event.pull_request.number }}"                      \
+            --sha="${{ github.sha }}"                                           \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+
+          echo "::group::Upload the coverage reports to CodeCov"
+          for dir in coverage/coverage-reports.*; do
+            ${{ runner.temp }}/codecov                                          \
+              --auto-load-params-from=GithubActions                             \
+              --verbose                                                         \
+              do-upload                                                         \
+              --dir="coverage/${dir}"                                           \
+              --name="${dir}"                                                   \
+              --branch="${{ github.ref_name }}"                                 \
+              --pr="${{ github.event.pull_request.number }}"                    \
+              --flag="${dir/coverage-reports.}"                                 \
+              --sha="${{ github.sha }}"                                         \
+              --fail-on-error                                                   \
+              --git-service=github                                              \
+              --token="${CODECOV_TOKEN}"                                        \
+              --slug="${{ github.repository }}"
+          done
+          echo "::endgroup::"
+
+          echo "::group::Create CodeCov report results"
+          ${{ runner.temp }}/codecov                                            \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            create-report-results                                               \
+            --sha="${{ github.sha }}"                                           \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+
+          echo "::group::Get CodeCov report results"
+          ${{ runner.temp }}/codecov                                            \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            get-report-results                                                  \
+            --sha="${{ github.sha }}"                                           \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+
+          echo "::group::Issue GitHub notifications"
+          ${{ runner.temp }}/codecov                                            \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            send-notifications                                                  \
+            --sha=${{ github.event.pull_request.head.sha }}                     \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug=${{ github.event.pull_request.base.repo.full_name }}
+          echo "::endgroup::"
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - name: Done
-        if: needs.lint.result == 'success' && needs.lint-workflows.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
+      - name: Success
+        if: needs.generate.result == 'success' && needs.lint.result == 'success' && needs.lint-workflows.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
         run: echo "OK"
-      - name: Done
-        if: needs.lint.result != 'success' || needs.lint-workflows.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'
+      - name: Failed
+        if: needs.generate.result != 'success' || needs.lint.result != 'success' || needs.lint-workflows.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'
         run: |-
           echo "Failed!"
           exit 1
