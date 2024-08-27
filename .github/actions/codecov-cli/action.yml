@@ -1,0 +1,34 @@
+name: 'Install CodeCov CLI'
+description: 'Install the CodeCov CLI for use in GitHub Actions'
+outputs:
+  codecov:
+    description: Path to the codecov CLI
+    value: ${{ steps.install.outputs.codecov }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download CodeCov CLI
+      shell: bash
+      env:
+        BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
+      run: |-
+        set -euo pipefail
+        curl -fSsL "${BASE_URL}"               -o "${{ runner.temp }}/codecov"
+        curl -fSsL "${BASE_URL}.SHA256SUM"     -o "${{ runner.temp }}/codecov.SHA256SUM"
+        curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "${{ runner.temp }}/codecov.SHA256SUM.sig"
+
+    - name: Verify Signatures
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |-
+        set -euo pipefail
+        curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+        gpgv "./codecov.SHA256SUM.sig" "./codecov.SHA256SUM"
+        shasum -a 256 -c "./codecov.SHA256SUM"
+        chmod a+x "./codecov"
+
+    - name: Install
+      id: install
+      shell: bash
+      run: echo "codecov=${{ runner.temp }}/codecov" >> "${GITHUB_OUTPUT}"

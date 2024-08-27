@@ -1,0 +1,60 @@
+name: Upload coverage report to CodeCov
+description: Upload the provided code coverage report(s) to CodeCov
+inputs:
+  name:
+    description: Name of the upload (visible in CodeCov)
+    required: true
+  flags:
+    description: Flags to assign to the upload
+    required: true
+  files:
+    description: Files to upload
+    required: true
+  token:
+    description: CodeCov token to use
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install CodeCov CLI
+      id: codecov
+      uses: ./.github/actions/codecov-cli
+    - name: Upload coverage report
+      shell: bash
+      env:
+        CODECOV_TOKEN: ${{ inputs.token }}
+        FILES: ${{ inputs.files }}
+        FLAGS: ${{ inputs.flags }}
+      run: |-
+        set -euo pipefail
+        pr=()
+        sha="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          pr+=("--pr=${{ github.event.number }}")
+        fi
+
+        file=()
+        for f in ${FILES}; do
+          file+=("--file=${f}")
+        done
+
+        flag=()
+        for f in ${FLAGS}; do
+          flag+=("--flag=${f}")
+        done
+
+        ${{ steps.codecov-cli.outputs.codecov }}                                \
+          --auto-load-params-from=GithubActions                                 \
+          --verbose                                                             \
+          do-upload                                                             \
+          --dir="${dir}"                                                        \
+          "${file[@]}"                                                          \
+          --name="${{ inputs.name }}"                                           \
+          "${pr[@]}"                                                            \
+          "${flag[@]}"                                                          \
+          --sha="${sha}"                                                        \
+          --fail-on-error                                                       \
+          --git-service=github                                                  \
+          --token="${CODECOV_TOKEN}"                                            \
+          --slug="${{ github.repository }}"
