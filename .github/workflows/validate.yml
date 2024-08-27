@@ -24,6 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
+        id: setup-go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: stable
@@ -42,15 +43,15 @@ jobs:
         run: go tool covdata textfmt -i ./coverage -o ./coverage/generator.out
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
-        id: simple-go-version
-        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
+        id: go
+        run:  echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
           if-no-files-found: error
-          name: coverage-reports.generator,go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }}
+          name: coverage-reports.generator,go${{ steps.go.outputs.version }},${{ runner.os }},${{ runner.arch }}
           path: ./coverage/generator.out
 
       - name: Run 'go mod tidy'
@@ -162,27 +163,41 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      - name: Checkout Go
+      - name: Setup Go
+        id: setup-go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
       - name: Run unit tests
+        shell: bash
         run: |-
           mkdir -p coverage
-          go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=${{ github.workspace }}/coverage/unit.out -race ./...
-          go -C _integration-tests test -shuffle=on -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile=${{ github.workspace }}/coverage/integration.out -race ./...
+          test_args=("-shuffle=on" "-race")
+          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
+          fi
+          go test "${test_args[@]}" ./...
+      - name: Run integraton suite unit tests
+        shell: bash
+        run: |-
+          mkdir -p coverage
+          test_args=("-shuffle=on" "-race")
+          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
+          fi
+          go -C _integration-tests test "${test_args[@]}" ./...
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
-        id: simple-go-version
-        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
+        id: go
+        run:  echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
           if-no-files-found: error
-          name: coverage-reports.unit,go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }}
+          name: coverage-reports.unit,go${{ steps.go.outputs.version }},${{ runner.os }},${{ runner.arch }}
           path: |-
             ./coverage/unit.out
             ./coverage/integration.out
@@ -211,6 +226,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
+        id: setup-go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
@@ -224,13 +240,21 @@ jobs:
       - name: Install python dependencies
         run: pip install -r _integration-tests/utils/agent/requirements.txt
       - name: Build orchestrion binary
-        run: go build -cover -covermode=atomic -coverpkg="./..." -o="bin/orchestrion.exe" .
+        shell: bash
+        run: |-
+          build_args=()
+          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+            build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
+          fi
+          go build "${build_args[@]}" -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
-
-          test_args=("-shuffle=on" "-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
+          test_args=("-shuffle=on")
+          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+            test_args+=("-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
+          fi
 
           case "${{ matrix.build-mode }}" in
           "DRIVER")
@@ -254,17 +278,17 @@ jobs:
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
-      - name: Determine simple go version
+      - name: Determine go minor version
+        id: go
         if: github.event_name != 'merge_group'
-        id: simple-go-version
-        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
+        run:  echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
           if-no-files-found: error
-          name: coverage-reports.integration,go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }}
+          name: coverage-reports.integration,go${{ steps.go.outputs.version }},${{ runner.os }},${{ runner.arch }}
           path: |-
             ./coverage/integration.out
             ./coverage/integration.run.out
@@ -284,16 +308,17 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Checkout
+        if: github.event_name != 'merge_group'
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Download coverage reports
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'merge_group'
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           merge-multiple: false # Extract in per-artifact directories
           pattern: coverage-reports.*
           path: coverage
       - name: Download codecov CLI
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'merge_group'
         run: |-
           set -euo pipefail
 
@@ -312,17 +337,22 @@ jobs:
         env:
           BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
         working-directory: ${{ runner.temp }}
-      - name: Upload coverage reports
-        if: github.event_name == 'pull_request' && needs.generate.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
+      - name: Submit coverage data to CodeCov
+        if: github.event_name != 'merge_group' && needs.generate.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
         shell: bash
         run: |-
+          pr=()
+          if [ "${{ github.event_name }}" -eq "pull_request" ]; then
+            pr+=("--pr=${{ github.event.pull_request.number }}")
+          fi
+
           echo "::group::Register commit metadata with CodeCov"
           ${{ runner.temp }}/codecov                                            \
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             create-commit                                                       \
             --parent-sha="${{ github.event.pull_request.base.sha }}"            \
-            --pr="${{ github.event.pull_request.number }}"                      \
+            "${pr[@]}"                                                          \
             --branch="${{ github.ref_name }}"                                   \
             --sha="${{ github.sha }}"                                           \
             --fail-on-error                                                     \
@@ -336,7 +366,7 @@ jobs:
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             create-report                                                       \
-            --pr="${{ github.event.pull_request.number }}"                      \
+            "${pr[@]}"                                                          \
             --sha="${{ github.sha }}"                                           \
             --fail-on-error                                                     \
             --git-service=github                                                \
@@ -353,7 +383,7 @@ jobs:
               --dir="coverage/${dir}"                                           \
               --name="${dir}"                                                   \
               --branch="${{ github.ref_name }}"                                 \
-              --pr="${{ github.event.pull_request.number }}"                    \
+              "${pr[@]}"                                                        \
               --flag="${dir/coverage-reports.}"                                 \
               --sha="${{ github.sha }}"                                         \
               --fail-on-error                                                   \
