@@ -44,11 +44,10 @@ jobs:
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: go
-        run: |-
-          set -x
-          version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
         shell: bash
+        run: |-
+          set -euo pipefail
+          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oP '^\d+\.\d+')" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
@@ -193,8 +192,10 @@ jobs:
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: go
-        run:  echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
+        run: |-
+          set -euo pipefail
+          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oP '^\d+\.\d+')" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
@@ -285,7 +286,9 @@ jobs:
         id: go
         if: github.event_name != 'merge_group'
         shell: bash
-        run:  echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')" >> "${GITHUB_OUTPUT}"
+        run: |-
+          set -euo pipefail
+          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oP '^\d+\.\d+')" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
         uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
