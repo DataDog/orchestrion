@@ -21,6 +21,7 @@ jobs:
   ##############################################################################
   # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
   generate:
+    needs: coverage-preflight
     runs-on: ubuntu-latest
     name: Run all generators
     outputs:
@@ -344,8 +345,6 @@ jobs:
   coverage-preflight:
     runs-on: ubuntu-latest
     name: CodeCov pre-flight
-    needs:
-      - generate
     if: github.event_name != 'merge_group'
     steps:
       - name: Checkout
