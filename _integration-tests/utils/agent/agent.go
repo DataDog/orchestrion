@@ -12,22 +12,21 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"orchestrion/integration/utils"
+
 	"github.com/google/uuid"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type MockAgent struct {
-	virtualEnv     string
-	process        *exec.Cmd
-	processCancel  context.CancelFunc
+	container      testcontainers.Container
 	currentSession atomic.Pointer[Session]
 	port           int
 }
@@ -38,52 +37,38 @@ type Session struct {
 }
 
 func New(t *testing.T) (*MockAgent, error) {
-	var (
-		agent MockAgent
-		err   error
-	)
-
-	ddapmTestAgent, _ := exec.LookPath("ddapm-test-agent")
-	if ddapmTestAgent == "" {
-		t.Log("No ddapm-test-agent found in $PATH, installing into a python venv...")
-		if agent.virtualEnv, err = os.MkdirTemp("", "orchestrion-integ-venv-*"); err != nil {
-			return nil, err
-		}
-		t.Logf("Creating Python venv at %q...\n", agent.virtualEnv)
-		if err = exec.Command("python3", "-m", "venv", agent.virtualEnv).Run(); err != nil {
-			return nil, err
-		}
-		venvBin := filepath.Join(agent.virtualEnv, "bin")
-		if runtime.GOOS == "windows" {
-			venvBin = filepath.Join(agent.virtualEnv, "Scripts")
-		}
-
-		t.Logf("Installing requirements in venv...\n")
-		_, thisFile, _, _ := runtime.Caller(0)
-		thisDir := filepath.Dir(thisFile)
-		if err = exec.Command(filepath.Join(venvBin, "pip"), "install", "-r", filepath.Join(thisDir, "requirements.txt")).Run(); err != nil {
-			return nil, err
-		}
-
-		ddapmTestAgent = filepath.Join(venvBin, "ddapm-test-agent")
+	ctx := context.Background()
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:latest",
+			ExposedPorts: []string{"8126"},
+			WaitingFor:   wait.ForHTTP("/info"),
+			Env: map[string]string{
+				"PORT":      "8126",
+				"LOG_LEVEL": "WARNING",
+			},
+			LogConsumerCfg: &testcontainers.LogConsumerConfig{
+				Consumers: []testcontainers.LogConsumer{utils.TestLogConsumer(t)},
+			},
+		},
+		Started: true,
+		Logger:  testcontainers.TestLogger(t),
+	})
+	if err != nil {
+		t.Fatalf("Could not start ddapm-test-agent: %s", err)
 	}
 
-	if agent.port, err = getFreePort(); err != nil {
-		return nil, err
-	}
-	t.Logf("Starting %s on port %d\n", ddapmTestAgent, agent.port)
-	var ctx context.Context
-	ctx, agent.processCancel = context.WithCancel(context.Background())
-	agent.process = exec.CommandContext(
-		ctx,
-		ddapmTestAgent,
-		fmt.Sprintf("--port=%d", agent.port),
-	)
-	if err = agent.process.Start(); err != nil {
-		return nil, err
+	agentHostPort, err := container.MappedPort(ctx, "8126")
+	if err != nil {
+		t.Fatalf("Could not get mapped port for ddapm-test-agent: %s", err)
 	}
 
-	return &agent, nil
+	t.Logf("Starting ddapm-test-agent on host port %d\n", agentHostPort.Int())
+
+	return &MockAgent{
+		container: container,
+		port:      agentHostPort.Int(),
+	}, nil
 }
 
 func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
@@ -151,13 +136,8 @@ func (a *MockAgent) Close() error {
 		return errors.New("cannot close agent while a test session is in progress")
 	}
 
-	a.processCancel()
-	if err := a.process.Wait(); err != nil {
-		return err
-	}
-
-	if err := os.RemoveAll(a.virtualEnv); err != nil {
-		return err
+	if err := a.container.Terminate(context.Background()); err != nil {
+		return fmt.Errorf("could not terminate ddapm-test-agent: %s", err)
 	}
 
 	return nil
