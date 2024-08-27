@@ -65,8 +65,6 @@ jobs:
             ${{ runner.os }}
             ${{ runner.arch }}
           token: ${{ secrets.CODECOV_TOKEN }}
-
-        token: ${{ secrets.CODECOV_TOKEN }}
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
