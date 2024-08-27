@@ -12,6 +12,11 @@ concurrency:
 
 permissions: read-all
 
+env:
+  # Make sure we're actually testing with the intended Go release (i.e, ensure
+  # no automatic toolchain download happens).
+  GOTOOLCHAIN: local
+
 jobs:
   ##############################################################################
   # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
