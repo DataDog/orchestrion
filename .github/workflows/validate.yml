@@ -400,15 +400,15 @@ jobs:
           echo "::endgroup::"
 
           for dir in coverage/coverage-reports.*; do
-            echo "::group::Upload ${dir/coverage-reports.} to CodeCov"
+            echo "::group::Upload ${dir#coverage/coverage-reports.} to CodeCov"
             ${{ runner.temp }}/codecov                                          \
               --auto-load-params-from=GithubActions                             \
               --verbose                                                         \
               do-upload                                                         \
-              --dir="coverage/${dir}"                                           \
-              --name="${dir}"                                                   \
+              --dir="${dir}"                                                    \
+              --name="${dir#coverage/}"                                         \
               "${pr[@]}"                                                        \
-              --flag="${dir/coverage-reports.}"                                 \
+              --flag="${dir#coverage/coverage-reports.}"                        \
               --sha="${{ github.sha }}"                                         \
               --fail-on-error                                                   \
               --git-service=github                                              \
