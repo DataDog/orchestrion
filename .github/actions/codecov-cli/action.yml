@@ -8,27 +8,14 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Download CodeCov CLI
-      shell: bash
-      env:
-        BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
-      run: |-
-        set -euo pipefail
-        curl -fSsL "${BASE_URL}"               -o "${{ runner.temp }}/codecov"
-        curl -fSsL "${BASE_URL}.SHA256SUM"     -o "${{ runner.temp }}/codecov.SHA256SUM"
-        curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "${{ runner.temp }}/codecov.SHA256SUM.sig"
+    - name: Setup Python
+      uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+      with:
+        python-version: '3.x'
 
-    - name: Verify Signatures
-      shell: bash
-      working-directory: ${{ runner.temp }}
-      run: |-
-        set -euo pipefail
-        curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --no-default-keyring --keyring trustedkeys.gpg --import
-        gpgv "./codecov.SHA256SUM.sig" "./codecov.SHA256SUM"
-        shasum -a 256 -c "./codecov.SHA256SUM"
-        chmod a+x "./codecov"
-
-    - name: Install
+    - name: Install codecov-cli
       id: install
       shell: bash
-      run: echo "codecov=${{ runner.temp }}/codecov" >> "${GITHUB_OUTPUT}"
+      run: |-
+        pip install codecov-cli==0.7.4
+        echo "codecov=$(which codecovcli)" >> "${GITHUB_OUTPUT}"
