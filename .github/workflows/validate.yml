@@ -401,11 +401,16 @@ jobs:
 
           for dir in coverage/coverage-reports.*; do
             echo "::group::Upload ${dir#coverage/coverage-reports.} to CodeCov"
+            file=()
+            for f in "${dir}"/*.out; do
+              file+=("--file=${f}")
+            done
             ${{ runner.temp }}/codecov                                          \
               --auto-load-params-from=GithubActions                             \
               --verbose                                                         \
               do-upload                                                         \
               --dir="${dir}"                                                    \
+              "${file[@]}"                                                      \
               --name="${dir#coverage/}"                                         \
               "${pr[@]}"                                                        \
               --flag="${dir#coverage/coverage-reports.}"                        \
