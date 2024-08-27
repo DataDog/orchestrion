@@ -44,7 +44,10 @@ jobs:
       - name: Determine simple go version
         if: github.event_name != 'merge_group'
         id: go
-        run:  echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')" >> "${GITHUB_OUTPUT}"
+        run: |-
+          set -x
+          version=$(echo '${{ steps.setup-go.outputs.go-version }}' | grep -oE '\\d+\\.\\d+')
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
         shell: bash
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
@@ -174,7 +177,7 @@ jobs:
         run: |-
           mkdir -p coverage
           test_args=("-shuffle=on" "-race")
-          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
           fi
           go test "${test_args[@]}" ./...
@@ -183,7 +186,7 @@ jobs:
         run: |-
           mkdir -p coverage
           test_args=("-shuffle=on" "-race")
-          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
           fi
           go -C _integration-tests test "${test_args[@]}" ./...
@@ -243,7 +246,7 @@ jobs:
         shell: bash
         run: |-
           build_args=()
-          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
             build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
           fi
           go build "${build_args[@]}" -o="bin/orchestrion.exe" .
@@ -252,7 +255,7 @@ jobs:
         run: |-
           mkdir -p "${GOCOVERDIR}"
           test_args=("-shuffle=on")
-          if [ "${{ github.event_name }}" -ne "merge_group" ]; then
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi
 
