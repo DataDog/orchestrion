@@ -442,7 +442,7 @@ jobs:
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             send-notifications                                                  \
-            --sha=${{ github.sha }}                                             \
+            --sha="${sha}"                                                      \
             --fail-on-error                                                     \
             --git-service=github                                                \
             --token="${CODECOV_TOKEN}"                                          \
