@@ -64,7 +64,9 @@ jobs:
             go${{ steps.go.outputs.version }}
             ${{ runner.os }}
             ${{ runner.arch }}
+          token: ${{ secrets.CODECOV_TOKEN }}
 
+        token: ${{ secrets.CODECOV_TOKEN }}
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
@@ -218,6 +220,7 @@ jobs:
             go${{ steps.go.outputs.version }}
             ${{ runner.os }}
             ${{ runner.arch }}
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
@@ -316,6 +319,7 @@ jobs:
             go${{ steps.go.outputs.version }}
             ${{ runner.os }}
             ${{ runner.arch }}
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
