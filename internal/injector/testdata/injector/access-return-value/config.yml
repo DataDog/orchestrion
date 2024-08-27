@@ -13,7 +13,7 @@ aspects:
           imports:
             log: log
           template: |-
-            {{- $ret := .Function.Returns 1 -}}
+            {{- $ret := .Function.Result 1 -}}
             defer func(){
               if {{$ret}} != nil {
                 log.Println("error in {{.Function.Name}}:", {{$ret}})

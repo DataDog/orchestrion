@@ -11,7 +11,7 @@ Automatic compile-time instrumentation of Go code.
 
 [Orchestrion](https://en.wikipedia.org/wiki/Orchestrion) processes Go source code at compilation time and automatically
 inserts instrumentation. This instrumentation produces Datadog APM traces from the instrumented code and supports
-Datadog Application Security Management. Future work will include support for OpenTelemetry tracing as well.
+Datadog Application Security Management.
 
 > [!IMPORTANT]
 > Orchestrion is under active development. The supported features are rapidly growing, and the user experiece may evolve
@@ -191,8 +191,12 @@ Library                             | Since    | Notes
 `gorm.io/gorm`                      | `v0.7.0` | [Aspect][gorm]
 `net/http`                          | `v0.7.0` | [Client][net-http.client] / [Server][net-http.server]
 `go.mongodb.org/mongo-driver/mongo` | `v0.7.3` | [Aspect][mongo]
-`k8s.io/client-go`                  | `v0.7.4` | [Aspect][k8s-client]
+`github.com/aws-sdk-go/aws`         | `v0.7.4` | [Aspect][aws-sdk-go]
 `github.com/hashicorp/vault`        | `v0.7.4` | [Aspect][hashicorp-vault]
+`github.com/IBM/sarama`             | `v0.7.4` | [Aspect][ibm-sarama]
+`github.com/Shopify/sarama`         | `v0.7.4` | [Aspect][shopify-sarama]
+`k8s.io/client-go`                  | `v0.7.4` | [Aspect][k8s-client]
+`log/slog`                          | `v0.7.4` | [Aspect][log-slog]
 
 [db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
 [gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
@@ -212,6 +216,10 @@ Library                             | Since    | Notes
 [mongo]: https://datadoghq.dev/orchestrion/docs/built-in/databases/mongo/
 [k8s-client]: https://datadoghq.dev/orchestrion/docs/built-in/k8s-client/
 [hashicorp-vault]: https://datadoghq.dev/orchestrion/docs/built-in/api/vault/
+[log-slog]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/slog/
+[aws-sdk-go]: https://datadoghq.dev/orchestrion/docs/built-in/cloud/aws-sdk/
+[ibm-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/ibm_sarama/
+[shopify-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/shopify_sarama/
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.

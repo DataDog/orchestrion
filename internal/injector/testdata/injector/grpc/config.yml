@@ -27,8 +27,6 @@ aspects:
             - imports: *imports
               template: grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
 
-preserveLineInfo: true
-
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc: true
 

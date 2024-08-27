@@ -22,8 +22,6 @@ aspects:
               {{range .AST.Args}}{{.}},
             {{end}})
 
-preserveLineInfo: true
-
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql: true
 

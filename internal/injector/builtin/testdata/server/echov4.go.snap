@@ -1,3 +1,4 @@
+//line samples/server/echov4.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -9,19 +10,19 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-//line <generated>:1
+//line <generated>
 	__orchestrion_echotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
 )
 
 //line samples/server/echov4.go:14
 func echoV4Server() {
 	r :=
-//line <generated>:1
+//line <generated>
 		func() *echo.Echo {
 			e :=
 //line samples/server/echov4.go:15
 				echo.New()
-//line <generated>:1
+//line <generated>
 			e.Use(__orchestrion_echotrace.Middleware())
 			return e
 		}()
@@ -40,12 +41,12 @@ type api struct {
 
 func (a *api) echoV4Server() {
 	a.srv =
-//line <generated>:1
+//line <generated>
 		func() *echo.Echo {
 			e :=
 //line samples/server/echov4.go:29
 				echo.New()
-//line <generated>:1
+//line <generated>
 			e.Use(__orchestrion_echotrace.Middleware())
 			return e
 		}()

@@ -174,7 +174,7 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 			flags.Unknown = append(flags.Unknown, arg)
 			// If there's more args, and the next one does not have a leading -, we'll assume this is the value of this
 			// unknown flag and consume it.
-			if len(args) > i && !strings.HasPrefix(args[i+1], "-") {
+			if len(args) > i+1 && !strings.HasPrefix(args[i+1], "-") {
 				flags.Unknown = append(flags.Unknown, args[i+1])
 				i++
 			}

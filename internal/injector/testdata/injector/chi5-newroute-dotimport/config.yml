@@ -15,8 +15,6 @@ aspects:
               return mux
             }()
 
-preserveLineInfo: true
-
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5: true
 

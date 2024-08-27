@@ -54,7 +54,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
         with:
-          python-version: '>=3.9 <3.13'
+          python-version: 3.x
           cache: pip
           cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements.txt
       - name: Install python dependencies

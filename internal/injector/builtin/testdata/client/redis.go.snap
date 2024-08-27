@@ -1,3 +1,4 @@
+//line samples/client/redis.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -12,7 +13,7 @@ import (
 	redisv7 "github.com/go-redis/redis/v7"
 	redisv8 "github.com/go-redis/redis/v8"
 	redigo "github.com/gomodule/redigo/redis"
-//line <generated>:1
+//line <generated>
 	__orchestrion_trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
 	__orchestrion_trace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
 	__orchestrion_redigo "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
@@ -21,12 +22,12 @@ import (
 //line samples/client/redis.go:17
 func redisV7Client() {
 	client :=
-//line <generated>:1
+//line <generated>
 		func() (client *redisv7.Client) {
 			client =
 //line samples/client/redis.go:18
 				redisv7.NewClient(&redisv7.Options{Addr: "127.0.0.1", Password: "", DB: 0})
-//line <generated>:1
+//line <generated>
 			__orchestrion_trace.WrapClient(client)
 			return
 		}()
@@ -39,12 +40,12 @@ func redisV7Client() {
 
 func redisV8Client(ctx context.Context) {
 	client :=
-//line <generated>:1
+//line <generated>
 		func() (client *redisv8.Client) {
 			client =
 //line samples/client/redis.go:26
 				redisv8.NewClient(&redisv8.Options{Addr: "127.0.0.1", Password: "", DB: 0})
-//line <generated>:1
+//line <generated>
 			__orchestrion_trace1.WrapClient(client)
 			return
 		}()

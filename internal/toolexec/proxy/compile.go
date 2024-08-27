@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -17,14 +16,13 @@ type compileFlagSet struct {
 	ImportCfg string `ddflag:"-importcfg"`
 	Output    string `ddflag:"-o"`
 	TrimPath  string `ddflag:"-trimpath"`
+	GoVersion string `ddflag:"-goversion"`
 }
 
 // CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
 	Flags compileFlagSet
-	// SourceDir is the directory containing source files that are in the command's inputs.
-	SourceDir string
 	// WorkDir is the $WORK directory managed by the go toolchain.
 	WorkDir string
 }
@@ -54,32 +52,17 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
-func (f *compileFlagSet) Valid() bool {
-	return f.Package != "" && f.Output != "" && f.ImportCfg != "" && f.TrimPath != ""
-}
-
-func (f *compileFlagSet) String() string {
-	return fmt.Sprintf("-p=%q -o=%q -importcfg=%q", f.Package, f.Output, f.ImportCfg)
-}
-
 func parseCompileCommand(args []string) (Command, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")
 	}
 	cmd := CompileCommand{command: NewCommand(args)}
 	parseFlags(&cmd.Flags, args[1:])
-	files := cmd.GoFiles()
 
-	// The ImportCfg file is rooted in the stage directory
-	stageDir := filepath.Dir(cmd.Flags.ImportCfg)
-	// The WorkDir is the parent of the stage directory
-	cmd.WorkDir = filepath.Dir(stageDir)
-	// NOTE: Some commands just print the tool version, in which case no go file will be provided as arg
-	for _, f := range files {
-		if dir := filepath.Dir(f); dir != stageDir {
-			cmd.SourceDir = dir
-			break
-		}
+	if cmd.Flags.ImportCfg != "" {
+		// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.
+		cmd.WorkDir = filepath.Dir(filepath.Dir(cmd.Flags.ImportCfg))
 	}
+
 	return &cmd, nil
 }

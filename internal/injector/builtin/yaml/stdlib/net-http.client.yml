@@ -100,8 +100,8 @@ aspects:
             {{- /* Largely copied from https://github.com/DataDog/dd-trace-go/blob/v1.65.0-rc.2/contrib/net/http/roundtripper.go#L28-L104 */ -}}
             {{- $t := .Function.Receiver -}}
             {{- $req := .Function.Argument 0 -}}
-            {{- $res := .Function.Returns 0 -}}
-            {{- $err := .Function.Returns 1 -}}
+            {{- $res := .Function.Result 0 -}}
+            {{- $err := .Function.Result 1 -}}
             if !{{ $t }}.DD__tracer_internal {
               resourceName := fmt.Sprintf("%s %s", {{ $req }}.Method, {{ $req }}.URL.Path)
               spanName := namingschema.OpName(namingschema.HTTPClient)
@@ -177,8 +177,8 @@ aspects:
           imports:
             instrument: github.com/datadog/orchestrion/instrument/net/http
           template: |-
-            {{- $ctx := .FindArgument "context.Context" -}}
-            {{- $req := .FindArgument "*net/http.Request" }}
+            {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- $req := .Function.ArgumentOfType "*net/http.Request" }}
             {{- if $ctx -}}
               instrument.{{ .AST.Fun.Name }}(
                 {{ $ctx }},

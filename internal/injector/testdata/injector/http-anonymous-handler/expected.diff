@@ -1,18 +1,25 @@
 --- input.go
 +++ output.go
-@@ -6,6 +6,8 @@
-   "log"
+@@ -1,3 +1,4 @@
++//line input.go:1:1
+ package main
+ 
+ import (
+@@ -7,12 +8,36 @@
    "net/http"
  
+   "orchestrion/integration"
++//line <generated>
 +  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 +  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
-   "orchestrion/integration"
  )
  
-@@ -13,6 +15,24 @@
++//line input.go:12
+ func main() {
    s := &http.Server{
      Addr: ":8085",
      Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++//line <generated>
 +      {
 +        r = r.WithContext(__orchestrion_instrument.Report(
 +          r.Context(),
@@ -31,6 +38,7 @@
 +          "http.useragent", r.Header.Get("User-Agent"),
 +        )
 +      }
++//line input.go:16
        data, err := io.ReadAll(r.Body)
        if err != nil {
          w.WriteHeader(http.StatusBadRequest)

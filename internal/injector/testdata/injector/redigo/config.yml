@@ -17,8 +17,6 @@ aspects:
       - replace-function:
           gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
 
-preserveLineInfo: true
-
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
 

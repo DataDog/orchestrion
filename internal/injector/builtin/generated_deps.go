@@ -10,6 +10,7 @@
 package builtin
 
 import (
+	_ "context"
 	_ "fmt"
 	_ "github.com/datadog/orchestrion/instrument"
 	_ "github.com/datadog/orchestrion/instrument/event"
