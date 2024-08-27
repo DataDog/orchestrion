@@ -212,14 +212,6 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
-      - name: Setup python
-        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
-        with:
-          python-version: 3.x
-          cache: pip
-          cache-dependency-path: _integration-tests/utils/agent/requirements.txt
-      - name: Install python dependencies
-        run: pip install -r _integration-tests/utils/agent/requirements.txt
       - name: Build orchestrion binary
         run: go build -cover -covermode=atomic -coverpkg="./..." -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
