@@ -654,7 +654,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"println(\"os.OpenFile\")\nparent, _ := dyngo.FromContext(nil)\nif parent != nil {\n    println(\"os.OpenFile: parent is not nil\")\n\top := &ossec.OpenOperation{\n        Operation: dyngo.NewOperation(parent),\n    }\n\n    var __dd_block bool\n    dyngo.OnData(op, func(_ *events.BlockingSecurityEvent) {\n        __dd_block = true\n    })\n\n    dyngo.StartOperation(op, ossec.OpenOperationArgs{\n        Path: {{ .Function.Argument 0 }},\n        Flags: {{ .Function.Argument 1 }},\n        Perms: {{ .Function.Argument 2 }},\n    })\n\n    defer dyngo.FinishOperation(op, ossec.OpenOperationRes[*File]{\n        File: &{{ .Function.Returns 0 }},\n        Err: &{{ .Function.Returns 1 }},\n    })\n\n    if __dd_block {\n        return\n    }\n}",
+				"__dd_parent_op, _ := dyngo.FromContext(nil)\nif __dd_parent_op != nil {\n\t__dd_op := &ossec.OpenOperation{\n        Operation: dyngo.NewOperation(__dd_parent_op),\n    }\n\n    var __dd_block bool\n    dyngo.OnData(__dd_op, func(_ *events.BlockingSecurityEvent) {\n        __dd_block = true\n    })\n\n    dyngo.StartOperation(__dd_op, ossec.OpenOperationArgs{\n        Path: {{ .Function.Argument 0 }},\n        Flags: {{ .Function.Argument 1 }},\n        Perms: {{ .Function.Argument 2 }},\n    })\n\n    defer dyngo.FinishOperation(__dd_op, ossec.OpenOperationRes[*File]{\n        File: &{{ .Function.Result 0 }},\n        Err: &{{ .Function.Result 1 }},\n    })\n\n    if __dd_block {\n        return\n    }\n}",
 				map[string]string{
 					"dyngo":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
 					"events": "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
@@ -754,4 +754,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:+KtuU1d3zsJj/JkIT/hbgPLZ0kxOJBnWJ0Z+V7YmMiQZScK7q4J9fgPuKADuhA+oytH5M48C7N61KEtP5iEdMw=="
+const Checksum = "sha512:lq6tJSXyXRsHOSqEz4mvPn8cYMhImQqvxkdA20IFFX2q1ajrAuCY0TPW4emg6OeaUqkZVJVzTkbiASk8OhNmlw=="

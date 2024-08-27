@@ -1,16 +1,22 @@
 # Unless explicitly stated otherwise all files in this repository are licensed
 # under the Apache License Version 2.0.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
-# Copyright 2023-present Datadog, Inc.
-%YAML 1.1
+# Copyright 2024-present Datadog, Inc.
 ---
+# yaml-language-server: $schema=../../../../docs/static/schema.json
 meta:
   name: os
-  description: Protection from Local File Inclusion (LFI) Attacks
   icon: save
+  description: |-
+    Protection from Local File Inclusion (LFI) Attacks
+    
+    All known functions that open files are susceptible to Local File Inclusion (LFI) attacks. This aspect protects
+    against LFI attacks by wrapping the os.OpenFile function with a security operation that will block the operation if
+    it is deemed unsafe.
+    
+    Instrumenting only the os.OpenFile function is sufficient to protect against LFI attacks, as all other functions in
+    the os package that open files ultimately call os.OpenFile (as of Go 1.23).
 
-# All calls that are susceptible to LFI attacks go through the os.OpenFile function, therefore we only need to protect
-# this function. This can change in the future if new functions are added to the os package that are susceptible to LFI
 aspects:
   - id: OpenFile
     join-point:
@@ -26,28 +32,26 @@ aspects:
             dyngo: gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo
             events: gopkg.in/DataDog/dd-trace-go.v1/appsec/events
           template: |-
-            println("os.OpenFile")
-            parent, _ := dyngo.FromContext(nil)
-            if parent != nil {
-                println("os.OpenFile: parent is not nil")
-            	op := &ossec.OpenOperation{
-                    Operation: dyngo.NewOperation(parent),
+            __dd_parent_op, _ := dyngo.FromContext(nil)
+            if __dd_parent_op != nil {
+            	__dd_op := &ossec.OpenOperation{
+                    Operation: dyngo.NewOperation(__dd_parent_op),
                 }
 
                 var __dd_block bool
-                dyngo.OnData(op, func(_ *events.BlockingSecurityEvent) {
+                dyngo.OnData(__dd_op, func(_ *events.BlockingSecurityEvent) {
                     __dd_block = true
                 })
 
-                dyngo.StartOperation(op, ossec.OpenOperationArgs{
+                dyngo.StartOperation(__dd_op, ossec.OpenOperationArgs{
                     Path: {{ .Function.Argument 0 }},
                     Flags: {{ .Function.Argument 1 }},
                     Perms: {{ .Function.Argument 2 }},
                 })
 
-                defer dyngo.FinishOperation(op, ossec.OpenOperationRes[*File]{
-                    File: &{{ .Function.Returns 0 }},
-                    Err: &{{ .Function.Returns 1 }},
+                defer dyngo.FinishOperation(__dd_op, ossec.OpenOperationRes[*File]{
+                    File: &{{ .Function.Result 0 }},
+                    Err: &{{ .Function.Result 1 }},
                 })
 
                 if __dd_block {

@@ -30,6 +30,9 @@ type TestCase struct {
 
 func (tc *TestCase) Setup(t *testing.T) {
 	t.Setenv("DD_APPSEC_RULES", "./testdata/rasp.json")
+	t.Setenv("DD_APPSEC_ENABLED", "true")
+	t.Setenv("DD_APPSEC_RASP_ENABLED", "true")
+	t.Setenv("DD_APPSEC_WAF_TIMEOUT", "1h")
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
 		Addr:    "127.0.0.1:8080",
@@ -92,7 +95,7 @@ func (tc *TestCase) handleRoot(w http.ResponseWriter, _ *http.Request) {
 
 	require.ErrorIs(tc.T, err, &events.BlockingSecurityEvent{})
 	if events.IsSecurityError(err) { // TODO: response writer instrumentation to not have to do that
-		span, _ := tracer.SpanFromContext(nil)
+		span, _ := tracer.SpanFromContext(context.TODO())
 		span.SetTag("is.security.error", true)
 		return
 	}
