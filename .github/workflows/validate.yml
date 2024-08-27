@@ -367,6 +367,8 @@ jobs:
       - name: Submit coverage data to CodeCov
         shell: bash
         run: |-
+          set -euo pipefail
+
           pr=()
           sha="${{ github.sha }}"
           parentsha="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
@@ -408,6 +410,10 @@ jobs:
             for f in "${dir}"/*.out; do
               file+=("--file=${f}")
             done
+            flag=()
+            for f in $(echo "${dir#coverage/coverage-reports.}" | tr ',' ' '); do
+              flag+=("--flag="${f}")
+            done
             ${{ runner.temp }}/codecov                                          \
               --auto-load-params-from=GithubActions                             \
               --verbose                                                         \
@@ -416,7 +422,7 @@ jobs:
               "${file[@]}"                                                      \
               --name="${dir#coverage/}"                                         \
               "${pr[@]}"                                                        \
-              --flag="${dir#coverage/coverage-reports.}"                        \
+              "${flag[@]}"                                                      \
               --sha="${sha}"                                                    \
               --fail-on-error                                                   \
               --git-service=github                                              \
