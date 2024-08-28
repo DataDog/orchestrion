@@ -7,6 +7,7 @@ package ibm_sarama
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -59,7 +60,30 @@ func (tc *TestCase) Setup(t *testing.T) {
 func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
-	producer, err := sarama.NewSyncProducer(addrs, cfg)
+	createProducer := func() (_ sarama.SyncProducer, err error) {
+		defer func() {
+			if r := recover(); r != nil && err == nil {
+				var ok bool
+				if err, ok = r.(error); !ok {
+					err = fmt.Errorf("panic: %v", r)
+				}
+			}
+		}()
+		return sarama.NewSyncProducer(addrs, cfg)
+	}
+
+	var (
+		producer sarama.SyncProducer
+		err      error
+	)
+	for attemptsLeft := 3; attemptsLeft > 0; attemptsLeft-- {
+		producer, err = createProducer()
+		if err != nil {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		break
+	}
 	require.NoError(t, err, "failed to create producer")
 	defer func() { assert.NoError(t, producer.Close(), "failed to close producer") }()
 
