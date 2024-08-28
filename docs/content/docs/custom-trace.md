@@ -123,13 +123,21 @@ precedence list (first non-empty is selected):
 
 If the annotated function accepts a {{<godoc "context" "Context" >}} argument,
 that context will be used for trace propagation. Otherwise, if the function
-accepts a {{<godoc "net/http" "Request" "*">}} argument, the request's context will
-be used for trace propagation.
+accepts a {{<godoc "net/http" "Request" "*">}} argument, the request's context
+will be used for trace propagation.
 
 Functions that accept neither solely rely on _goroutine local storage_ for trace
 propagation. This means that traces may be split on _goroutine_ boundaries
 unless a {{<godoc "context" "Context" >}} or {{<godoc "net/http" "Request" "*">}}
-value is passed across.
+value carying trace context is passed across.
+
+Trace context carrying {{<godoc "context" "Context" >}} values are those that:
+
+- have been received by a `//dd:span` annotated function, as instrumentation
+  will create a new trace root span if if did not already carry trace context
+- are returned by:
+  - {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" "StartSpanFromContext" >}}
+  - {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" "ContextWithSpan" >}}
 
 ```go
 package demo
@@ -149,3 +157,27 @@ func callee(ctx context.Context, done chan<- struct{}) {
   done <- struct{}{}
 }
 ```
+
+### Manual Instrumentation
+
+The {{<godoc "gopkg.in/DataDog/dd-trace-go.v1">}} library can be used to
+manually instrument sections of your code even when building with `orchestrion`.
+
+You can use APIs such as {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" "StartSpanFromContext" >}}
+to create spans in any section of your code. This can be useful to delimit a
+specific section of your code with a span without having to refactor it in a
+separate function (which would allow the use of the `//dd:span` directive), or
+when you need to customize the span more than the `//dd:span` directive allows.
+
+{{<callout emoji="⚠️">}}
+You may also use integrations from the packages within
+{{<godoc "gopkg.in/DataDog/dd-trace-go.v1/contrib">}}, although this may result
+in duplicated trace spans if `orchestrion` supports automatic instrumentation of
+the same integration.
+
+This can be useful to instrument calls that `orchestrion` does not yet support.
+If you directly use integrations, we encourage you carefully review the
+[release notes](https://github.com/DataDog/orchestrion/releases) before
+upgrading to a new `orchestrion` release, so you can remove manual
+instrumentation that was made redundant as necessary.
+{{</callout>}}
