@@ -184,7 +184,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p coverage
-          test_args=("-shuffle=on" "-race")
+          test_args=("-shuffle=on" "-race" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
           fi
@@ -193,7 +193,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p coverage
-          test_args=("-shuffle=on" "-race")
+          test_args=("-shuffle=on" "-race" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
           fi
@@ -269,7 +269,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
-          test_args=("-shuffle=on")
+          test_args=("-shuffle=on" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi

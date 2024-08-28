@@ -58,3 +58,8 @@ runs:
           --git-service=github                                                  \
           --token="${CODECOV_TOKEN}"                                            \
           --slug="${{ github.repository }}"
+    - name: Upload Artifact
+      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
+      with:
+        name: ${{ inputs.name }} coverage report
+        path: ${{ inputs.files }}
