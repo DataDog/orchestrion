@@ -122,9 +122,9 @@ func main() {
 				case "heap":
 					// Nothing to do; this is dealt with only in After
 				case "cpu":
-					cpuProfile, err = startCPUProfiling(ctx, profilePath)
+					cpuProfile, err = startCPUProfiling(profilePath)
 				case "trace":
-					executionTrace, err = startExecutionTracing(ctx, profilePath)
+					executionTrace, err = startExecutionTracing(profilePath)
 				default:
 					return fmt.Errorf("unrecognized profile type %s", p)
 				}
@@ -226,7 +226,7 @@ func profileToFile(filename string, collect func(io.Writer) error) (*os.File, er
 	return f, nil
 }
 
-func startCPUProfiling(ctx *cli.Context, prefix string) (*os.File, error) {
+func startCPUProfiling(prefix string) (*os.File, error) {
 	filename := profilePath(prefix, "orchestrion-cpu-%d.pprof")
 	f, err := profileToFile(filename, pprof.StartCPUProfile)
 	if err != nil {
@@ -235,7 +235,7 @@ func startCPUProfiling(ctx *cli.Context, prefix string) (*os.File, error) {
 	return f, nil
 }
 
-func startExecutionTracing(ctx *cli.Context, prefix string) (*os.File, error) {
+func startExecutionTracing(prefix string) (*os.File, error) {
 	filename := profilePath(prefix, "orchestrion-%d.trace")
 	f, err := profileToFile(filename, trace.Start)
 	if err != nil {
