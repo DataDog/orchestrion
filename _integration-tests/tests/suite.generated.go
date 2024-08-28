@@ -18,6 +18,7 @@ import (
 	gin "orchestrion/integration/tests/gin"
 	goredisv7 "orchestrion/integration/tests/go-redis.v7"
 	goredisv8 "orchestrion/integration/tests/go-redis.v8"
+	goredisv9 "orchestrion/integration/tests/go-redis.v9"
 	gorm "orchestrion/integration/tests/gorm"
 	gormjinzhu "orchestrion/integration/tests/gorm.jinzhu"
 	grpc "orchestrion/integration/tests/grpc"
@@ -42,6 +43,7 @@ var suite = map[string]testCase{
 	"gin":                                  new(gin.TestCase),
 	"go-redis.v7":                          new(goredisv7.TestCase),
 	"go-redis.v8":                          new(goredisv8.TestCase),
+	"go-redis.v9":                          new(goredisv9.TestCase),
 	"gorm":                                 new(gorm.TestCase),
 	"gorm.jinzhu":                          new(gormjinzhu.TestCase),
 	"grpc":                                 new(grpc.TestCase),
