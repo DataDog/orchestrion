@@ -123,7 +123,7 @@ precedence list (first non-empty is selected):
 
 If the annotated function accepts a {{<godoc "context" "Context" >}} argument,
 that context will be used for trace propagation. Otherwise, if the function
-accepts a {{<godoc "net/http" "Request" "*">}} argument, the requests's context will
+accepts a {{<godoc "net/http" "Request" "*">}} argument, the request's context will
 be used for trace propagation.
 
 Functions that accept neither solely rely on _goroutine local storage_ for trace
