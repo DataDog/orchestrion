@@ -95,7 +95,7 @@ func New(opts *Options) (srv *Server, err error) {
 		DontListen: opts.NoListener,
 		Accounts:   []*server.Account{userAccount, systemAccount},
 		Users: []*server.User{
-			{Username: client.USERNAME, Password: client.NO_PASSWORD, Account: userAccount},
+			{Username: client.Username, Password: client.NoPassword, Account: userAccount},
 			{Username: serverUsername, Password: noPassword, Account: userAccount},
 			{Username: sysUser, Password: noPassword, Account: systemAccount},
 		},
@@ -197,7 +197,7 @@ func (s *Server) Connect() (*client.Client, error) {
 	conn, err := nats.Connect(
 		s.clientUrl,
 		nats.Name("local-connect"),
-		nats.UserInfo(client.USERNAME, client.NO_PASSWORD),
+		nats.UserInfo(client.Username, client.NoPassword),
 		nats.InProcessServer(s.server),
 	)
 	if err != nil {

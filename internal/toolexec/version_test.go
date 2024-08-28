@@ -30,7 +30,7 @@ func init() {
 }
 
 func Test(t *testing.T) {
-	t.Setenv(client.ENV_VAR_JOBSERVER_URL, "") // Make sure we don't accidentally connect to an external jobserver...
+	t.Setenv(client.EnvVarJobserverUrl, "") // Make sure we don't accidentally connect to an external jobserver...
 
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")

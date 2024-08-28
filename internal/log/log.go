@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	level            = LevelNone
-	writer  *os.File = os.Stderr
+	level   = LevelNone
+	writer  = os.Stderr
 	writerM sync.Mutex
 
 	context     = make(map[string]string)
@@ -63,9 +63,8 @@ func SetContext(key string, value string) {
 			if contextKeys[i] == key {
 				contextKeys = append(contextKeys[:i], contextKeys[i+1:]...)
 				break
-			} else {
-				i++
 			}
+			i++
 		}
 	}
 }

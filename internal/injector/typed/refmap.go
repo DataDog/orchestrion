@@ -170,7 +170,6 @@ func (r *ReferenceMap) add(path string, kind ReferenceKind) bool {
 func (k ReferenceKind) String() string {
 	if k == ImportStatement {
 		return "ImportStatement"
-	} else {
-		return "RelocationTarget"
 	}
+	return "RelocationTarget"
 }

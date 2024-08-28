@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	USERNAME    = "orchestrion"
-	NO_PASSWORD = "" // We only use account management to have access to system events, not for security.
+	Username   = "orchestrion"
+	NoPassword = "" // We only use account management to have access to system events, not for security.
 )
 
 type Client struct {
@@ -27,7 +27,7 @@ type Client struct {
 // Connect creates a new client connected to the NATS server at the specified
 // address.
 func Connect(addr string) (*Client, error) {
-	conn, err := nats.Connect(addr, nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())), nats.UserInfo(USERNAME, NO_PASSWORD))
+	conn, err := nats.Connect(addr, nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())), nats.UserInfo(Username, NoPassword))
 	if err != nil {
 		return nil, err
 	}

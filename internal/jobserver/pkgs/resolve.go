@@ -97,7 +97,7 @@ func (r *ResolveRequest) canonicalizeEnviron() {
 func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	// Make sure all children jobs connect to THIS jobserver; this is more efficient than checking for
 	// the local file system beacon.
-	req.Env = append(req.Env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, s.serverURL))
+	req.Env = append(req.Env, fmt.Sprintf("%s=%s", client.EnvVarJobserverUrl, s.serverURL))
 	req.canonicalize()
 
 	reqHash, err := req.hash()

@@ -104,7 +104,7 @@ func Run(goArgs []string, opts ...Option) error {
 					server.Shutdown()
 					log.Tracef("[JOBSERVER]: %s\n", server.CacheStats.String())
 				}()
-				env = append(env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, server.ClientURL()))
+				env = append(env, fmt.Sprintf("%s=%s", client.EnvVarJobserverUrl, server.ClientURL()))
 				// Set the process' goflags, since we know them already...
 				goflags.SetFlags("", argv[1:])
 			}

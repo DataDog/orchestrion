@@ -57,12 +57,12 @@ func main() {
 			&cli.StringFlag{
 				Category: "Advanced",
 				Name:     "job-server-url",
-				EnvVars:  []string{client.ENV_VAR_JOBSERVER_URL},
+				EnvVars:  []string{client.EnvVarJobserverUrl},
 				Usage:    "Set the job server URL",
 				Hidden:   true, // Users don't normally need to use this.
 				Action: func(_ *cli.Context, url string) error {
 					// Forward the value to the environment variable, so that all child processes see it.
-					return os.Setenv(client.ENV_VAR_JOBSERVER_URL, url)
+					return os.Setenv(client.EnvVarJobserverUrl, url)
 				},
 			},
 			&cli.StringFlag{

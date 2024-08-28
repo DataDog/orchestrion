@@ -11,7 +11,6 @@ import (
 	// Tool dependencies
 	_ "github.com/gohugoio/hugo"
 	_ "github.com/google/go-licenses/v2"
-	_ "golang.org/x/tools/cmd/stringer"
 
 	// Instrumentation packages
 	_ "github.com/datadog/orchestrion/internal/injector/builtin"
