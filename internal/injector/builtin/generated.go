@@ -644,6 +644,25 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From stdlib/ossec.yml
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("os"),
+			join.FunctionBody(join.Function(
+				join.Name("OpenFile"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_parent_op, _ := dyngo.FromContext(nil)\nif __dd_parent_op != nil {\n    __dd_op := &ossec.OpenOperation{\n        Operation: dyngo.NewOperation(__dd_parent_op),\n    }\n\n    var __dd_block bool\n    dyngo.OnData(__dd_op, func(_ *events.BlockingSecurityEvent) {\n        __dd_block = true\n    })\n\n    dyngo.StartOperation(__dd_op, ossec.OpenOperationArgs{\n        Path: {{ .Function.Argument 0 }},\n        Flags: {{ .Function.Argument 1 }},\n        Perms: {{ .Function.Argument 2 }},\n    })\n\n    defer dyngo.FinishOperation(__dd_op, ossec.OpenOperationRes[*File]{\n        File: &{{ .Function.Result 0 }},\n        Err: &{{ .Function.Result 1 }},\n    })\n\n    if __dd_block {\n        return\n    }\n}",
+				map[string]string{
+					"dyngo":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
+					"events": "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+					"ossec":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
+				},
+			)),
+		},
+	},
 	// From stdlib/runtime.yml
 	{
 		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
@@ -720,7 +739,9 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler",
@@ -733,4 +754,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:4G+QQ6koPPKPBYbhYWFwEme8TOQDk3GL3dIREzUkaSHwyKBfJytVRZYZ+jCfwrJRvgWap81TVLeo70LTIelkcw=="
+const Checksum = "sha512:f4OhmRCa3KjGYbYPvbiX58iL0tfbZi5DbeJMcKZYmtscJJplrS9Y8gzVe5hBT6nlSSYCfA05aqa8AFyHnCSFvw=="
