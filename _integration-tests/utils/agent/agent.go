@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -128,6 +129,7 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 	}
 
 	t.Logf("Started test session with ID %s\n", session.token.String())
+
 	tracer.Start(
 		tracer.WithAgentAddr(fmt.Sprintf("127.0.0.1:%d", a.port)),
 		tracer.WithSampler(tracer.NewAllSampler()),
