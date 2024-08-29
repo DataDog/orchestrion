@@ -114,3 +114,4 @@ linters-settings:
 
 run:
   build-tags: [integration]
+  timeout: 10m # Default of 1m is too short in CI
