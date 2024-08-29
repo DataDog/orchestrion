@@ -7,6 +7,7 @@ package join
 
 import (
 	"fmt"
+	"go/token"
 	"strings"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/context"
@@ -62,12 +63,14 @@ func (s *structDefinition) RenderHTML() string {
 type structLiteral struct {
 	typeName TypeName
 	field    string
+	match    string
 }
 
-func StructLiteral(typeName TypeName, field string) *structLiteral {
+func StructLiteral(typeName TypeName, field string, match string) *structLiteral {
 	return &structLiteral{
 		typeName: typeName,
 		field:    field,
+		match:    match,
 	}
 }
 
@@ -80,7 +83,27 @@ func (s *structLiteral) ImpliesImported() []string {
 
 func (s *structLiteral) Matches(ctx context.AspectContext) bool {
 	if s.field == "" {
-		return s.matchesLiteral(ctx.Node())
+		switch s.match {
+		case "pointer-only":
+			// match only if the current node is equal to & and the underlying node matches
+			// the struct literal we are looking for
+			if expr, ok := ctx.Node().(*dst.UnaryExpr); ok && expr.Op == token.AND {
+				return s.matchesLiteral(expr.X)
+			}
+			return false
+
+		case "value-only":
+			// do not match if the parent is equal to &
+			if parent := ctx.Parent(); parent != nil {
+				if expr, ok := parent.Node().(*dst.UnaryExpr); ok && expr.Op == token.AND {
+					return false
+				}
+			}
+			return s.matchesLiteral(ctx.Node())
+
+		default:
+			return s.matchesLiteral(ctx.Node())
+		}
 	}
 
 	kve, ok := ctx.Node().(*dst.KeyValueExpr)
@@ -109,7 +132,7 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 }
 
 func (s *structLiteral) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), jen.Lit(s.field))
+	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), jen.Lit(s.field), jen.Lit(s.match))
 }
 
 func (s *structLiteral) RenderHTML() string {
@@ -156,6 +179,7 @@ func init() {
 		var spec struct {
 			Type  string
 			Field string
+			Match string
 		}
 		if err := node.Decode(&spec); err != nil {
 			return nil, err
@@ -165,7 +189,9 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-
-		return StructLiteral(tn, spec.Field), nil
+		if spec.Match == "" {
+			spec.Match = "any"
+		}
+		return StructLiteral(tn, spec.Field, spec.Match), nil
 	}
 }

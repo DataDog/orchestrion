@@ -10,10 +10,11 @@ meta:
   icon: cloud
 
 aspects:
-  - id: Attach tracing middleware to the aws.Config
+  - id: Append tracing middleware to the aws.Config struct literal (value)
     join-point:
       struct-literal:
         type: github.com/aws/aws-sdk-go-v2/aws.Config
+        match: value-only
     advice:
       - wrap-expression:
           imports:
@@ -22,5 +23,23 @@ aspects:
           template: |-
             func(cfg aws.Config) (aws.Config) {
               awstrace.AppendMiddleware(&cfg)
+              return cfg
+            }({{ . }})
+
+  - id: Append tracing middleware to the aws.Config struct literal (pointer) or initialized through aws.NewConfig
+    join-point:
+      one-of:
+        - struct-literal:
+            type: github.com/aws/aws-sdk-go-v2/aws.Config
+            match: pointer-only
+        - function-call: github.com/aws/aws-sdk-go-v2/aws.NewConfig
+    advice:
+      - wrap-expression:
+          imports:
+            awstrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws
+            aws: github.com/aws/aws-sdk-go-v2/aws
+          template: |-
+            func(cfg *aws.Config) (*aws.Config) {
+              awstrace.AppendMiddleware(cfg)
               return cfg
             }({{ . }})

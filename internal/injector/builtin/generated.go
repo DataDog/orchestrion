@@ -18,7 +18,7 @@ import (
 var Aspects = [...]aspect.Aspect{
 	// From api/vault.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), ""),
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), "", "any"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"HttpClient\" }}\n  {{- $hasField = true -}}\n  HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  HttpClient: vaulttrace.NewHTTPClient(),\n  {{- end }}\n}",
@@ -30,10 +30,25 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From cloud/aws-sdk-v2.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), ""),
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), "", "value-only"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg aws.Config) (aws.Config) {\n  awstrace.AppendMiddleware(&cfg)\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
+					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), "", "pointer-only"),
+			join.FunctionCall("github.com/aws/aws-sdk-go-v2/aws.NewConfig"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *aws.Config) (*aws.Config) {\n  awstrace.AppendMiddleware(cfg)\n  return cfg\n}({{ . }})",
 				map[string]string{
 					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
 					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
@@ -473,7 +488,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From k8s-client.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), ""),
+		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), "", "any"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"WrapTransport\" }}\n  {{- $hasField = true -}}\n  WrapTransport: kubernetestransport.Wrappers({{ .Value }}, kubernetestrace.WrapRoundTripper),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  WrapTransport: kubernetestransport.Wrappers(nil, kubernetestrace.WrapRoundTripper),\n  {{- end }}\n}",
@@ -512,7 +527,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.StructLiteral(join.MustTypeName("net/http.Transport"), ""),
+			join.StructLiteral(join.MustTypeName("net/http.Transport"), "", "any"),
 			join.OneOf(
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"),
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/hostname/httputils"),
@@ -587,7 +602,7 @@ var Aspects = [...]aspect.Aspect{
 			join.Configuration(map[string]string{
 				"httpmode": "wrap",
 			}),
-			join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
+			join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler", "any"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/go-chi/chi/v5"),
 				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
@@ -772,4 +787,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:09kAMek8+niFbSDWqfhHEXQ67Qo8DiaaXEA2gaaJsVMZDtNtUko6vp+mUgSpOBlZO4PUZ7DGvzGW4Vox20BWmA=="
+const Checksum = "sha512:udu/ywGcONUUbTVjBvqzqXYNbtjnoenwr+X7+Q2SiKefXbcTpXlk9u7wBt6fiU6ykbEuZunAkLn/KJiugc7fLQ=="

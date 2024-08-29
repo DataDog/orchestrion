@@ -39,6 +39,7 @@ var suite = map[string]testCase{
 	"aws.v2/LoadDefaultConfig":             new(awsv2.TestCaseLoadDefaultConfig),
 	"aws.v2/NewConfig":                     new(awsv2.TestCaseNewConfig),
 	"aws.v2/StructLiteral":                 new(awsv2.TestCaseStructLiteral),
+	"aws.v2/StructLiteralPtr":              new(awsv2.TestCaseStructLiteralPtr),
 	"chi.v5":                               new(chiv5.TestCase),
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),

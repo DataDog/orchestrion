@@ -631,7 +631,7 @@
         "properties": {
           "struct-literal": {
             "title": "Match struct literal expressions",
-            "markdownDescription": "The `struct-literal` join point matches struct literal expressions that create an instance of the named struct. It only matches `CompositeLit` nodes. If `field` is specified, it only matches the literals that explicitly specify the named field.\n\nThe struct literal may have its address immediately taken (`&SomeType{/*...*/}`), and associated advice must be carefully designed to avoid breaking this (for example, wrapping it in an immediately-invoked function expression makes it impossible to take the value's address without first assigning it to a variable).",
+            "markdownDescription": "The `struct-literal` join point matches struct literal expressions that create an instance of the named struct. In case of `match` being equal to `value-only` or `any`, the matched node will be of type `CompositeLit`, and in case of being `pointer-only`, it will be of type `UnaryExpr` (the node itself will be available in the `{{ .X }}` field). If `field` is specified, it only matches the literals that explicitly specify the named field.\n\nThe struct literal may have its address immediately taken (`&SomeType{/*...*/}`), and associated advice must be carefully designed to avoid breaking this (for example, wrapping it in an immediately-invoked function expression makes it impossible to take the value's address without first assigning it to a variable). For cases like this, the `match` field comes handy to limit the type of expressions that are matched.",
             "type": "object",
             "required": ["type"],
             "properties": {
@@ -642,6 +642,12 @@
               "field": {
                 "description": "Only match struct literal expressions that include the specified field name.",
                 "$ref": "#/$defs/go/identifier"
+              },
+              "match": {
+                "description": "The struct literal expression style to match (value-only, pointer-only or any)",
+                "type": "string",
+                "enum": ["value-only", "pointer-only", "any"],
+                "default": "any"
               }
             },
             "additionalProperties": false
@@ -651,11 +657,15 @@
           {
             "struct-literal": {
               "type": "net/http.Server",
-              "field": "Handler"
+              "field": "Handler",
+              "match": "any"
             }
           },
           {
-            "struct-literal": { "type": "net/http.Transport" }
+            "struct-literal": {
+              "type": "net/http.Transport",
+              "match": "pointer-only"
+            }
           }
         ]
       },

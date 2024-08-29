@@ -14,11 +14,7 @@ import (
 )
 
 func AWSClientV2() {
-	cfg := aws.Config{
-		Region:       "test-region-1337",
-		Credentials:  aws.AnonymousCredentials{},
-		BaseEndpoint: aws.String("http://localhost:4566"),
-	}
+	cfg := newCfg1()
 
 	s3api := s3.NewFromConfig(cfg)
 	res, err := s3api.CreateBucket(context.Background(), &s3.CreateBucketInput{
@@ -28,4 +24,26 @@ func AWSClientV2() {
 		log.Fatal(err)
 	}
 	log.Printf("got response: %v\n", res)
+}
+
+func newCfg1() aws.Config {
+	cfg := aws.NewConfig()
+	return *cfg
+}
+
+func newCfg2() aws.Config {
+	cfg := &aws.Config{
+		Region:       "test-region-1337",
+		Credentials:  aws.AnonymousCredentials{},
+		BaseEndpoint: aws.String("http://localhost:4566"),
+	}
+	return *cfg
+}
+
+func newCfg3() aws.Config {
+	return aws.Config{
+		Region:       "test-region-1337",
+		Credentials:  aws.AnonymousCredentials{},
+		BaseEndpoint: aws.String("http://localhost:4566"),
+	}
 }
