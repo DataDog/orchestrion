@@ -6,8 +6,8 @@
 
 package main
 
-//line samples/client/gorm.go:10
 import (
+//line samples/client/gorm.go:10
 	"log"
 
 	jinzhu "github.com/jinzhu/gorm"
