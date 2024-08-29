@@ -29,7 +29,7 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	t.Setenv("DD_APPSEC_RULES", "./testdata/rasp.json")
+	t.Setenv("DD_APPSEC_RULES", "./testdata/rasp-only-rules.json")
 	t.Setenv("DD_APPSEC_ENABLED", "true")
 	t.Setenv("DD_APPSEC_RASP_ENABLED", "true")
 	t.Setenv("DD_APPSEC_WAF_TIMEOUT", "1h")
