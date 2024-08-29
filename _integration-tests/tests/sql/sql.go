@@ -13,7 +13,7 @@ import (
 	"orchestrion/integration/validator/trace"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // Auto-register sqlite3 driver
 	"github.com/stretchr/testify/require"
 )
 

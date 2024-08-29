@@ -35,7 +35,7 @@ func WithToolexec(bin string, args ...string) Option {
 
 	for _, arg := range args {
 		if buffer.Len() > 0 {
-			buffer.WriteByte(' ')
+			_ = buffer.WriteByte(' ')
 		}
 		// We are quoting all arguments to hopefully evade shell interpretation.
 		if _, err := fmt.Fprintf(&buffer, "%q", arg); err != nil {
@@ -104,7 +104,7 @@ func Run(goArgs []string, opts ...Option) error {
 					server.Shutdown()
 					log.Tracef("[JOBSERVER]: %s\n", server.CacheStats.String())
 				}()
-				env = append(env, fmt.Sprintf("%s=%s", client.EnvVarJobserverUrl, server.ClientURL()))
+				env = append(env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, server.ClientURL()))
 				// Set the process' goflags, since we know them already...
 				goflags.SetFlags("", argv[1:])
 			}

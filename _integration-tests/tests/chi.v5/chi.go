@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,9 +37,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		w.Write([]byte("Hello World!\n"))
 	})
 
-	go func() {
-		require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed)
-	}()
+	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {

@@ -61,12 +61,12 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	mappedPort, err := tc.server.MappedPort(ctx, nat.Port(port))
 	require.NoError(t, err)
-	hostIp, err := tc.server.Host(ctx)
+	hostIP, err := tc.server.Host(ctx)
 	require.NoError(t, err)
 
 	tc.cfg = &aws.Config{
 		Credentials: credentials.NewStaticCredentials("NOTANACCESSKEY", "NOTASECRETKEY", ""),
-		Endpoint:    aws.String(fmt.Sprintf("http://%s:%s", hostIp, mappedPort.Port())),
+		Endpoint:    aws.String(fmt.Sprintf("http://%s:%s", hostIP, mappedPort.Port())),
 		Region:      aws.String("test-region-1337"),
 	}
 }
@@ -83,7 +83,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{

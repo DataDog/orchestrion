@@ -63,7 +63,7 @@ func main() {
 	}
 	if len(errors) > 0 {
 		for _, err := range errors {
-			fmt.Println(err)
+			_, _ = fmt.Println(err)
 		}
 		os.Exit(1)
 	}

@@ -23,7 +23,7 @@ import (
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s <dir>\n", os.Args[0])
+		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s <dir>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 }

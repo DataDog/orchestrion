@@ -94,17 +94,16 @@ func (s *funcDecl) AsCode() jen.Code {
 func (s *funcDecl) RenderHTML() string {
 	var buf strings.Builder
 
-	buf.WriteString("<div class=\"join-point function-declaratop,\">\n")
-	buf.WriteString("  <span class=\"type pill\">Function declaration</span>\n")
-	buf.WriteString("  <ul>\n")
+	_, _ = buf.WriteString("<div class=\"join-point function-declaratop,\">\n")
+	_, _ = buf.WriteString("  <span class=\"type pill\">Function declaration</span>\n")
+	_, _ = buf.WriteString("  <ul>\n")
 	for _, opt := range s.opts {
-		buf.WriteString("    <li>\n")
-		buf.WriteString(opt.toHTML())
-		buf.WriteString("    </li>\n")
-
+		_, _ = buf.WriteString("    <li>\n")
+		_, _ = buf.WriteString(opt.toHTML())
+		_, _ = buf.WriteString("    </li>\n")
 	}
-	buf.WriteString("  </ul>\n")
-	buf.WriteString("</div>\n")
+	_, _ = buf.WriteString("  </ul>\n")
+	_, _ = buf.WriteString("</div>\n")
 
 	return buf.String()
 }
@@ -115,7 +114,7 @@ func Name(name string) FunctionOption {
 	return funcName(name)
 }
 
-func (fo funcName) impliesImported() []string {
+func (funcName) impliesImported() []string {
 	return nil
 }
 
@@ -218,42 +217,42 @@ func (fo *signature) AsCode() jen.Code {
 func (fo *signature) toHTML() string {
 	var buf strings.Builder
 
-	buf.WriteString("<div class=\"join-point function-option fo-signature\">\n")
-	buf.WriteString("  <span class=\"type pill\">Signature matches</span>\n")
-	buf.WriteString("<ul>\n")
+	_, _ = buf.WriteString("<div class=\"join-point function-option fo-signature\">\n")
+	_, _ = buf.WriteString("  <span class=\"type pill\">Signature matches</span>\n")
+	_, _ = buf.WriteString("<ul>\n")
 
 	if len(fo.args) > 0 {
-		buf.WriteString("    <li>\n")
-		buf.WriteString("      <span class=\"type pill\">Arguments</span>\n")
-		buf.WriteString("      <ol>\n")
+		_, _ = buf.WriteString("    <li>\n")
+		_, _ = buf.WriteString("      <span class=\"type pill\">Arguments</span>\n")
+		_, _ = buf.WriteString("      <ol>\n")
 		for _, arg := range fo.args {
-			buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
-			buf.WriteString(arg.RenderHTML())
-			buf.WriteString("        </li>\n")
+			_, _ = buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
+			_, _ = buf.WriteString(arg.RenderHTML())
+			_, _ = buf.WriteString("        </li>\n")
 		}
-		buf.WriteString("      </ol>\n")
-		buf.WriteString("    </li>\n")
+		_, _ = buf.WriteString("      </ol>\n")
+		_, _ = buf.WriteString("    </li>\n")
 	} else {
-		buf.WriteString("    <li class=\"flex\"><span class=\"type\">Arguments</span><span class=\"value\">None</span></li>\n")
+		_, _ = buf.WriteString("    <li class=\"flex\"><span class=\"type\">Arguments</span><span class=\"value\">None</span></li>\n")
 	}
 
 	if len(fo.returns) > 0 {
-		buf.WriteString("    <li>\n")
-		buf.WriteString("      <span class=\"type pill\">Return Values</span>\n")
-		buf.WriteString("      <ol>\n")
+		_, _ = buf.WriteString("    <li>\n")
+		_, _ = buf.WriteString("      <span class=\"type pill\">Return Values</span>\n")
+		_, _ = buf.WriteString("      <ol>\n")
 		for _, arg := range fo.returns {
-			buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
-			buf.WriteString(arg.RenderHTML())
-			buf.WriteString("        </li>\n")
+			_, _ = buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
+			_, _ = buf.WriteString(arg.RenderHTML())
+			_, _ = buf.WriteString("        </li>\n")
 		}
-		buf.WriteString("      </ol>\n")
-		buf.WriteString("    </li>\n")
+		_, _ = buf.WriteString("      </ol>\n")
+		_, _ = buf.WriteString("    </li>\n")
 	} else {
-		buf.WriteString("    <li class=\"flex\"><span class=\"type\">Return Values</span><span class=\"value\">None</span></li>\n")
+		_, _ = buf.WriteString("    <li class=\"flex\"><span class=\"type\">Return Values</span><span class=\"value\">None</span></li>\n")
 	}
 
-	buf.WriteString("</ul>\n")
-	buf.WriteString("</div>\n")
+	_, _ = buf.WriteString("</ul>\n")
+	_, _ = buf.WriteString("</div>\n")
 
 	return buf.String()
 }
@@ -305,7 +304,7 @@ func (fo oneOfFunctions) AsCode() jen.Code {
 	})
 }
 
-func (fo oneOfFunctions) toHTML() string {
+func (oneOfFunctions) toHTML() string {
 	return "one-of"
 }
 
@@ -353,7 +352,7 @@ func (fo *receiver) evaluate(info *functionInformation) bool {
 	return info.Receiver != nil && fo.typeName.MatchesDefinition(info.Receiver, info.ImportPath)
 }
 
-func (fo *receiver) impliesImported() []string {
+func (*receiver) impliesImported() []string {
 	return nil
 }
 

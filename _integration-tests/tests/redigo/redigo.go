@@ -97,7 +97,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	assert.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{

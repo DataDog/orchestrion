@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	EnvVarJobserverUrl = "ORCHESTRION_JOBSERVER_URL"
+	EnvVarJobserverURL = "ORCHESTRION_JOBSERVER_URL"
 	urlFileName        = ".orchestrion-jobserver"
 )
 
@@ -44,8 +44,8 @@ func FromEnvironment(workDir string) (*Client, error) {
 		return client, nil
 	}
 
-	if url := os.Getenv(EnvVarJobserverUrl); url != "" {
-		log.Debugf("Connecting to job server at %q (from %s)\n", url, EnvVarJobserverUrl)
+	if url := os.Getenv(EnvVarJobserverURL); url != "" {
+		log.Debugf("Connecting to job server at %q (from %s)\n", url, EnvVarJobserverURL)
 		c, err := Connect(url)
 		if err != nil {
 			return nil, err
@@ -84,11 +84,13 @@ func FromEnvironment(workDir string) (*Client, error) {
 	defer cancel()
 	client, err := waitForURLFile(ctx, urlFilePath, cmd)
 	if err != nil {
-		cmd.Process.Kill() // Kill the process if it's still running...
+		err = errors.Join(err, cmd.Process.Kill()) // Kill the process if it's still running...
 		return nil, err
 	}
 	// Detach the process, so it survives this one if needed...
-	cmd.Process.Release()
+	if err := cmd.Process.Release(); err != nil {
+		log.Warnf("Failed to detach from job server process: %v\n", err)
+	}
 
 	return client, nil
 }
@@ -120,18 +122,19 @@ func clientFromURLFile(path string) (*Client, string, error) {
 
 func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd) (*Client, error) {
 	for {
-		if c, url, err := clientFromURLFile(path); err == nil {
+		c, url, err := clientFromURLFile(path)
+		if err == nil {
 			client = c
 			// Set it in the current environment so that child processes don't have to go through the same dance again.
-			os.Setenv(EnvVarJobserverUrl, url)
+			_ = os.Setenv(EnvVarJobserverURL, url)
 			return c, nil
-		} else if cmd.ProcessState == nil && ctx.Err() == nil {
-			log.Tracef("Job server still not ready in %q...\n", path)
-			time.Sleep(150 * time.Millisecond)
-		} else {
+		}
+		if cmd.ProcessState != nil || ctx.Err() != nil {
 			// Attempt to kill the process if it hasn't died by itself...
 			_ = cmd.Process.Kill()
 			return nil, err
 		}
+		log.Tracef("Job server still not ready in %q...\n", path)
+		time.Sleep(150 * time.Millisecond)
 	}
 }

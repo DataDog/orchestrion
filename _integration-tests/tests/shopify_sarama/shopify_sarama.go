@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package shopify_sarama
+package shopifysarama
 
 import (
 	"context"
@@ -111,7 +111,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{

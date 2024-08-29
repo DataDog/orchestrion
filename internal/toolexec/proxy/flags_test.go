@@ -18,7 +18,6 @@ type testFlagSet struct {
 }
 
 func TestParseFlags(t *testing.T) {
-
 	for name, tc := range map[string]struct {
 		args     []string
 		expected testFlagSet
@@ -85,5 +84,4 @@ func TestParseFlags(t *testing.T) {
 			require.True(t, reflect.DeepEqual(tc.expected, flags))
 		})
 	}
-
 }

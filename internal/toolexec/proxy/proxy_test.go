@@ -39,7 +39,7 @@ func TestReplaceParam(t *testing.T) {
 			require.NotContains(t, cmd.Args(), tc.new)
 			err := cmd.ReplaceParam(tc.old, tc.new)
 			if tc.error {
-				require.NotNil(t, err)
+				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 				require.Contains(t, cmd.Args(), tc.new)
@@ -71,7 +71,6 @@ func TestParseCommand(t *testing.T) {
 			expectedStage: "b001",
 		},
 	} {
-
 		t.Run(name, func(t *testing.T) {
 			cmd := proxy.MustParseCommand(tc.input)
 			require.Equal(t, tc.expectedType, cmd.Type())

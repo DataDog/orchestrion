@@ -100,7 +100,7 @@ func Test(t *testing.T) {
 	}
 }
 
-func shell(dir, cmd string, args ...string) (string, error) {
+func shell(dir string, cmd string, args ...string) (string, error) {
 	var stdout bytes.Buffer
 
 	child := exec.Command(cmd, args...)

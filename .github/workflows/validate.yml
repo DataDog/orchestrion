@@ -143,7 +143,7 @@ jobs:
       - name: Lint main module
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
         with:
-          version: v1.54.2
+          version: v1.60.3
       - name: Lint integration tests
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
         with:

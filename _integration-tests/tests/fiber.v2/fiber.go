@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,10 +25,10 @@ type TestCase struct {
 func (tc *TestCase) Setup(t *testing.T) {
 	tc.App = fiber.New(fiber.Config{DisableStartupMessage: true})
 	tc.App.Get("/ping", func(c *fiber.Ctx) error { return c.JSON(map[string]any{"message": "pong"}) })
-	go func() { require.NoError(t, tc.App.Listen("127.0.0.1:8080")) }()
+	go func() { assert.NoError(t, tc.App.Listen("127.0.0.1:8080")) }()
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (*TestCase) Run(t *testing.T) {
 	resp, err := http.Get("http://127.0.0.1:8080/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)

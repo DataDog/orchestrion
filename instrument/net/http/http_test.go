@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	validUrl   = "http://example.com"
-	invalidUrl = "http:/\x00/invalid."
+	validURL   = "http://example.com"
+	invalidURL = "http:/\x00/invalid."
 )
 
 func TestGet(t *testing.T) {
@@ -30,11 +30,11 @@ func TestGet(t *testing.T) {
 			func(req *http.Request) (*http.Response, error) {
 				assert.Equal(t, ctx, req.Context())
 				assert.Equal(t, "GET", req.Method)
-				assert.Equal(t, validUrl, req.URL.String())
+				assert.Equal(t, validURL, req.URL.String())
 				return &http.Response{StatusCode: 200}, nil
 			},
 			func() {
-				res, err := Get(ctx, validUrl)
+				res, err := Get(ctx, validURL)
 				require.NoError(t, err)
 				require.Equal(t, 200, res.StatusCode)
 			},
@@ -43,13 +43,13 @@ func TestGet(t *testing.T) {
 
 	t.Run("invalid URL", func(t *testing.T) {
 		withMockDefaultClient(
-			func(req *http.Request) (*http.Response, error) {
+			func(*http.Request) (*http.Response, error) {
 				assert.Fail(t, "unexpected call to RoundTrip")
 				return nil, errors.New("unreachable")
 			},
 			func() {
 				ctx := context.Background()
-				res, err := Get(ctx, invalidUrl)
+				res, err := Get(ctx, invalidURL)
 				require.Error(t, err)
 				require.Nil(t, res)
 			},
@@ -64,11 +64,11 @@ func TestHead(t *testing.T) {
 			func(req *http.Request) (*http.Response, error) {
 				assert.Equal(t, ctx, req.Context())
 				assert.Equal(t, "HEAD", req.Method)
-				assert.Equal(t, validUrl, req.URL.String())
+				assert.Equal(t, validURL, req.URL.String())
 				return &http.Response{StatusCode: 200}, nil
 			},
 			func() {
-				res, err := Head(ctx, validUrl)
+				res, err := Head(ctx, validURL)
 				require.NoError(t, err)
 				require.Equal(t, 200, res.StatusCode)
 			},
@@ -77,13 +77,13 @@ func TestHead(t *testing.T) {
 
 	t.Run("invalid URL", func(t *testing.T) {
 		withMockDefaultClient(
-			func(req *http.Request) (*http.Response, error) {
+			func(*http.Request) (*http.Response, error) {
 				assert.Fail(t, "unexpected call to RoundTrip")
 				return nil, errors.New("unreachable")
 			},
 			func() {
 				ctx := context.Background()
-				res, err := Head(ctx, invalidUrl)
+				res, err := Head(ctx, invalidURL)
 				require.Error(t, err)
 				require.Nil(t, res)
 			},
@@ -101,15 +101,15 @@ func TestPost(t *testing.T) {
 			func(req *http.Request) (*http.Response, error) {
 				assert.Equal(t, ctx, req.Context())
 				assert.Equal(t, "POST", req.Method)
-				assert.Equal(t, validUrl, req.URL.String())
+				assert.Equal(t, validURL, req.URL.String())
 				assert.Equal(t, contentType, req.Header.Get("content-type"))
 				data, err := io.ReadAll(req.Body)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, body, data)
 				return &http.Response{StatusCode: 200}, nil
 			},
 			func() {
-				res, err := Post(ctx, validUrl, contentType, bytes.NewReader(body))
+				res, err := Post(ctx, validURL, contentType, bytes.NewReader(body))
 				require.NoError(t, err)
 				require.Equal(t, 200, res.StatusCode)
 			},
@@ -118,13 +118,13 @@ func TestPost(t *testing.T) {
 
 	t.Run("invalid URL", func(t *testing.T) {
 		withMockDefaultClient(
-			func(req *http.Request) (*http.Response, error) {
+			func(*http.Request) (*http.Response, error) {
 				assert.Fail(t, "unexpected call to RoundTrip")
 				return nil, errors.New("unreachable")
 			},
 			func() {
 				ctx := context.Background()
-				res, err := Post(ctx, invalidUrl, contentType, bytes.NewReader(body))
+				res, err := Post(ctx, invalidURL, contentType, bytes.NewReader(body))
 				require.Error(t, err)
 				require.Nil(t, res)
 			},
@@ -144,15 +144,15 @@ func TestPostForm(t *testing.T) {
 			func(req *http.Request) (*http.Response, error) {
 				assert.Equal(t, ctx, req.Context())
 				assert.Equal(t, "POST", req.Method)
-				assert.Equal(t, validUrl, req.URL.String())
+				assert.Equal(t, validURL, req.URL.String())
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("content-type"))
 				data, err := io.ReadAll(req.Body)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, []byte(values.Encode()), data)
 				return &http.Response{StatusCode: 200}, nil
 			},
 			func() {
-				res, err := PostForm(ctx, validUrl, values)
+				res, err := PostForm(ctx, validURL, values)
 				require.NoError(t, err)
 				require.Equal(t, 200, res.StatusCode)
 			},
@@ -161,13 +161,13 @@ func TestPostForm(t *testing.T) {
 
 	t.Run("invalid URL", func(t *testing.T) {
 		withMockDefaultClient(
-			func(req *http.Request) (*http.Response, error) {
+			func(*http.Request) (*http.Response, error) {
 				assert.Fail(t, "unexpected call to RoundTrip")
 				return nil, errors.New("unreachable")
 			},
 			func() {
 				ctx := context.Background()
-				res, err := PostForm(ctx, invalidUrl, values)
+				res, err := PostForm(ctx, invalidURL, values)
 				require.Error(t, err)
 				require.Nil(t, res)
 			},

@@ -161,7 +161,7 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 		return node
 	}
 
-	return dstutil.Apply(node, func(csor *dstutil.Cursor) bool {
+	res, _ := dstutil.Apply(node, func(csor *dstutil.Cursor) bool {
 		sel, ok := csor.Node().(*dst.SelectorExpr)
 		if !ok {
 			return true
@@ -187,6 +187,8 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 
 		return true
 	}, nil).(dst.Decl)
+
+	return res
 }
 
 func (t *Template) AsCode() jen.Code {
@@ -257,21 +259,21 @@ func (t *Template) RenderHTML() string {
 		}
 		sort.Strings(keys)
 
-		buf.WriteString("\n\n```go\n")
-		buf.WriteString("// Using the following synthetic imports:\n")
-		buf.WriteString("import (\n")
+		_, _ = buf.WriteString("\n\n```go\n")
+		_, _ = buf.WriteString("// Using the following synthetic imports:\n")
+		_, _ = buf.WriteString("import (\n")
 		for _, name := range keys {
-			fmt.Fprintf(&buf, "\t%-*s %q\n", nameLen, name, t.imports[name])
+			_, _ = fmt.Fprintf(&buf, "\t%-*s %q\n", nameLen, name, t.imports[name])
 		}
-		buf.WriteString(")\n```")
+		_, _ = buf.WriteString(")\n```")
 	}
 
-	buf.WriteString("\n\n```go-template\n")
+	_, _ = buf.WriteString("\n\n```go-template\n")
 	// Render with tabs so it's more go-esque!
-	buf.WriteString(regexp.MustCompile(`(?m)^(?:  )+`).ReplaceAllStringFunc(t.source, func(orig string) string {
+	_, _ = buf.WriteString(regexp.MustCompile(`(?m)^(?:  )+`).ReplaceAllStringFunc(t.source, func(orig string) string {
 		return strings.Repeat("\t", len(orig)/2)
 	}))
-	buf.WriteString("\n```\n")
+	_, _ = buf.WriteString("\n```\n")
 
 	return buf.String()
 }

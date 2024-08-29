@@ -11,7 +11,7 @@ import (
 	"orchestrion/integration/validator/trace"
 )
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{

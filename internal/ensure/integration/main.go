@@ -20,5 +20,5 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	fmt.Println("This command has not respawned!")
+	_, _ = fmt.Println("This command has not respawned!")
 }

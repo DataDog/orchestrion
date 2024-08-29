@@ -53,16 +53,16 @@ func (o allOf) AsCode() jen.Code {
 
 func (o allOf) RenderHTML() string {
 	var buf strings.Builder
-	buf.WriteString("<div class=\"join-point all-of\">")
-	buf.WriteString("  <span class=\"type pill\">All of</span>")
-	buf.WriteString("  <ul>\n")
+	_, _ = buf.WriteString("<div class=\"join-point all-of\">")
+	_, _ = buf.WriteString("  <span class=\"type pill\">All of</span>")
+	_, _ = buf.WriteString("  <ul>\n")
 	for _, candidate := range o {
-		buf.WriteString("    <li class=\"candidate\">\n")
-		buf.WriteString(candidate.RenderHTML())
-		buf.WriteString("    </li>\n")
+		_, _ = buf.WriteString("    <li class=\"candidate\">\n")
+		_, _ = buf.WriteString(candidate.RenderHTML())
+		_, _ = buf.WriteString("    </li>\n")
 	}
-	buf.WriteString("  </ul>\n")
-	buf.WriteString("</div>\n")
+	_, _ = buf.WriteString("  </ul>\n")
+	_, _ = buf.WriteString("</div>\n")
 	return buf.String()
 }
 

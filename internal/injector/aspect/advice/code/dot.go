@@ -54,7 +54,7 @@ func (p *placeholders) forNode(node dst.Node, singleton bool) string {
 		p.byName[name] = node
 		p.singletons[node] = name
 	} else {
-		p.byName[name] = dst.Clone(node).(dst.Expr)
+		p.byName[name], _ = dst.Clone(node).(dst.Expr)
 	}
 
 	return fmt.Sprintf("_.%s", name)
