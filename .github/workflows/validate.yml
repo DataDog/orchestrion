@@ -144,12 +144,10 @@ jobs:
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
         with:
           version: v1.54.2
-          skip-cache: true # actions/setup-go has already done this
       - name: Lint integration tests
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
         with:
           version: v1.54.2
-          skip-cache: true # actions/setup-go has already done this
           working-directory: _integration-tests
       - name: Verify license headers
         run: go run tools/headercheck/header_check.go

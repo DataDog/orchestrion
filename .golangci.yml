@@ -11,3 +11,6 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unexported-return
       - name: unexported-return
         disabled: true
+
+run:
+  build-tags: [integration]
