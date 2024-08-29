@@ -22,12 +22,8 @@ code: |-
   package main
 
   import (
-    "context"
     "log"
     "net/http"
-    "time"
-
-    "orchestrion/integration"
 
     . "github.com/go-chi/chi/v5"
   )
@@ -41,9 +37,5 @@ code: |-
       Addr:    ":8080",
       Handler: router,
     }
-    integration.OnSignal(func() {
-      ctx, _ := context.WithTimeout(context.Background(), time.Second)
-      s.Shutdown(ctx)
-    })
     log.Print(s.ListenAndServe())
   }
