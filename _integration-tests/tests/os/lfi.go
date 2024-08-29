@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -29,6 +30,10 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("appsec does not support Windows")
+	}
+
 	t.Setenv("DD_APPSEC_RULES", "./testdata/rasp-only-rules.json")
 	t.Setenv("DD_APPSEC_ENABLED", "true")
 	t.Setenv("DD_APPSEC_RASP_ENABLED", "true")
