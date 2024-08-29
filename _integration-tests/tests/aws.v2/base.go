@@ -10,6 +10,8 @@ package awsv2
 import (
 	"context"
 	"fmt"
+	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -32,6 +34,10 @@ type base struct {
 }
 
 func (b *base) setup(t *testing.T) {
+	if _, ok := os.LookupEnv("CI"); ok && runtime.GOOS != "linux" {
+		t.Skip("skipping test as it requires docker to run in the CI")
+	}
+
 	port := "8000/tcp"
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
