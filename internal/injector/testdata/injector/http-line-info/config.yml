@@ -37,8 +37,6 @@ aspects:
               {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
             )
 
-preserveLineInfo: true
-
 syntheticReferences:
   github.com/datadog/orchestrion/instrument/event: true
   github.com/datadog/orchestrion/instrument: true

@@ -3,7 +3,7 @@ title: "Getting Started"
 weight: 1
 
 prev: /docs
-next: /docs/built-in
+next: /features
 ---
 
 ## Requirements

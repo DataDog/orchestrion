@@ -12,9 +12,6 @@ aspects:
           template: |-
             fmt.Println("hello world")
 
-preserveLineInfo: true
-mustCompile: true
-
 syntheticReferences:
   fmt: true
 

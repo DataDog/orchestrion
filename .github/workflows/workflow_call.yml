@@ -7,12 +7,22 @@ on:
         required: false
         type: string
         default: main
+      runs-on:
+        description: 'The runner to use for the job'
+        required: false
+        type: string
+        default: ubuntu-latest
   workflow_call:
     inputs:
       dd-trace-go-ref:
         type: string
         required: true
         description: 'The ref to checkout dd-trace-go at'
+      runs-on:
+        description: 'The runner to use for the job'
+        required: false
+        type: string
+        default: ubuntu-latest
 
 permissions: read-all
 
@@ -22,7 +32,7 @@ concurrency:
 
 jobs:
   integration-tests:
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ${{ inputs.runs-on }}
     name: Integration Smoke Tests
     steps:
       - name: Checkout orchestrion
