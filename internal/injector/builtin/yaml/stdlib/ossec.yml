@@ -11,12 +11,11 @@ meta:
     Protection from Local File Inclusion (LFI) Attacks
     
     All known functions that open files are susceptible to Local File Inclusion (LFI) attacks. This aspect protects
-    against LFI attacks by wrapping the os.OpenFile function with a security operation that will block the operation if
+    against LFI attacks by wrapping the `os.OpenFile` function with a security operation that will block the operation if
     it is deemed unsafe.
     
-    Instrumenting only the os.OpenFile function is sufficient to protect against LFI attacks, as all other functions in
-    the os package that open files ultimately call os.OpenFile (as of Go 1.23).
-
+    Instrumenting only the `os.OpenFile` function is sufficient to protect against LFI attacks, as all other functions in
+    the `os` package that open files ultimately call `os.OpenFile` (as of Go 1.23).
 aspects:
   - id: OpenFile
     join-point:
@@ -34,7 +33,7 @@ aspects:
           template: |-
             __dd_parent_op, _ := dyngo.FromContext(nil)
             if __dd_parent_op != nil {
-            	__dd_op := &ossec.OpenOperation{
+                __dd_op := &ossec.OpenOperation{
                     Operation: dyngo.NewOperation(__dd_parent_op),
                 }
 
