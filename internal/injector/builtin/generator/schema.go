@@ -124,9 +124,9 @@ func documentSchemaInstance(schema *jsonschema.Schema, path string) error {
 	if len(schema.Examples) > 0 {
 		fmt.Fprintln(file, "## Examples")
 		fmt.Fprintln(file)
-		for _, ex := range schema.Examples {
+		for idx, ex := range schema.Examples {
 			if err := schema.Validate(ex); err != nil {
-				return fmt.Errorf("invalid example: %w", err)
+				return fmt.Errorf("invalid example (index %d): %w", idx, err)
 			}
 
 			yml, err := yaml.Marshal(ex)
