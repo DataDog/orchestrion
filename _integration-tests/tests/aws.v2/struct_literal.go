@@ -27,7 +27,7 @@ func (tc *TestCaseStructLiteral) Setup(t *testing.T) {
 	tc.cfg = aws.Config{
 		Region:       "test-region-1337",
 		Credentials:  credentials.NewStaticCredentialsProvider("NOTANACCESSKEY", "NOTASECRETKEY", ""),
-		BaseEndpoint: aws.String(fmt.Sprintf("http://%s:%s", tc.hostIP, tc.mappedPort)),
+		BaseEndpoint: aws.String(fmt.Sprintf("http://%s:%s", tc.host, tc.port)),
 	}
 }
 

@@ -26,7 +26,7 @@ func (tc *TestCaseNewConfig) Setup(t *testing.T) {
 	cfg := aws.NewConfig()
 	cfg.Region = "test-region-1337"
 	cfg.Credentials = credentials.NewStaticCredentialsProvider("NOTANACCESSKEY", "NOTASECRETKEY", "")
-	cfg.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%s", tc.hostIP, tc.mappedPort))
+	cfg.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%s", tc.host, tc.port))
 	tc.cfg = *cfg
 }
 

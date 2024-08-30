@@ -32,7 +32,7 @@ func (tc *TestCaseLoadDefaultConfig) Setup(t *testing.T) {
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("NOTANACCESSKEY", "NOTASECRETKEY", "")),
 	)
 	require.NoError(t, err)
-	cfg.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%s", tc.hostIP, tc.mappedPort))
+	cfg.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%s", tc.host, tc.port))
 	tc.cfg = cfg
 }
 
