@@ -26,7 +26,6 @@ func StartDynamoDBTestContainer(t *testing.T) (c testcontainers.Container, host 
 			Image:        "amazon/dynamodb-local:latest",
 			ExposedPorts: []string{exposedPort},
 			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
-			Name:         "dynamodb-local",
 			WorkingDir:   "/home/dynamodblocal",
 			Cmd: []string{
 				"-jar", "DynamoDBLocal.jar",
@@ -45,7 +44,7 @@ func StartDynamoDBTestContainer(t *testing.T) (c testcontainers.Container, host 
 	server, err := testcontainers.GenericContainer(ctx, req)
 	AssertTestContainersError(t, err)
 
-	mappedPort, err := server.MappedPort(ctx, nat.Port(port))
+	mappedPort, err := server.MappedPort(ctx, nat.Port(exposedPort))
 	require.NoError(t, err)
 
 	host, err = server.Host(ctx)
@@ -61,7 +60,8 @@ func AssertTestContainersError(t *testing.T, err error) {
 		return
 	}
 	if _, ok := os.LookupEnv("CI"); ok && runtime.GOOS != "linux" {
-		t.Skipf("skipping test since the current CI environment failed to start container: %v", err)
+		t.Skipf("failed to start container (CI does not support docker, skipping test): %v", err)
+		return
 	}
 	require.NoError(t, err)
 }
