@@ -9,291 +9,189 @@
 package injector
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"go/parser"
+	"go/importer"
 	"go/token"
-	"os"
-	"path/filepath"
-	"sync"
 
-	"github.com/datadog/orchestrion/internal/goflags"
 	"github.com/datadog/orchestrion/internal/injector/aspect"
 	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/injector/builtin"
 	"github.com/datadog/orchestrion/internal/injector/typed"
-	"github.com/datadog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
-	"github.com/dave/dst/decorator/resolver/guess"
+	"github.com/dave/dst/decorator/resolver"
+	"github.com/dave/dst/decorator/resolver/gotypes"
 	"github.com/dave/dst/dstutil"
-	"golang.org/x/tools/go/packages"
 )
 
 type (
-	// Injector injects go code into a program.
+	// Injector injects go code into a specific Go package.
 	Injector struct {
-		fileset    *token.FileSet
-		decorators []*decorator.Decorator
-		restorer   *decorator.Restorer
-		opts       Options
-		mutex      sync.Mutex // Guards access to InjectFile
-	}
-
-	// ModifiedFileFn is called with the original file and must return the path to use when writing a modified version.
-	ModifiedFileFn func(string) string
-
-	Options struct {
-		// Aspects is the set of configured injections to attempt.
+		// Aspects is the set of configured aspects to use.
 		Aspects []aspect.Aspect
-		// Dir is the working directory to use for resolving dependencies, etc... If blank, the current working directory is
-		// used.
-		Dir string
-		// IncludeTests requests test files to be prepared for injection, too.
-		IncludeTests bool
-		// ModifiedFile is called to obtain the file name to use when writing a modified file. If nil, the original file is
-		// overwritten in-place.
-		ModifiedFile ModifiedFileFn
-		// PreserveLineInfo enables emission of //line directives to preserve line information from the original file, so
-		// that stack traces resolve to the original source code. This is strongly recommended when performing compile-time
-		// injection.
-		PreserveLineInfo bool
+
+		// ImportPath is the import path of the package that will be injected.
+		ImportPath string
+		// Name is the name of the package that will be injected. If blank, it will be determined from parsing source files.
+		Name string
+		// GoVersion is the go runtime version required by this package. If blank, no go runtime compatibility will be
+		// asserted.
+		GoVersion string
+
+		// ModifiedFile is called to determine the output file name for a modified file. If nil, the input file is modified
+		// in-place.
+		ModifiedFile func(string) string
+		// Lookup is a function that resolves and imported package's archive file.
+		Lookup importer.Lookup
+		// RootConfig is the root configuration value to use.
+		RootConfig map[string]string
+
+		// restorerResolver is used to restore modified files. It's created on-demand then re-used.
+		restorerResolver resolver.RestorerResolver
+	}
+
+	// InjectedFile contains information about a modified file. It can be used to update compilation instructions.
+	InjectedFile struct {
+		// References holds new references created while injecting the package, if any.
+		References typed.ReferenceMap
+		// Filename is the name of the file that needs to be compiled in place of the original one. It may be identical to
+		// the input file if the Injector.ModifiedFile function is nil or returns identity.
+		Filename string
+	}
+
+	result struct {
+		InjectedFile
+		Modified bool
 	}
 )
 
-// New creates a new injector with the specified options.
-func New(pkgDir string, opts Options) (*Injector, error) {
-	fileset := token.NewFileSet()
-	cfg := &packages.Config{
-		// Explicitly disable toolexec for this, as if provided via $GOFLAGS, it
-		// would be honored by the go/packages loader and that'd cause this call to
-		// become a fork-bomb.
-		BuildFlags: []string{"-toolexec="},
-		Dir:        opts.Dir,
-		Fset:       fileset,
-		Mode: packages.NeedName |
-			packages.NeedFiles |
-			packages.NeedImports |
-			packages.NeedTypes |
-			packages.NeedTypesSizes |
-			packages.NeedSyntax |
-			packages.NeedTypesInfo,
-		Tests: opts.IncludeTests,
-		Logf:  func(format string, args ...any) { log.Tracef(format+"\n", args...) },
-	}
-	if flags, err := goflags.Flags(); err == nil {
-		// Honor any `-tags`  flags provided by the user, as these may affect what
-		// is getting compiled or not.
-		if tags, hasTags := flags.Get("-tags"); hasTags {
-			cfg.BuildFlags = append(cfg.BuildFlags, fmt.Sprintf("-tags=%s", tags))
-		}
-	}
-
-	var (
-		pkgPath     string
-		decorators  []*decorator.Decorator
-		restorerMap map[string]string
-	)
-	if pkgs, err := decorator.Load(cfg, pkgDir); err != nil {
+// InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
+// the receiving Injector. The method returns a map that associates the original source file path to the modified file
+// information. It does not contain entries for unmodified files.
+func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) {
+	if err := i.validate(); err != nil {
 		return nil, err
-	} else {
-		decorators = make([]*decorator.Decorator, 0, len(pkgs))
-		restorerMap = make(map[string]string, len(builtin.RestorerMap))
-		for path, name := range builtin.RestorerMap {
-			restorerMap[path] = name
-		}
+	}
 
-		for _, pkg := range pkgs {
-			if len(pkg.Errors) > 0 {
-				errs := make([]error, len(pkg.Errors))
-				for i := range pkg.Errors {
-					errs[i] = pkg.Errors[i]
-				}
-				return nil, errors.Join(errs...)
-			}
+	fset := token.NewFileSet()
+	astFiles, err := parseFiles(fset, files)
+	if err != nil {
+		return nil, err
+	}
 
-			if pkgPath == "" {
-				// The first non-blank package path is the "top level" one (the one we care about).
-				pkgPath = pkg.PkgPath
-			}
+	uses, err := i.typeCheck(fset, astFiles)
+	if err != nil {
+		return nil, err
+	}
 
-			for _, imp := range pkg.Imports {
-				if imp.Name == "" {
-					// Happens when there is an error while processing the import, typically inability to resolve the name due to
-					// a typo or something. If we allow blank names in the map, the restorer just removes the qualifiers, which is
-					// obviously undesirable.
-					continue
-				}
-				restorerMap[imp.PkgPath] = imp.Name
-			}
-
-			// pkg.Decorator is nil in case the package in question does not include any go source file. This can be the case
-			// when building test packages that do not include any non-test source file; in which case the "package under
-			// test" is empty. This is because the loader returns three different entries when processing tests:
-			// 1. The package under test (which may be empty)
-			// 2. The test functions
-			// 3. The test binary/main
-			if pkg.Decorator != nil {
-				decorators = append(decorators, pkg.Decorator)
-			}
+	decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
+	dstFiles := make([]*dst.File, len(astFiles))
+	for idx, astFile := range astFiles {
+		dstFiles[idx], err = decorator.DecorateFile(astFile)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	if len(decorators) == 0 {
-		return nil, errors.New("no decorators could be created")
+	result := make(map[string]InjectedFile, len(files))
+	for idx, dstFile := range dstFiles {
+		res, err := i.injectFile(decorator, dstFile)
+		if err != nil {
+			return nil, err
+		}
+		if res.Modified {
+			result[files[idx]] = res.InjectedFile
+		}
 	}
-
-	return &Injector{
-		fileset:    fileset,
-		decorators: decorators,
-		restorer:   decorator.NewRestorerWithImports(pkgPath, guess.WithMap(restorerMap)),
-		opts:       opts,
-	}, nil
+	return result, nil
 }
 
-type (
-	// Result describes the result of an injection operation.
-	Result struct {
-		References typed.ReferenceMap // New package references injected into the file and what kind of reference they are
-		Filename   string             // The file name of the output file (may be different from the input file)
-		Modified   bool               // Whether the file was modified
-		NewFiles   map[string][]byte  // New source files to be compiled
+func (i *Injector) validate() error {
+	var err error
+	if i.ImportPath == "" {
+		err = errors.Join(err, fmt.Errorf("invalid %T: missing ImportPath", i))
 	}
-)
+	if i.Lookup == nil {
+		err = errors.Join(err, fmt.Errorf("invalid %T: missing Lookup", i))
+	}
+	return err
+}
 
-// Injects code in the specified file. This method can be called concurrently by multiple goroutines,
+// injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) InjectFile(filename string, rootConfig map[string]string) (res Result, err error) {
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
+func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (result, error) {
+	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
-	res.Filename = filename
-
-	file, decorator, err := i.lookupDecoratedFile(filename)
+	var err error
+	result.Modified, result.References, err = i.applyAspects(decorator, file, i.RootConfig)
 	if err != nil {
-		return res, err
+		return result, err
 	}
 
-	if res.NewFiles == nil {
-		res.NewFiles = make(map[string][]byte)
-	}
-	if res.Modified, res.References, err = i.inject(file, decorator, rootConfig, res.NewFiles); err != nil {
-		return res, err
-	}
-
-	if res.Modified {
-		buf := bytes.NewBuffer(nil)
-		if err = i.restorer.Fprint(buf, file); err != nil {
-			return res, err
+	if result.Modified {
+		result.Filename, err = i.writeModifiedFile(decorator, file)
+		if err != nil {
+			return result, err
 		}
-
-		res.Filename = i.outputFileFor(filename)
-		if err := os.MkdirAll(filepath.Dir(res.Filename), 0o755); err != nil {
-			return res, err
-		}
-		err = os.WriteFile(res.Filename, postProcess(buf.Bytes()), 0o644)
 	}
 
-	return res, err
+	return result, nil
 }
 
-func (i *Injector) lookupDecoratedFile(filename string) (*dst.File, *decorator.Decorator, error) {
-	stat, err := os.Stat(filename)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, dec := range i.decorators {
-		for node, name := range dec.Filenames {
-			if name == "" {
-				// A bunch of synthetic nodes won't have a file name.
-				continue
-			}
-			s, err := os.Stat(name)
-			if err != nil {
-				continue
-			}
-			if os.SameFile(stat, s) {
-				return node, dec, nil
-			}
-		}
-	}
-
-	src, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	decorator := i.decorators[0]
-	file, err := decorator.ParseFile(filename, src, parser.ParseComments)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return file, decorator, nil
-}
-
-// inject performs all configured injections on the specified file. It returns whether the file was
-// modified, any import references introduced by modifications. In case of an error, the
-// trasnformation aborts as quickly as possible and returns the error.
-func (i *Injector) inject(file *dst.File, decorator *decorator.Decorator, rootConfig map[string]string, newFiles map[string][]byte) (mod bool, refs typed.ReferenceMap, err error) {
-	var chain *context.NodeChain
-
-	dstutil.Apply(
-		file,
-		func(csor *dstutil.Cursor) bool {
-			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
-				return false
-			}
-			root := chain == nil
-			chain = chain.Child(csor)
-			if root {
-				chain.SetConfig(rootConfig)
-			}
-			return true
-		},
-		func(csor *dstutil.Cursor) bool {
-			if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
-				return false
-			}
-
-			// Pop the ancestry stack now that we're done with this node.
-			defer func() { chain = chain.Parent() }()
-
-			var changed bool
-			changed, err = i.injectNode(chain.Context(
-				csor,
-				decorator.Path,
-				file,
-				&refs,
-				decorator,
-			))
-			mod = mod || changed
-
-			return err == nil
-		},
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, error) {
+	var (
+		chain      *context.NodeChain
+		modified   bool
+		references typed.ReferenceMap
+		err        error
 	)
+
+	pre := func(csor *dstutil.Cursor) bool {
+		if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
+			return false
+		}
+		root := chain == nil
+		chain = chain.Child(csor)
+		if root {
+			chain.SetConfig(rootConfig)
+		}
+		return true
+	}
+
+	post := func(csor *dstutil.Cursor) bool {
+		// Pop the ancestry stack now that we're done with this node.
+		defer func() { chain = chain.Parent() }()
+
+		var changed bool
+		changed, err = i.injectNode(chain.Context(
+			csor,
+			decorator.Path,
+			file,
+			&references,
+			decorator,
+		))
+		modified = modified || changed
+
+		return err == nil
+	}
+
+	dstutil.Apply(file, pre, post)
 
 	// We only inject synthetic imports here because it may offset declarations by one position in
 	// case a new import declaration is necessary, which causes dstutil.Apply to re-traverse the
 	// current declaration.
-	if refs.AddSyntheticImports(file) {
-		mod = true
+	if references.AddSyntheticImports(file) {
+		modified = true
 	}
 
-	if mod && i.opts.PreserveLineInfo {
-		i.addLineDirectives(file, decorator)
-	}
-
-	return
+	return modified, references, err
 }
 
-// injectNode assesses all configured injections agaisnt the current node, and performs any AST
+// injectNode assesses all configured aspects agaisnt the current node, and performs any AST
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
 func (i *Injector) injectNode(ctx context.AdviceContext) (mod bool, err error) {
-	for _, inj := range i.opts.Aspects {
+	for _, inj := range i.Aspects {
 		if !inj.JoinPoint.Matches(ctx) {
 			continue
 		}
@@ -310,81 +208,4 @@ func (i *Injector) injectNode(ctx context.AdviceContext) (mod bool, err error) {
 	}
 
 	return
-}
-
-// addLineDirectives travers a transformed AST and adds "//line file:line" directives where
-// necessary to preserve the original file's line numbering, and to correctly locate synthetic nodes
-// within a `<generated>` pseudo-file.
-func (i *Injector) addLineDirectives(file *dst.File, decorator *decorator.Decorator) {
-	var (
-		// Whether we are in generated code or not
-		inGen = false
-		// Force emitting a generated code line directive even if we are already in generated code. This
-		// is necessary when original AST nodes are inlined within generated code (usually by
-		// a wrap-expression advice), so we appropriately resume generated code tagging afterwards.
-		forceGen = false
-	)
-
-	var stack []bool
-	dst.Inspect(file, func(node dst.Node) bool {
-		if node == nil {
-			if len(stack) == 0 {
-				panic("popping empty stack")
-			}
-			forceGen = !inGen && stack[len(stack)-1]
-			inGen, stack = inGen || stack[len(stack)-1], stack[:len(stack)-1]
-			return true
-		}
-
-		// Push the current node onto the stack
-		defer func() {
-			stack = append(stack, inGen)
-			// The forceGen flag is reset after any node is processed, as at this stage we have resumed
-			// normal operations.
-			forceGen = false
-		}()
-
-		ast := decorator.Ast.Nodes[node]
-		if ast != nil {
-			position := i.fileset.Position(ast.Pos())
-			// Generated nodes from templates may have a corresponding AST node, with a blank filename.
-			// Those should be treated as synthetic nodes (they are!).
-			if position.Filename != "" {
-				if inGen {
-					// We need to properly re-position this node (previous node was synthetic)
-					deco := node.Decorations()
-					if deco.Before == dst.None {
-						deco.Before = dst.NewLine
-					}
-					deco.Start.Append(fmt.Sprintf("//line %s:%d", position.Filename, position.Line))
-					inGen = false
-				}
-				return true
-			}
-		}
-
-		if !inGen || forceGen {
-			deco := node.Decorations()
-			if deco.Before == dst.None {
-				deco.Before = dst.NewLine
-			}
-			deco.Start.Prepend("//line <generated>:1")
-			inGen = true
-		}
-
-		return true
-	})
-
-	if len(stack) != 0 {
-		panic("finished with non-zero stack!")
-	}
-}
-
-// outputFileFor returns the file name to be used when writing a modified file. It uses the options
-// specified when building this Injector.
-func (i *Injector) outputFileFor(filename string) string {
-	if i.opts.ModifiedFile == nil {
-		return filename
-	}
-	return i.opts.ModifiedFile(filename)
 }

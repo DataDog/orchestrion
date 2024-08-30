@@ -56,7 +56,6 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 			Tags: map[string]any{
 				"name":     "http.request",
 				"resource": "GET /ping",
-				"service":  "tests.test",
 				"type":     "http",
 			},
 			Meta: map[string]any{
@@ -66,7 +65,6 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
-						"service":  "tests.test",
 						"resource": "GET /ping",
 						"type":     "web",
 					},

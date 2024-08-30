@@ -1,3 +1,4 @@
+//line samples/client/mongo.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -11,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-//line <generated>:1
+//line <generated>
 	__orchestrion_mongotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -19,10 +20,10 @@ import (
 func mongoClient() {
 	ctx := context.Background()
 	opts :=
-//line <generated>:1
+//line <generated>
 //line samples/client/mongo.go:18
 		options.Client().
-//line <generated>:1
+//line <generated>
 			SetMonitor(__orchestrion_mongotrace.NewMonitor()).
 //line samples/client/mongo.go:18
 			ApplyURI("mongodb://localhost:27017")

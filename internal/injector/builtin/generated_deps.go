@@ -10,6 +10,7 @@
 package builtin
 
 import (
+	_ "context"
 	_ "fmt"
 	_ "github.com/datadog/orchestrion/instrument"
 	_ "github.com/datadog/orchestrion/instrument/event"
@@ -42,7 +43,9 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/profiler"

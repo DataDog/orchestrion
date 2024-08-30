@@ -14,8 +14,6 @@ aspects:
             instrument.WrapHandler({{ . }})
             //dd:endwrap
 
-preserveLineInfo: true
-
 syntheticReferences:
   github.com/datadog/orchestrion/instrument: true
 

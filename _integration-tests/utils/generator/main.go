@@ -62,7 +62,7 @@ func main() {
 
 	file.Var().Id("suite").Op("=").Map(jen.String()).Id("testCase").ValuesFunc(func(g *jen.Group) {
 		for _, entry := range entries {
-			if !entry.IsDir() {
+			if !entry.IsDir() || entry.Name() == "testdata" {
 				continue
 			}
 

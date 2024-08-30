@@ -54,7 +54,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 		{
 			Tags: map[string]any{
 				"name":     "http.request",
-				"service":  "tests.test",
 				"resource": "GET /",
 				"type":     "http",
 			},
@@ -66,7 +65,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
-						"service":  "tests.test",
 						"resource": "GET /",
 						"type":     "web",
 					},
@@ -78,7 +76,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						{
 							Tags: map[string]any{
 								"name":     "http.request",
-								"service":  "tests.test",
 								"resource": "POST /hit",
 								"type":     "http",
 							},
@@ -94,7 +91,6 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 								{
 									Tags: map[string]any{
 										"name":     "http.request",
-										"service":  "tests.test",
 										"resource": "POST /hit",
 										"type":     "web",
 									},

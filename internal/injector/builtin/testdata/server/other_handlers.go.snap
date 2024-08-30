@@ -1,3 +1,4 @@
+//line samples/server/other_handlers.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -13,9 +14,9 @@ import (
 	"os"
 	"strings"
 	"time"
-//line <generated>:1
+//line <generated>
 	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
-	__orchestrion_event "github.com/datadog/orchestrion/instrument/event"
+	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 //line samples/server/other_handlers.go:18
@@ -28,22 +29,20 @@ func (f foo) fooHandler(rw http.ResponseWriter, req *http.Request) {
 
 func buildHandlers() {
 	http.HandleFunc("/foo/bar",
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/other_handlers.go:26
 			func(writer http.ResponseWriter, request *http.Request) {
 				writer.Write([]byte("done!"))
 			}))
-//line samples/server/other_handlers.go:29
 	v :=
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/other_handlers.go:29
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("another one!"))
 			})
 
-//line samples/server/other_handlers.go:33
 	fmt.Printf("%T\n", v)
 
 	type holder struct {
@@ -52,7 +51,7 @@ func buildHandlers() {
 
 	x := holder{
 		f:
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/other_handlers.go:40
 			func(w http.ResponseWriter, request *http.Request) {
@@ -60,11 +59,10 @@ func buildHandlers() {
 			}),
 	}
 
-//line samples/server/other_handlers.go:45
 	fmt.Println(x)
 
 	// silly legal things
-//line <generated>:1
+//line <generated>
 	__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/other_handlers.go:48
 		func(w http.ResponseWriter, r *http.Request) {
@@ -81,58 +79,83 @@ func buildHandlers() {
 			}
 			fmt.Println(resp.Status)
 			w.Write([]byte("expression!"))
-		})(
-//line samples/server/other_handlers.go:62
-		httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
+		})(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 
 	for i := 0; i < 10; i++ {
 		go
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/other_handlers.go:65
 			func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("goroutine!"))
-			})(
-//line samples/server/other_handlers.go:67
-			httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
+			})(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 	}
 
 	defer
-//line <generated>:1
+//line <generated>
 	__orchestrion_instrument.WrapHandlerFunc(
 //line samples/server/other_handlers.go:70
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("goroutine!"))
-		})(
-//line samples/server/other_handlers.go:72
-		httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
+		})(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 }
 
 //dd:span foo:bar type:potato
-func myFunc(_arg_0 context.Context, name string) {
-//line <generated>:1
+func myFunc(__argument__0 context.Context, name string) {
+//line <generated>
 	{
-		_arg_0 = __orchestrion_instrument.Report(_arg_0, __orchestrion_event.EventStart, "function-name", "myFunc", "foo", "bar", "type", "potato")
-		defer __orchestrion_instrument.Report(_arg_0, __orchestrion_event.EventEnd, "function-name", "myFunc", "foo", "bar", "type", "potato")
+		var span __orchestrion_tracer.Span
+		span, __argument__0 = __orchestrion_tracer.StartSpanFromContext(__argument__0, "myFunc",
+			__orchestrion_tracer.Tag("function-name", "myFunc"),
+			__orchestrion_tracer.Tag("foo", "bar"),
+			__orchestrion_tracer.Tag("type", "potato"),
+		)
+
+		defer span.Finish()
 	}
 //line samples/server/other_handlers.go:77
 	fmt.Println(name)
 }
 
 //dd:span foo2:bar2 type:request
-func myFunc2(name string, _arg_1 *http.Request) {
-//line <generated>:1
+func myFunc2(name string, __argument__1 *http.Request) {
+//line <generated>
 	{
-		_arg_1 = _arg_1.WithContext(__orchestrion_instrument.Report(_arg_1.Context(), __orchestrion_event.EventStart, "function-name", "myFunc2", "foo2", "bar2", "type", "request"))
-		defer __orchestrion_instrument.Report(_arg_1.Context(), __orchestrion_event.EventEnd, "function-name", "myFunc2", "foo2", "bar2", "type", "request")
+		ctx := __argument__1.Context()
+		var span __orchestrion_tracer.Span
+		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "myFunc2",
+			__orchestrion_tracer.Tag("function-name", "myFunc2"),
+			__orchestrion_tracer.Tag("foo2", "bar2"),
+			__orchestrion_tracer.Tag("type", "request"),
+		)
+		__argument__1 = __argument__1.WithContext(ctx)
+
+		defer span.Finish()
 	}
 //line samples/server/other_handlers.go:82
 	fmt.Println(name)
 }
 
-//dd:span foo3:bar3 type:request
-func myFunc3(name string) {
-	fmt.Println(name)
+//dd:span foo3:bar3 type:request span.name:customName
+func myFunc3(name string) (__result__0 error) {
+//line <generated>
+	{
+		ctx := context.TODO()
+		var span __orchestrion_tracer.Span
+		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "customName",
+			__orchestrion_tracer.Tag("function-name", "myFunc3"),
+			__orchestrion_tracer.Tag("foo3", "bar3"),
+			__orchestrion_tracer.Tag("type", "request"),
+		)
+
+		defer func() {
+			span.Finish(__orchestrion_tracer.WithError(__result__0))
+		}()
+
+	}
+//line samples/server/other_handlers.go:87
+	_, err := fmt.Println(name)
+	return err
 }
 
 func registerHandlers() {
@@ -140,43 +163,39 @@ func registerHandlers() {
 	http.Handle("/handle-1", handler)
 	http.Handle("/hundle-2", http.HandlerFunc(myHandler))
 	http.Handle("/hundle-3", http.HandlerFunc(
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
-//line samples/server/other_handlers.go:94
-			func(w http.ResponseWriter, r *http.Request) {})))
 //line samples/server/other_handlers.go:95
+			func(w http.ResponseWriter, r *http.Request) {})))
 	http.HandleFunc("/handlefunc-1", handler)
 	http.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
 	http.HandleFunc("/handlefunc-3",
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
-//line samples/server/other_handlers.go:97
-			func(w http.ResponseWriter, r *http.Request) {}))
 //line samples/server/other_handlers.go:98
+			func(w http.ResponseWriter, r *http.Request) {}))
 	s := http.NewServeMux()
 	s.Handle("/handle-mux", handler)
 	s.Handle("/handle-mux", http.HandlerFunc(myHandler))
 	s.Handle("/handle-mux", http.HandlerFunc(
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
-//line samples/server/other_handlers.go:101
-			func(w http.ResponseWriter, r *http.Request) {})))
 //line samples/server/other_handlers.go:102
+			func(w http.ResponseWriter, r *http.Request) {})))
 	s.HandleFunc("/handlefunc-1", handler)
 	s.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
 	s.HandleFunc("/handlefunc-3",
-//line <generated>:1
+//line <generated>
 		__orchestrion_instrument.WrapHandlerFunc(
-//line samples/server/other_handlers.go:104
-			func(w http.ResponseWriter, r *http.Request) {}))
 //line samples/server/other_handlers.go:105
+			func(w http.ResponseWriter, r *http.Request) {}))
 	_ = &http.Server{
 		Addr: ":8080",
 		Handler:
-//line <generated>:1
 		//dd:startwrap
+//line <generated>
 		__orchestrion_instrument.WrapHandler(
-//line samples/server/other_handlers.go:107
+//line samples/server/other_handlers.go:108
 			handler),
 		//dd:endwrap
 	}

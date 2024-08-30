@@ -1,6 +1,6 @@
 ---
 title: Built-in Configuration
-weight: 10
+weight: 80
 prev: /docs/getting-started
 next: /docs/troubleshooting
 ---

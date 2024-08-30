@@ -121,23 +121,23 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"span.kind":         "client",
 					},
 				},
-			},
-		},
-		{
-			Tags: map[string]any{
-				"resource": "redigo.Conn.Flush",
-				"type":     "redis",
-				"name":     "redis.command",
-				"service":  "redis.conn",
-			},
-			Meta: map[string]any{
-				"redis.raw_command": "",
-				"db.system":         "redis",
-				"component":         "gomodule/redigo",
-				"out.network":       "tcp",
-				"out.host":          "localhost",
-				"redis.args_length": "0",
-				"span.kind":         "client",
+				{
+					Tags: map[string]any{
+						"resource": "redigo.Conn.Flush",
+						"type":     "redis",
+						"name":     "redis.command",
+						"service":  "redis.conn",
+					},
+					Meta: map[string]any{
+						"redis.raw_command": "",
+						"db.system":         "redis",
+						"component":         "gomodule/redigo",
+						"out.network":       "tcp",
+						"out.host":          "localhost",
+						"redis.args_length": "0",
+						"span.kind":         "client",
+					},
+				},
 			},
 		},
 	}

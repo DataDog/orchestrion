@@ -1,10 +1,15 @@
 --- input.go
 +++ output.go
-@@ -7,8 +7,12 @@
+@@ -1,3 +1,4 @@
++//line input.go:1:1
+ package main
+ 
+ import (
+@@ -7,8 +8,12 @@
    "net/http"
  
    "orchestrion/integration"
-+//line <generated>:1
++//line <generated>
 +  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 +  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
  )
@@ -13,11 +18,11 @@
  func main() {
    s := &http.Server{
      Addr:    ":8085",
-@@ -21,6 +23,28 @@
+@@ -21,6 +24,28 @@
  }
  
  func handle(w http.ResponseWriter, r *http.Request) {
-+//line <generated>:1
++//line <generated>
 +  {
 +    r = r.WithContext(__orchestrion_instrument.Report(
 +      r.Context(),

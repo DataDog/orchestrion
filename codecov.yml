@@ -3,7 +3,11 @@
 codecov:
   require_ci_to_pass: true
   notify:
-    wait_for_ci: true
+    manual_trigger: true
+
+comment:
+  layout: diff, components, files
+  behavior: new
 
 ignore:
   - '**/generator/main.go' # Generators are not actually part of the product
@@ -22,9 +26,6 @@ coverage:
       default:
         target: auto
         informational: true
-
-comment:
-  require_changes: true
 
 component_management:
   individual_components:

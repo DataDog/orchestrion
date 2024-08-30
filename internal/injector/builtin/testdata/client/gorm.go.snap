@@ -1,3 +1,4 @@
+//line samples/client/gorm.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -5,6 +6,7 @@
 
 package main
 
+//line samples/client/gorm.go:10
 import (
 	"log"
 
@@ -13,7 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	_ "github.com/mattn/go-sqlite3"
-//line <generated>:1
+//line <generated>
 	__orchestrion_sql "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	__orchestrion_gorm "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	__orchestrion_gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
@@ -41,12 +43,12 @@ func gormClient() {
 
 func jinzhuGormClient() {
 	db, err :=
-//line <generated>:1
+//line <generated>
 		func() (*jinzhu.DB, error) {
 			db, err :=
 //line samples/client/gorm.go:39
 				jinzhu.Open("sqlite3", "file::memory:?cache=shared")
-//line <generated>:1
+//line <generated>
 			if err != nil {
 				return nil, err
 			}

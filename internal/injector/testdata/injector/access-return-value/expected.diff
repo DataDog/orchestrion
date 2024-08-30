@@ -1,18 +1,25 @@
 --- input.go
 +++ output.go
-@@ -5,7 +5,14 @@
+@@ -1,3 +1,4 @@
++//line input.go:1:1
+ package test
+ 
+ import (
+@@ -5,7 +6,16 @@
    "log"
  )
  
 -func test() (interface{}, error) {
-+func test() (_ interface{}, __returns__1 error) {
++func test() (_ interface{}, __result__1 error) {
++//line <generated>
 +  {
 +    defer func() {
-+      if __returns__1 != nil {
-+        log.Println("error in test:", __returns__1)
++      if __result__1 != nil {
++        log.Println("error in test:", __result__1)
 +      }
 +    }()
 +  }
++//line input.go:9
    log.Println("Running test function...")
    return nil, errors.ErrUnsupported
  }
