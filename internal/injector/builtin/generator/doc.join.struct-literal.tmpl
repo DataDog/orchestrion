@@ -1,0 +1,25 @@
+<div class="join-point struct-literal">
+  <div class="flex">
+    <span class="type">Struct literal</span>
+    {{ render .TypeName }}
+  </div>
+  <ul>
+  <li class="flex"><span class="type pill">
+    {{- if eq .Match 0 -}}
+    Pointer or Value
+    {{- else if eq .Match 1 -}}
+    Value
+    {{- else if eq .Match 2 -}}
+    Pointer
+    {{- else -}}
+    {{ .Match }}
+    {{- end -}}
+  </span></li>
+  {{- with .Field }}
+    <li class="flex">
+    <span class="type">Including field</span>
+    <code>{{ . }}</code>
+    </li>
+  {{- end -}}
+  </ul>
+</div>

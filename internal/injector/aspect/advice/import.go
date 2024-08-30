@@ -8,8 +8,6 @@
 package advice
 
 import (
-	"fmt"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -32,10 +30,6 @@ func (a addBlankImport) AsCode() jen.Code {
 
 func (a addBlankImport) AddedImports() []string {
 	return []string{string(a)}
-}
-
-func (a addBlankImport) RenderHTML() string {
-	return fmt.Sprintf(`<span class="advice add-blank-import"><span class="type">Add blank import of </span>{{<godoc %q>}}</span>`, string(a))
 }
 
 func init() {

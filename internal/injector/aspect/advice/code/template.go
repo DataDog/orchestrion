@@ -26,8 +26,8 @@ import (
 
 type Template struct {
 	template *template.Template
-	imports  map[string]string
-	source   string
+	Imports  map[string]string
+	Source   string
 }
 
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
@@ -157,7 +157,7 @@ func (t *Template) compileTemplate(ctx context.AdviceContext, name string) ([]ds
 // import-enabled decorator.Restorer can emit the correct code, and knows not to
 // remove the inserted import statements.
 func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.Decl {
-	if len(t.imports) == 0 {
+	if len(t.Imports) == 0 {
 		return node
 	}
 
@@ -172,7 +172,7 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 			return true
 		}
 
-		path, found := t.imports[ident.Name]
+		path, found := t.Imports[ident.Name]
 		if !found {
 			return true
 		}
@@ -193,17 +193,17 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 
 func (t *Template) AsCode() jen.Code {
 	return jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
-		jen.Line().Lit(t.source),
+		jen.Line().Lit(t.Source),
 		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
 			// We sort the keys so the generated code order is consistent...
-			keys := make([]string, 0, len(t.imports))
-			for k := range t.imports {
+			keys := make([]string, 0, len(t.Imports))
+			for k := range t.Imports {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
 
 			for _, k := range keys {
-				v := t.imports[k]
+				v := t.Imports[k]
 				g.Line().Add(jen.Lit(k).Op(":").Lit(v))
 			}
 			g.Empty().Line()
@@ -213,8 +213,8 @@ func (t *Template) AsCode() jen.Code {
 }
 
 func (t *Template) AddedImports() []string {
-	imports := make([]string, 0, len(t.imports))
-	for _, path := range t.imports {
+	imports := make([]string, 0, len(t.Imports))
+	for _, path := range t.Imports {
 		imports = append(imports, path)
 	}
 	return imports
@@ -248,10 +248,10 @@ func numberLines(text string) string {
 func (t *Template) RenderHTML() string {
 	var buf strings.Builder
 
-	if len(t.imports) > 0 {
-		keys := make([]string, 0, len(t.imports))
+	if len(t.Imports) > 0 {
+		keys := make([]string, 0, len(t.Imports))
 		nameLen := 0
-		for name := range t.imports {
+		for name := range t.Imports {
 			keys = append(keys, name)
 			if l := len(name); l > nameLen {
 				nameLen = l
@@ -263,14 +263,14 @@ func (t *Template) RenderHTML() string {
 		_, _ = buf.WriteString("// Using the following synthetic imports:\n")
 		_, _ = buf.WriteString("import (\n")
 		for _, name := range keys {
-			_, _ = fmt.Fprintf(&buf, "\t%-*s %q\n", nameLen, name, t.imports[name])
+			_, _ = fmt.Fprintf(&buf, "\t%-*s %q\n", nameLen, name, t.Imports[name])
 		}
 		_, _ = buf.WriteString(")\n```")
 	}
 
 	_, _ = buf.WriteString("\n\n```go-template\n")
 	// Render with tabs so it's more go-esque!
-	_, _ = buf.WriteString(regexp.MustCompile(`(?m)^(?:  )+`).ReplaceAllStringFunc(t.source, func(orig string) string {
+	_, _ = buf.WriteString(regexp.MustCompile(`(?m)^(?:  )+`).ReplaceAllStringFunc(t.Source, func(orig string) string {
 		return strings.Repeat("\t", len(orig)/2)
 	}))
 	_, _ = buf.WriteString("\n```\n")

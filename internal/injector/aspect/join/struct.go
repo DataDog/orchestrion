@@ -8,7 +8,6 @@ package join
 import (
 	"fmt"
 	"go/token"
-	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
@@ -17,31 +16,31 @@ import (
 )
 
 type structDefinition struct {
-	typeName TypeName
+	TypeName TypeName
 }
 
 // StructDefinition matches the definition of a particular struct given its fully qualified name.
 func StructDefinition(typeName TypeName) *structDefinition {
 	return &structDefinition{
-		typeName: typeName,
+		TypeName: typeName,
 	}
 }
 
 func (s *structDefinition) ImpliesImported() []string {
-	if path := s.typeName.ImportPath(); path != "" {
+	if path := s.TypeName.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
-	if s.typeName.pointer {
+	if s.TypeName.pointer {
 		// We can't ever match a pointer definition
 		return false
 	}
 
 	spec, ok := ctx.Node().(*dst.TypeSpec)
-	if !ok || spec.Name == nil || spec.Name.Name != s.typeName.name {
+	if !ok || spec.Name == nil || spec.Name.Name != s.TypeName.name {
 		return false
 	}
 
@@ -49,23 +48,19 @@ func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	return ctx.ImportPath() == s.typeName.path
+	return ctx.ImportPath() == s.TypeName.path
 }
 
 func (s *structDefinition) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "StructDefinition").Call(s.typeName.AsCode())
-}
-
-func (s *structDefinition) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point struct-definition"><span class="type">Definition of</span>%s</div>`, s.typeName.RenderHTML())
+	return jen.Qual(pkgPath, "StructDefinition").Call(s.TypeName.AsCode())
 }
 
 type (
 	StructLiteralMatch int
 	structLiteral      struct {
-		typeName TypeName
-		field    string
-		match    StructLiteralMatch
+		TypeName TypeName
+		Field    string
+		Match    StructLiteralMatch
 	}
 )
 
@@ -85,8 +80,8 @@ const (
 // StructLiteralField matches a specific field in struct literals of the designated type.
 func StructLiteralField(typeName TypeName, field string) *structLiteral {
 	return &structLiteral{
-		typeName: typeName,
-		field:    field,
+		TypeName: typeName,
+		Field:    field,
 	}
 }
 
@@ -94,21 +89,21 @@ func StructLiteralField(typeName TypeName, field string) *structLiteral {
 // specified match type.
 func StructLiteral(typeName TypeName, match StructLiteralMatch) *structLiteral {
 	return &structLiteral{
-		typeName: typeName,
-		match:    match,
+		TypeName: typeName,
+		Match:    match,
 	}
 }
 
 func (s *structLiteral) ImpliesImported() []string {
-	if path := s.typeName.ImportPath(); path != "" {
+	if path := s.TypeName.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (s *structLiteral) Matches(ctx context.AspectContext) bool {
-	if s.field == "" {
-		switch s.match {
+	if s.Field == "" {
+		switch s.Match {
 		case StructLiteralMatchPointerOnly:
 			// match only if the current node is equal to & and the underlying node matches
 			// the struct literal we are looking for
@@ -145,7 +140,7 @@ func (s *structLiteral) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	return key.Name == s.field
+	return key.Name == s.Field
 }
 
 func (s *structLiteral) matchesLiteral(node dst.Node) bool {
@@ -153,50 +148,14 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 	if !ok {
 		return false
 	}
-	return s.typeName.Matches(lit.Type)
+	return s.TypeName.Matches(lit.Type)
 }
 
 func (s *structLiteral) AsCode() jen.Code {
-	if s.field != "" {
-		return jen.Qual(pkgPath, "StructLiteralField").Call(s.typeName.AsCode(), jen.Lit(s.field))
+	if s.Field != "" {
+		return jen.Qual(pkgPath, "StructLiteralField").Call(s.TypeName.AsCode(), jen.Lit(s.Field))
 	}
-	return jen.Qual(pkgPath, "StructLiteral").Call(s.typeName.AsCode(), s.match.asCode())
-}
-
-func (s *structLiteral) RenderHTML() string {
-	var buf strings.Builder
-
-	_, _ = buf.WriteString("<div class=\"join-point struct-literal\">\n")
-	_, _ = buf.WriteString("  <div class=\"flex\">\n")
-	_, _ = buf.WriteString("    <span class=\"type\">Struct literal</span>\n")
-	_, _ = buf.WriteString(s.typeName.RenderHTML())
-	_, _ = buf.WriteString("\n  </div>\n")
-	if s.field != "" {
-		_, _ = buf.WriteString("  <ul>\n")
-		_, _ = buf.WriteString("    <li class=\"flex\">\n")
-		_, _ = buf.WriteString("      <span class=\"type\">Including field</span>\n")
-		_, _ = buf.WriteString("      <code>\n")
-		_, _ = buf.WriteString(s.field)
-		_, _ = buf.WriteString("\n      </code>\n")
-		_, _ = buf.WriteString("    </li>\n")
-		_, _ = buf.WriteString("  </ul>\n")
-	} else if s.match != StructLiteralMatchAny {
-		_, _ = buf.WriteString("  <ul>\n")
-		_, _ = buf.WriteString("    <li class=\"flex\">\n")
-		_, _ = buf.WriteString("      <span class=\"type\">Only as</span>\n")
-		_, _ = buf.WriteString("      <code>\n")
-		if s.match == StructLiteralMatchValueOnly {
-			_, _ = buf.WriteString("value\n")
-		} else {
-			_, _ = buf.WriteString("pointer\n")
-		}
-		_, _ = buf.WriteString("      </code>\n")
-		_, _ = buf.WriteString("    </li>\n")
-		_, _ = buf.WriteString("  </ul>\n")
-	}
-	_, _ = buf.WriteString("</div>\n")
-
-	return buf.String()
+	return jen.Qual(pkgPath, "StructLiteral").Call(s.TypeName.AsCode(), s.Match.asCode())
 }
 
 func init() {

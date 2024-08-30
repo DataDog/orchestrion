@@ -7,11 +7,12 @@ package join
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
+
+	_ "embed" // For go:embed
 )
 
 type configuration map[string]string
@@ -48,28 +49,6 @@ func (jp configuration) AsCode() jen.Code {
 
 		g.Line().Empty()
 	}))
-}
-
-func (jp configuration) RenderHTML() string {
-	var buf strings.Builder
-
-	_, _ = buf.WriteString("<div class=\"join-point configuration\">\n")
-	_, _ = buf.WriteString("  <span class=\"type pill\">Configuration</span>\n")
-	_, _ = buf.WriteString("  <ul>\n")
-	for k, v := range jp {
-		_, _ = buf.WriteString("    <li class=\"flex\">\n")
-		_, _ = buf.WriteString("      <span class=\"type\">")
-		_, _ = buf.WriteString(k)
-		_, _ = buf.WriteString("</span>\n")
-		_, _ = buf.WriteString("      <code>\n")
-		_, _ = buf.WriteString(v)
-		_, _ = buf.WriteString("      </code>\n")
-		_, _ = buf.WriteString("    </li>\n")
-	}
-	_, _ = buf.WriteString("  </ul>\n")
-	_, _ = buf.WriteString("</div>\n")
-
-	return buf.String()
 }
 
 func init() {
