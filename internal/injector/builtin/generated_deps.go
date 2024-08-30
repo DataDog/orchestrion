@@ -18,6 +18,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"

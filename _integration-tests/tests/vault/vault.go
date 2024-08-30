@@ -37,9 +37,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		utils.WithTestLogConsumer(t),
 		testvault.WithToken("root"),
 	)
-	if err != nil {
-		t.Skipf("Failed to start vault test container: %v\n", err)
-	}
+	utils.AssertTestContainersError(t, err)
 
 	addr, err := tc.server.HttpHostAddress(ctx)
 	if err != nil {
