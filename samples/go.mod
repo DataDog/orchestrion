@@ -22,6 +22,7 @@ require (
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/redis/go-redis/v9 v9.6.1
 	go.mongodb.org/mongo-driver v1.16.1
 	google.golang.org/grpc v1.65.0
 	gorm.io/driver/postgres v1.5.9

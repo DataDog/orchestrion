@@ -100,6 +100,21 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/redis/go-redis/v9.NewClient"),
+			join.FunctionCall("github.com/redis/go-redis/v9.NewFailoverClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{ . }}\n  trace.WrapClient(client)\n  return\n}()",
+				map[string]string{
+					"redis": "github.com/redis/go-redis/v9",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
+				},
+			)),
+		},
+	},
 	// From databases/gorm.yml
 	{
 		JoinPoint: join.FunctionCall("gorm.io/gorm.Open"),
@@ -763,6 +778,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
@@ -783,4 +799,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:BqpDrOMkZXzgpm4/sfyyRZ5wIAON7h0/r33Vj8aU9zEOjccU9G68STp9zq0ygUPFbixgochBJm+stjlSu27J+g=="
+const Checksum = "sha512:sp5TsWOqNIVcxw2552Y6n+j22VMd0UWV3GBBEIQXAKXiMlN9AjAx7dmUaYf0CfGURiiZ2NR5e/IyO+zAzXh7bA=="
