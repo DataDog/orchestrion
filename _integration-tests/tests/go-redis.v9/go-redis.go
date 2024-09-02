@@ -46,9 +46,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 			),
 		),
 	)
-	if err != nil {
-		t.Skipf("Failed to start redis test container: %v\n", err)
-	}
+	utils.AssertTestContainersError(t, err)
 
 	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {
