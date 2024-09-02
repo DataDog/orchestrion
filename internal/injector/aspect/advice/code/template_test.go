@@ -7,6 +7,7 @@ package code_test
 
 import (
 	"errors"
+	"go/types"
 	"testing"
 
 	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
@@ -64,5 +65,8 @@ func (mockAdviceContext) AddImport(path string, alias string) bool {
 	panic(errors.ErrUnsupported)
 }
 func (mockAdviceContext) AddLink(string) bool {
+	panic(errors.ErrUnsupported)
+}
+func (mockAdviceContext) TypeOf(expr dst.Expr) types.Type {
 	panic(errors.ErrUnsupported)
 }

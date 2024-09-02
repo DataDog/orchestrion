@@ -12,6 +12,12 @@ aspects:
             gocqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql
           template: gocqltrace.CreateTracedSession({{ .AST.Fun.X }})
 
+preserveLineInfo: true
+mustCompile: true
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql: true
+
 code: |-
   package test
 
