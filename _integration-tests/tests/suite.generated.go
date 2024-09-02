@@ -11,6 +11,7 @@ package tests
 
 import (
 	awsv1 "orchestrion/integration/tests/aws.v1"
+	awsv2 "orchestrion/integration/tests/aws.v2"
 	chiv5 "orchestrion/integration/tests/chi.v5"
 	ddspan "orchestrion/integration/tests/dd-span"
 	echov4 "orchestrion/integration/tests/echo.v4"
@@ -26,6 +27,7 @@ import (
 	mongo "orchestrion/integration/tests/mongo"
 	mux "orchestrion/integration/tests/mux"
 	nethttp "orchestrion/integration/tests/net_http"
+	os "orchestrion/integration/tests/os"
 	redigo "orchestrion/integration/tests/redigo"
 	shopifysarama "orchestrion/integration/tests/shopify_sarama"
 	slog "orchestrion/integration/tests/slog"
@@ -35,6 +37,10 @@ import (
 
 var suite = map[string]testCase{
 	"aws.v1":                               new(awsv1.TestCase),
+	"aws.v2/LoadDefaultConfig":             new(awsv2.TestCaseLoadDefaultConfig),
+	"aws.v2/NewConfig":                     new(awsv2.TestCaseNewConfig),
+	"aws.v2/StructLiteral":                 new(awsv2.TestCaseStructLiteral),
+	"aws.v2/StructLiteralPtr":              new(awsv2.TestCaseStructLiteralPtr),
 	"chi.v5":                               new(chiv5.TestCase),
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),
@@ -52,6 +58,7 @@ var suite = map[string]testCase{
 	"mongo":          new(mongo.TestCase),
 	"mux":            new(mux.TestCase),
 	"net_http":       new(nethttp.TestCase),
+	"os":             new(os.TestCase),
 	"redigo":         new(redigo.TestCase),
 	"shopify_sarama": new(shopifysarama.TestCase),
 	"slog":           new(slog.TestCase),
