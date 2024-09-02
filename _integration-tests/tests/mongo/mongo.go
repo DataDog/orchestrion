@@ -41,9 +41,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
 	)
-	if err != nil {
-		t.Skipf("Failed to start mongo test container: %v\n", err)
-	}
+	utils.AssertTestContainersError(t, err)
 
 	mongoURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {

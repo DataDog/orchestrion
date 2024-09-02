@@ -13,7 +13,7 @@ unsafe = true
 noClasses = false
 
 [[menu.main]]
-name = 'User Documentation'
+name = 'User Guide'
 pageRef = '/docs'
 weight = 2
 

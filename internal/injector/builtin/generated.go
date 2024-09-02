@@ -18,12 +18,40 @@ import (
 var Aspects = [...]aspect.Aspect{
 	// From api/vault.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), ""),
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/hashicorp/vault/api.Config"), join.StructLiteralMatchAny),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"HttpClient\" }}\n  {{- $hasField = true -}}\n  HttpClient: vaulttrace.WrapHTTPClient({{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  HttpClient: vaulttrace.NewHTTPClient(),\n  {{- end }}\n}",
 				map[string]string{
 					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
+				},
+			)),
+		},
+	},
+	// From cloud/aws-sdk-v2.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg aws.Config) (aws.Config) {\n  awstrace.AppendMiddleware(&cfg)\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
+					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), join.StructLiteralMatchPointerOnly),
+			join.FunctionCall("github.com/aws/aws-sdk-go-v2/aws.NewConfig"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *aws.Config) (*aws.Config) {\n  awstrace.AppendMiddleware(cfg)\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
+					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 				},
 			)),
 		},
@@ -475,7 +503,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From k8s-client.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), ""),
+		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), join.StructLiteralMatchAny),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"WrapTransport\" }}\n  {{- $hasField = true -}}\n  WrapTransport: kubernetestransport.Wrappers({{ .Value }}, kubernetestrace.WrapRoundTripper),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  WrapTransport: kubernetestransport.Wrappers(nil, kubernetestrace.WrapRoundTripper),\n  {{- end }}\n}",
@@ -514,7 +542,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.StructLiteral(join.MustTypeName("net/http.Transport"), ""),
+			join.StructLiteral(join.MustTypeName("net/http.Transport"), join.StructLiteralMatchAny),
 			join.OneOf(
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"),
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/hostname/httputils"),
@@ -589,7 +617,7 @@ var Aspects = [...]aspect.Aspect{
 			join.Configuration(map[string]string{
 				"httpmode": "wrap",
 			}),
-			join.StructLiteral(join.MustTypeName("net/http.Server"), "Handler"),
+			join.StructLiteralField(join.MustTypeName("net/http.Server"), "Handler"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/go-chi/chi/v5"),
 				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
@@ -659,6 +687,25 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From stdlib/ossec.yml
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("os"),
+			join.FunctionBody(join.Function(
+				join.Name("OpenFile"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_parent_op, _ := dyngo.FromContext(nil)\nif __dd_parent_op != nil {\n    __dd_op := &ossec.OpenOperation{\n        Operation: dyngo.NewOperation(__dd_parent_op),\n    }\n\n    var __dd_block bool\n    dyngo.OnData(__dd_op, func(_ *events.BlockingSecurityEvent) {\n        __dd_block = true\n    })\n\n    dyngo.StartOperation(__dd_op, ossec.OpenOperationArgs{\n        Path: {{ .Function.Argument 0 }},\n        Flags: {{ .Function.Argument 1 }},\n        Perms: {{ .Function.Argument 2 }},\n    })\n\n    defer dyngo.FinishOperation(__dd_op, ossec.OpenOperationRes[*File]{\n        File: &{{ .Function.Result 0 }},\n        Err: &{{ .Function.Result 1 }},\n    })\n\n    if __dd_block {\n        return\n    }\n}",
+				map[string]string{
+					"dyngo":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
+					"events": "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+					"ossec":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
+				},
+			)),
+		},
+	},
 	// From stdlib/runtime.yml
 	{
 		JoinPoint: join.StructDefinition(join.MustTypeName("runtime.g")),
@@ -710,6 +757,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
@@ -736,7 +784,9 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler",
@@ -749,4 +799,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:Ng2O+uksRuy+3Aj0SdAZfusH4NEitbkh/zqWGF5w3mTxfidhUve1h1zF1/kaW6JTvjJTvA8VqhnQnnKI+uU+3w=="
+const Checksum = "sha512:sp5TsWOqNIVcxw2552Y6n+j22VMd0UWV3GBBEIQXAKXiMlN9AjAx7dmUaYf0CfGURiiZ2NR5e/IyO+zAzXh7bA=="
