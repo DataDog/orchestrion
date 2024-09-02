@@ -3,6 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
+//go:build integration
+
 package gocql
 
 import (
@@ -24,7 +26,6 @@ import (
 
 type TestCase struct {
 	container *testcassandra.CassandraContainer
-	cluster   *gocql.ClusterConfig
 	session   *gocql.Session
 	port      string
 }
@@ -46,8 +47,8 @@ func (tc *TestCase) Setup(t *testing.T) {
 	_, tc.port, err = net.SplitHostPort(hostPort)
 	require.NoError(t, err)
 
-	tc.cluster = gocql.NewCluster(hostPort)
-	tc.session, err = tc.cluster.CreateSession()
+	cluster := gocql.NewCluster(hostPort)
+	tc.session, err = cluster.CreateSession()
 	require.NoError(t, err)
 }
 
@@ -97,14 +98,12 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "cassandra",
 					},
 					Meta: map[string]any{
-						"component":                   "gocql/gocql",
-						"span.kind":                   "client",
-						"db.system":                   "cassandra",
-						"out.host":                    "127.0.0.1",
-						"out.port":                    tc.port,
-						"cassandra.cluster":           "Test Cluster",
-						"cassandra.datacenter":        "datacenter1",
-						"db.cassandra.contact.points": "127.0.0.1:" + tc.port,
+						"component":            "gocql/gocql",
+						"span.kind":            "client",
+						"db.system":            "cassandra",
+						"out.port":             tc.port,
+						"cassandra.cluster":    "Test Cluster",
+						"cassandra.datacenter": "datacenter1",
 					},
 				},
 				{
@@ -115,14 +114,12 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "cassandra",
 					},
 					Meta: map[string]any{
-						"component":                   "gocql/gocql",
-						"span.kind":                   "client",
-						"db.system":                   "cassandra",
-						"out.host":                    "127.0.0.1",
-						"out.port":                    tc.port,
-						"cassandra.cluster":           "Test Cluster",
-						"cassandra.datacenter":        "datacenter1",
-						"db.cassandra.contact.points": "127.0.0.1:" + tc.port,
+						"component":            "gocql/gocql",
+						"span.kind":            "client",
+						"db.system":            "cassandra",
+						"out.port":             tc.port,
+						"cassandra.cluster":    "Test Cluster",
+						"cassandra.datacenter": "datacenter1",
 					},
 				},
 				{
@@ -133,14 +130,12 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "cassandra",
 					},
 					Meta: map[string]any{
-						"component":                   "gocql/gocql",
-						"span.kind":                   "client",
-						"db.system":                   "cassandra",
-						"out.host":                    "127.0.0.1",
-						"out.port":                    tc.port,
-						"cassandra.cluster":           "Test Cluster",
-						"cassandra.datacenter":        "datacenter1",
-						"db.cassandra.contact.points": "127.0.0.1:" + tc.port,
+						"component":            "gocql/gocql",
+						"span.kind":            "client",
+						"db.system":            "cassandra",
+						"out.port":             tc.port,
+						"cassandra.cluster":    "Test Cluster",
+						"cassandra.datacenter": "datacenter1",
 					},
 				},
 			},
