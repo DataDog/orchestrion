@@ -5,7 +5,7 @@
 
 //go:build integration
 
-package redigo
+package goredis
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -27,7 +27,7 @@ import (
 
 type TestCase struct {
 	server *testredis.RedisContainer
-	*redis.Pool
+	*redis.Client
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
@@ -46,7 +46,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 			),
 		),
 	)
-	utils.AssertTestContainersError(t, err)
+	if err != nil {
+		t.Skipf("Failed to start redis test container: %v\n", err)
+	}
 
 	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {
@@ -56,43 +58,23 @@ func (tc *TestCase) Setup(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
 	}
-
-	const network = "tcp"
-	address := redisURL.Host
-
-	tc.Pool = &redis.Pool{
-		Dial:        func() (redis.Conn, error) { return redis.Dial(network, address) },
-		DialContext: func(ctx context.Context) (redis.Conn, error) { return redis.DialContext(ctx, network, address) },
-		TestOnBorrow: func(c redis.Conn, _ time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-	}
-
-	client := tc.Pool.Get()
-	defer func() { require.NoError(t, client.Close()) }()
-	_, err = client.Do("SET", "test_key", "test_value")
-	require.NoError(t, err)
+	addr := redisURL.Host
+	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
 	defer span.Finish()
 
-	client, err := tc.Pool.GetContext(ctx)
-	require.NoError(t, err)
-	defer func() { require.NoError(t, client.Close()) }()
-
-	res, err := client.Do("GET", "test_key", ctx)
-	require.NoError(t, err)
-	require.NotEmpty(t, res)
+	require.NoError(t, tc.Client.Set(ctx, "test_key", "test_value", 0).Err())
+	require.NoError(t, tc.Client.Get(ctx, "test_key").Err())
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	assert.NoError(t, tc.Pool.Close())
+	assert.NoError(t, tc.Client.Close())
 	assert.NoError(t, tc.server.Terminate(ctx))
 }
 
@@ -105,36 +87,36 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 			Children: trace.Spans{
 				{
 					Tags: map[string]any{
-						"resource": "GET",
-						"type":     "redis",
 						"name":     "redis.command",
-						"service":  "redis.conn",
+						"service":  "redis.client",
+						"resource": "set",
+						"type":     "redis",
 					},
 					Meta: map[string]any{
-						"redis.raw_command": "GET test_key",
-						"db.system":         "redis",
-						"component":         "gomodule/redigo",
-						"out.network":       "tcp",
-						"out.host":          "localhost",
-						"redis.args_length": "1",
+						"redis.args_length": "3",
+						"component":         "redis/go-redis.v9",
+						"out.db":            "0",
 						"span.kind":         "client",
+						"db.system":         "redis",
+						"redis.raw_command": "set test_key test_value: ",
+						"out.host":          "localhost",
 					},
 				},
 				{
 					Tags: map[string]any{
-						"resource": "redigo.Conn.Flush",
-						"type":     "redis",
 						"name":     "redis.command",
-						"service":  "redis.conn",
+						"service":  "redis.client",
+						"resource": "get",
+						"type":     "redis",
 					},
 					Meta: map[string]any{
-						"redis.raw_command": "",
-						"db.system":         "redis",
-						"component":         "gomodule/redigo",
-						"out.network":       "tcp",
-						"out.host":          "localhost",
-						"redis.args_length": "0",
+						"redis.args_length": "2",
+						"component":         "redis/go-redis.v9",
+						"out.db":            "0",
 						"span.kind":         "client",
+						"db.system":         "redis",
+						"redis.raw_command": "get test_key: ",
+						"out.host":          "localhost",
 					},
 				},
 			},

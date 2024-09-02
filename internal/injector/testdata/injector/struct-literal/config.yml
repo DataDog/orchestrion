@@ -1,0 +1,46 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      struct-literal:
+        type: github.com/aws/aws-sdk-go-v2/aws.Config
+        match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            awstrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws
+            aws: github.com/aws/aws-sdk-go-v2/aws
+          template: |-
+            func(cfg aws.Config) (aws.Config) {
+              awstrace.AppendMiddleware(&cfg)
+              return cfg
+            }({{ . }})
+
+  - join-point:
+      struct-literal:
+        type: github.com/aws/aws-sdk-go-v2/aws.Config
+        match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            awstrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws
+            aws: github.com/aws/aws-sdk-go-v2/aws
+          template: |-
+            func(cfg *aws.Config) (*aws.Config) {
+              awstrace.AppendMiddleware(cfg)
+              return cfg
+            }({{ . }})
+
+preserveLineInfo: true
+mustCompile: true
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws: true
+
+code: |-
+  package test
+  
+  import "github.com/aws/aws-sdk-go-v2/aws"
+  
+  var cfgValue = aws.Config{}
+  var cfgPtr = &aws.Config{}

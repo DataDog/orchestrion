@@ -46,3 +46,22 @@ aspects:
               trace.WrapClient(client)
               return
             }()
+
+  ################################################################################
+  # V9
+  - id: Wrap V9 client
+    join-point:
+      one-of:
+        - function-call: github.com/redis/go-redis/v9.NewClient
+        - function-call: github.com/redis/go-redis/v9.NewFailoverClient
+    advice:
+      - wrap-expression:
+          imports:
+            redis: github.com/redis/go-redis/v9
+            trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9
+          template: |-
+            func() (client *redis.Client) {
+              client = {{ . }}
+              trace.WrapClient(client)
+              return
+            }()

@@ -10,8 +10,6 @@ package awsv1
 import (
 	"context"
 	"fmt"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
@@ -19,10 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -31,42 +30,12 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	port := "8000/tcp"
-	req := testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "amazon/dynamodb-local:latest",
-			ExposedPorts: []string{port},
-			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
-			Name:         "dynamodb-local",
-			WorkingDir:   "/home/dynamodblocal",
-			Cmd: []string{
-				"-jar", "DynamoDBLocal.jar",
-				"-inMemory",
-				"-disableTelemetry",
-			},
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Consumers: []testcontainers.LogConsumer{utils.TestLogConsumer(t)},
-			},
-		},
-		Started: true,
-		Logger:  testcontainers.TestLogger(t),
-	}
-
-	ctx := context.Background()
-	var err error
-	tc.server, err = testcontainers.GenericContainer(ctx, req)
-	if err != nil {
-		t.Skipf("Failed to start dynamodb local container: %v\n", err)
-	}
-
-	mappedPort, err := tc.server.MappedPort(ctx, nat.Port(port))
-	require.NoError(t, err)
-	hostIP, err := tc.server.Host(ctx)
-	require.NoError(t, err)
+	server, host, port := utils.StartDynamoDBTestContainer(t)
+	tc.server = server
 
 	tc.cfg = &aws.Config{
 		Credentials: credentials.NewStaticCredentials("NOTANACCESSKEY", "NOTASECRETKEY", ""),
-		Endpoint:    aws.String(fmt.Sprintf("http://%s:%s", hostIP, mappedPort.Port())),
+		Endpoint:    aws.String(fmt.Sprintf("http://%s:%s", host, port)),
 		Region:      aws.String("test-region-1337"),
 	}
 }

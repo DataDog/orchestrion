@@ -3,7 +3,9 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package shopifysarama
+//go:build integration
+
+package shopify_sarama
 
 import (
 	"context"
@@ -46,9 +48,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
 	)
-	if err != nil {
-		t.Skipf("Failed to start kafka test container: %v\n", err)
-	}
+	utils.AssertTestContainersError(t, err)
 
 	addr, err := tc.server.KafkaSeedBroker(ctx)
 	require.NoError(t, err, "failed to get seed broker address")

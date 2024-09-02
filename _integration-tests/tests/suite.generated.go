@@ -11,6 +11,7 @@ package tests
 
 import (
 	awsv1 "orchestrion/integration/tests/aws.v1"
+	awsv2 "orchestrion/integration/tests/aws.v2"
 	chiv5 "orchestrion/integration/tests/chi.v5"
 	ddspan "orchestrion/integration/tests/dd-span"
 	echov4 "orchestrion/integration/tests/echo.v4"
@@ -18,6 +19,7 @@ import (
 	gin "orchestrion/integration/tests/gin"
 	goredisv7 "orchestrion/integration/tests/go-redis.v7"
 	goredisv8 "orchestrion/integration/tests/go-redis.v8"
+	goredisv9 "orchestrion/integration/tests/go-redis.v9"
 	gorm "orchestrion/integration/tests/gorm"
 	gormjinzhu "orchestrion/integration/tests/gorm.jinzhu"
 	grpc "orchestrion/integration/tests/grpc"
@@ -36,6 +38,10 @@ import (
 
 var suite = map[string]testCase{
 	"aws.v1":                               new(awsv1.TestCase),
+	"aws.v2/LoadDefaultConfig":             new(awsv2.TestCaseLoadDefaultConfig),
+	"aws.v2/NewConfig":                     new(awsv2.TestCaseNewConfig),
+	"aws.v2/StructLiteral":                 new(awsv2.TestCaseStructLiteral),
+	"aws.v2/StructLiteralPtr":              new(awsv2.TestCaseStructLiteralPtr),
 	"chi.v5":                               new(chiv5.TestCase),
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),
@@ -43,6 +49,7 @@ var suite = map[string]testCase{
 	"gin":                                  new(gin.TestCase),
 	"go-redis.v7":                          new(goredisv7.TestCase),
 	"go-redis.v8":                          new(goredisv8.TestCase),
+	"go-redis.v9":                          new(goredisv9.TestCase),
 	"gorm":                                 new(gorm.TestCase),
 	"gorm.jinzhu":                          new(gormjinzhu.TestCase),
 	"grpc":                                 new(grpc.TestCase),
