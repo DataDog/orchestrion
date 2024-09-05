@@ -179,6 +179,20 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
+	// From datastreams/gcp_pubsub.yml
+	{
+		JoinPoint: join.MethodCall(join.MustTypeName("*cloud.google.com/go/pubsub.Subscription"), "Receive"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(sub *pubsub.Subscription, ctx context.Context, h func(context.Context, *pubsub.Message)) error {\n  return sub.Receive(ctx, pubsubtrace.WrapReceiveHandler(sub, h))\n}({{ .AST.Fun.X }}, {{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})",
+				map[string]string{
+					"context":     "context",
+					"pubsub":      "cloud.google.com/go/pubsub",
+					"pubsubtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1",
+				},
+			)),
+		},
+	},
 	// From datastreams/ibm_sarama.yml
 	{
 		JoinPoint: join.OneOf(
@@ -772,6 +786,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -813,4 +828,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:3wQCgk3r35pFPRvwJdcTE84pp8yzhqqZU7XX1ITsYXXLxup7/dHs2qx5VBQFPCxWeku9t2zKgx2KwECrJBG4vA=="
+const Checksum = "sha512:YXBEEcr0LqDfSB3zwUJsXHtnduJMdML0DuPRIsqHilEbQWBazwjaPu3zzHiq0W23cdXDQfX5b0qSBKm5s7iL1Q=="

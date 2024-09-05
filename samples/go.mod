@@ -5,6 +5,7 @@ go 1.22.6
 replace github.com/datadog/orchestrion => ../
 
 require (
+	cloud.google.com/go/pubsub v1.42.0
 	github.com/IBM/sarama v1.43.3
 	github.com/Shopify/sarama v1.38.1
 	github.com/aws/aws-sdk-go v1.55.5

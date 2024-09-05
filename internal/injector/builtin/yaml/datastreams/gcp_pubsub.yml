@@ -1,0 +1,90 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+---
+# yaml-language-server: $schema=../../../../../docs/static/schema.json
+meta:
+  name: cloud.google.com/go/pubsub
+  description: Package pubsub provides an easy way to publish and receive Google Cloud Pub/Sub messages, hiding the details of the underlying server RPCs
+  icon: fast-forward
+
+# Replacement:
+    # sub := pubsub.Subscription()
+    # sub.Receive(ctx, handler) -> sub.Receive(ctx, pubsubtrace.WrapReceiveHandler(sub, handler))
+#   - .AST.Fun.X = sub
+#   - .AST.Args[0] = ctx
+#   - .AST.Args[1] = handler
+#   - .AST.Fun.Sel.Name = Receive
+aspects:
+  - id: Wrap the handler passed in to *pubsub.Subscription.Receive second argument
+    join-point:
+      method-call:
+        receiver: '*cloud.google.com/go/pubsub.Subscription'
+        name: Receive
+    advice:
+      - wrap-expression:
+          imports:
+            pubsubtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1
+            pubsub: cloud.google.com/go/pubsub
+            context: context
+          template: |-
+            func(sub *pubsub.Subscription, ctx context.Context, h func(context.Context, *pubsub.Message)) error {
+              return sub.Receive(ctx, pubsubtrace.WrapReceiveHandler(sub, h))
+            }({{ .AST.Fun.X }}, {{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+
+  # TODO: open issue -> if I try to match cloud.google.com/go/pubsub.PublishResult it does not match - seems orchestrion is not following aliases
+#  - id: Add struct fields to pubsub.PublishResult
+#    join-point:
+#      struct-definition: cloud.google.com/go/internal/pubsub.PublishResult
+#    advice:
+#      - inject-declarations:
+#          imports:
+#            atomic: sync/atomic
+#          template: |-
+#            type DDTracePublishResult interface {
+#              Get(ctx context.Context) (string, error)
+#            }
+#            type atomicBool = atomic.Bool
+#      - add-struct-field:
+#          name: DDTracePublishResult
+#          type: DDTracePublishResult
+#      - add-struct-field:
+#          name: DDTracePublishResultCalled
+#          type: atomicBool
+#
+#  # Replacement: topic.Publish(ctx, msg) -> pubsubtrace.Publish(ctx, topic, msg)
+#  - id: Replace calls to *pubsub.Topic.Publish with the traced ones
+#    join-point:
+#      method-call:
+#        receiver: '*cloud.google.com/go/pubsub.Topic'
+#        name: Publish
+#    advice:
+#      - wrap-expression:
+#          imports:
+#            pubsubtrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1
+#            pubsub: cloud.google.com/go/pubsub
+#            context: context
+#          template: |-
+#            func(topic *pubsub.Topic, ctx context.Context, msg *pubsub.Message) *pubsub.PublishResult {
+#              ddres := pubsubtrace.Publish(ctx, topic, msg)
+#              res := ddres.PublishResult
+#              res.DDTracePublishResult = ddres
+#              return res
+#            }({{ .AST.Fun.X }}, {{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+#
+#  - id: Modify *pubsub.PublishResult.Get to call the traced version
+#    join-point:
+#      function-body:
+#        function:
+#          - receiver: '*cloud.google.com/go/internal/pubsub.PublishResult'
+#          - name: Get
+#    advice:
+#      - prepend-statements:
+#          template: |-
+#            {{- $r := .Function.Receiver -}}
+#            {{- $ctx := .Function.Argument 0 -}}
+#            if {{ $r }}.DDTracePublishResult != nil && !{{ $r }}.DDTracePublishResultCalled.Load() {
+#              {{ $r }}.DDTracePublishResultCalled.Store(true)
+#              return {{ $r }}.DDTracePublishResult.Get({{ $ctx }})
+#            }
