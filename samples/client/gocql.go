@@ -16,16 +16,7 @@ func SampleGoCQL1() {
 		Hosts:    []string{"127.0.0.1:9042"},
 		Keyspace: "my-keyspace",
 	}
-
-	session, err := cluster.CreateSession()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	query := session.Query("CREATE KEYSPACE if not exists trace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1}")
-	if err := query.Exec(); err != nil {
-		log.Fatal(err)
-	}
+	runGoCQLQuery(cluster)
 }
 
 func SampleGoCQL2() {
@@ -33,7 +24,15 @@ func SampleGoCQL2() {
 		Hosts:    []string{"127.0.0.1:9042"},
 		Keyspace: "my-keyspace",
 	}
+	runGoCQLQuery(&cluster)
+}
 
+func SampleGoCQL3() {
+	cluster := gocql.NewCluster("127.0.0.1:9042")
+	runGoCQLQuery(cluster)
+}
+
+func runGoCQLQuery(cluster *gocql.ClusterConfig) {
 	session, err := cluster.CreateSession()
 	if err != nil {
 		log.Fatal(err)
