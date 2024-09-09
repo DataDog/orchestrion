@@ -12,11 +12,15 @@ meta:
 aspects:
   - id: Wrap gocql.NewCluster function call or gocql.ClusterConfig struct literal (pointer)
     join-point:
-      one-of:
-        - struct-literal:
-            type: github.com/gocql/gocql.ClusterConfig
-            match: pointer-only
-        - function-call: github.com/gocql/gocql.NewCluster
+      all-of:
+        - one-of:
+          - struct-literal:
+              type: github.com/gocql/gocql.ClusterConfig
+              match: pointer-only
+          - function-call: github.com/gocql/gocql.NewCluster
+        # Avoid circular dependency.
+        - not:
+            import-path: github.com/gocql/gocql
     advice:
       - wrap-expression:
           imports:
@@ -33,9 +37,13 @@ aspects:
 
   - id: Wrap gocql.ClusterConfig struct literal (value)
     join-point:
-      struct-literal:
-        type: github.com/gocql/gocql.ClusterConfig
-        match: value-only
+      all-of:
+        - struct-literal:
+            type: github.com/gocql/gocql.ClusterConfig
+            match: value-only
+        # Avoid circular dependency.
+        - not:
+            import-path: github.com/gocql/gocql
     advice:
       - wrap-expression:
           imports:

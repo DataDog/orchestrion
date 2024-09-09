@@ -117,9 +117,12 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From databases/gocql.yml
 	{
-		JoinPoint: join.OneOf(
-			join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchPointerOnly),
-			join.FunctionCall("github.com/gocql/gocql.NewCluster"),
+		JoinPoint: join.AllOf(
+			join.OneOf(
+				join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchPointerOnly),
+				join.FunctionCall("github.com/gocql/gocql.NewCluster"),
+			),
+			join.Not(join.ImportPath("github.com/gocql/gocql")),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -132,7 +135,10 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchValueOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchValueOnly),
+			join.Not(join.ImportPath("github.com/gocql/gocql")),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cluster gocql.ClusterConfig) gocql.ClusterConfig {\n  obs := gocqltrace.NewObserver(&cluster)              \n  cluster.QueryObserver = obs\n  cluster.BatchObserver = obs\n  cluster.ConnectObserver = obs\n  return cluster\n}({{ . }})",
@@ -828,4 +834,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:7Df0w94d2WzfRO0Zx/ucLvvhlC4jWNLkKOWGZqcov/SDX2n841U16qB7Ew8iZVYjx9FlN9zYsFdctmp+eQykog=="
+const Checksum = "sha512:EAu2p1EnXYn3Vl9oxZKiXBexiu+ecyJn62uo2ORzY5PpPnpTVW2foTHAKGZAkELYcgBJkJ6NUP+CfXdIpifoHA=="
