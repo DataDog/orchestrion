@@ -1,0 +1,70 @@
+//line samples/client/gocql.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"log"
+
+	"github.com/gocql/gocql"
+//line <generated>
+	__orchestrion_gocqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql"
+)
+
+//line samples/client/gocql.go:14
+func SampleGoCQL1() {
+	cluster :=
+//line <generated>
+		func(cluster *gocql.ClusterConfig) *gocql.ClusterConfig {
+			obs := __orchestrion_gocqltrace.NewObserver(cluster)
+			cluster.QueryObserver = obs
+			cluster.BatchObserver = obs
+			cluster.ConnectObserver = obs
+			return cluster
+		}(
+//line samples/client/gocql.go:15
+			&gocql.ClusterConfig{
+				Hosts:    []string{"127.0.0.1:9042"},
+				Keyspace: "my-keyspace",
+			})
+
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query := session.Query("CREATE KEYSPACE if not exists trace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1}")
+	if err := query.Exec(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func SampleGoCQL2() {
+	cluster :=
+//line <generated>
+		func(cluster gocql.ClusterConfig) gocql.ClusterConfig {
+			obs := __orchestrion_gocqltrace.NewObserver(&cluster)
+			cluster.QueryObserver = obs
+			cluster.BatchObserver = obs
+			cluster.ConnectObserver = obs
+			return cluster
+		}(
+//line samples/client/gocql.go:32
+			gocql.ClusterConfig{
+				Hosts:    []string{"127.0.0.1:9042"},
+				Keyspace: "my-keyspace",
+			})
+
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	query := session.Query("CREATE KEYSPACE if not exists trace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1}")
+	if err := query.Exec(); err != nil {
+		log.Fatal(err)
+	}
+}
