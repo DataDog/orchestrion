@@ -16,6 +16,7 @@ import (
 	ddspan "orchestrion/integration/tests/dd-span"
 	echov4 "orchestrion/integration/tests/echo.v4"
 	fiberv2 "orchestrion/integration/tests/fiber.v2"
+	gcppubsub "orchestrion/integration/tests/gcp_pubsub"
 	gin "orchestrion/integration/tests/gin"
 	goredisv7 "orchestrion/integration/tests/go-redis.v7"
 	goredisv8 "orchestrion/integration/tests/go-redis.v8"
@@ -46,6 +47,7 @@ var suite = map[string]testCase{
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),
 	"fiber.v2":                             new(fiberv2.TestCase),
+	"gcp_pubsub":                           new(gcppubsub.TestCase),
 	"gin":                                  new(gin.TestCase),
 	"go-redis.v7":                          new(goredisv7.TestCase),
 	"go-redis.v8":                          new(goredisv8.TestCase),

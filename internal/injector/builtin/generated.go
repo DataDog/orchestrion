@@ -166,6 +166,57 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
+	// From datastreams/gcp_pubsub.yml
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*cloud.google.com/go/pubsub.Subscription")),
+			join.Name("Receive"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $subscription := .Function.Receiver -}}\n{{- $handler := .Function.Argument 1 -}}\n__dd_traceFn := tracing.TraceReceiveFunc({{ $subscription }})\n__dd_wrapHandler := func(h func(ctx context.Context, msg *Message)) func(ctx context.Context, msg *Message) {\n  return func(ctx context.Context, msg *Message) {\n    __dd_traceMsg := &tracing.Message{\n      ID:              msg.ID,\n      Data:            msg.Data,\n      OrderingKey:     msg.OrderingKey,\n      Attributes:      msg.Attributes,\n      DeliveryAttempt: msg.DeliveryAttempt,\n      PublishTime:     msg.PublishTime,\n    }\n    ctx, closeSpan := __dd_traceFn(ctx, __dd_traceMsg)\n    defer closeSpan()\n    h(ctx, msg)\n  }\n}\n{{ $handler }} = __dd_wrapHandler({{ $handler }})",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("cloud.google.com/go/internal/pubsub.PublishResult")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type DDCloseSpanFunc = func(serverID string, err error)",
+				map[string]string{},
+			), []string{}),
+			advice.AddStructField("DDCloseSpan", join.MustTypeName("DDCloseSpanFunc")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*cloud.google.com/go/pubsub.Topic")),
+			join.Name("Publish"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $topic := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Argument 1 -}}\n{{- $publishResult := .Function.Result 0 -}}\n__dd_traceMsg := &tracing.Message{\n  ID:              {{ $msg }}.ID,\n  Data:            {{ $msg }}.Data,\n  OrderingKey:     {{ $msg }}.OrderingKey,\n  Attributes:      {{ $msg }}.Attributes,\n  DeliveryAttempt: {{ $msg }}.DeliveryAttempt,\n  PublishTime:     {{ $msg }}.PublishTime,\n}\n__dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, __dd_traceMsg)\n{{ $ctx }} = __dd_ctx\n{{ $msg }}.Attributes = __dd_traceMsg.Attributes\n\ndefer func() {\n  {{ $publishResult }}.DDCloseSpan = __dd_closeSpan\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*cloud.google.com/go/internal/pubsub.PublishResult")),
+			join.Name("Get"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $publishResult := .Function.Receiver -}}\n{{- $serverID := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\ndefer func() {\n  if {{ $publishResult }}.DDCloseSpan != nil {\n    {{ $publishResult }}.DDCloseSpan({{ $serverID }}, {{ $err }})\n  }\n}()",
+				map[string]string{},
+			)),
+		},
+	},
 	// From datastreams/ibm_sarama.yml
 	{
 		JoinPoint: join.OneOf(
@@ -759,6 +810,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -799,4 +851,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:sp5TsWOqNIVcxw2552Y6n+j22VMd0UWV3GBBEIQXAKXiMlN9AjAx7dmUaYf0CfGURiiZ2NR5e/IyO+zAzXh7bA=="
+const Checksum = "sha512:JAVv+luicrtqSgAsh7ik7iSQbQ+nYeO+WVN9Sis/73wwh1iHa55L5AwwLxsm+LvP0+JB0qJGZWH6D08RAiDruw=="
