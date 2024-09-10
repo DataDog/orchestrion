@@ -38,9 +38,10 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
 	github.com/xlab/treeprint v1.2.0
 	go.mongodb.org/mongo-driver v1.16.1
+	golang.org/x/sync v0.8.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20240816220358-f8d98a477c22
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.68.0-rc.1
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/v3 v3.5.1
@@ -336,7 +337,6 @@ require (
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
