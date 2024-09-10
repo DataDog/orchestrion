@@ -9,7 +9,7 @@ charset-normalizer==3.3.2
 ddsketch==3.0.1
 frozenlist==1.4.1
 idna==3.8
-msgpack==1.0.8
+msgpack==1.1.0
 multidict==6.0.5
 protobuf==5.28.0
 requests==2.32.3
