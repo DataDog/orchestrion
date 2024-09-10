@@ -143,6 +143,7 @@ Library                             | Since    | Notes
 `os`                                | `v0.8.0` | [Aspect][os]
 `github.com/aws/aws-sdk-go-v2`      | `v0.8.0` | [Aspect][aws-sdk-go-v2]
 `github.com/redis/go-redis/v9`      | `v0.8.0` | [Aspect][go-redis-v9]
+`github.com/gocql/gocql`            | `v0.8.0` | [Aspect][gocql]
 
 [db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
 [gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
@@ -169,6 +170,7 @@ Library                             | Since    | Notes
 [ibm-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/ibm_sarama/
 [shopify-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/shopify_sarama/
 [os]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/ossec/
+[gocql]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gocql/
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.
