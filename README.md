@@ -140,6 +140,10 @@ Library                             | Since    | Notes
 `github.com/Shopify/sarama`         | `v0.7.4` | [Aspect][shopify-sarama]
 `k8s.io/client-go`                  | `v0.7.4` | [Aspect][k8s-client]
 `log/slog`                          | `v0.7.4` | [Aspect][log-slog]
+`os`                                | `v0.8.0` | [Aspect][os]
+`github.com/aws/aws-sdk-go-v2`      | `v0.8.0` | [Aspect][aws-sdk-go-v2]
+`github.com/redis/go-redis/v9`      | `v0.8.0` | [Aspect][go-redis-v9]
+`github.com/gocql/gocql`            | `v0.8.0` | [Aspect][gocql]
 
 [db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
 [gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
@@ -147,6 +151,7 @@ Library                             | Since    | Notes
 [chi-v1]: https://datadoghq.dev/orchestrion/docs/built-in/http/chi/#use-v1-tracer-middleware
 [go-redis-v7]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v7-client
 [go-redis-v8]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v8-client
+[go-redis-v9]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v9-client
 [fiber-v2]: https://datadoghq.dev/orchestrion/docs/built-in/http/fiber/
 [redigo]: https://datadoghq.dev/orchestrion/docs/built-in/databases/redigo/
 [gorilla]: https://datadoghq.dev/orchestrion/docs/built-in/http/gorilla/
@@ -161,8 +166,11 @@ Library                             | Since    | Notes
 [hashicorp-vault]: https://datadoghq.dev/orchestrion/docs/built-in/api/vault/
 [log-slog]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/slog/
 [aws-sdk-go]: https://datadoghq.dev/orchestrion/docs/built-in/cloud/aws-sdk/
+[aws-sdk-go-v2]: https://datadoghq.dev/orchestrion/docs/built-in/cloud/aws-sdk-v2/
 [ibm-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/ibm_sarama/
 [shopify-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/shopify_sarama/
+[os]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/ossec/
+[gocql]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gocql/
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.
