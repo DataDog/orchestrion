@@ -115,6 +115,40 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/gocql.yml
+	{
+		JoinPoint: join.AllOf(
+			join.OneOf(
+				join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchPointerOnly),
+				join.FunctionCall("github.com/gocql/gocql.NewCluster"),
+			),
+			join.Not(join.ImportPath("github.com/gocql/gocql")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cluster *gocql.ClusterConfig) *gocql.ClusterConfig {\n  obs := gocqltrace.NewObserver(cluster)              \n  cluster.QueryObserver = obs\n  cluster.BatchObserver = obs\n  cluster.ConnectObserver = obs\n  return cluster\n}({{ . }})",
+				map[string]string{
+					"gocql":      "github.com/gocql/gocql",
+					"gocqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchValueOnly),
+			join.Not(join.ImportPath("github.com/gocql/gocql")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cluster gocql.ClusterConfig) gocql.ClusterConfig {\n  obs := gocqltrace.NewObserver(&cluster)              \n  cluster.QueryObserver = obs\n  cluster.BatchObserver = obs\n  cluster.ConnectObserver = obs\n  return cluster\n}({{ . }})",
+				map[string]string{
+					"gocql":      "github.com/gocql/gocql",
+					"gocqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql",
+				},
+			)),
+		},
+	},
 	// From databases/gorm.yml
 	{
 		JoinPoint: join.FunctionCall("gorm.io/gorm.Open"),
@@ -766,6 +800,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
@@ -799,4 +834,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:sp5TsWOqNIVcxw2552Y6n+j22VMd0UWV3GBBEIQXAKXiMlN9AjAx7dmUaYf0CfGURiiZ2NR5e/IyO+zAzXh7bA=="
+const Checksum = "sha512:EAu2p1EnXYn3Vl9oxZKiXBexiu+ecyJn62uo2ORzY5PpPnpTVW2foTHAKGZAkELYcgBJkJ6NUP+CfXdIpifoHA=="
