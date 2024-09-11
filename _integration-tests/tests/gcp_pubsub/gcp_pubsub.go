@@ -31,8 +31,10 @@ const (
 )
 
 type TestCase struct {
-	container *gcloud.GCloudContainer
-	client    *pubsub.Client
+	container   *gcloud.GCloudContainer
+	client      *pubsub.Client
+	publishTime time.Time
+	messageID   string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
@@ -61,7 +63,10 @@ func (tc *TestCase) Setup(t *testing.T) {
 	topic, err := tc.client.CreateTopic(ctx, testTopic)
 	require.NoError(t, err)
 
-	_, err = tc.client.CreateSubscription(ctx, testSubscription, pubsub.SubscriptionConfig{Topic: topic})
+	_, err = tc.client.CreateSubscription(ctx, testSubscription, pubsub.SubscriptionConfig{
+		Topic:                 topic,
+		EnableMessageOrdering: true,
+	})
 	require.NoError(t, err)
 }
 
@@ -70,8 +75,10 @@ func (tc *TestCase) publishMessage(t *testing.T) {
 
 	ctx := context.Background()
 	topic := tc.client.Topic(testTopic)
+	topic.EnableMessageOrdering = true
 	res := topic.Publish(context.Background(), &pubsub.Message{
-		Data: []byte("Hello, World!"),
+		Data:        []byte("Hello, World!"),
+		OrderingKey: "ordering-key",
 	})
 	_, err := res.Get(ctx)
 	require.NoError(t, err)
@@ -88,6 +95,8 @@ func (tc *TestCase) receiveMessage(t *testing.T) {
 	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
 		assert.Equal(t, message.Data, []byte("Hello, World!"))
 		message.Ack()
+		tc.publishTime = message.PublishTime
+		tc.messageID = message.ID
 		cancel()
 	})
 	require.NoError(t, err)
@@ -113,24 +122,31 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
-				"name":    "pubsub.publish",
-				"type":    "queue",
-				"service": "gcp_pubsub.test",
+				"name":     "pubsub.publish",
+				"type":     "queue",
+				"resource": "projects/pstest-orchestrion/topics/pstest-orchestrion-topic",
+				"service":  "tests.test",
 			},
 			Meta: map[string]any{
-				"span.kind": "producer",
-				"component": "cloud.google.com/go/pubsub.v1",
+				"span.kind":    "producer",
+				"component":    "cloud.google.com/go/pubsub.v1",
+				"ordering_key": "ordering-key",
 			},
 			Children: trace.Spans{
 				{
 					Tags: map[string]any{
-						"name":    "pubsub.receive",
-						"type":    "queue",
-						"service": "gcp_pubsub.test",
+						"name":     "pubsub.receive",
+						"type":     "queue",
+						"resource": "projects/pstest-orchestrion/subscriptions/pstest-orchestrion-subscription",
+						"service":  "tests.test",
 					},
 					Meta: map[string]any{
-						"span.kind": "consumer",
-						"component": "cloud.google.com/go/pubsub.v1",
+						"span.kind":        "consumer",
+						"component":        "cloud.google.com/go/pubsub.v1",
+						"messaging.system": "googlepubsub",
+						"ordering_key":     "ordering-key",
+						"publish_time":     tc.publishTime.String(),
+						"message_id":       tc.messageID,
 					},
 				},
 			},

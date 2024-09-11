@@ -46,7 +46,6 @@ aspects:
 
   ## Trace Publish ##
 
-  # TODO: open issue -> if I try to match cloud.google.com/go/pubsub.PublishResult it does not match - seems orchestrion is not following aliases
   - id: Add struct fields to pubsub.PublishResult
     join-point:
       struct-definition: cloud.google.com/go/internal/pubsub.PublishResult
