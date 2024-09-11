@@ -29,7 +29,15 @@ aspects:
             __dd_traceFn := tracing.TraceReceiveFunc({{ $subscription }})
             __dd_wrapHandler := func(h func(ctx context.Context, msg *Message)) func(ctx context.Context, msg *Message) {
               return func(ctx context.Context, msg *Message) {
-                ctx, closeSpan := __dd_traceFn(ctx, msg)
+                __dd_traceMsg := &tracing.Message{
+                  ID:              msg.ID,
+                  Data:            msg.Data,
+                  OrderingKey:     msg.OrderingKey,
+                  Attributes:      msg.Attributes,
+                  DeliveryAttempt: msg.DeliveryAttempt,
+                  PublishTime:     msg.PublishTime,
+                }
+                ctx, closeSpan := __dd_traceFn(ctx, __dd_traceMsg)
                 defer closeSpan()
                 h(ctx, msg)
               }
@@ -38,6 +46,7 @@ aspects:
 
   ## Trace Publish ##
 
+  # TODO: open issue -> if I try to match cloud.google.com/go/pubsub.PublishResult it does not match - seems orchestrion is not following aliases
   - id: Add struct fields to pubsub.PublishResult
     join-point:
       struct-definition: cloud.google.com/go/internal/pubsub.PublishResult
@@ -64,8 +73,17 @@ aspects:
             {{- $ctx := .Function.Argument 0 -}}
             {{- $msg := .Function.Argument 1 -}}
             {{- $publishResult := .Function.Result 0 -}}
-            __dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, {{ $msg }})
+            __dd_traceMsg := &tracing.Message{
+              ID:              {{ $msg }}.ID,
+              Data:            {{ $msg }}.Data,
+              OrderingKey:     {{ $msg }}.OrderingKey,
+              Attributes:      {{ $msg }}.Attributes,
+              DeliveryAttempt: {{ $msg }}.DeliveryAttempt,
+              PublishTime:     {{ $msg }}.PublishTime,
+            }
+            __dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, __dd_traceMsg)
             {{ $ctx }} = __dd_ctx
+            {{ $msg }}.Attributes = __dd_traceMsg.Attributes
             
             defer func() {
               {{ $publishResult }}.DDCloseSpan = __dd_closeSpan

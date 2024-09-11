@@ -5,7 +5,7 @@ go 1.22.6
 replace github.com/datadog/orchestrion => ../
 
 // TODO: remove
-replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240910154816-9f5893676dfc
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240910105425-9ef5256cc323
 
 require (
 	cloud.google.com/go/pubsub v1.42.0

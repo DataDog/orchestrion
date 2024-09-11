@@ -208,7 +208,7 @@ var Aspects = [...]aspect.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $subscription := .Function.Receiver -}}\n{{- $handler := .Function.Argument 1 -}}\n__dd_traceFn := tracing.TraceReceiveFunc({{ $subscription }})\n__dd_wrapHandler := func(h func(ctx context.Context, msg *Message)) func(ctx context.Context, msg *Message) {\n  return func(ctx context.Context, msg *Message) {\n    ctx, closeSpan := __dd_traceFn(ctx, msg)\n    defer closeSpan()\n    h(ctx, msg)\n  }\n}\n{{ $handler }} = __dd_wrapHandler({{ $handler }})",
+				"{{- $subscription := .Function.Receiver -}}\n{{- $handler := .Function.Argument 1 -}}\n__dd_traceFn := tracing.TraceReceiveFunc({{ $subscription }})\n__dd_wrapHandler := func(h func(ctx context.Context, msg *Message)) func(ctx context.Context, msg *Message) {\n  return func(ctx context.Context, msg *Message) {\n    __dd_traceMsg := &tracing.Message{\n      ID:              msg.ID,\n      Data:            msg.Data,\n      OrderingKey:     msg.OrderingKey,\n      Attributes:      msg.Attributes,\n      DeliveryAttempt: msg.DeliveryAttempt,\n      PublishTime:     msg.PublishTime,\n    }\n    ctx, closeSpan := __dd_traceFn(ctx, __dd_traceMsg)\n    defer closeSpan()\n    h(ctx, msg)\n  }\n}\n{{ $handler }} = __dd_wrapHandler({{ $handler }})",
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 				},
@@ -232,7 +232,7 @@ var Aspects = [...]aspect.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $topic := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Argument 1 -}}\n{{- $publishResult := .Function.Result 0 -}}\n__dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, {{ $msg }})\n{{ $ctx }} = __dd_ctx\n\ndefer func() {\n  {{ $publishResult }}.DDCloseSpan = __dd_closeSpan\n}()",
+				"{{- $topic := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Argument 1 -}}\n{{- $publishResult := .Function.Result 0 -}}\n__dd_traceMsg := &tracing.Message{\n  ID:              {{ $msg }}.ID,\n  Data:            {{ $msg }}.Data,\n  OrderingKey:     {{ $msg }}.OrderingKey,\n  Attributes:      {{ $msg }}.Attributes,\n  DeliveryAttempt: {{ $msg }}.DeliveryAttempt,\n  PublishTime:     {{ $msg }}.PublishTime,\n}\n__dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, __dd_traceMsg)\n{{ $ctx }} = __dd_ctx\n{{ $msg }}.Attributes = __dd_traceMsg.Attributes\n\ndefer func() {\n  {{ $publishResult }}.DDCloseSpan = __dd_closeSpan\n}()",
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 				},
@@ -886,4 +886,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:A1LDE90RwwB8j5U1wTUCYPnTFYDs23FM9cIQH61lR/3CeftIiUKWzNSqj+5x6xKw+IhoZhn+w+FYt0cYTI+kpA=="
+const Checksum = "sha512:bMz0+ZlioiGLAXlumePYUKgTNrKaqEahWmoWnL75aHyjCgwepCHc+y+EvLezQmxbK9MiXaqFfron3VWSorXHqA=="
