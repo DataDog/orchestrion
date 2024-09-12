@@ -225,6 +225,31 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From datastreams/confluentinc_kafka_v2.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewConsumer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(c *kafka.Consumer, err error) (*kafkatrace.Consumer, error) {\n  var wc *kafkatrace.Consumer\n  if c != nil {\n    wc = kafkatrace.WrapConsumer(c)\n  }\n  return wc, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewProducer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
 	// From datastreams/ibm_sarama.yml
 	{
 		JoinPoint: join.OneOf(
@@ -819,6 +844,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -860,4 +886,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:78GckQiO/TwkdY/imohcBfDjBPGxM5gl0afpVbwYOmiGDxQn9pDgRrccUuef61GrdHDX1ZR8iBC6VVaEpYmRiw=="
+const Checksum = "sha512:6ygNit1V8B4UH1mqIy80O59MSFX4rikAivvjw0SiKcpgSDxiS14EmdvLIR2QyathZs7RfdGbxxpp91z8FEqRfA=="
