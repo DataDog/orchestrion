@@ -13,6 +13,7 @@ import (
 	awsv1 "orchestrion/integration/tests/aws.v1"
 	awsv2 "orchestrion/integration/tests/aws.v2"
 	chiv5 "orchestrion/integration/tests/chi.v5"
+	confluentincconfluentkafkago "orchestrion/integration/tests/confluentinc_confluent-kafka-go"
 	ddspan "orchestrion/integration/tests/dd-span"
 	echov4 "orchestrion/integration/tests/echo.v4"
 	fiberv2 "orchestrion/integration/tests/fiber.v2"
@@ -44,6 +45,7 @@ var suite = map[string]testCase{
 	"aws.v2/StructLiteral":                 new(awsv2.TestCaseStructLiteral),
 	"aws.v2/StructLiteralPtr":              new(awsv2.TestCaseStructLiteralPtr),
 	"chi.v5":                               new(chiv5.TestCase),
+	"confluentinc_confluent-kafka-go":		new(confluentincconfluentkafkago.TestCase),
 	"dd-span":                              new(ddspan.TestCase),
 	"echo.v4":                              new(echov4.TestCase),
 	"fiber.v2":                             new(fiberv2.TestCase),
