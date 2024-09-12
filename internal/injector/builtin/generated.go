@@ -427,6 +427,60 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
+	// From datastreams/confluentinc_kafka.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+		Advice: []advice.Advice{
+<<<<<<< HEAD
+			advice.WrapExpression(code.MustTemplate(
+				"func(c *kafka.Consumer, err error) (*kafkatrace.Consumer, error) {\n  var wc *kafkatrace.Consumer\n  if c != nil {\n    wc = kafkatrace.WrapConsumer(c)\n  }\n  return wc, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/kafka.NewProducer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
+				},
+			)),
+=======
+			advice.AddStructField("_ddTracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing.ProducerTracer")),
+>>>>>>> bccf93e (feat: code adapted to last dd-trace-go implementation)
+		},
+	},
+	// From datastreams/confluentinc_kafka_v2.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewConsumer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(c *kafka.Consumer, err error) (*kafkatrace.Consumer, error) {\n  var wc *kafkatrace.Consumer\n  if c != nil {\n    wc = kafkatrace.WrapConsumer(c)\n  }\n  return wc, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewProducer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
 	// From datastreams/gcp_pubsub.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
@@ -1131,6 +1185,13 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
+<<<<<<< HEAD
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+=======
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing",
+>>>>>>> bccf93e (feat: code adapted to last dd-trace-go implementation)
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -1179,4 +1240,8 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:i0tLYCr+uaIDKaCgI5RP0XnsbVPYaqvAnnu2fH6gE02FCOP+6gwQRd9p5uMEePv+4ebKmaAORZRw3VybaC8u6w=="
+<<<<<<< HEAD
+const Checksum = "sha512:HwAHO9sfdcaZLkLEs8BgPWwNHok+MBdYqgGk13Uq8aFwFssv+T64h5tg74vchGeUZDgixclAdypGqNqO0QiXwQ=="
+=======
+const Checksum = "sha512:1NTio2PeFO3S6Y0d4ooWqMjye8QTMZkolwbjgYODTV4zI3DkgPVbmOEJY+h8avE1AD1zJ/agdJNnYEYfOH3RRQ=="
+>>>>>>> bccf93e (feat: code adapted to last dd-trace-go implementation)
