@@ -9,6 +9,7 @@ package kafka
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -33,11 +34,13 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows")
+	}
 	var (
 		err error
 		ctx = context.Background()
 	)
-
 	tc.server, err = redpanda.Run(ctx,
 		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
 		redpanda.WithAutoCreateTopics(),
