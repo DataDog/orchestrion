@@ -64,7 +64,7 @@ func main() {
 
 		f.
 			Func().
-			Id("TestIntegration").
+			Id("TestIntegration_"+pkgName).
 			Params(jen.Id("t").Op("*").Qual("testing", "T")).
 			Block(
 				// testCases := map[string]utils.TestCase{ ... }

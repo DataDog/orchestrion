@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestIntegration(t *testing.T) {
+func TestIntegration_gocql(t *testing.T) {
 	testCases := map[string]utils.TestCase{
 		"NewCluster":       new(TestCaseNewCluster),
 		"StructLiteral":    new(TestCaseStructLiteral),

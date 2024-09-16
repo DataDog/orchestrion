@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestIntegration(t *testing.T) {
+func TestIntegration_awsv2(t *testing.T) {
 	testCases := map[string]utils.TestCase{
 		"LoadDefaultConfig": new(TestCaseLoadDefaultConfig),
 		"NewConfig":         new(TestCaseNewConfig),

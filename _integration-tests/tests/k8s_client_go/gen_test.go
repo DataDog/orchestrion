@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestIntegration(t *testing.T) {
+func TestIntegration_k8sclientgo(t *testing.T) {
 	testCases := map[string]utils.TestCase{
 		"NewCfgFunc":                new(TestCaseNewCfgFunc),
 		"StructLiteralWithParam":    new(TestCaseStructLiteralWithParam),

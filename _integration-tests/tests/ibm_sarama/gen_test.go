@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestIntegration(t *testing.T) {
+func TestIntegration_ibm_sarama(t *testing.T) {
 	testCases := map[string]utils.TestCase{
 		"Main": new(TestCase),
 	}
