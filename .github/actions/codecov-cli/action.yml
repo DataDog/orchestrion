@@ -1,0 +1,21 @@
+name: 'Install CodeCov CLI'
+description: 'Install the CodeCov CLI for use in GitHub Actions'
+outputs:
+  codecov:
+    description: Path to the codecov CLI
+    value: ${{ steps.install.outputs.codecov }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+      with:
+        python-version: '3.x'
+
+    - name: Install codecov-cli
+      id: install
+      shell: bash
+      run: |-
+        pip install codecov-cli==0.7.4
+        echo "codecov=$(which codecovcli)" >> "${GITHUB_OUTPUT}"

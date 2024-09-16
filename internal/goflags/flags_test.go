@@ -42,7 +42,6 @@ func TestTrim(t *testing.T) {
 				require.NotContains(t, tc.flags.Short, flag)
 			}
 		})
-
 	}
 }
 
@@ -133,16 +132,16 @@ func TestParse(t *testing.T) {
 	} {
 		// Make sure the expected outcomes are non-nil, makes it easier to validate afterwards.
 		if tc.expected.Short == nil {
-			tc.expected.Short = map[string]struct{}{}
+			tc.expected.Short = make(map[string]struct{})
 		}
 		if tc.expected.Long == nil {
-			tc.expected.Long = map[string]string{}
+			tc.expected.Long = make(map[string]string)
 		}
 
 		t.Run(name, func(t *testing.T) {
 			defer restore(shortFlags, longFlags)
 			shortFlags = tc.expected.Short
-			longFlags = map[string]struct{}{}
+			longFlags = make(map[string]struct{})
 			for flag := range tc.expected.Long {
 				longFlags[flag] = struct{}{}
 			}
@@ -152,12 +151,12 @@ func TestParse(t *testing.T) {
 			require.NoError(t, err)
 
 			if flags.Short == nil {
-				flags.Short = map[string]struct{}{}
+				flags.Short = make(map[string]struct{})
 			}
 			assert.True(t, reflect.DeepEqual(tc.expected.Short, flags.Short), "expected:\n%#v\nactual:\n%#v", tc.expected.Short, flags.Short)
 
 			if flags.Long == nil {
-				flags.Long = map[string]string{}
+				flags.Long = make(map[string]string)
 			}
 			assert.True(t, reflect.DeepEqual(tc.expected.Long, flags.Long), "expected:\n%#v\nactual:\n%#v", tc.expected.Long, flags.Long)
 		})

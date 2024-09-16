@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"orchestrion/integration/utils"
@@ -29,7 +30,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.App.Get("/ping", func(c *fiber.Ctx) error { return c.JSON(map[string]any{"message": "pong"}) })
 	tc.addr = "127.0.0.1:" + utils.GetFreePort(t)
 
-	go func() { require.NoError(t, tc.App.Listen(tc.addr)) }()
+	go func() { assert.NoError(t, tc.App.Listen(tc.addr)) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {

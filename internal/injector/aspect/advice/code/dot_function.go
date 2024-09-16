@@ -78,11 +78,11 @@ func (f *declaredFunc) Name() (string, error) {
 	return f.Decl.Name.Name, nil
 }
 
-func (f *literalFunc) Receiver() (string, error) {
+func (*literalFunc) Receiver() (string, error) {
 	return "", errNotMethod
 }
 
-func (f *literalFunc) Name() (string, error) {
+func (*literalFunc) Name() (string, error) {
 	return "", nil
 }
 
@@ -94,7 +94,7 @@ func (noFunc) Name() (string, error) {
 	return "", errNoFunction
 }
 
-func (noFunc) Argument(index int) (string, error) {
+func (noFunc) Argument(int) (string, error) {
 	return "", errNoFunction
 }
 
@@ -102,7 +102,7 @@ func (noFunc) ArgumentOfType(string) (string, error) {
 	return "", errNoFunction
 }
 
-func (noFunc) Result(index int) (string, error) {
+func (noFunc) Result(int) (string, error) {
 	return "", errNoFunction
 }
 
@@ -157,7 +157,7 @@ func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
 					return name, nil
 				}
 			}
-			idx += 1
+			idx++
 		}
 	}
 
@@ -186,7 +186,7 @@ func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, er
 		}
 		switch count := len(field.Names); count {
 		case 0, 1:
-			index += 1
+			index++
 		default:
 			index += count
 		}

@@ -19,6 +19,7 @@ import (
 	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
@@ -47,7 +48,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	mux.HandleFunc("/", tc.handleRoot)
 
-	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -64,7 +65,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
@@ -96,10 +97,9 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 }
 
 func (tc *TestCase) handleRoot(w http.ResponseWriter, _ *http.Request) {
-
 	fp, err := os.Open("/etc/passwd")
 
-	require.ErrorIs(tc.T, err, &events.BlockingSecurityEvent{})
+	assert.ErrorIs(tc.T, err, &events.BlockingSecurityEvent{})
 	if events.IsSecurityError(err) { // TODO: response writer instrumentation to not have to do that
 		span, _ := tracer.SpanFromContext(context.TODO())
 		span.SetTag("is.security.error", true)

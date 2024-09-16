@@ -19,7 +19,7 @@ type Graph struct {
 
 // AddEdge adds a new edge to this graph. Returns an error if the new edge would
 // introduce a cycle in the graph.
-func (g *Graph) AddEdge(from, to string) error {
+func (g *Graph) AddEdge(from string, to string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -46,7 +46,7 @@ func (g *Graph) AddEdge(from, to string) error {
 }
 
 // RemoveEdge removes an edge from this graph.
-func (g *Graph) RemoveEdge(from, to string) {
+func (g *Graph) RemoveEdge(from string, to string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -56,7 +56,7 @@ func (g *Graph) RemoveEdge(from, to string) {
 	}
 }
 
-func (g *Graph) path(from, to string) []string {
+func (g *Graph) path(from string, to string) []string {
 	var path []string
 	for child := range g.nodes[from] {
 		if child == to {

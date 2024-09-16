@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -33,7 +34,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.Server = grpc.NewServer()
 	helloworld.RegisterGreeterServer(tc.Server, &server{})
 
-	go func() { require.NoError(t, tc.Server.Serve(lis)) }()
+	go func() { assert.NoError(t, tc.Server.Serve(lis)) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -50,7 +51,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.Equal(t, "Hello rob", resp.GetMessage())
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {
+func (tc *TestCase) Teardown(*testing.T) {
 	tc.Server.GracefulStop()
 }
 

@@ -166,7 +166,7 @@ func (cmd *command) Stage() string {
 	return filepath.Base(filepath.Dir(cmd.flags.Output))
 }
 
-func (cmd *command) Type() CommandType {
+func (*command) Type() CommandType {
 	return CommandTypeOther
 }
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"orchestrion/integration/utils"
@@ -35,10 +36,10 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	engine.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
 
-	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (*TestCase) Run(t *testing.T) {
 	resp, err := http.Get("http://127.0.0.1:8080/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)

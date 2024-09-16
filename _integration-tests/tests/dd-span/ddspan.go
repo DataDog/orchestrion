@@ -18,21 +18,21 @@ import (
 
 type TestCase struct{}
 
-func (tc *TestCase) Setup(t *testing.T) {}
+func (*TestCase) Setup(*testing.T) {}
 
-func (tc *TestCase) Run(t *testing.T) {
+func (*TestCase) Run(t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
 	defer span.Finish()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:0/", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:0/", nil)
 	require.NoError(t, err)
 
-	spanFromHttpRequest(req)
+	_, _ = spanFromHTTPRequest(req)
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {}
+func (*TestCase) Teardown(*testing.T) {}
 
 //dd:span foo:bar
-func spanFromHttpRequest(*http.Request) (string, error) {
+func spanFromHTTPRequest(*http.Request) (string, error) {
 	return tagSpecificSpan()
 }

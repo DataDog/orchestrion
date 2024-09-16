@@ -29,7 +29,7 @@ func Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	return http.DefaultClient.Do(req)
 }
 
-func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *http.Response, err error) {
+func Post(ctx context.Context, url string, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, err

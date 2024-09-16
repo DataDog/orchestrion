@@ -158,11 +158,7 @@ func (a *MockAgent) Close() error {
 		return err
 	}
 
-	if err := os.RemoveAll(a.virtualEnv); err != nil {
-		return err
-	}
-
-	return nil
+	return os.RemoveAll(a.virtualEnv)
 }
 
 func (s *Session) Port() int {

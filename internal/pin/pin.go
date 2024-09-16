@@ -59,31 +59,31 @@ func AutoPinOrchestrion() {
 		styleFile = styleFile.Foreground(lipgloss.ANSIColor(2)).Underline(true)
 		styleCmd = styleCmd.Foreground(lipgloss.ANSIColor(5)).Bold(true).Underline(true)
 	} else {
-		fmt.Fprintf(os.Stderr, "Version check error: %v\n", requiredVersionError)
+		_, _ = fmt.Fprintf(os.Stderr, "Version check error: %v\n", requiredVersionError)
 	}
 
 	var builder strings.Builder
-	builder.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.ANSIColor(3)).Render("Warning:"))
-	builder.WriteRune(' ')
-	builder.WriteString(stylePath.Render(orchestrionImportPath))
-	builder.WriteString(" is not present in your ")
-	builder.WriteString(styleFile.Render("go.mod"))
-	builder.WriteString(" file.\nIn order to ensure build reliability and reproductibility, orchestrion")
-	builder.WriteString(" will now add itself in your ")
-	builder.WriteString(styleFile.Render("go.mod"))
-	builder.WriteString(" file by:\n\n\t1. creating a new file named ")
-	builder.WriteString(styleFile.Render(orchestrionToolGo))
-	builder.WriteString("\n\t2. running ")
-	builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
-	builder.WriteString("\n\t3. running ")
-	builder.WriteString(styleCmd.Render("go mod tidy"))
-	builder.WriteString("\n\nYou should commit the resulting changes into your source control system.")
+	_, _ = builder.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.ANSIColor(3)).Render("Warning:"))
+	_, _ = builder.WriteRune(' ')
+	_, _ = builder.WriteString(stylePath.Render(orchestrionImportPath))
+	_, _ = builder.WriteString(" is not present in your ")
+	_, _ = builder.WriteString(styleFile.Render("go.mod"))
+	_, _ = builder.WriteString(" file.\nIn order to ensure build reliability and reproductibility, orchestrion")
+	_, _ = builder.WriteString(" will now add itself in your ")
+	_, _ = builder.WriteString(styleFile.Render("go.mod"))
+	_, _ = builder.WriteString(" file by:\n\n\t1. creating a new file named ")
+	_, _ = builder.WriteString(styleFile.Render(orchestrionToolGo))
+	_, _ = builder.WriteString("\n\t2. running ")
+	_, _ = builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
+	_, _ = builder.WriteString("\n\t3. running ")
+	_, _ = builder.WriteString(styleCmd.Render("go mod tidy"))
+	_, _ = builder.WriteString("\n\nYou should commit the resulting changes into your source control system.")
 
 	message := builder.String()
-	fmt.Fprintln(os.Stderr, box.Render(message))
+	_, _ = fmt.Fprintln(os.Stderr, box.Render(message))
 
 	if err := PinOrchestrion(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to pin orchestrion in go.mod: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Failed to pin orchestrion in go.mod: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -115,7 +115,9 @@ func PinOrchestrion() error {
 		return fmt.Errorf("creating temporary %q: %w", tmpFile.Name(), err)
 	}
 	err = code.Render(tmpFile)
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("closing %q: %w", tmpFile.Name(), err)
+	}
 	if err != nil {
 		return fmt.Errorf("writing to %q: %w", tmpFile.Name(), err)
 	}
@@ -148,6 +150,6 @@ func init() {
 		}
 		log.Tracef("GOMOD=%s\n", os.Getenv("GOMOD"))
 	} else {
-		os.Setenv(envVarCheckedGoMod, envValTrue)
+		_ = os.Setenv(envVarCheckedGoMod, envValTrue)
 	}
 }

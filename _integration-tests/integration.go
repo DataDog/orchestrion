@@ -5,20 +5,4 @@
 
 package integration
 
-import (
-	"os"
-	"os/signal"
-	"syscall"
-)
-
 //go:generate go run ./utils/generator ./tests
-
-// OnSignal is used in the config files from internal/injector/testdata.
-func OnSignal(f func()) {
-	c := make(chan os.Signal, 0)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		f()
-	}()
-}

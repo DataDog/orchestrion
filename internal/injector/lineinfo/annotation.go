@@ -44,17 +44,15 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 	if node == nil {
 		last := len(v.stack) - 1
 
-		switch node := v.stack[last].(type) {
-		case *dst.GenDecl:
+		if node, isGenDecl := v.stack[last].(*dst.GenDecl); isGenDecl {
 			// If this is a `*dst.GenDecl` with a single item that's rendered without parentheses, we
 			// hoist decorations from the single item to the `*dst.GenDecl` itself, as it'll render
 			// better.
-			if !node.Lparen && len(node.Specs) > 1 {
-				break
+			if node.Lparen && len(node.Specs) == 1 {
+				specDeco := node.Specs[0].Decorations()
+				node.Decs.Start = append(node.Decs.Start, specDeco.Start...)
+				specDeco.Start.Clear()
 			}
-			specDeco := node.Specs[0].Decorations()
-			node.Decs.Start = append(node.Decs.Start, specDeco.Start...)
-			specDeco.Start.Clear()
 		}
 
 		// Finished visiting a node, we don't have anything particular to do...
@@ -138,22 +136,22 @@ func (l *lineInfo) directive(fileStart bool) string {
 	const prefix = "//line "
 	builder := bytes.NewBuffer(make([]byte, 0, len(prefix)+len(l.adjFile)+1+len(line)+2))
 
-	builder.WriteString(prefix)
-	builder.WriteString(l.adjFile)
+	_, _ = builder.WriteString(prefix)
+	_, _ = builder.WriteString(l.adjFile)
 	switch l.adjLine {
 	case 0:
 		// We don't emit 0 line numbers
 	case 1:
 		if fileStart {
 			// We emit :1:1 for line 1, so we match the output of `go tool cover` for this particular case.
-			builder.WriteString(":1:1")
+			_, _ = builder.WriteString(":1:1")
 			break
 		}
 		fallthrough
 	default:
 		// Otherwise, we only emit line number (no column).
-		builder.WriteByte(':')
-		builder.WriteString(line)
+		_ = builder.WriteByte(':')
+		_, _ = builder.WriteString(line)
 	}
 
 	return builder.String()

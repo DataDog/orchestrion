@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"orchestrion/integration/utils"
@@ -33,14 +34,14 @@ func (tc *TestCase) Setup(t *testing.T) {
 		Handler: mux,
 	}
 
-	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/ping", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err := io.WriteString(w, `{"message": "pong"}`)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}).Methods("GET")
 
-	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -57,6 +58,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Spans {
+	url := fmt.Sprintf("http://%s/ping", tc.Server.Addr)
 	return trace.Spans{
 		{
 			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
@@ -66,7 +68,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"type":     "http",
 			},
 			Meta: map[string]any{
-				"http.url": fmt.Sprintf("http://%s/ping", tc.Server.Addr),
+				"http.url": url,
 			},
 			Children: trace.Spans{
 				{
@@ -76,7 +78,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"type":     "web",
 					},
 					Meta: map[string]any{
-						"http.url": fmt.Sprintf("http://%s/ping", tc.Server.Addr),
+						"http.url": url,
 					},
 				},
 			},

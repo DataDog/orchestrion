@@ -12,7 +12,7 @@ import (
 	"orchestrion/integration/validator/trace"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // Auto-register the sqlite3 driver
 	"github.com/stretchr/testify/require"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"gorm.io/driver/sqlite"
@@ -48,7 +48,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.NoError(t, tc.DB.WithContext(ctx).Where("user_id = ?", 2).First(&note).Error)
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {}
+func (*TestCase) Teardown(*testing.T) {}
 
 func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{

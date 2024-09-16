@@ -64,8 +64,8 @@ func (d directive) matches(dec string) bool {
 
 	// If there is something after the directive name, it must be white space
 	rest = rest[len(d):]
-	rune, size := utf8.DecodeRuneInString(rest)
-	return size == 0 || unicode.IsSpace(rune)
+	r, size := utf8.DecodeRuneInString(rest)
+	return size == 0 || unicode.IsSpace(r)
 }
 
 func (directive) ImpliesImported() []string {

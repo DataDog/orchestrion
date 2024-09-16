@@ -34,11 +34,11 @@ func MutexAt(path string) *Mutex {
 // will downgrade the lock to a read-only lock.
 func (m *Mutex) RLock() error {
 	if m.file == nil {
-		if f, err := m.open(); err != nil {
+		f, err := m.open()
+		if err != nil {
 			return err
-		} else {
-			m.file = f
 		}
+		m.file = f
 	}
 	return rlock(m.file)
 }
@@ -48,11 +48,11 @@ func (m *Mutex) RLock() error {
 // reading, it will upgrade the lock to a read-write lock.
 func (m *Mutex) Lock() error {
 	if m.file == nil {
-		if f, err := m.open(); err != nil {
+		f, err := m.open()
+		if err != nil {
 			return err
-		} else {
-			m.file = f
 		}
+		m.file = f
 	}
 	return lock(m.file)
 }

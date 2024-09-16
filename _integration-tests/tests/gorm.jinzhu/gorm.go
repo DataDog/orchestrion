@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // Auto-register sqlite3 driver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
@@ -40,7 +40,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 	} {
 		require.NoError(t, tc.DB.Create(note).Error)
 	}
-
 }
 
 func (tc *TestCase) Run(t *testing.T) {

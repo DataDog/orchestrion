@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"orchestrion/integration/utils"
@@ -35,7 +36,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	})
 	tc.addr = "127.0.0.1:" + utils.GetFreePort(t)
 
-	go func() { require.ErrorIs(t, tc.Echo.Start(tc.addr), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.Echo.Start(tc.addr), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {

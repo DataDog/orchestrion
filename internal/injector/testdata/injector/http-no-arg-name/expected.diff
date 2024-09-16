@@ -1,24 +1,22 @@
 --- input.go
 +++ output.go
-@@ -1,3 +1,4 @@
+@@ -1,10 +1,15 @@
 +//line input.go:1:1
  package main
  
  import (
-@@ -6,8 +7,12 @@
+   "log"
    "net/http"
- 
-   "orchestrion/integration"
 +//line <generated>
 +  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
 +  __orchestrion_event "github.com/datadog/orchestrion/instrument/event"
  )
  
-+//line input.go:11
++//line input.go:8
  func main() {
    s := &http.Server{
      Addr:    ":8085",
-@@ -19,5 +22,26 @@
+@@ -13,5 +11,26 @@
    log.Printf("Server shut down: %v", s.ListenAndServe())
  }
  
