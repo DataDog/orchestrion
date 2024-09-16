@@ -12,12 +12,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"orchestrion/integration/utils"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 )
 
