@@ -65,12 +65,16 @@ jobs:
         if: github.event_name != 'push'
         id: is-tree-dirty
         run: |-
+          set -euxo pipefail
           git add .
-          git diff --staged --patch --exit-code > .repo.patch || echo "result=true" >> ${GITHUB_OUTPUT}
+          git status
+          git diff --staged --patch --exit-code > .repo.patch || echo 'result=true' >> "${GITHUB_OUTPUT}"
       - name: Upload patch
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
         with:
+          if-no-files-found: error
+          include-hidden-files: true
           name: repo.patch
           path: .repo.patch
       - name: Fail build if working tree is dirty
