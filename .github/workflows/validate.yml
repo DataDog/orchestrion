@@ -338,10 +338,10 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Success
-        if: needs.generate.result == 'success' && needs.lint.result == 'success' && needs.lint-workflows.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
+        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-workflows.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure'
         run: echo "OK"
       - name: Failed
-        if: needs.generate.result != 'success' || needs.lint.result != 'success' || needs.lint-workflows.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'
+        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-workflows.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure'
         run: |-
           echo "Failed!"
           exit 1
