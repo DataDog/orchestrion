@@ -19,6 +19,7 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/gocql/gocql v1.6.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gomodule/redigo v1.9.2
 	github.com/google/uuid v1.6.0
@@ -30,6 +31,7 @@ require (
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.33.0
+	github.com/testcontainers/testcontainers-go/modules/cassandra v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.33.0
@@ -38,7 +40,7 @@ require (
 	go.mongodb.org/mongo-driver v1.16.1
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20240816220358-f8d98a477c22
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.1-rc.2
+	gopkg.in/DataDog/dd-trace-go.v1 v1.67.1
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/v3 v3.5.1
@@ -195,6 +197,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hairyhenderson/go-codeowners v0.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
