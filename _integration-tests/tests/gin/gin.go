@@ -10,12 +10,14 @@ package gin
 import (
 	"context"
 	"net/http"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -27,7 +29,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	engine := gin.New()
 
 	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:8080",
+		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: engine.Handler(),
 	}
 

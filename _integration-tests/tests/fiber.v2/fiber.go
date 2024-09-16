@@ -9,26 +9,31 @@ package fiber
 
 import (
 	"net/http"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
 	*fiber.App
+	addr string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
 	tc.App = fiber.New(fiber.Config{DisableStartupMessage: true})
 	tc.App.Get("/ping", func(c *fiber.Ctx) error { return c.JSON(map[string]any{"message": "pong"}) })
-	go func() { require.NoError(t, tc.App.Listen("127.0.0.1:8080")) }()
+	tc.addr = "127.0.0.1:" + utils.GetFreePort(t)
+
+	go func() { require.NoError(t, tc.App.Listen(tc.addr)) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	resp, err := http.Get("http://127.0.0.1:8080/ping")
+	resp, err := http.Get("http://" + tc.addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -37,7 +42,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.App.ShutdownWithTimeout(time.Second))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
+func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
@@ -47,7 +52,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"type":     "http",
 			},
 			Meta: map[string]any{
-				"http.url": "http://127.0.0.1:8080/ping",
+				"http.url": "http://" + tc.addr + "/ping",
 			},
 			Children: trace.Spans{
 				{

@@ -22,11 +22,13 @@ import (
 
 type TestCase struct {
 	*grpc.Server
+	addr string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	lis, err := net.Listen("tcp", "127.0.0.1:9090")
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
+	tc.addr = lis.Addr().String()
 
 	tc.Server = grpc.NewServer()
 	helloworld.RegisterGreeterServer(tc.Server, &server{})
@@ -35,7 +37,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	conn, err := grpc.NewClient("127.0.0.1:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(tc.addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer func() { require.NoError(t, conn.Close()) }()
 

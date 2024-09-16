@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	t.Setenv("DD_APPSEC_WAF_TIMEOUT", "1h")
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:8080",
+		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: mux,
 	}
 
