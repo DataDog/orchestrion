@@ -268,7 +268,7 @@ jobs:
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
           fi
-          go build "${build_args[@]}" -o="bin/orchestrion.exe" .
+          go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
         shell: bash
         run: |-
@@ -378,7 +378,7 @@ jobs:
             --verbose                                                           \
             create-commit                                                       \
             --parent-sha="${parentsha}"                                         \
-            "${pr[@]}"                                                          \
+            ${pr[@]+"${pr[@]}"}                                                 \
             --sha="${sha}"                                                      \
             --fail-on-error                                                     \
             --git-service=github                                                \
@@ -391,7 +391,7 @@ jobs:
             --auto-load-params-from=GithubActions                               \
             --verbose                                                           \
             create-report                                                       \
-            "${pr[@]}"                                                          \
+            ${pr[@]+"${pr[@]}"}                                                 \
             --sha="${sha}"                                                      \
             --fail-on-error                                                     \
             --git-service=github                                                \

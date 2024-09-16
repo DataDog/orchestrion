@@ -49,10 +49,10 @@ runs:
           --verbose                                                             \
           do-upload                                                             \
           --disable-search                                                      \
-          "${file[@]}"                                                          \
+          ${file[@]+"${file[@]}"}                                               \
           --name="${{ inputs.name }}"                                           \
-          "${pr[@]}"                                                            \
-          "${flag[@]}"                                                          \
+          ${pr[@]+"${pr[@]}"}                                                   \
+          ${flag[@]+"${flag[@]}"}                                               \
           --sha="${sha}"                                                        \
           --fail-on-error                                                       \
           --git-service=github                                                  \
