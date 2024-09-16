@@ -77,42 +77,6 @@ func RunTest(t *testing.T, tc TestCase) {
 	tc.Run(t)
 }
 
-// NewTestSuite creates a new test suite from the given test cases.
-func NewTestSuite(testCases map[string]TestCase) func(t *testing.T) {
-	return func(t *testing.T) {
-		t.Helper()
-		require.True(t, orchestrionEnabled, "this test suite must be run with orchestrion enabled")
-		require.NotEmpty(t, testCases, "no test case registered")
-
-		mockAgent, err := agent.New(t)
-		require.NoError(t, err)
-		defer mockAgent.Close()
-
-		for name, tc := range testCases {
-			tc := tc
-			t.Run(name, func(t *testing.T) {
-				t.Log("Running setup")
-				tc.Setup(t)
-
-				defer func() {
-					t.Log("Running teardown")
-					tc.Teardown(t)
-				}()
-
-				sess, err := mockAgent.NewSession(t)
-				require.NoError(t, err)
-
-				// Defer this, so it runs even if the test panics (e.g, as the result of a failed assertion).
-				// If this does not happen, the test session will remain open; which is undesirable.
-				defer checkTrace(t, tc, sess)
-
-				t.Log("Running test")
-				tc.Run(t)
-			})
-		}
-	}
-}
-
 func checkTrace(t *testing.T, tc TestCase, sess *agent.Session) {
 	t.Helper()
 
