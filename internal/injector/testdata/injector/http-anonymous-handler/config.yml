@@ -45,12 +45,9 @@ code: |-
   package main
 
   import (
-    "context"
     "io"
     "log"
     "net/http"
-
-    "orchestrion/integration"
   )
 
   func main() {
@@ -68,8 +65,5 @@ code: |-
         w.Write(data)
       }),
     }
-    integration.OnSignal(func() {
-      s.Shutdown(context.Background())
-    })
     log.Printf("Server shut down: %v", s.ListenAndServe())
   }

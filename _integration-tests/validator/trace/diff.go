@@ -16,6 +16,13 @@ import (
 
 type Diff treeprint.Tree
 
+const (
+	markerAdded   = "+"
+	markerRemoved = "-"
+	markerChanged = "±"
+	markerEqual   = "="
+)
+
 // RequireAnyMatch asserts that any of the traces in `others` corresponds to the receiver.
 func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
 	t.Helper()
@@ -27,7 +34,7 @@ func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
 
 func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) {
 	if len(others) == 0 {
-		span.into(diff.AddMetaBranch("-", "No spans to match against"))
+		span.into(diff.AddMetaBranch(markerRemoved, "No spans to match against"))
 		return nil, diff
 	}
 
@@ -36,7 +43,7 @@ func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) 
 		if other.ID != 0 {
 			id = fmt.Sprintf("Span ID %d", other.ID)
 		}
-		branch := diff.AddMetaBranch("±", id)
+		branch := diff.AddMetaBranch(markerChanged, id)
 		if span.matches(other, branch) {
 			return other, nil
 		}
@@ -62,12 +69,12 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 		expected := span.Tags[tag]
 		actual := other.Tags[tag]
 		if expected != actual && (tag != "service" || fmt.Sprintf("%s.exe", expected) != actual) {
-			branch := diff.AddMetaBranch("±", tag)
-			branch.AddMetaNode("-", expected)
-			branch.AddMetaNode("+", actual)
+			branch := diff.AddMetaBranch(markerChanged, tag)
+			branch.AddMetaNode(markerRemoved, expected)
+			branch.AddMetaNode(markerAdded, actual)
 			matches = false
 		} else {
-			diff.AddMetaNode("=", fmt.Sprintf("%-*s = %q", maxLen, tag, expected))
+			diff.AddMetaNode(markerEqual, fmt.Sprintf("%-*s = %q", maxLen, tag, expected))
 		}
 	}
 
@@ -88,12 +95,12 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 			metaNode = diff.AddBranch("meta")
 		}
 		if expected != actual {
-			branch := metaNode.AddMetaBranch("±", key)
-			branch.AddMetaNode("-", expected)
-			branch.AddMetaNode("+", actual)
+			branch := metaNode.AddMetaBranch(markerChanged, key)
+			branch.AddMetaNode(markerRemoved, expected)
+			branch.AddMetaNode(markerAdded, actual)
 			matches = false
 		} else {
-			metaNode.AddMetaNode("=", fmt.Sprintf("%-*s = %q", maxLen, key, expected))
+			metaNode.AddMetaNode(markerEqual, fmt.Sprintf("%-*s = %q", maxLen, key, expected))
 		}
 	}
 
@@ -104,7 +111,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 		}
 		nodeName := fmt.Sprintf("At index %d", idx)
 		if len(other.Children) == 0 {
-			child.into(childrenNode.AddMetaBranch("-", fmt.Sprintf("%s (no children to match from)", nodeName)))
+			child.into(childrenNode.AddMetaBranch(markerRemoved, fmt.Sprintf("%s (no children to match from)", nodeName)))
 			matches = false
 			continue
 		}
@@ -113,9 +120,9 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 			if span.ID != 0 {
 				nodeName = fmt.Sprintf("Span #%d", span.ID)
 			}
-			child.into(childrenNode.AddMetaBranch("=", nodeName))
+			child.into(childrenNode.AddMetaBranch(markerEqual, nodeName))
 		} else {
-			childDiff.SetMetaValue("±")
+			childDiff.SetMetaValue(markerChanged)
 			childDiff.SetValue(nodeName)
 			childrenNode.AddNode(childDiff)
 			matches = false

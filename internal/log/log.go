@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	level            = LevelNone
-	writer  *os.File = os.Stderr
+	level   = LevelNone
+	writer  = os.Stderr
 	writerM sync.Mutex
 
 	context     = make(map[string]string)
@@ -63,9 +63,8 @@ func SetContext(key string, value string) {
 			if contextKeys[i] == key {
 				contextKeys = append(contextKeys[:i], contextKeys[i+1:]...)
 				break
-			} else {
-				i++
 			}
+			i++
 		}
 	}
 }
@@ -101,17 +100,17 @@ func write(at Level, format string, args ...any) {
 	// We flock the output file to ensure lines don't get mangled by concurrent access. On Windows
 	// with NTFS, if the log file is a O_APPEND file, this also has the benefit of preventing further
 	// data corruption, as NTFS tries its best to emulate O_APPEND, but this is brittle.
-	Flock(writer)
-	defer FUnlock(writer)
+	_ = Flock(writer)
+	defer func() { _ = FUnlock(writer) }()
 
-	fmt.Fprintf(writer, "[%-7s", at)
+	_, _ = fmt.Fprintf(writer, "[%-7s", at)
 
 	contextM.RLock()
 	defer contextM.RUnlock()
 	for _, key := range contextKeys {
-		fmt.Fprintf(writer, "|%s=%s", key, context[key])
+		_, _ = fmt.Fprintf(writer, "|%s=%s", key, context[key])
 	}
 
-	fmt.Fprint(writer, "] ")
-	fmt.Fprintf(writer, format, args...)
+	_, _ = fmt.Fprint(writer, "] ")
+	_, _ = fmt.Fprintf(writer, format, args...)
 }

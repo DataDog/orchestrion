@@ -108,11 +108,11 @@ func (r *ReferenceMap) AddSyntheticImports(file *dst.File) bool {
 	// Find the last import declaration in the file...
 	var imports *dst.GenDecl
 	for _, decl := range file.Decls {
-		if genDecl, ok := decl.(*dst.GenDecl); ok && genDecl.Tok == token.IMPORT {
-			imports = genDecl
-		} else {
+		genDecl, ok := decl.(*dst.GenDecl)
+		if !ok || genDecl.Tok != token.IMPORT {
 			break
 		}
+		imports = genDecl
 	}
 	// ...or create a new one if none is found...
 	if imports == nil {
@@ -170,7 +170,6 @@ func (r *ReferenceMap) add(path string, kind ReferenceKind) bool {
 func (k ReferenceKind) String() string {
 	if k == ImportStatement {
 		return "ImportStatement"
-	} else {
-		return "RelocationTarget"
 	}
+	return "RelocationTarget"
 }

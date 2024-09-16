@@ -36,7 +36,7 @@ func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
 
 	spec.Values = make([]dst.Expr, len(spec.Names))
 	for i := range spec.Values {
-		spec.Values[i] = dst.Clone(expr).(dst.Expr)
+		spec.Values[i], _ = dst.Clone(expr).(dst.Expr)
 	}
 
 	return true, nil

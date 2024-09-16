@@ -70,13 +70,13 @@ func (o oneOf) RenderHTML() string {
 func (o oneOf) renderCandidatesHTML() string {
 	var buf strings.Builder
 
-	buf.WriteString("<ul>\n")
+	_, _ = buf.WriteString("<ul>\n")
 	for _, candidate := range o {
-		buf.WriteString("  <li class=\"candidate\">\n")
-		buf.WriteString(candidate.RenderHTML())
-		buf.WriteString("  </li>\n")
+		_, _ = buf.WriteString("  <li class=\"candidate\">\n")
+		_, _ = buf.WriteString(candidate.RenderHTML())
+		_, _ = buf.WriteString("  </li>\n")
 	}
-	buf.WriteString("</ul>\n")
+	_, _ = buf.WriteString("</ul>\n")
 
 	return buf.String()
 }

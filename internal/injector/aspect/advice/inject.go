@@ -71,20 +71,20 @@ func (a injectDeclarations) AddedImports() []string {
 
 func (a injectDeclarations) RenderHTML() string {
 	var buf strings.Builder
-	buf.WriteString("<div class=\"advice inject-declarations\">\n")
-	buf.WriteString("  <div class=\"type\">Introduce new declarations:\n")
-	buf.WriteString(a.template.RenderHTML())
-	buf.WriteString("\n  </div>\n")
+	_, _ = buf.WriteString("<div class=\"advice inject-declarations\">\n")
+	_, _ = buf.WriteString("  <div class=\"type\">Introduce new declarations:\n")
+	_, _ = buf.WriteString(a.template.RenderHTML())
+	_, _ = buf.WriteString("\n  </div>\n")
 	if len(a.links) > 0 {
-		buf.WriteString("  <div class=\"type\">Record link-time dependencies on:\n")
-		buf.WriteString("    <ul>\n")
+		_, _ = buf.WriteString("  <div class=\"type\">Record link-time dependencies on:\n")
+		_, _ = buf.WriteString("    <ul>\n")
 		for _, link := range a.links {
-			buf.WriteString(fmt.Sprintf("      <li>{{<godoc %q>}}</li>\n", link))
+			_, _ = buf.WriteString(fmt.Sprintf("      <li>{{<godoc %q>}}</li>\n", link))
 		}
-		buf.WriteString("    </ul>\n")
-		buf.WriteString("  </div>\n")
+		_, _ = buf.WriteString("    </ul>\n")
+		_, _ = buf.WriteString("  </div>\n")
 	}
-	buf.WriteString("</div>\n")
+	_, _ = buf.WriteString("</div>\n")
 
 	return buf.String()
 }

@@ -19,13 +19,14 @@ import (
 
 // StartDynamoDBTestContainer starts a new dynamoDB test container and returns the necessary information to connect
 // to it.
-func StartDynamoDBTestContainer(t *testing.T) (c testcontainers.Container, host string, port string) {
+func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string, string) {
 	exposedPort := "8000/tcp"
 	req := testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "amazon/dynamodb-local:latest",
 			ExposedPorts: []string{exposedPort},
 			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
+			Name:         "dynamodb-local",
 			WorkingDir:   "/home/dynamodblocal",
 			Cmd: []string{
 				"-jar", "DynamoDBLocal.jar",
@@ -47,7 +48,7 @@ func StartDynamoDBTestContainer(t *testing.T) (c testcontainers.Container, host 
 	mappedPort, err := server.MappedPort(ctx, nat.Port(exposedPort))
 	require.NoError(t, err)
 
-	host, err = server.Host(ctx)
+	host, err := server.Host(ctx)
 	require.NoError(t, err)
 
 	return server, host, mappedPort.Port()

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	envVarParentId = "ORCHESTRION_PKG.RESOLVE_PARENT_ID"
+	envVarParentID = "ORCHESTRION_PKG.RESOLVE_PARENT_ID"
 )
 
 var envIgnoreList = map[string]func(*ResolveRequest, string){
@@ -28,7 +28,7 @@ var envIgnoreList = map[string]func(*ResolveRequest, string){
 	"PWD": nil,
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
 	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
-	envVarParentId:        func(r *ResolveRequest, id string) { r.resolveParentId = id },
+	envVarParentID:        func(r *ResolveRequest, id string) { r.resolveParentID = id },
 }
 
 type (
@@ -39,7 +39,7 @@ type (
 		Pattern    string   `json:"pattern"`              // Package pattern to resolve
 
 		// Fields set by canonicalization
-		resolveParentId    string // The value of the `envVarParentId` environment variable
+		resolveParentID    string // The value of the `envVarParentID` environment variable
 		toolexecImportpath string // The value of the TOOLEXEC_IMPORTPATH environment variable
 		canonical          bool   // Whether this request was canonicalized yet
 	}
@@ -97,7 +97,7 @@ func (r *ResolveRequest) canonicalizeEnviron() {
 func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	// Make sure all children jobs connect to THIS jobserver; this is more efficient than checking for
 	// the local file system beacon.
-	req.Env = append(req.Env, fmt.Sprintf("%s=%s", client.ENV_VAR_JOBSERVER_URL, s.serverURL))
+	req.Env = append(req.Env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, s.serverURL))
 	req.canonicalize()
 
 	reqHash, err := req.hash()
@@ -105,18 +105,18 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		return nil, err
 	}
 
-	if req.resolveParentId != "" {
-		if err := s.graph.AddEdge(req.resolveParentId, req.toolexecImportpath); err != nil {
+	if req.resolveParentID != "" {
+		if err := s.graph.AddEdge(req.resolveParentID, req.toolexecImportpath); err != nil {
 			return nil, err
 		}
-		defer s.graph.RemoveEdge(req.resolveParentId, req.toolexecImportpath)
+		defer s.graph.RemoveEdge(req.resolveParentID, req.toolexecImportpath)
 	}
 
 	env := req.Env
 	if req.toolexecImportpath != "" {
 		env = make([]string, 0, len(req.Env)+1)
 		env = append(env, req.Env...)
-		env = append(env, fmt.Sprintf("%s=%s", envVarParentId, req.toolexecImportpath))
+		env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
 	}
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
 		pkgs, err := packages.Load(
@@ -156,7 +156,7 @@ func hashArray(items []string) string {
 	h := sha512.New512_224()
 
 	for idx, item := range items {
-		fmt.Fprintf(h, "\x01%d\x02%s\x03", idx, item)
+		_, _ = fmt.Fprintf(h, "\x01%d\x02%s\x03", idx, item)
 	}
 
 	return base64.URLEncoding.EncodeToString(h.Sum(nil))

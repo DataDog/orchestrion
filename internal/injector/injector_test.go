@@ -47,7 +47,6 @@ func Test(t *testing.T) {
 	dirName := "injector"
 	testsDir := filepath.Join(thisFile, "..", "testdata", dirName)
 	rootDir := filepath.Join(thisFile, "..", "..", "..")
-	integDir := filepath.Join(rootDir, "_integration-tests")
 
 	entries, err := os.ReadDir(testsDir)
 	require.NoError(t, err, "failed to read test data directory")
@@ -89,7 +88,6 @@ func Test(t *testing.T) {
 
 			runGo(t, tmp, "mod", "init", testModuleName)
 			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", rootDir))
-			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("orchestrion/integration=%s", integDir))
 
 			inputFile := filepath.Join(tmp, "input.go")
 			original := strings.TrimSpace(config.Code) + "\n"

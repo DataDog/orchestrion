@@ -24,7 +24,7 @@ type TestCase struct {
 	logs   *bytes.Buffer
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(*testing.T) {
 	tc.logs = new(bytes.Buffer)
 	tc.logger = slog.New(
 		slog.NewTextHandler(
@@ -70,6 +70,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	}
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {}
+func (*TestCase) Teardown(*testing.T) {}
 
 func (*TestCase) ExpectedTraces() trace.Spans { return trace.Spans{} }

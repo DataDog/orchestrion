@@ -48,7 +48,7 @@ func makeFlagSetValueMap(flagSet any) map[string]reflect.Value {
 
 // parseOption parses the given current argument and following one according to
 // the go Flags syntax.
-func parseOption(flagSetValueMap map[string]reflect.Value, arg, nextArg string) (nonOpt bool, shift int) {
+func parseOption(flagSetValueMap map[string]reflect.Value, arg string, nextArg string) (nonOpt bool, shift int) {
 	if arg[0] != '-' {
 		// Not an option, return the value and shift by one.
 		return true, 1

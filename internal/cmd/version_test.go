@@ -25,7 +25,7 @@ func TestVersion(t *testing.T) {
 	t.Run("standard", func(t *testing.T) {
 		var output bytes.Buffer
 		set := *set
-		set.Parse([]string{})
+		set.Parse(nil)
 		ctx := cli.NewContext(&cli.App{Writer: &output}, &set, nil)
 
 		require.NoError(t, cmd.Version.Action(ctx))
@@ -36,7 +36,7 @@ func TestVersion(t *testing.T) {
 		var output bytes.Buffer
 		t.Setenv("DD_ORCHESTRION_STARTUP_VERSION", "v0.0.0")
 		set := *set
-		set.Parse([]string{})
+		set.Parse(nil)
 		ctx := cli.NewContext(&cli.App{Writer: &output}, &set, nil)
 
 		require.NoError(t, cmd.Version.Action(ctx))

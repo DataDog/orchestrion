@@ -43,3 +43,5 @@ jobs:
         uses: github/codeql-action/analyze@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3
         with:
           category: "/language:go"
+          # Currently, the upload fails for merge group checks, but still run the checks...
+          upload: ${{ github.event_name == 'merge_group' && 'never' || 'always' }}

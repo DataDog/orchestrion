@@ -10,6 +10,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,7 +60,7 @@ func TestConcurrency(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < nbSets; j++ {
 				set(j)
-				require.Equal(t, j, get())
+				assert.Equal(t, j, get())
 			}
 		}()
 	}

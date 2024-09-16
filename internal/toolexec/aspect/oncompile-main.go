@@ -24,7 +24,7 @@ import (
 // creating circular import dependencies).
 // This ensures that the relevant packages' `init` (if any) are appropriately run, and that the
 // linker automatically picks up these dependencies when creating the full binary.
-func (w Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
+func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 	if cmd.Flags.Package != "main" {
 		return nil
 	}
