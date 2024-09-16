@@ -62,27 +62,22 @@ func main() {
 		pkgName, testCases := parseCode(testDir)
 		f := testFile(pkgName)
 
-		f.
-			Func().
-			Id("TestIntegration_"+pkgName).
-			Params(jen.Id("t").Op("*").Qual("testing", "T")).
-			Block(
-				// testCases := map[string]utils.TestCase{ ... }
-				jen.Id("testCases").Op(":=").Map(jen.String()).Qual(utilsPkg, "TestCase").ValuesFunc(func(g *jen.Group) {
-					for _, tc := range testCases {
-						name := "Main"
-						if n := strings.TrimPrefix(tc, "TestCase"); n != "" {
-							name = n
-						}
-						g.Line().Lit(name).Op(":").New(jen.Id(tc))
-					}
-					g.Line().Empty()
-				}),
-				// runTest := utils.NewIntegrationTest(testCases)
-				jen.Id("runTest").Op(":=").Qual(utilsPkg, "NewTestSuite").Call(jen.Id("testCases")),
-				// runTest(t)
-				jen.Id("runTest").Call(jen.Id("t")),
-			)
+		for _, tc := range testCases {
+			testSuffix := ""
+			if n := strings.TrimPrefix(tc, "TestCase"); n != "" {
+				testSuffix = "_" + n
+			}
+
+			f.
+				Func().
+				Id("TestIntegration_" + pkgName + testSuffix).
+				Params(jen.Id("t").Op("*").Qual("testing", "T")).
+				Block(
+					// utils.RunTest(t, new(TestCase))
+					jen.Qual(utilsPkg, "RunTest").Call(jen.Id("t"), jen.New(jen.Id(tc))),
+				).
+				Line().Empty()
+		}
 
 		if err := f.Save(out); err != nil {
 			log.Fatalf("failed writing file: %v\n", err)

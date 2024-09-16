@@ -14,12 +14,14 @@ import (
 	"testing"
 )
 
-func TestIntegration_k8sclientgo(t *testing.T) {
-	testCases := map[string]utils.TestCase{
-		"NewCfgFunc":                new(TestCaseNewCfgFunc),
-		"StructLiteralWithParam":    new(TestCaseStructLiteralWithParam),
-		"StructLiteralWithoutParam": new(TestCaseStructLiteralWithoutParam),
-	}
-	runTest := utils.NewTestSuite(testCases)
-	runTest(t)
+func TestIntegration_k8sclientgo_NewCfgFunc(t *testing.T) {
+	utils.RunTest(t, new(TestCaseNewCfgFunc))
+}
+
+func TestIntegration_k8sclientgo_StructLiteralWithParam(t *testing.T) {
+	utils.RunTest(t, new(TestCaseStructLiteralWithParam))
+}
+
+func TestIntegration_k8sclientgo_StructLiteralWithoutParam(t *testing.T) {
+	utils.RunTest(t, new(TestCaseStructLiteralWithoutParam))
 }

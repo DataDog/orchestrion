@@ -39,8 +39,8 @@ func (tc *TestCase) Setup(t *testing.T) {
 	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
-func (*TestCase) Run(t *testing.T) {
-	resp, err := http.Get("http://127.0.0.1:8080/ping")
+func (tc *TestCase) Run(t *testing.T) {
+	resp, err := http.Get("http://" + tc.Server.Addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }

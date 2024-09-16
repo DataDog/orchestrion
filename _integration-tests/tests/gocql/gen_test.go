@@ -14,12 +14,14 @@ import (
 	"testing"
 )
 
-func TestIntegration_gocql(t *testing.T) {
-	testCases := map[string]utils.TestCase{
-		"NewCluster":       new(TestCaseNewCluster),
-		"StructLiteral":    new(TestCaseStructLiteral),
-		"StructLiteralPtr": new(TestCaseStructLiteralPtr),
-	}
-	runTest := utils.NewTestSuite(testCases)
-	runTest(t)
+func TestIntegration_gocql_NewCluster(t *testing.T) {
+	utils.RunTest(t, new(TestCaseNewCluster))
+}
+
+func TestIntegration_gocql_StructLiteral(t *testing.T) {
+	utils.RunTest(t, new(TestCaseStructLiteral))
+}
+
+func TestIntegration_gocql_StructLiteralPtr(t *testing.T) {
+	utils.RunTest(t, new(TestCaseStructLiteralPtr))
 }

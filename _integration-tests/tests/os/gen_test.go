@@ -15,9 +15,5 @@ import (
 )
 
 func TestIntegration_os(t *testing.T) {
-	testCases := map[string]utils.TestCase{
-		"Main": new(TestCase),
-	}
-	runTest := utils.NewTestSuite(testCases)
-	runTest(t)
+	utils.RunTest(t, new(TestCase))
 }

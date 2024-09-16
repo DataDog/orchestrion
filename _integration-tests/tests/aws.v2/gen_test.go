@@ -14,13 +14,18 @@ import (
 	"testing"
 )
 
-func TestIntegration_awsv2(t *testing.T) {
-	testCases := map[string]utils.TestCase{
-		"LoadDefaultConfig": new(TestCaseLoadDefaultConfig),
-		"NewConfig":         new(TestCaseNewConfig),
-		"StructLiteral":     new(TestCaseStructLiteral),
-		"StructLiteralPtr":  new(TestCaseStructLiteralPtr),
-	}
-	runTest := utils.NewTestSuite(testCases)
-	runTest(t)
+func TestIntegration_awsv2_LoadDefaultConfig(t *testing.T) {
+	utils.RunTest(t, new(TestCaseLoadDefaultConfig))
+}
+
+func TestIntegration_awsv2_NewConfig(t *testing.T) {
+	utils.RunTest(t, new(TestCaseNewConfig))
+}
+
+func TestIntegration_awsv2_StructLiteral(t *testing.T) {
+	utils.RunTest(t, new(TestCaseStructLiteral))
+}
+
+func TestIntegration_awsv2_StructLiteralPtr(t *testing.T) {
+	utils.RunTest(t, new(TestCaseStructLiteralPtr))
 }
