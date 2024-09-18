@@ -11,28 +11,35 @@ import (
 	"strings"
 )
 
+//go:generate go run github.com/datadog/orchestrion/internal/toolexec/proxy/generator -command=compile
+
 type compileFlagSet struct {
-	Package   string `ddflag:"-p"`
-	ImportCfg string `ddflag:"-importcfg"`
-	Output    string `ddflag:"-o"`
-	TrimPath  string `ddflag:"-trimpath"`
-	GoVersion string `ddflag:"-goversion"`
+	Package     string `ddflag:"-p"`
+	ImportCfg   string `ddflag:"-importcfg"`
+	Output      string `ddflag:"-o"`
+	Lang        string `ddflag:"-lang"`
+	showVersion bool   `ddflag:"-V"`
 }
 
 // CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
 	Flags compileFlagSet
+	Files []string
 	// WorkDir is the $WORK directory managed by the go toolchain.
 	WorkDir string
 }
 
 func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
 
+func (c *CompileCommand) ShowVersion() bool {
+	return c.Flags.showVersion
+}
+
 // GoFiles returns the list of Go files passed as arguments to cmd
 func (cmd *CompileCommand) GoFiles() []string {
-	files := make([]string, 0, len(cmd.args))
-	for _, path := range cmd.args {
+	files := make([]string, 0, len(cmd.Files))
+	for _, path := range cmd.Files {
 		if !strings.HasSuffix(path, ".go") {
 			continue
 		}
@@ -47,6 +54,7 @@ func (cmd *CompileCommand) GoFiles() []string {
 func (cmd *CompileCommand) AddFiles(files []string) {
 	paramIdx := len(cmd.args)
 	cmd.args = append(cmd.args, files...)
+	cmd.Files = append(cmd.Files, files...)
 	for i, f := range files {
 		cmd.paramPos[f] = paramIdx + i
 	}
@@ -57,7 +65,11 @@ func parseCompileCommand(args []string) (Command, error) {
 		return nil, errors.New("unexpected number of command arguments")
 	}
 	cmd := CompileCommand{command: NewCommand(args)}
-	parseFlags(&cmd.Flags, args[1:])
+	pos, err := cmd.Flags.parse(args[1:])
+	if err != nil {
+		return nil, err
+	}
+	cmd.Files = pos
 
 	if cmd.Flags.ImportCfg != "" {
 		// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.

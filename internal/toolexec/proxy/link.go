@@ -10,10 +10,13 @@ import (
 	"path/filepath"
 )
 
+//go:generate go run github.com/datadog/orchestrion/internal/toolexec/proxy/generator -command=link
+
 type linkFlagSet struct {
-	BuildMode string `ddflag:"-buildmode"`
-	ImportCfg string `ddflag:"-importcfg"`
-	Output    string `ddflag:"-o"`
+	BuildMode   string `ddflag:"-buildmode"`
+	ImportCfg   string `ddflag:"-importcfg"`
+	Output      string `ddflag:"-o"`
+	showVersion bool   `ddflag:"-V"`
 }
 
 // LinkCommand represents a go tool `link` invocation
@@ -28,6 +31,10 @@ func (*LinkCommand) Type() CommandType {
 	return CommandTypeLink
 }
 
+func (cmd *LinkCommand) ShowVersion() bool {
+	return cmd.Flags.showVersion
+}
+
 func (cmd *LinkCommand) Stage() string {
 	return filepath.Base(filepath.Dir(filepath.Dir(cmd.Flags.Output)))
 }
@@ -37,7 +44,10 @@ func parseLinkCommand(args []string) (Command, error) {
 		return nil, errors.New("unexpected number of command arguments")
 	}
 	flags := &linkFlagSet{}
-	parseFlags(flags, args[1:])
+	_, err := flags.parse(args[1:])
+	if err != nil {
+		return nil, err
+	}
 
 	// The WorkDir is the parent of the stage dir, and the ImportCfg file is directly in the stage dir.
 	workDir := filepath.Dir(filepath.Dir(flags.ImportCfg))
