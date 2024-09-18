@@ -28,7 +28,7 @@ func main() {
 	}
 
 	scope := pkgs[0].Types.Scope()
-	dstNode := scope.Lookup("Node").Type().(*types.Named).Underlying().(*types.Interface)
+	dstNode, _ := scope.Lookup("Node").Type().(*types.Named).Underlying().(*types.Interface)
 
 	file := jen.NewFile("code")
 	file.HeaderComment("Unless explicitly stated otherwise all files in this repository are licensed")

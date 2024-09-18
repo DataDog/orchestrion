@@ -12,11 +12,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -26,14 +29,14 @@ type TestCase struct {
 func (tc *TestCase) Setup(t *testing.T) {
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:8080",
+		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: mux,
 	}
 
 	mux.HandleFunc("/hit", tc.handleHit)
 	mux.HandleFunc("/", tc.handleRoot)
 
-	go func() { require.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -119,7 +122,7 @@ func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
 	resp, err := http.Post(fmt.Sprintf("http://%s/hit", tc.Server.Addr), "text/plain", r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 	defer resp.Body.Close()
@@ -127,12 +130,12 @@ func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
 	w.WriteHeader(resp.StatusCode)
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func (*TestCase) handleHit(w http.ResponseWriter, r *http.Request) {
@@ -141,10 +144,10 @@ func (*TestCase) handleHit(w http.ResponseWriter, r *http.Request) {
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(b)
+	_, _ = w.Write(b)
 }

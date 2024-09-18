@@ -36,7 +36,7 @@ type (
 	Server struct {
 		server     *server.Server     // The underlying NATS server
 		CacheStats *common.CacheStats // Cache statistics
-		clientUrl  string             // The client URL to use for connecting to this server
+		clientURL  string             // The client URL to use for connecting to this server
 
 		// Tracking connected clients for automatic shutdown on inactivity...
 		clients           map[uint64]string
@@ -95,7 +95,7 @@ func New(opts *Options) (srv *Server, err error) {
 		DontListen: opts.NoListener,
 		Accounts:   []*server.Account{userAccount, systemAccount},
 		Users: []*server.User{
-			{Username: client.USERNAME, Password: client.NO_PASSWORD, Account: userAccount},
+			{Username: client.Username, Password: client.NoPassword, Account: userAccount},
 			{Username: serverUsername, Password: noPassword, Account: userAccount},
 			{Username: sysUser, Password: noPassword, Account: systemAccount},
 		},
@@ -124,20 +124,20 @@ func New(opts *Options) (srv *Server, err error) {
 		return nil, errors.New("timed out waiting for NATS server to become available")
 	}
 
-	var clientUrl string
+	var clientURL string
 	if opts.NoListener {
 		// "Any" URL will do here, it's not actually used...
-		clientUrl = "nats://localhost:0"
+		clientURL = "nats://localhost:0"
 	} else {
 		// We don't use `server.ClientURL()` here because it currently returns an invalid URL is the
 		// listener address is IPv6 (see: https://github.com/nats-io/nats-server/issues/5721)
-		clientUrl = fmt.Sprintf("nats://%s", server.Addr())
+		clientURL = fmt.Sprintf("nats://%s", server.Addr())
 	}
 
-	log.Tracef("[JOBSERVER] NATS Server ready for connections on %q\n", clientUrl)
+	log.Tracef("[JOBSERVER] NATS Server ready for connections on %q\n", clientURL)
 
 	// Obtaining the local server connection
-	conn, err := nats.Connect(clientUrl, nats.UserInfo(serverUsername, noPassword), nats.InProcessServer(server))
+	conn, err := nats.Connect(clientURL, nats.UserInfo(serverUsername, noPassword), nats.InProcessServer(server))
 	if err != nil {
 		return nil, fmt.Errorf("connecting to in-process NATS server instance: %w", err)
 	}
@@ -146,12 +146,12 @@ func New(opts *Options) (srv *Server, err error) {
 	res := Server{
 		server:     server,
 		CacheStats: &common.CacheStats{},
-		clientUrl:  clientUrl,
+		clientURL:  clientURL,
 	}
 	if err := buildid.Subscribe(conn, res.CacheStats); err != nil {
 		return nil, err
 	}
-	if err := pkgs.Subscribe(clientUrl, conn, res.CacheStats); err != nil {
+	if err := pkgs.Subscribe(clientURL, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
 	if _, err := conn.Subscribe("clients", res.handleClients); err != nil {
@@ -164,7 +164,7 @@ func New(opts *Options) (srv *Server, err error) {
 	}
 
 	if opts.InactivityTimeout > 0 {
-		sysConn, err := nats.Connect(clientUrl, nats.Name("server-local-admin"), nats.UserInfo(sysUser, noPassword), nats.InProcessServer(server))
+		sysConn, err := nats.Connect(clientURL, nats.Name("server-local-admin"), nats.UserInfo(sysUser, noPassword), nats.InProcessServer(server))
 		if err != nil {
 			return nil, err
 		}
@@ -195,9 +195,9 @@ func New(opts *Options) (srv *Server, err error) {
 // Connect returns a client using the in-process connection to the server.
 func (s *Server) Connect() (*client.Client, error) {
 	conn, err := nats.Connect(
-		s.clientUrl,
+		s.clientURL,
 		nats.Name("local-connect"),
-		nats.UserInfo(client.USERNAME, client.NO_PASSWORD),
+		nats.UserInfo(client.Username, client.NoPassword),
 		nats.InProcessServer(s.server),
 	)
 	if err != nil {
@@ -209,7 +209,7 @@ func (s *Server) Connect() (*client.Client, error) {
 // ClientURL returns the URL connection string clients should use to connect to
 // this NATS server.
 func (s *Server) ClientURL() string {
-	return s.clientUrl
+	return s.clientURL
 }
 
 // Shutdown initiates the shutdown of this server.

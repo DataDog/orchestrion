@@ -56,7 +56,7 @@ var Server = &cli.Command{
 		}
 
 		if urlFile := c.String("url-file"); urlFile != "" {
-			return startWithUrlFile(&opts, urlFile)
+			return startWithURLFile(&opts, urlFile)
 		}
 		_, err := start(&opts, true)
 		return err
@@ -79,16 +79,16 @@ func start(opts *jobserver.Options, wait bool) (*jobserver.Server, cli.ExitCoder
 	return server, nil
 }
 
-// startWithUrlFile starts a new job server using the provided URL file (unless the file contains the URL to a still
+// startWithURLFile starts a new job server using the provided URL file (unless the file contains the URL to a still
 // running server), and waits for it to have completely shut down.
-func startWithUrlFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
+func startWithURLFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
 	mu := filelock.MutexAt(urlFile)
 	if err := mu.RLock(); err != nil {
 		return cli.Exit(fmt.Errorf("failed to acquire read lock on %q: %w", urlFile, err), 1)
 	}
 
 	// Check if there is already a server running...
-	if url, err := hasUrlToRunningServer(urlFile); err != nil {
+	if url, err := hasURLToRunningServer(urlFile); err != nil {
 		return cli.Exit(err, 1)
 	} else if url != "" {
 		return cli.Exit(fmt.Sprintf("A server is already listening on %q", url), 2)
@@ -100,7 +100,7 @@ func startWithUrlFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
 	}
 
 	// Check again whether there is a running server; as a concurrent process might have acquired the write lock first.
-	if url, err := hasUrlToRunningServer(urlFile); err != nil {
+	if url, err := hasURLToRunningServer(urlFile); err != nil {
 		return cli.Exit(err, 1)
 	} else if url != "" {
 		return cli.Exit(fmt.Sprintf("A server is already listening on %q", url), 2)
@@ -161,9 +161,9 @@ func deleteOnInterrupt(path string) func() {
 	return cancel
 }
 
-// hasUrlToRunningServer checks whether the provided URL file contains the URL to a running server,
+// hasURLToRunningServer checks whether the provided URL file contains the URL to a running server,
 // by trying to connect to it. If that is the case, it returns the URL to the running server.
-func hasUrlToRunningServer(urlFile string) (string, error) {
+func hasURLToRunningServer(urlFile string) (string, error) {
 	urlData, err := os.ReadFile(urlFile)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("failed to read URL file at %q: %w", urlFile, err)

@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestSignal tests that the GLS is correctly set even when the code comes from a signal handler.
@@ -38,11 +38,11 @@ func TestSignal(t *testing.T) {
 		doneSigChan <- struct{}{}
 
 		<-checkChan
-		require.Equal(t, expected, get())
+		assert.Equal(t, expected, get())
 		doneCheckChan <- struct{}{}
 	}()
 
-	syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
+	_ = syscall.Kill(syscall.Getpid(), syscall.SIGUSR1)
 	<-doneSigChan
 	checkChan <- struct{}{}
 	<-doneCheckChan

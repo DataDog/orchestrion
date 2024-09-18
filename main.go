@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -57,12 +58,12 @@ func main() {
 			&cli.StringFlag{
 				Category: "Advanced",
 				Name:     "job-server-url",
-				EnvVars:  []string{client.ENV_VAR_JOBSERVER_URL},
+				EnvVars:  []string{client.EnvVarJobserverURL},
 				Usage:    "Set the job server URL",
 				Hidden:   true, // Users don't normally need to use this.
 				Action: func(_ *cli.Context, url string) error {
 					// Forward the value to the environment variable, so that all child processes see it.
-					return os.Setenv(client.ENV_VAR_JOBSERVER_URL, url)
+					return os.Setenv(client.EnvVarJobserverURL, url)
 				},
 			},
 			&cli.StringFlag{
@@ -115,16 +116,18 @@ func main() {
 			if err := os.MkdirAll(profilePath, 0775); err != nil && !os.IsExist(err) {
 				return err
 			}
-			os.Setenv(envVarOrchestrionProfilePath, profilePath)
+			if err := os.Setenv(envVarOrchestrionProfilePath, profilePath); err != nil {
+				return cli.Exit(fmt.Errorf("setting environment %s: %w", envVarOrchestrionProfilePath, err), 1)
+			}
 			for _, p := range profiles {
 				var err error
 				switch p {
 				case "heap":
 					// Nothing to do; this is dealt with only in After
 				case "cpu":
-					cpuProfile, err = startCPUProfiling(ctx, profilePath)
+					cpuProfile, err = startCPUProfiling(profilePath)
 				case "trace":
-					executionTrace, err = startExecutionTracing(ctx, profilePath)
+					executionTrace, err = startExecutionTracing(profilePath)
 				default:
 					return fmt.Errorf("unrecognized profile type %s", p)
 				}
@@ -132,18 +135,24 @@ func main() {
 					return fmt.Errorf("enabling profile %s: %w", p, err)
 				}
 			}
-			os.Setenv(envVarOrchestrionEnabledProfiles, strings.Join(profiles, ","))
+			if err := os.Setenv(envVarOrchestrionEnabledProfiles, strings.Join(profiles, ",")); err != nil {
+				return cli.Exit(fmt.Errorf("setting environment %s: %w", envVarOrchestrionEnabledProfiles, err), 1)
+			}
 			return nil
 		},
 		After: func(ctx *cli.Context) error {
 			// Stop profiling, execution tracing, if they were started
 			if cpuProfile != nil {
 				pprof.StopCPUProfile()
-				cpuProfile.Close()
+				if err := cpuProfile.Close(); err != nil {
+					log.Warnf("Failed to close CPU profile: %v\n", err)
+				}
 			}
 			if executionTrace != nil {
 				trace.Stop()
-				executionTrace.Close()
+				if err := executionTrace.Close(); err != nil {
+					log.Warnf("Failed to close execution trace: %v\n", err)
+				}
 			}
 			if slices.Contains(ctx.StringSlice("profile"), "heap") {
 				filename := profilePath(ctx.String("profile-path"), "orchestrion-heap-%d.pprof")
@@ -153,14 +162,16 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("writing heap profile: %w", err)
 				}
-				f.Close()
+				if err := f.Close(); err != nil {
+					log.Warnf("Failed to close heap profile: %v\n", err)
+				}
 			}
 			return nil
 		},
 	}
 	// Run the CLI application
 	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
 	}
 }
@@ -168,7 +179,9 @@ func main() {
 var logLevelSet bool
 
 func actionSetLogLevel(_ *cli.Context, level string) error {
-	os.Setenv(envVarOrchestrionLogLevel, level)
+	if err := os.Setenv(envVarOrchestrionLogLevel, level); err != nil {
+		return cli.Exit(fmt.Errorf("setting environment %s: %w", envVarOrchestrionLogLevel, err), 1)
+	}
 	if level, valid := log.LevelNamed(level); valid {
 		logLevelSet = true
 		log.SetLevel(level)
@@ -183,7 +196,9 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 			path = filepath.Join(wd, path)
 		}
 	}
-	os.Setenv(envVarOrchestrionLogFile, path)
+	if err := os.Setenv(envVarOrchestrionLogFile, path); err != nil {
+		return cli.Exit(fmt.Errorf("setting environment %s: %w", envVarOrchestrionLogFile, err), 1)
+	}
 	filename := os.Expand(path, func(name string) string {
 		switch name {
 		case "PID":
@@ -209,7 +224,7 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 	return nil
 }
 
-func profilePath(path, nameFormat string) string {
+func profilePath(path string, nameFormat string) string {
 	return filepath.Join(path, fmt.Sprintf(nameFormat, os.Getpid()))
 }
 
@@ -219,14 +234,14 @@ func profileToFile(filename string, collect func(io.Writer) error) (*os.File, er
 		return nil, fmt.Errorf("creating file %s: %w", filename, err)
 	}
 	if err := collect(f); err != nil {
-		f.Close()
-		os.Remove(filename)
+		err = errors.Join(err, f.Close())
+		err = errors.Join(err, os.Remove(filename))
 		return nil, fmt.Errorf("starting collection: %w", err)
 	}
 	return f, nil
 }
 
-func startCPUProfiling(ctx *cli.Context, prefix string) (*os.File, error) {
+func startCPUProfiling(prefix string) (*os.File, error) {
 	filename := profilePath(prefix, "orchestrion-cpu-%d.pprof")
 	f, err := profileToFile(filename, pprof.StartCPUProfile)
 	if err != nil {
@@ -235,7 +250,7 @@ func startCPUProfiling(ctx *cli.Context, prefix string) (*os.File, error) {
 	return f, nil
 }
 
-func startExecutionTracing(ctx *cli.Context, prefix string) (*os.File, error) {
+func startExecutionTracing(prefix string) (*os.File, error) {
 	filename := profilePath(prefix, "orchestrion-%d.trace")
 	f, err := profileToFile(filename, trace.Start)
 	if err != nil {

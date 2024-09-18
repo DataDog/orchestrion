@@ -118,18 +118,18 @@ func (a *appendArgs) AddedImports() []string {
 func (a *appendArgs) RenderHTML() string {
 	var buf strings.Builder
 
-	buf.WriteString("<div class=\"advice append-arguments\">\n")
-	buf.WriteString("  <div class=\"type\">Append the following ")
-	buf.WriteString(a.typeName.RenderHTML())
-	buf.WriteString(" arguments to the function call:</div>\n")
-	buf.WriteString("  <ol>\n")
+	_, _ = buf.WriteString("<div class=\"advice append-arguments\">\n")
+	_, _ = buf.WriteString("  <div class=\"type\">Append the following ")
+	_, _ = buf.WriteString(a.typeName.RenderHTML())
+	_, _ = buf.WriteString(" arguments to the function call:</div>\n")
+	_, _ = buf.WriteString("  <ol>\n")
 	for _, t := range a.templates {
-		buf.WriteString("    <li>")
-		buf.WriteString(t.RenderHTML())
-		buf.WriteString("</li>\n")
+		_, _ = buf.WriteString("    <li>")
+		_, _ = buf.WriteString(t.RenderHTML())
+		_, _ = buf.WriteString("</li>\n")
 	}
-	buf.WriteString("  </ol>\n")
-	buf.WriteString("</div>\n")
+	_, _ = buf.WriteString("  </ol>\n")
+	_, _ = buf.WriteString("</div>\n")
 
 	return buf.String()
 }
@@ -141,7 +141,7 @@ type redirectCall struct {
 
 // ReplaceFunction replaces the called function with the provided drop-in replacement. The signature
 // must be compatible with the original function (it may accept a new variadic argument).
-func ReplaceFunction(path, name string) *redirectCall {
+func ReplaceFunction(path string, name string) *redirectCall {
 	return &redirectCall{path, name}
 }
 

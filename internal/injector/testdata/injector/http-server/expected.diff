@@ -1,19 +1,18 @@
 --- input.go
 +++ output.go
-@@ -1,3 +1,4 @@
+@@ -1,16 +1,27 @@
 +//line input.go:1:1
  package main
  
  import (
-@@ -7,13 +8,23 @@
+   "io"
+   "log"
    "net/http"
- 
-   "orchestrion/integration"
 +//line <generated>
 +  __orchestrion_instrument "github.com/datadog/orchestrion/instrument"
  )
  
-+//line input.go:12
++//line input.go:9
  func main() {
    s := &http.Server{
 -    Addr:    ":8085",
@@ -23,11 +22,11 @@
 +    //dd:startwrap
 +//line <generated>
 +    __orchestrion_instrument.WrapHandler(
-+//line input.go:15
++//line input.go:12
 +      http.HandlerFunc(handle)),
 +    //dd:endwrap
    }
-+//line input.go:17
-   integration.OnSignal(func() {
-     s.Shutdown(context.Background())
-   })
++//line input.go:14
+   log.Printf("Server shut down: %v", s.ListenAndServe())
+ }
+ 

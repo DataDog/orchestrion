@@ -45,11 +45,8 @@ code: |-
   package main
 
   import (
-    "context"
     "log"
     "net/http"
-
-    "orchestrion/integration"
   )
 
   func main() {
@@ -57,9 +54,6 @@ code: |-
       Addr:    ":8085",
       Handler: http.HandlerFunc(handle),
     }
-    integration.OnSignal(func() {
-      s.Shutdown(context.Background())
-    })
     log.Printf("Server shut down: %v", s.ListenAndServe())
   }
 

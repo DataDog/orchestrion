@@ -7,15 +7,21 @@ on:
   push:
     branches: [main]
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 permissions: read-all
+
+env:
+  # Make sure we're actually testing with the intended Go release (i.e, ensure
+  # no automatic toolchain download happens).
+  GOTOOLCHAIN: local
 
 jobs:
   ##############################################################################
   # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
   generate:
+    needs: coverage-preflight
     runs-on: ubuntu-latest
     name: Run all generators
     outputs:
@@ -24,6 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
+        id: setup-go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: stable
@@ -33,23 +40,31 @@ jobs:
         run: |-
           mkdir -p ${GOCOVERDIR}
           go generate ./...
-          go -C _integration-tests generate ./...
+          go -C _integration-tests generate -tags=integration ./...
         env:
-          GOFLAGS: -covermode=atomic -coverpkg=github.com/datadog/orchestrion/...
+          GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/datadog/orchestrion/...,./...
           GOCOVERDIR: ${{ github.workspace }}/coverage
       - name: Consolidate coverage report
-        if: always() && github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group'
         run: go tool covdata textfmt -i ./coverage -o ./coverage/generator.out
+      - name: Determine simple go version
+        if: github.event_name != 'merge_group'
+        id: go
+        run: |-
+          set -euo pipefail
+          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
-        # We want this even if the tests failed
-        if: always() && github.event_name != 'merge_group'
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        if: github.event_name != 'merge_group'
+        uses: ./.github/actions/codecov-upload
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ runner.os }},${{ runner.arch }},generator
-          file: ./coverage/generator.out
           name: Generators
-
+          files: ./coverage/generator.out
+          flags: |-
+            generator
+            go${{ steps.go.outputs.version }}
+            ${{ runner.os }}
+            ${{ runner.arch }}
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
@@ -65,12 +80,16 @@ jobs:
         if: github.event_name != 'push'
         id: is-tree-dirty
         run: |-
+          set -euxo pipefail
           git add .
-          git diff --staged --patch --exit-code > .repo.patch || echo "result=true" >> ${GITHUB_OUTPUT}
+          git status
+          git diff --staged --patch --exit-code > .repo.patch || echo 'result=true' >> "${GITHUB_OUTPUT}"
       - name: Upload patch
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
         with:
+          if-no-files-found: error
+          include-hidden-files: true
           name: repo.patch
           path: .repo.patch
       - name: Fail build if working tree is dirty
@@ -103,7 +122,7 @@ jobs:
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        uses: planetscale/ghcommit-action@c7915d6c18d5ce4eb42b0eff3f10a29fe0766e4c # v0.1.44
+        uses: planetscale/ghcommit-action@88c53665a0c85bc370b410610f2bcf1979204651 # v0.1.45
         with:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
@@ -125,11 +144,15 @@ jobs:
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
-      - name: golangci-lint
+      - name: Lint main module
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
         with:
-          version: v1.52.2
-          skip-cache: true # actions/setup-go has already done this
+          version: v1.60.3
+      - name: Lint integration tests
+        uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6
+        with:
+          version: v1.60.3
+          working-directory: _integration-tests
       - name: Verify license headers
         run: go run tools/headercheck/header_check.go
       - name: vet
@@ -144,7 +167,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@3c16e895bb662b4d7e284f032cbe8835a57773cc # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@0901cf7b71c7ea6261ec69a3dc2bd3f9264f893e # v3
 
   ##############################################################################
   # Run all unit tests with coverage enabled
@@ -159,30 +182,51 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      - name: Checkout Go
+      - name: Setup Go
+        id: setup-go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
       - name: Run unit tests
+        shell: bash
         run: |-
           mkdir -p coverage
-          go test -shuffle=on -cover -covermode=atomic -coverpkg=./... -coverprofile=${{ github.workspace }}/coverage/unit.out -race ./...
-          go -C _integration-tests test -shuffle=on -cover -covermode=atomic -coverpkg=./...,github.com/datadog/orchestrion/... -coverprofile=${{ github.workspace }}/coverage/integration.out -race ./...
-      - name: Determine simple go version
-        if: always() && github.event_name != 'merge_group'
-        id: simple-go-version
-        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
+          test_args=("-shuffle=on" "-race" "-v")
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
+          fi
+          go test "${test_args[@]}" ./...
+      - name: Run integraton suite unit tests
         shell: bash
+        run: |-
+          mkdir -p coverage
+          test_args=("-shuffle=on" "-race" "-v")
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
+          fi
+          go -C _integration-tests test "${test_args[@]}" ./...
+      - name: Determine simple go version
+        if: github.event_name != 'merge_group'
+        id: go
+        shell: bash
+        run: |-
+          set -euo pipefail
+          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
-        # We want this even if the tests failed
-        if: always() && github.event_name != 'merge_group'
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        if: github.event_name != 'merge_group'
+        uses: ./.github/actions/codecov-upload
         with:
+          name: Unit Tests (go${{ steps.go.outputs.version }}, ${{ runner.os }}, ${{ runner.arch }})
+          files: |-
+            ./coverage/unit.out
+            ./coverage/integration.out
+          flags: |-
+            unit
+            go${{ steps.go.outputs.version }}
+            ${{ runner.os }}
+            ${{ runner.arch }}
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},unit
-          files: ./coverage/unit.out,./coverage/integration.out
-          name: Unit Tests (go ${{ matrix.go-version }})
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
@@ -208,6 +252,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       - name: Setup go
+        id: setup-go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
         with:
           go-version: ${{ matrix.go-version }}
@@ -221,21 +266,32 @@ jobs:
       - name: Install python dependencies
         run: pip install -r _integration-tests/utils/agent/requirements.txt
       - name: Build orchestrion binary
-        run: go build -cover -covermode=atomic -coverpkg="./..." -o="bin/orchestrion.exe" .
+        shell: bash
+        run: |-
+          build_args=()
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
+            build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
+          fi
+          go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
+          test_args=("-shuffle=on" "-v")
+          if [ "${{ github.event_name }}" != "merge_group" ]; then
+            test_args+=("-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
+          fi
+
           case "${{ matrix.build-mode }}" in
           "DRIVER")
-            bin/orchestrion.exe go -C=_integration-tests test -shuffle=on ./...
+            bin/orchestrion.exe go -C=_integration-tests test "${test_args[@]}" -a ./...
             ;;
           "TOOLEXEC")
-            go -C=_integration-tests test -shuffle=on -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
+            go -C=_integration-tests test "${test_args[@]}" -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
             ;;
           "GOFLAGS")
             export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion.exe toolexec' ${GOFLAGS}"
-            go -C=_integration-tests test -shuffle=on ./...
+            go -C=_integration-tests test "${test_args[@]}" ./...
             ;;
           *)
             echo "Unknown build mode: ${{ matrix.build-mode }}"
@@ -248,19 +304,28 @@ jobs:
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
-      - name: Determine simple go version
+      - name: Determine go minor version
+        id: go
         if: github.event_name != 'merge_group'
-        id: simple-go-version
-        run: echo "version=$(go version | cut -d' ' -f3 | grep -oE '\d+\.\d+')" >> "${GITHUB_OUTPUT}"
         shell: bash
+        run: |-
+          set -euo pipefail
+          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group'
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4
+        uses: ./.github/actions/codecov-upload
         with:
+          name: Integration Tests (${{ matrix.build-mode }}, go${{ steps.go.outputs.version }}, ${{ runner.os }}, ${{ runner.arch }})
+          files: |-
+            ./coverage/integration.out
+            ./coverage/integration.run.out
+          flags: |-
+            integration
+            ${{ matrix.build-mode }}
+            go${{ steps.go.outputs.version }}
+            ${{ runner.os }}
+            ${{ runner.arch }}
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go${{ steps.simple-go-version.outputs.version }},${{ runner.os }},${{ runner.arch }},integration
-          files: ./coverage/integration.out
-          name: Integration Tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
@@ -276,45 +341,109 @@ jobs:
       - integration-tests
     if: '!cancelled()'
     steps:
-      - name: Checkout
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      - name: Download codecov CLI
-        if: github.event_name == 'pull_request'
-        run: |-
-          set -euo pipefail
-
-          curl -fSsL "${BASE_URL}" -o "./codecov"
-          curl -fSsL "${BASE_URL}.SHA256SUM" -o "./codecov.SHA256SUM"
-          curl -fSsL "${BASE_URL}.SHA256SUM.sig" -o "./codecov.SHA256SUM.sig"
-
-          # Import the CodeCov security key
-          curl -fSsL "https://keybase.io/codecovsecurity/pgp_keys.asc" | gpg --no-default-keyring --keyring trustedkeys.gpg --import
-
-          # Verify the downloaded binary matches expected signatures
-          gpgv "./codecov.SHA256SUM.sig" "./codecov.SHA256SUM"
-          shasum -a 256 -c "./codecov.SHA256SUM"
-
-          chmod a+x "./codecov"
-        env:
-          BASE_URL: https://cli.codecov.io/latest/linux${{ runner.arch == 'ARM64' && '-arm64' || '' }}/codecov
-        working-directory: ${{ runner.temp }}
-      - name: Trigger CodeCov notifications
-        if: github.event_name == 'pull_request'
-        run: |-
-          ${{ runner.temp }}/codecov send-notifications                         \
-            --token="${CODECOV_TOKEN}"                                          \
-            --fail-on-error                                                     \
-            --slug=${{ github.event.pull_request.base.repo.full_name }}         \
-            --sha=${{ github.event.pull_request.head.sha }}
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - name: Done
-        if: needs.lint.result == 'success' && needs.lint-workflows.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success'
+      - name: Success
+        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-workflows.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure'
         run: echo "OK"
-      - name: Done
-        if: needs.lint.result != 'success' || needs.lint-workflows.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'
+      - name: Failed
+        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-workflows.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure'
         run: |-
           echo "Failed!"
           exit 1
 
+  ##############################################################################
+  # Produce a CodeCov coverage report with all uploaded code coverage data.
+  coverage-preflight:
+    runs-on: ubuntu-latest
+    name: CodeCov pre-flight
+    if: github.event_name != 'merge_group'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Download codecov CLI
+        id: codecov-cli
+        uses: ./.github/actions/codecov-cli
+      - name: Register commit with CodeCov
+        shell: bash
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |-
+          set -euo pipefail
+
+          pr=()
+          sha="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          parentsha="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            pr+=("--pr=${{ github.event.number }}")
+          fi
+
+          echo "::group::Register commit metadata with CodeCov"
+          ${{ steps.codecov-cli.outputs.codecov }}                              \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            create-commit                                                       \
+            --parent-sha="${parentsha}"                                         \
+            ${pr[@]+"${pr[@]}"}                                                 \
+            --sha="${sha}"                                                      \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+
+          echo "::group::Create a new blank CodeCov report"
+          ${{ steps.codecov-cli.outputs.codecov }}                              \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            create-report                                                       \
+            ${pr[@]+"${pr[@]}"}                                                 \
+            --sha="${sha}"                                                      \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+  coverage-finalize:
+    runs-on: ubuntu-latest
+    name: Create CodeCov report
+    needs:
+      - coverage-preflight
+      - unit-tests
+      - integration-tests
+    if: github.event_name != 'merge_group'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Download codecov CLI
+        id: codecov-cli
+        uses: ./.github/actions/codecov-cli
+      - name: Create CodeCov report
+        shell: bash
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |-
+          set -euo pipefail
+          sha="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+
+          echo "::group::Create CodeCov report results"
+          ${{ steps.codecov-cli.outputs.codecov }}                              \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            create-report-results                                               \
+            --sha="${sha}"                                                      \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug="${{ github.repository }}"
+          echo "::endgroup::"
+
+          echo "::group::Issue GitHub notifications"
+          ${{ steps.codecov-cli.outputs.codecov }}                              \
+            --auto-load-params-from=GithubActions                               \
+            --verbose                                                           \
+            send-notifications                                                  \
+            --sha="${sha}"                                                      \
+            --fail-on-error                                                     \
+            --git-service=github                                                \
+            --token="${CODECOV_TOKEN}"                                          \
+            --slug=${{ github.repository }}
+          echo "::endgroup::"

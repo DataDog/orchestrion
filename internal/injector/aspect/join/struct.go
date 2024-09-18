@@ -166,35 +166,35 @@ func (s *structLiteral) AsCode() jen.Code {
 func (s *structLiteral) RenderHTML() string {
 	var buf strings.Builder
 
-	buf.WriteString("<div class=\"join-point struct-literal\">\n")
-	buf.WriteString("  <div class=\"flex\">\n")
-	buf.WriteString("    <span class=\"type\">Struct literal</span>\n")
-	buf.WriteString(s.typeName.RenderHTML())
-	buf.WriteString("\n  </div>\n")
+	_, _ = buf.WriteString("<div class=\"join-point struct-literal\">\n")
+	_, _ = buf.WriteString("  <div class=\"flex\">\n")
+	_, _ = buf.WriteString("    <span class=\"type\">Struct literal</span>\n")
+	_, _ = buf.WriteString(s.typeName.RenderHTML())
+	_, _ = buf.WriteString("\n  </div>\n")
 	if s.field != "" {
-		buf.WriteString("  <ul>\n")
-		buf.WriteString("    <li class=\"flex\">\n")
-		buf.WriteString("      <span class=\"type\">Including field</span>\n")
-		buf.WriteString("      <code>\n")
-		buf.WriteString(s.field)
-		buf.WriteString("\n      </code>\n")
-		buf.WriteString("    </li>\n")
-		buf.WriteString("  </ul>\n")
+		_, _ = buf.WriteString("  <ul>\n")
+		_, _ = buf.WriteString("    <li class=\"flex\">\n")
+		_, _ = buf.WriteString("      <span class=\"type\">Including field</span>\n")
+		_, _ = buf.WriteString("      <code>\n")
+		_, _ = buf.WriteString(s.field)
+		_, _ = buf.WriteString("\n      </code>\n")
+		_, _ = buf.WriteString("    </li>\n")
+		_, _ = buf.WriteString("  </ul>\n")
 	} else if s.match != StructLiteralMatchAny {
-		buf.WriteString("  <ul>\n")
-		buf.WriteString("    <li class=\"flex\">\n")
-		buf.WriteString("      <span class=\"type\">Only as</span>\n")
-		buf.WriteString("      <code>\n")
+		_, _ = buf.WriteString("  <ul>\n")
+		_, _ = buf.WriteString("    <li class=\"flex\">\n")
+		_, _ = buf.WriteString("      <span class=\"type\">Only as</span>\n")
+		_, _ = buf.WriteString("      <code>\n")
 		if s.match == StructLiteralMatchValueOnly {
-			buf.WriteString("value\n")
+			_, _ = buf.WriteString("value\n")
 		} else {
-			buf.WriteString("pointer\n")
+			_, _ = buf.WriteString("pointer\n")
 		}
-		buf.WriteString("      </code>\n")
-		buf.WriteString("    </li>\n")
-		buf.WriteString("  </ul>\n")
+		_, _ = buf.WriteString("      </code>\n")
+		_, _ = buf.WriteString("    </li>\n")
+		_, _ = buf.WriteString("  </ul>\n")
 	}
-	buf.WriteString("</div>\n")
+	_, _ = buf.WriteString("</div>\n")
 
 	return buf.String()
 }

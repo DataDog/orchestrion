@@ -4,9 +4,9 @@
 +//line input.go:1:1
  package test
  
-+//line input.go:5
  import (
 -  "database/sql"
++//line input.go:5
    "database/sql/driver"
 +//line <generated>
 +  __orchestrion_sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"

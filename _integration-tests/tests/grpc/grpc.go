@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,20 +23,22 @@ import (
 
 type TestCase struct {
 	*grpc.Server
+	addr string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	lis, err := net.Listen("tcp", "127.0.0.1:9090")
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
+	tc.addr = lis.Addr().String()
 
 	tc.Server = grpc.NewServer()
 	helloworld.RegisterGreeterServer(tc.Server, &server{})
 
-	go func() { require.NoError(t, tc.Server.Serve(lis)) }()
+	go func() { assert.NoError(t, tc.Server.Serve(lis)) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	conn, err := grpc.NewClient("127.0.0.1:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(tc.addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	defer func() { require.NoError(t, conn.Close()) }()
 
@@ -48,7 +51,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.Equal(t, "Hello rob", resp.GetMessage())
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {
+func (tc *TestCase) Teardown(*testing.T) {
 	tc.Server.GracefulStop()
 }
 
