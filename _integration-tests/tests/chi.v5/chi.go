@@ -11,13 +11,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -29,7 +31,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	//dd:ignore
 	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:8080",
+		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: router,
 	}
 

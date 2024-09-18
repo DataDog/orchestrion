@@ -12,12 +12,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -27,7 +29,7 @@ type TestCase struct {
 func (tc *TestCase) Setup(t *testing.T) {
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:8080",
+		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: mux,
 	}
 
