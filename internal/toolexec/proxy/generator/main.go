@@ -118,7 +118,10 @@ func main() {
 			if !ok || spec.Name.Name != typeName {
 				continue
 			}
-			strct := spec.Type.(*ast.StructType)
+			strct, ok := spec.Type.(*ast.StructType)
+			if !ok {
+				log.Fatalf("Expected a struct, got a %T\n", spec)
+			}
 			for _, field := range strct.Fields.List {
 				tag, err := strconv.Unquote(field.Tag.Value)
 				if err != nil {

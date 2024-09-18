@@ -19,7 +19,7 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.String("R", "-1", "set address rounding quantum")
 	flagSet.Int("T", -1, "set the start address of text symbols")
 	flagSet.BoolFunc("V", "print version and exit", func(string) error {
-		f.showVersion = true
+		f.ShowVersion = true
 		return nil
 	})
 	flagSet.String("X", "", "add string value definition of the form importpath.name=value")

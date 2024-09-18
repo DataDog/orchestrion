@@ -16,7 +16,7 @@ type linkFlagSet struct {
 	BuildMode   string `ddflag:"-buildmode"`
 	ImportCfg   string `ddflag:"-importcfg"`
 	Output      string `ddflag:"-o"`
-	showVersion bool   `ddflag:"-V"`
+	ShowVersion bool   `ddflag:"-V"`
 }
 
 // LinkCommand represents a go tool `link` invocation
@@ -32,7 +32,7 @@ func (*LinkCommand) Type() CommandType {
 }
 
 func (cmd *LinkCommand) ShowVersion() bool {
-	return cmd.Flags.showVersion
+	return cmd.Flags.ShowVersion
 }
 
 func (cmd *LinkCommand) Stage() string {

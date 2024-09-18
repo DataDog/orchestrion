@@ -18,7 +18,7 @@ type compileFlagSet struct {
 	ImportCfg   string `ddflag:"-importcfg"`
 	Output      string `ddflag:"-o"`
 	Lang        string `ddflag:"-lang"`
-	showVersion bool   `ddflag:"-V"`
+	ShowVersion bool   `ddflag:"-V"`
 }
 
 // CompileCommand represents a go tool `compile` invocation
@@ -33,7 +33,7 @@ type CompileCommand struct {
 func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
 
 func (c *CompileCommand) ShowVersion() bool {
-	return c.Flags.showVersion
+	return c.Flags.ShowVersion
 }
 
 // GoFiles returns the list of Go files passed as arguments to cmd

@@ -20,7 +20,7 @@ func TestParseLink(t *testing.T) {
 		"version_print": {
 			input: []string{"/path/link", "-V=full"},
 			flags: linkFlagSet{
-				showVersion: true,
+				ShowVersion: true,
 			},
 		},
 		"link": {

@@ -20,7 +20,7 @@ func TestParseCompile(t *testing.T) {
 		"version_print": {
 			input: []string{"/path/compile", "-V=full"},
 			flags: compileFlagSet{
-				showVersion: true,
+				ShowVersion: true,
 			},
 		},
 		"compile": {
@@ -44,7 +44,7 @@ func TestParseCompile(t *testing.T) {
 	} {
 		if tc.goFiles == nil {
 			// Simplify comparisons, as goFiles always returns non-nil
-			tc.goFiles = []string{}
+			tc.goFiles = make([]string, 0)
 		}
 
 		if name != "nats.go" {
