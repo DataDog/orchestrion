@@ -25,7 +25,7 @@ type Aspect struct {
 	TracerInternal bool
 }
 
-func (a *Aspect) AsCode() (jp, adv jen.Code) {
+func (a *Aspect) AsCode() (jp jen.Code, adv jen.Code) {
 	jp = a.JoinPoint.AsCode()
 	adv = jen.Index().Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice", "Advice").ValuesFunc(func(g *jen.Group) {
 		for _, a := range a.Advice {

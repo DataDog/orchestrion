@@ -48,16 +48,15 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
 				// No weaving in those packages!
 				return nil
-			} else {
-				log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
-				shortList := make([]aspect.Aspect, 0, len(aspects))
-				for _, aspect := range aspects {
-					if aspect.TracerInternal {
-						shortList = append(shortList, aspect)
-					}
-				}
-				aspects = shortList
 			}
+			log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
+			shortList := make([]aspect.Aspect, 0, len(aspects))
+			for _, aspect := range aspects {
+				if aspect.TracerInternal {
+					shortList = append(shortList, aspect)
+				}
+			}
+			aspects = shortList
 		}
 	}
 

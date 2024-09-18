@@ -24,7 +24,7 @@ type LinkCommand struct {
 	WorkDir string
 }
 
-func (cmd *LinkCommand) Type() CommandType {
+func (*LinkCommand) Type() CommandType {
 	return CommandTypeLink
 }
 

@@ -37,7 +37,7 @@ func (VersionSuffixResponse) IsResponseTo(*VersionSuffixRequest) {}
 
 var tagSuffix string
 
-func (s *service) versionSuffix(req *VersionSuffixRequest) (VersionSuffixResponse, error) {
+func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -132,8 +132,8 @@ var _ json.Marshaler = (*moduleInfo)(nil)
 
 func (m *moduleInfo) MarshalJSON() ([]byte, error) {
 	toMarshal := struct {
-		*packages.Module `json:",inline"`
-		Files            [][2]string `json:"files,omitempty"`
+		*packages.Module
+		Files [][2]string `json:"files,omitempty"`
 	}{Module: m.Module}
 
 	// If this module is replaced by a directory; we'll hash the files as well...

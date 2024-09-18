@@ -142,13 +142,13 @@ func (n *TypeName) AsNode() dst.Expr {
 func (n *TypeName) AsCode() jen.Code {
 	str := bytes.NewBuffer(make([]byte, 0, 1+len(n.path)+len(n.name)))
 	if n.pointer {
-		str.WriteString("*")
+		_, _ = str.WriteString("*")
 	}
 	if n.path != "" {
-		str.WriteString(n.path)
-		str.WriteString(".")
+		_, _ = str.WriteString(n.path)
+		_, _ = str.WriteString(".")
 	}
-	str.WriteString(n.name)
+	_, _ = str.WriteString(n.name)
 
 	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
 }

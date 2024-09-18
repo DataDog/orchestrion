@@ -13,8 +13,7 @@ import (
 var Pin = &cli.Command{
 	Name:  "pin",
 	Usage: "Registers orchestrion in your project's `go.mod` file",
-	Flags: []cli.Flag{},
-	Action: func(c *cli.Context) error {
+	Action: func(*cli.Context) error {
 		return pin.PinOrchestrion()
 	},
 }

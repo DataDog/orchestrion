@@ -11,7 +11,7 @@ import (
 	"orchestrion/integration/validator/trace"
 )
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
@@ -20,10 +20,10 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			Children: trace.Spans{
 				{
 					Tags: map[string]any{
-						"name": "spanFromHttpRequest",
+						"name": "spanFromHTTPRequest",
 					},
 					Meta: map[string]any{
-						"function-name": "spanFromHttpRequest",
+						"function-name": "spanFromHTTPRequest",
 						"foo":           "bar",
 					},
 					Children: trace.Spans{

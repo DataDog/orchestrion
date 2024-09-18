@@ -5,7 +5,7 @@
 
 //go:build integration
 
-package gcp_pubsub
+package gcppubsub
 
 import (
 	"context"
@@ -125,7 +125,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"name":     "pubsub.publish",
 				"type":     "queue",
 				"resource": "projects/pstest-orchestrion/topics/pstest-orchestrion-topic",
-				"service":  "tests.test",
+				"service":  "gcp_pubsub.test",
 			},
 			Meta: map[string]any{
 				"span.kind":    "producer",
@@ -138,7 +138,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"name":     "pubsub.receive",
 						"type":     "queue",
 						"resource": "projects/pstest-orchestrion/subscriptions/pstest-orchestrion-subscription",
-						"service":  "tests.test",
+						"service":  "gcp_pubsub.test",
 					},
 					Meta: map[string]any{
 						"span.kind":        "consumer",

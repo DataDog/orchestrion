@@ -134,7 +134,7 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 	args = append(append(make([]string, 0, len(goflagsArgs)+len(args)), goflagsArgs...), args...)
 
 	var positional []string
-	for i := 0; i < len(args); i += 1 {
+	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
 		// Any argument after "--" is a positional argument, so we are done parsing.

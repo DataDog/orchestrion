@@ -2,9 +2,6 @@ module github.com/datadog/orchestrion
 
 go 1.22.6
 
-// TODO: remove
-replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240911144551-ba11596de4d7
-
 require (
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/dave/dst v0.27.3
@@ -25,7 +22,7 @@ require (
 	golang.org/x/sys v0.24.0
 	golang.org/x/term v0.23.0
 	golang.org/x/tools v0.24.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.68.0-rc.2
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
 	k8s.io/client-go v0.31.0

@@ -4,9 +4,6 @@ go 1.22.6
 
 replace github.com/datadog/orchestrion => ../
 
-// TODO: remove
-replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240911144551-ba11596de4d7
-
 require (
 	cloud.google.com/go/pubsub v1.42.0
 	github.com/IBM/sarama v1.43.3
@@ -46,7 +43,7 @@ require (
 	google.golang.org/api v0.194.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/grpc/examples v0.0.0-20240816220358-f8d98a477c22
-	gopkg.in/DataDog/dd-trace-go.v1 v1.67.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.68.0-rc.2
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.11
 	gotest.tools/v3 v3.5.1

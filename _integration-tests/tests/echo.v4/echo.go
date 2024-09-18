@@ -11,16 +11,20 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
 	*echo.Echo
+	addr string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
@@ -30,12 +34,13 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.Echo.GET("/ping", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{"message": "pong"})
 	})
+	tc.addr = "127.0.0.1:" + utils.GetFreePort(t)
 
-	go func() { require.ErrorIs(t, tc.Echo.Start("127.0.0.1:8080"), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.Echo.Start(tc.addr), http.ErrServerClosed) }()
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	resp, err := http.Get("http://127.0.0.1:8080/ping")
+	resp, err := http.Get("http://" + tc.addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -47,7 +52,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.Echo.Shutdown(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
+func (tc *TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
@@ -65,7 +70,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"type":     "web",
 					},
 					Meta: map[string]any{
-						"http.url": "http://127.0.0.1:8080/ping",
+						"http.url": "http://" + tc.addr + "/ping",
 					},
 				},
 			},

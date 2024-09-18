@@ -16,22 +16,22 @@ import (
 )
 
 var (
-	//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get
-	__dd_orchestrion_gls_get func() any
+	//go:linkname orchestrionGlsGet __dd_orchestrion_gls_get
+	orchestrionGlsGet func() any
 
-	//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set
-	__dd_orchestrion_gls_set func(any)
+	//go:linkname orhcestrionGlsSet __dd_orchestrion_gls_set
+	orhcestrionGlsSet func(any)
 
 	get = func() any { return nil }
 	set = func(any) {}
 )
 
 func init() {
-	if __dd_orchestrion_gls_get != nil {
-		get = __dd_orchestrion_gls_get
+	if orchestrionGlsGet != nil {
+		get = orchestrionGlsGet
 	}
-	if __dd_orchestrion_gls_set != nil {
-		set = __dd_orchestrion_gls_set
+	if orhcestrionGlsSet != nil {
+		set = orhcestrionGlsSet
 	}
 }
 

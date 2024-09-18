@@ -5,17 +5,18 @@
 
 //go:build integration
 
-package shopify_sarama
+package ibm_sarama
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -59,7 +60,30 @@ func (tc *TestCase) Setup(t *testing.T) {
 func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
-	producer, err := sarama.NewSyncProducer(addrs, cfg)
+	createProducer := func() (_ sarama.SyncProducer, err error) {
+		defer func() {
+			if r := recover(); r != nil && err == nil {
+				var ok bool
+				if err, ok = r.(error); !ok {
+					err = fmt.Errorf("panic: %v", r)
+				}
+			}
+		}()
+		return sarama.NewSyncProducer(addrs, cfg)
+	}
+
+	var (
+		producer sarama.SyncProducer
+		err      error
+	)
+	for attemptsLeft := 3; attemptsLeft > 0; attemptsLeft-- {
+		producer, err = createProducer()
+		if err != nil {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		break
+	}
 	require.NoError(t, err, "failed to create producer")
 	defer func() { assert.NoError(t, producer.Close(), "failed to close producer") }()
 
@@ -111,7 +135,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
@@ -121,7 +145,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 			Meta: map[string]any{
 				"span.kind": "producer",
-				"component": "Shopify/sarama",
+				"component": "IBM/sarama",
 			},
 			Children: trace.Spans{
 				{
@@ -132,7 +156,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 					},
 					Meta: map[string]any{
 						"span.kind": "consumer",
-						"component": "Shopify/sarama",
+						"component": "IBM/sarama",
 					},
 				},
 			},

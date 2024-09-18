@@ -1,7 +1,6 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/codecov
 codecov:
-  require_ci_to_pass: true
   notify:
     manual_trigger: true
 
@@ -10,11 +9,9 @@ comment:
   behavior: new
 
 ignore:
-  - '**/generator/main.go' # Generators are not actually part of the product
   - 'samples/**' # This is sample code for instrumentable things
   - 'tools/**' # Repository maintenance tooling
   - 'internal/injector/aspect/advice/code/dot_ast.proxies.go' # Auto-generated proxy code
-  - '_integration-tests/tests/**' # Cannot collect coverage in integrationt tests due to a bug in the Go toolchain
 
 coverage:
   status:
@@ -29,6 +26,9 @@ coverage:
 
 component_management:
   individual_components:
+    - component_id: generators
+      name: Generators
+      paths: ["**/generator/*.go"]
     - component_id: instruments
       name: Instruments
       paths: [instrument/**]
@@ -44,3 +44,11 @@ component_management:
     - component_id: injector
       name: Injector
       paths: [internal/injector/**]
+    - component_id: jobserver
+      name: Job Server
+      paths: [internal/jobserver/**]
+    - component_id: integration-tests
+      name: Integration Test Suite
+      paths: [_integration-tests/**]
+    - component_id: other
+      name: Other

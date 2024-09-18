@@ -15,7 +15,7 @@ import (
 	"github.com/datadog/orchestrion/internal/toolexec/proxy"
 )
 
-func (w Weaver) OnLink(cmd *proxy.LinkCommand) error {
+func (Weaver) OnLink(cmd *proxy.LinkCommand) error {
 	log.SetContext("PHASE", "link")
 	defer log.SetContext("PHASE", "")
 

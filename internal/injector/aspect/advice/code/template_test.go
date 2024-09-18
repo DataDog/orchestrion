@@ -60,7 +60,7 @@ func (mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
 func (mockAdviceContext) ReplaceNode(dst.Node) {
 	panic(errors.ErrUnsupported)
 }
-func (mockAdviceContext) AddImport(path string, alias string) bool {
+func (mockAdviceContext) AddImport(string, string) bool {
 	panic(errors.ErrUnsupported)
 }
 func (mockAdviceContext) AddLink(string) bool {

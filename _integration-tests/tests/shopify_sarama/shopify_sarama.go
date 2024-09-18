@@ -5,7 +5,7 @@
 
 //go:build integration
 
-package ibm_sarama
+package shopify_sarama
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
-	"github.com/IBM/sarama"
+	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -111,7 +111,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (*TestCase) ExpectedTraces() trace.Spans {
 	return trace.Spans{
 		{
 			Tags: map[string]any{
@@ -121,7 +121,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			},
 			Meta: map[string]any{
 				"span.kind": "producer",
-				"component": "IBM/sarama",
+				"component": "Shopify/sarama",
 			},
 			Children: trace.Spans{
 				{
@@ -132,7 +132,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 					},
 					Meta: map[string]any{
 						"span.kind": "consumer",
-						"component": "IBM/sarama",
+						"component": "Shopify/sarama",
 					},
 				},
 			},

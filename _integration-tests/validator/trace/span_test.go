@@ -6,9 +6,7 @@
 package trace
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -60,22 +58,6 @@ func TestMatchesAny(t *testing.T) {
 			}
 		})
 	}
-}
-
-func renderDiff(diff []Diff) []byte {
-	var buf bytes.Buffer
-
-	for idx, entry := range diff {
-		if idx > 0 {
-			buf.WriteByte('\n')
-		}
-		buf.WriteString(strings.Repeat("#", 72))
-		buf.WriteString(fmt.Sprintf("\n// At index %d\n", idx))
-		buf.WriteString(entry.String())
-		buf.WriteByte('\n')
-	}
-
-	return buf.Bytes()
 }
 
 func init() {

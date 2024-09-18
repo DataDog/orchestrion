@@ -159,7 +159,7 @@ func (l *LinkDeps) Write(w io.Writer) error {
 
 // readArchiveData returns the content of the given entry from the provided archive file. If there
 // is no such entry in the archive, a nil io.Reader and no error is returned.
-func readArchiveData(archive, entry string) (io.Reader, error) {
+func readArchiveData(archive string, entry string) (io.Reader, error) {
 	var list, data bytes.Buffer
 	cmd := exec.Command("go", "tool", "pack", "t", archive)
 	cmd.Stdout = &list

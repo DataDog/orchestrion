@@ -27,7 +27,7 @@ type CompileCommand struct {
 	WorkDir string
 }
 
-func (cmd *CompileCommand) Type() CommandType { return CommandTypeCompile }
+func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
 
 // GoFiles returns the list of Go files passed as arguments to cmd
 func (cmd *CompileCommand) GoFiles() []string {
