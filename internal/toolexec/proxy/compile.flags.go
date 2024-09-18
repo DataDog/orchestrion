@@ -23,6 +23,7 @@ func (f *compileFlagSet) parse(args []string) ([]string, error) {
 	flagSet.Bool("N", false, "disable optimizations")
 	flagSet.Bool("S", false, "print assembly listing")
 	flagSet.BoolFunc("V", "print version and exit", func(string) error {
+		f.showVersion = true
 		return nil
 	})
 	flagSet.Bool("W", false, "debug parse tree after type checking")

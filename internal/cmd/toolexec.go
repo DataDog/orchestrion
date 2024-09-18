@@ -63,7 +63,7 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Tracef("Toolexec final command:    %q/n", proxyCmd.Args())
+		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
 		return proxy.RunCommand(proxyCmd)
 	},
 }
