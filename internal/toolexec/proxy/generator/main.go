@@ -81,10 +81,9 @@ func main() {
 			if curMajor > newMajor || (curMajor == newMajor && curMinor > newMinor) {
 				if os.Getenv("CI") != "" {
 					log.Fatalf("Generate must be run with go%d.%d or newer (was run with %d.%d)\n", curMajor, curMinor, newMajor, newMinor)
-				} else {
-					log.Printf("Skipping generation of %q, as it was generated against a more recent version of the go %s tool (%d.%d >= %d.%d)\n", outFile, command, curMajor, curMinor, newMajor, newMinor)
-					return
 				}
+				log.Printf("Skipping generation of %q, as it was generated against a more recent version of the go %s tool (%d.%d >= %d.%d)\n", outFile, command, curMajor, curMinor, newMajor, newMinor)
+				return
 			}
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
