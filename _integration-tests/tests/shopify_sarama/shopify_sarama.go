@@ -9,10 +9,10 @@ package shopify_sarama
 
 import (
 	"context"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
 	"github.com/Shopify/sarama"
@@ -46,9 +46,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
 		redpanda.WithAutoCreateTopics(),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	addr, err := tc.server.KafkaSeedBroker(ctx)
 	require.NoError(t, err, "failed to get seed broker address")
@@ -119,7 +119,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"type":    "queue",
 				"service": "kafka",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"span.kind": "producer",
 				"component": "Shopify/sarama",
 			},
@@ -130,7 +130,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"type":    "queue",
 						"service": "kafka",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"span.kind": "consumer",
 						"component": "Shopify/sarama",
 					},

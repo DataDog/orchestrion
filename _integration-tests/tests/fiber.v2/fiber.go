@@ -52,7 +52,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"resource": "GET /ping",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"http.url": "http://" + tc.addr + "/ping",
 			},
 			Children: trace.Spans{
@@ -63,7 +63,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /ping",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.url": "/ping",
 					},
 				},

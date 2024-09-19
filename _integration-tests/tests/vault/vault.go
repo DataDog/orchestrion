@@ -9,10 +9,10 @@ package vault
 
 import (
 	"context"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 
 	"github.com/hashicorp/vault/api"
@@ -34,10 +34,10 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testvault.Run(ctx,
 		"vault:1.7.3",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 		testvault.WithToken("root"),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	addr, err := tc.server.HttpHostAddress(ctx)
 	if err != nil {
@@ -84,7 +84,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /v1/secret/key",
 						"type":     "http",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.method": "GET",
 						"http.url":    "/v1/secret/key",
 						"span.kind":   "client",

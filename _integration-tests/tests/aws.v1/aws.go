@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 
-	"orchestrion/integration/utils"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -30,7 +30,7 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	server, host, port := utils.StartDynamoDBTestContainer(t)
+	server, host, port := testcontainersutils.StartDynamoDBTestContainer(t)
 	tc.server = server
 
 	tc.cfg = &aws.Config{
@@ -61,7 +61,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"resource": "dynamodb.ListTables",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"aws.operation":    "ListTables",
 				"aws.region":       "test-region-1337",
 				"aws_service":      "dynamodb",

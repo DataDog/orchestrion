@@ -77,19 +77,19 @@ func (span *RawSpan) UnmarshalJSON(data []byte) error {
 		case "span_id":
 			err = json.Unmarshal(value, &span.ID)
 			if err == nil {
-				span.Tags["span_id"] = json.Number(fmt.Sprintf("%d", span.ID))
+				span.Tags["span_id"] = fmt.Sprintf("%d", span.ID)
 			}
 		case "parent_id":
 			err = json.Unmarshal(value, &span.ParentID)
 			if err == nil {
-				span.Tags["parent_id"] = json.Number(fmt.Sprintf("%d", span.ParentID))
+				span.Tags["parent_id"] = fmt.Sprintf("%d", span.ParentID)
 			}
 		case "_children":
 			err = json.Unmarshal(value, &span.Children)
 		case "meta":
 			err = json.Unmarshal(value, &span.Meta)
 		default:
-			var val any
+			var val string
 			dec := json.NewDecoder(bytes.NewReader(value))
 			dec.UseNumber()
 			err = dec.Decode(&val)

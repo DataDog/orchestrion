@@ -64,7 +64,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"resource": "GET /",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"http.url": fmt.Sprintf("http://%s/", tc.Server.Addr),
 			},
 			Children: trace.Spans{
@@ -75,7 +75,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"service":  "chi.router",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.url": fmt.Sprintf("http://%s/", tc.Server.Addr),
 					},
 				},

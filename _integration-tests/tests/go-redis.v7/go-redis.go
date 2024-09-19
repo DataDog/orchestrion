@@ -11,7 +11,7 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
@@ -38,7 +38,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testredis.Run(ctx,
 		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
 				wait.ForLog("* Ready to accept connections"),
@@ -47,7 +47,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 			),
 		),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {
@@ -91,7 +91,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "set",
 						"type":     "redis",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.args_length": "3",
 						"component":         "go-redis/redis.v7",
 						"out.db":            "0",
@@ -108,7 +108,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "get",
 						"type":     "redis",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.args_length": "2",
 						"component":         "go-redis/redis.v7",
 						"out.db":            "0",

@@ -10,6 +10,7 @@ package awsv2
 import (
 	"context"
 	"fmt"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"testing"
 	"time"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 
-	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -30,7 +30,7 @@ type base struct {
 }
 
 func (b *base) setup(t *testing.T) {
-	b.server, b.host, b.port = utils.StartDynamoDBTestContainer(t)
+	b.server, b.host, b.port = testcontainersutils.StartDynamoDBTestContainer(t)
 }
 
 func (b *base) teardown(t *testing.T) {
@@ -56,7 +56,7 @@ func (b *base) expectedSpans() trace.Spans {
 				"resource": "DynamoDB.ListTables",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"aws.operation": "ListTables",
 				"aws.region":    "test-region-1337",
 				"aws_service":   "DynamoDB",
@@ -72,7 +72,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "POST /",
 						"type":     "http",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.method":              "POST",
 						"http.status_code":         "200",
 						"http.url":                 fmt.Sprintf("http://localhost:%s/", b.port),

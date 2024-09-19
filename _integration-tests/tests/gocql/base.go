@@ -10,6 +10,7 @@ package gocql
 import (
 	"context"
 	"net"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"testing"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	testcassandra "github.com/testcontainers/testcontainers-go/modules/cassandra"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
-	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -38,9 +38,9 @@ func (b *base) setup(t *testing.T) {
 	b.container, err = testcassandra.Run(ctx,
 		"cassandra:4.1",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	b.hostPort, err = b.container.ConnectionHost(ctx)
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "CREATE KEYSPACE if not exists trace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1}",
 						"type":     "cassandra",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":            "gocql/gocql",
 						"span.kind":            "client",
 						"db.system":            "cassandra",
@@ -110,7 +110,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "CREATE TABLE if not exists trace.person (name text PRIMARY KEY, age int, description text)",
 						"type":     "cassandra",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":            "gocql/gocql",
 						"span.kind":            "client",
 						"db.system":            "cassandra",
@@ -126,7 +126,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "INSERT INTO trace.person (name, age, description) VALUES ('Cassandra', 100, 'A cruel mistress')",
 						"type":     "cassandra",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":            "gocql/gocql",
 						"span.kind":            "client",
 						"db.system":            "cassandra",

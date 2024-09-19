@@ -19,7 +19,8 @@ type SpanID uint64
 // via the Children property.
 type Span struct {
 	ID       SpanID `json:"span_id"`
-	Meta     map[string]any
+	ParentID SpanID `json:"parent_id"`
+	Meta     map[string]string
 	Tags     map[string]any
 	Children []*Span
 }
@@ -48,7 +49,7 @@ func (span *Span) UnmarshalJSON(data []byte) error {
 		case "span_id":
 			err = json.Unmarshal(value, &span.ID)
 			if err == nil {
-				span.Tags["span_id"] = json.Number(fmt.Sprintf("%d", span.ID))
+				span.Tags["span_id"] = fmt.Sprintf("%d", span.ID)
 			}
 		default:
 			var val any

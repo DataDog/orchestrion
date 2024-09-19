@@ -64,7 +64,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"name":     "gorm.query",
 						"service":  "gorm.db",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component": "gorm.io/gorm.v1",
 					},
 				},
