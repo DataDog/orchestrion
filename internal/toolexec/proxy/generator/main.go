@@ -34,7 +34,15 @@ type flagSpec struct {
 
 func main() {
 	var command string
-	flag.StringVar(&command, "command", "", "The command to generate a parser for")
+	flag.Func("command", "The command to generate a parser for", func(val string) error {
+		switch val {
+		case "compile", "link":
+			command = val
+		default:
+			return fmt.Errorf("unsupported command: %q", val)
+		}
+		return nil
+	})
 	flag.Parse()
 
 	if command == "" {
