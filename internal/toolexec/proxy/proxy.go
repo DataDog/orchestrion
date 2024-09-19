@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 )
 
 type (
@@ -26,10 +25,7 @@ type (
 		// Args are all the command arguments, starting from the Go tool command
 		Args() []string
 		ReplaceParam(param string, val string) error
-		// Stage returns the build stage of the command. Each stage usually associated
-		// to a specific package and is named using the `bXXX` format, where `X` are numbers.
-		// Stage b001 is the final stage of the go build process
-		Stage() string
+
 		// Type represents the go tool command type (compile, link, asm, etc.)
 		Type() CommandType
 
@@ -44,11 +40,6 @@ type (
 	// processors will be invoked.
 	CommandProcessor[T Command] func(T) error
 
-	commandFlagSet struct {
-		Output  string `ddflag:"-o"`
-		Version string `ddflag:"-V"`
-	}
-
 	// command is the default unknown command type
 	// Can be used to compose specific Command implementations
 	command struct {
@@ -56,7 +47,6 @@ type (
 		// paramPos is the index in args of the *value* provided for the parameter stored in the key
 		paramPos map[string]int
 		onClose  []func() error
-		flags    commandFlagSet
 	}
 )
 
@@ -89,8 +79,6 @@ func NewCommand(args []string) command {
 		cmd.paramPos[v] = pos + 1
 	}
 
-	parseFlags(&cmd.flags, args)
-
 	return cmd
 }
 
@@ -107,10 +95,6 @@ func (cmd *command) Close() error {
 		}
 	}
 	return nil
-}
-
-func (cmd *command) ShowVersion() bool {
-	return cmd.flags.Version == "full"
 }
 
 // ReplaceParam will replace any parameter of the command provided it is found
@@ -162,14 +146,14 @@ func MustRunCommand(cmd Command, opts ...RunCommandOption) {
 	panic(err)
 }
 
-func (cmd *command) Stage() string {
-	return filepath.Base(filepath.Dir(cmd.flags.Output))
-}
-
 func (*command) Type() CommandType {
 	return CommandTypeOther
 }
 
 func (cmd *command) Args() []string {
 	return cmd.args
+}
+
+func (*command) ShowVersion() bool {
+	return false
 }
