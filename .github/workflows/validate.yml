@@ -229,6 +229,39 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   ##############################################################################
+  # Run all benchmarks and generate report
+  benchmark:
+    needs: generate
+    runs-on: ubuntu-latest
+    name: Benchmarks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Setup go
+        id: setup-go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        with:
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
+      - name: Run benchmarks
+        run: go test -bench=. -run=^$ ./... | tee ${{ runner.temp }}/benchmarks.txt
+      - name: Upload benchmark report (raw)
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
+        with:
+          if-no-files-found: error
+          name: Benchmark Report
+          path: ${{ runner.temp }}/benchmarks.txt
+      - name: Format Report
+        run: |-
+          go run golang.org/x/perf/cmd/benchstat  \
+            -table=.name -row=/repo -col=/variant \
+            ${{ runner.temp }}/benchmarks.txt     \
+            > ${{ runner.temp }}/benchmarks-formatted.txt
+      - name: Setting Job Summary
+        run: echo "### Benchmark Report\n\n```\n$(cat ${{ runner.temp }}/benchmarks-formatted.txt)```\n" >> "${GITHUB_STEP_SUMMARY}"
+
+
+  ##############################################################################
   # Run all integration tests and gather extensive coverage
   integration-tests:
     needs: generate
