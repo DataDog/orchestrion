@@ -10,8 +10,6 @@ package redigo
 import (
 	"context"
 	"net/url"
-	testcontainersutils "orchestrion/integration/utils/testcontainers"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
@@ -20,7 +18,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -37,13 +39,13 @@ func (tc *TestCase) Setup(t *testing.T) {
 		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		testcontainersutils.WithTestLogConsumer(t),
-		//testcontainers.WithWaitStrategy(
-		//	wait.ForAll(
-		//		wait.ForLog("* Ready to accept connections"),
-		//		wait.ForExposedPort(),
-		//		wait.ForListeningPort("6379/tcp"),
-		//	),
-		//),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForLog("* Ready to accept connections"),
+				wait.ForExposedPort(),
+				wait.ForListeningPort("6379/tcp"),
+			),
+		),
 	)
 	testcontainersutils.AssertTestContainersError(t, err)
 
