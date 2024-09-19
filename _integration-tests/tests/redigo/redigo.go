@@ -31,8 +31,7 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	var err error
 	tc.server, err = testredis.Run(ctx,
