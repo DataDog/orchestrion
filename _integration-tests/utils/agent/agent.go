@@ -13,6 +13,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo/trace"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -38,7 +40,8 @@ func (m *MockAgent) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("{}"))
+	_, err := w.Write([]byte("{}"))
+	assert.NoError(m.T, err)
 }
 
 func (m *MockAgent) handleTraces(req *http.Request) {
@@ -96,7 +99,7 @@ func (m *MockAgent) Spans() trace.Spans {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	spansByID := map[trace.SpanID]*trace.Span{}
+	spansByID := make(map[trace.SpanID]*trace.Span)
 	for _, payload := range m.payloads {
 		for _, spans := range payload {
 			for _, span := range spans {

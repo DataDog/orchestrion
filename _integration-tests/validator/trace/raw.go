@@ -89,7 +89,7 @@ func (span *RawSpan) UnmarshalJSON(data []byte) error {
 		case "meta":
 			err = json.Unmarshal(value, &span.Meta)
 		default:
-			var val string
+			var val any
 			dec := json.NewDecoder(bytes.NewReader(value))
 			dec.UseNumber()
 			err = dec.Decode(&val)
