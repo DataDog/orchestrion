@@ -44,8 +44,7 @@ func parseLinkCommand(args []string) (Command, error) {
 		return nil, errors.New("unexpected number of command arguments")
 	}
 	flags := &linkFlagSet{}
-	_, err := flags.parse(args[1:])
-	if err != nil {
+	if _, err := flags.parse(args[1:]); err != nil {
 		return nil, err
 	}
 

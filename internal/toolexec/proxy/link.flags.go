@@ -10,14 +10,14 @@ package proxy
 import "flag"
 
 func (f *linkFlagSet) parse(args []string) ([]string, error) {
-	flagSet := flag.NewFlagSet("link", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("link version go1.23", flag.ContinueOnError)
 	flagSet.String("B", "", "add an ELF NT_GNU_BUILD_ID note when using ELF; use \"gobuildid\" to generate it from the Go build ID")
 	flagSet.String("E", "", "set entry symbol name")
 	flagSet.String("H", "", "set header type")
 	flagSet.String("I", "", "use linker as ELF dynamic linker")
 	flagSet.String("L", "", "add specified directory to library path")
-	flagSet.String("R", "-1", "set address rounding quantum")
-	flagSet.Int("T", -1, "set the start address of text symbols")
+	flagSet.String("R", "", "set address rounding quantum")
+	flagSet.Int("T", 0, "set the start address of text symbols")
 	flagSet.BoolFunc("V", "print version and exit", func(string) error {
 		f.ShowVersion = true
 		return nil
@@ -25,7 +25,7 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.String("X", "", "add string value definition of the form importpath.name=value")
 	flagSet.Bool("a", false, "no-op (deprecated)")
 	flagSet.Bool("asan", false, "enable ASan interface")
-	flagSet.Bool("aslr", true, "enable ASLR for buildmode=c-shared on windows")
+	flagSet.Bool("aslr", false, "enable ASLR for buildmode=c-shared on windows")
 	flagSet.String("benchmark", "", "set to 'mem' or 'cpu' to enable phase benchmarking")
 	flagSet.String("benchmarkprofile", "", "emit phase profiles to base_phase.{cpu,mem}prof")
 	flagSet.Bool("bindnow", false, "mark a dynamically linked ELF object for immediate function binding")
@@ -33,8 +33,8 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.StringVar(&f.BuildMode, "buildmode", "", "set build mode")
 	flagSet.Bool("c", false, "dump call graph")
 	flagSet.String("capturehostobjs", "", "capture host object files loaded during internal linking to specified dir")
-	flagSet.Bool("checklinkname", true, "check linkname symbol references")
-	flagSet.Bool("compressdwarf", true, "compress DWARF if possible")
+	flagSet.Bool("checklinkname", false, "check linkname symbol references")
+	flagSet.Bool("compressdwarf", false, "compress DWARF if possible")
 	flagSet.String("cpuprofile", "", "write cpu profile to file")
 	flagSet.Bool("d", false, "disable dynamic executable")
 	flagSet.Bool("debugnosplit", false, "dump nosplit call graph")
@@ -59,7 +59,7 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.Bool("n", false, "no-op (deprecated)")
 	flagSet.StringVar(&f.Output, "o", "", "write output to file")
 	flagSet.String("pluginpath", "", "full path name for plugin")
-	flagSet.Bool("pruneweakmap", true, "prune weak mapinit refs")
+	flagSet.Bool("pruneweakmap", false, "prune weak mapinit refs")
 	flagSet.String("r", "", "set the ELF dynamic linker search path to dir1:dir2:...")
 	flagSet.Bool("race", false, "enable race detector")
 	flagSet.Int("randlayout", 0, "randomize function layout")
