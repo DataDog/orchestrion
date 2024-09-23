@@ -14,7 +14,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/dlclark/regexp2"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"

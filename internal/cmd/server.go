@@ -12,10 +12,10 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/datadog/orchestrion/internal/filelock"
-	"github.com/datadog/orchestrion/internal/jobserver"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/jobserver"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/urfave/cli/v2"
@@ -49,7 +49,7 @@ var Server = &cli.Command{
 	Hidden: true,
 	Action: func(c *cli.Context) error {
 		opts := jobserver.Options{
-			ServerName:        "github.com/datadog/orchestrion server",
+			ServerName:        "github.com/DataDog/orchestrion server",
 			Port:              c.Int("port"),
 			InactivityTimeout: c.Duration("inactivity-timeout"),
 			EnableLogging:     c.Bool("nats-logging"),

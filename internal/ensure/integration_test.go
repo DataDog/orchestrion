@@ -63,7 +63,7 @@ func Test(t *testing.T) {
 			}
 
 			if test.version != "" {
-				goMod = append(goMod, fmt.Sprintf("require github.com/datadog/orchestrion %s", test.version), "")
+				goMod = append(goMod, fmt.Sprintf("require github.com/DataDog/orchestrion %s", test.version), "")
 
 				// So that "go mod tidy" does not remove the requirement...
 				require.NoError(t,
@@ -71,13 +71,13 @@ func Test(t *testing.T) {
 						"//go:build tools",
 						"package tools",
 						"",
-						"import _ \"github.com/datadog/orchestrion\"",
+						"import _ \"github.com/DataDog/orchestrion\"",
 					}, "\n")), 0o644),
 					"failed to write tools.go",
 				)
 			}
 			if test.replaces {
-				goMod = append(goMod, fmt.Sprintf("replace github.com/datadog/orchestrion => %s", filepath.Dir(filepath.Dir(ensureDir))), "")
+				goMod = append(goMod, fmt.Sprintf("replace github.com/DataDog/orchestrion => %s", filepath.Dir(filepath.Dir(ensureDir))), "")
 			}
 
 			require.NoError(t,

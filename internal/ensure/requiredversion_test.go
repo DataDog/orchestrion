@@ -16,8 +16,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/goenv"
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 )
 

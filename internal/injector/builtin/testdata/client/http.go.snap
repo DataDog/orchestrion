@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 //line <generated>
-	__orchestrion_instrument "github.com/datadog/orchestrion/instrument/net/http"
+	__orchestrion_instrument "github.com/DataDog/orchestrion/instrument/net/http"
 )
 
 //line samples/client/http.go:16

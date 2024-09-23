@@ -9,8 +9,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/stretchr/testify/require"

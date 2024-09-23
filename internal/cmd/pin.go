@@ -6,7 +6,7 @@
 package cmd
 
 import (
-	"github.com/datadog/orchestrion/internal/pin"
+	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/urfave/cli/v2"
 )
 

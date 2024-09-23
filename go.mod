@@ -1,4 +1,4 @@
-module github.com/datadog/orchestrion
+module github.com/DataDog/orchestrion
 
 go 1.22.6
 

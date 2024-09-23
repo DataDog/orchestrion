@@ -16,8 +16,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"github.com/dave/jennifer/jen"
@@ -192,7 +192,7 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 }
 
 func (t *Template) AsCode() jen.Code {
-	return jen.Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
+	return jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
 		jen.Line().Lit(t.source),
 		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
 			// We sort the keys so the generated code order is consistent...

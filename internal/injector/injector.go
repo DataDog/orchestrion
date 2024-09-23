@@ -14,9 +14,9 @@ import (
 	"go/importer"
 	"go/token"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect"
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver"

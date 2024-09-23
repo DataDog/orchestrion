@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/datadog/orchestrion/internal/ensure"
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/ensure"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/urfave/cli/v2"
 )
 

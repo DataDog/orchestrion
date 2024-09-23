@@ -8,7 +8,7 @@ package code
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )

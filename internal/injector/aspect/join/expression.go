@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"

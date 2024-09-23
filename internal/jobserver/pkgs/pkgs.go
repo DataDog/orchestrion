@@ -6,7 +6,7 @@
 package pkgs
 
 import (
-	"github.com/datadog/orchestrion/internal/jobserver/common"
+	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/nats-io/nats.go"
 )
 

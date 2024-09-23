@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
 )
 

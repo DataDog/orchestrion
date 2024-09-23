@@ -12,14 +12,14 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/datadog/orchestrion/internal/injector"
-	"github.com/datadog/orchestrion/internal/injector/aspect"
-	"github.com/datadog/orchestrion/internal/injector/builtin"
-	"github.com/datadog/orchestrion/internal/injector/typed"
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
-	"github.com/datadog/orchestrion/internal/toolexec/importcfg"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/injector"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 )
 
 type specialCaseBehavior int
