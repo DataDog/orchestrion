@@ -31,9 +31,9 @@ const (
 
 var (
 	weavingSpecialCase = map[*regexp.Regexp]specialCaseBehavior{
-		regexp.MustCompile(`^github\.com/datadog/orchestrion(?:/.+)?$`):  neverWeave,
-		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`): weaveTracerInternal,
-		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):        neverWeave,
+		regexp.MustCompile(`^github\.com/[Dd]ata[Dd]og/orchestrion(?:/.+)?$`): neverWeave,
+		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`):      weaveTracerInternal,
+		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):             neverWeave,
 	}
 )
 

@@ -15,7 +15,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/mod/semver"
 )
 
 var ensureDir string
@@ -47,11 +49,17 @@ func Test(t *testing.T) {
 		fails bool
 	}
 	for name, test := range map[string]test{
-		"v0.6.0":   {version: "v0.6.0", output: "v0.6.0"},
-		"replaced": {version: "v0.6.0", replaces: true, output: "This command has not respawned!"},
+		"v0.9.0":   {version: "v0.9.0", output: "v0.9.0"},
+		"replaced": {version: "v0.9.0", replaces: true, output: "This command has not respawned!"},
 		"none":     {fails: true},
 	} {
 		t.Run(name, func(t *testing.T) {
+			if !test.replaces && semver.Compare(test.version, version.Tag) >= 0 {
+				// Tests w/o replace can't run if the "happy" version has not been released yet. v0.9.0 includes a module path
+				// re-capitalization which forces us to skip temporarily at least until that is released.
+				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag)
+			}
+
 			wd := filepath.Join(tmp, name)
 			require.NoError(t, os.Mkdir(wd, 0750), "failed to create test working directory")
 

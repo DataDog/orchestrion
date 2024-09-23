@@ -34,6 +34,7 @@ func Test(t *testing.T) {
 
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
+	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
 
 	getArgs := []string{"get"}
 	for _, pkg := range builtin.InjectedPaths {

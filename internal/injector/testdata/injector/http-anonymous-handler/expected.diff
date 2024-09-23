@@ -3,7 +3,7 @@
 @@ -1,15 +1,40 @@
 +//line input.go:1:1
  package main
-
+ 
  import (
    "io"
    "log"
@@ -12,7 +12,7 @@
 +  __orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
 +  __orchestrion_event "github.com/DataDog/orchestrion/instrument/event"
  )
-
+ 
 +//line input.go:9
  func main() {
    s := &http.Server{

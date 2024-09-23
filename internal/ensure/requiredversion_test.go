@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/mod/semver"
 )
 
 func TestGoModVersion(t *testing.T) {
@@ -28,11 +29,17 @@ func TestGoModVersion(t *testing.T) {
 		err     error
 	}
 	for name, test := range map[string]test{
-		"happy":    {version: "v0.6.0"},
-		"replaced": {version: "v0.6.0", replace: true},
+		"happy":    {version: "v0.9.0"},
+		"replaced": {version: "v0.9.0", replace: true},
 		"missing":  {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
 	} {
 		t.Run(name, func(t *testing.T) {
+			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag) >= 0 {
+				// Tests w/o replace can't run if the "happy" version has not been released yet. v0.9.0 includes a module path
+				// re-capitalization which forces us to skip temporarily at least until that is released.
+				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag)
+			}
+
 			tmp, err := os.MkdirTemp("", "ensure-*")
 			require.NoError(t, err, "failed to create temporary directory")
 			defer os.RemoveAll(tmp)
@@ -59,7 +66,7 @@ func TestGoModVersion(t *testing.T) {
 			child := exec.Command("go", "mod", "tidy")
 			child.Dir = tmp
 			child.Stderr = os.Stderr
-			require.NoError(t, child.Run(), "error while running 'go mod download'")
+			require.NoError(t, child.Run(), "error while running 'go mod tidy'")
 
 			rVersion, rDir, err := goModVersion(tmp)
 			if test.err != nil {
