@@ -32,9 +32,9 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/cassandra v0.33.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
 	github.com/xlab/treeprint v1.2.0
 	go.mongodb.org/mongo-driver v1.16.1
