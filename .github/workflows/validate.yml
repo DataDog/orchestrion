@@ -93,7 +93,7 @@ jobs:
           name: repo.patch
           path: .repo.patch
       - name: Fail build if working tree is dirty
-        if: github.event_name == 'push' && steps.is-tree-dirty.outputs.result == 'true'
+        if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
         run: |-
           echo "::error::Files have been modified by 'go generate ./...' (see logs)."
           cat .repo.patch
