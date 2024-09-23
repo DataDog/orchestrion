@@ -93,7 +93,7 @@ func TestParse(t *testing.T) {
 		"cover": {
 			flags: []string{"run", "-cover", "-covermode=atomic"},
 			expected: CommandFlags{
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
@@ -109,7 +109,7 @@ func TestParse(t *testing.T) {
 			flags: []string{"-C", "..", "run", "-cover", "-covermode=atomic"},
 			expected: CommandFlags{
 				// Note - the "-C" flags has no effect at this stage, so it's expected coverpkg is this package.
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
@@ -117,7 +117,7 @@ func TestParse(t *testing.T) {
 			flags: []string{"-C=..", "run", "-cover", "-covermode=atomic", "."},
 			expected: CommandFlags{
 				// Note - the "-C" flags has no effect at this stage, so it's expected coverpkg is this package.
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags"},
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
@@ -125,7 +125,7 @@ func TestParse(t *testing.T) {
 			flags:   []string{"run", "."},
 			goflags: "-cover -covermode=atomic -tags=integration '-toolexec=foo bar'",
 			expected: CommandFlags{
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/datadog/orchestrion/internal/goflags", "-tags": "integration", "-toolexec": "foo bar"},
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags", "-tags": "integration", "-toolexec": "foo bar"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},

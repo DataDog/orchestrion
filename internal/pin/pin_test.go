@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,7 +34,7 @@ func TestPin(t *testing.T) {
 
 	data, err := os.ReadFile(filepath.Join(tmp, "go.mod"))
 	require.NoError(t, err)
-	require.Contains(t, string(data), fmt.Sprintf(`github.com/datadog/orchestrion %s`, version.Tag))
+	require.Contains(t, string(data), fmt.Sprintf(`github.com/DataDog/orchestrion %s`, version.Tag))
 }
 
 func scaffold(dir string) error {
@@ -47,7 +47,7 @@ func scaffold(dir string) error {
 	}
 	defer goMod.Close()
 
-	if _, err := fmt.Fprintln(goMod, "module github.com/datadog/orchestrion/pin-test"); err != nil {
+	if _, err := fmt.Fprintln(goMod, "module github.com/DataDog/orchestrion/pin-test"); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintln(goMod); err != nil {
@@ -59,7 +59,7 @@ func scaffold(dir string) error {
 	if _, err := fmt.Fprintln(goMod); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(goMod, "replace github.com/datadog/orchestrion %s => %s\n", version.Tag, rootDir); err != nil {
+	if _, err := fmt.Fprintf(goMod, "replace github.com/DataDog/orchestrion %s => %s\n", version.Tag, rootDir); err != nil {
 		return err
 	}
 

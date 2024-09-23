@@ -8,5 +8,5 @@
 package tools
 
 import (
-	_ "github.com/datadog/orchestrion"
+	_ "github.com/DataDog/orchestrion"
 )

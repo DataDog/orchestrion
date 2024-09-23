@@ -11,10 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
-	"github.com/datadog/orchestrion/internal/toolexec/importcfg"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/dave/jennifer/jen"
 )
 

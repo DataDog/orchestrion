@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/datadog/orchestrion/internal/jobserver/buildid"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/jobserver/common"
-	"github.com/datadog/orchestrion/internal/jobserver/pkgs"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/common"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )

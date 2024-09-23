@@ -15,9 +15,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/injector"
-	"github.com/datadog/orchestrion/internal/injector/aspect"
-	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/injector"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
@@ -87,7 +87,7 @@ func Test(t *testing.T) {
 			require.NoError(t, yaml.Unmarshal(data, &config), "failed to parse test configuration")
 
 			runGo(t, tmp, "mod", "init", testModuleName)
-			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", rootDir))
+			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
 
 			inputFile := filepath.Join(tmp, "input.go")
 			original := strings.TrimSpace(config.Code) + "\n"

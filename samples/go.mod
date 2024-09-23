@@ -1,16 +1,16 @@
-module github.com/datadog/orchestrion/samples
+module github.com/DataDog/orchestrion/samples
 
 go 1.22.6
 
-replace github.com/datadog/orchestrion => ../
+replace github.com/DataDog/orchestrion => ../
 
 require (
+	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/IBM/sarama v1.43.3
 	github.com/Shopify/sarama v1.38.1
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.30.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.60.1
-	github.com/datadog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis/v7 v7.4.1
@@ -306,7 +306,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240823204242-4ba0660f739c // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240823204242-4ba0660f739c // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.68.0-rc.2 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.68.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

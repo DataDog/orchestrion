@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 
 	"github.com/stretchr/testify/require"
 )
@@ -56,25 +56,21 @@ func TestParseCommand(t *testing.T) {
 		expectedStage string
 	}{
 		"unknown": {
-			input:         []string{"unknown", "irrelevant"},
-			expectedType:  proxy.CommandTypeOther,
-			expectedStage: ".",
+			input:        []string{"unknown", "irrelevant"},
+			expectedType: proxy.CommandTypeOther,
 		},
 		"compile": {
-			input:         []string{"compile", "-o", "b002/a.out", "main.go"},
-			expectedType:  proxy.CommandTypeCompile,
-			expectedStage: "b002",
+			input:        []string{"compile", "-o", "b002/a.out", "main.go"},
+			expectedType: proxy.CommandTypeCompile,
 		},
 		"link": {
-			input:         []string{"link", "-o", "b001/out/a.out", "main.go"},
-			expectedType:  proxy.CommandTypeLink,
-			expectedStage: "b001",
+			input:        []string{"link", "-o", "b001/out/a.out", "main.go"},
+			expectedType: proxy.CommandTypeLink,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			cmd := proxy.MustParseCommand(tc.input)
 			require.Equal(t, tc.expectedType, cmd.Type())
-			require.Equal(t, tc.expectedStage, cmd.Stage())
 			require.True(t, reflect.DeepEqual(tc.input, cmd.Args()))
 		})
 	}

@@ -39,7 +39,7 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
 
 1. Install Orchestrion:
     ```console
-    $ go install github.com/datadog/orchestrion@latest
+    $ go install github.com/DataDog/orchestrion@latest
     ```
 
 2. <details><summary>Optional: project <tt>go.mod</tt> registration</summary>
@@ -61,9 +61,9 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
       >
       >     package tools
       >
-      >     import _ "github.com/datadog/orchestrion"
+      >     import _ "github.com/DataDog/orchestrion"
       >     ```
-      > 2. Run `go get github.com/datadog/orchstrion@<current-release>` to make sure the project version corresponds to the
+      > 2. Run `go get github.com/DataDog/orchstrion@<current-release>` to make sure the project version corresponds to the
       >    one currently being used
       > 3. Run `go mod tidy` to make sure your `go.mod` and `go.sum` files are up-to-date
       >
@@ -82,13 +82,13 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
     ```
     ╭──────────────────────────────────────────────────────────────────────────────╮
     │                                                                              │
-    │  Warning: github.com/datadog/orchestrion is not present in your go.mod       │
+    │  Warning: github.com/DataDog/orchestrion is not present in your go.mod       │
     │  file.                                                                       │
     │  In order to ensure build reliability and reproductibility, orchestrion      │
     │  will now add itself in your go.mod file by:                                 │
     │                                                                              │
     │      1. creating a new file named orchestrion.tool.go                        │
-    │      2. running go get github.com/datadog/orchestrion@v0.7.0-dev.2           │
+    │      2. running go get github.com/DataDog/orchestrion@v0.7.0-dev.2           │
     │      3. running go mod tidy                                                  │
     │                                                                              │
     │  You should commit the resulting changes into your source control system.    │
@@ -110,7 +110,7 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
 > The version of `orchestrion` used to compile your project is ultimately tracked in the `go.mod` file. You can manage
 > it in the same way you manage any other dependency, and updating to the latest release is as simple as doing:
 > ```console
-> $ go get github.com/datadog/orchestrion@latest
+> $ go get github.com/DataDog/orchestrion@latest
 > ```
 
 ## Supported libraries

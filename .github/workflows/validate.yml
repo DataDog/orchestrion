@@ -42,7 +42,7 @@ jobs:
           go generate ./...
           go -C _integration-tests generate -tags=integration ./...
         env:
-          GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/datadog/orchestrion/...,./...
+          GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/DataDog/orchestrion/...,./...
           GOCOVERDIR: ${{ github.workspace }}/coverage
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group'
@@ -194,7 +194,7 @@ jobs:
           mkdir -p coverage
           test_args=("-shuffle=on" "-race" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
           fi
           go test "${test_args[@]}" ./...
       - name: Run integraton suite unit tests
@@ -203,7 +203,7 @@ jobs:
           mkdir -p coverage
           test_args=("-shuffle=on" "-race" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/datadog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
           fi
           go -C _integration-tests test "${test_args[@]}" ./...
       - name: Determine simple go version
@@ -279,7 +279,7 @@ jobs:
           mkdir -p "${GOCOVERDIR}"
           test_args=("-shuffle=on" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-coverpkg=./...,github.com/datadog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
+            test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi
 
           case "${{ matrix.build-mode }}" in

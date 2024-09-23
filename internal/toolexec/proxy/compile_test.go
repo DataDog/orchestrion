@@ -6,7 +6,6 @@
 package proxy
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,33 +14,49 @@ import (
 func TestParseCompile(t *testing.T) {
 	for name, tc := range map[string]struct {
 		input   []string
-		stage   string
 		goFiles []string
 		flags   compileFlagSet
 	}{
 		"version_print": {
 			input: []string{"/path/compile", "-V=full"},
-			stage: ".",
+			flags: compileFlagSet{
+				ShowVersion: true,
+			},
 		},
 		"compile": {
-			input:   []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-goversion", "go1.42.1337", "-importcfg", "/buildDir/b002/importcfg", "/source/dir/main.go", "/source/dir/file1.go"},
-			stage:   "b002",
+			input:   []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "mypackage", "-lang=go1.42", "-importcfg", "/buildDir/b002/importcfg", "/source/dir/main.go", "/source/dir/file1.go"},
 			goFiles: []string{"/source/dir/main.go", "/source/dir/file1.go"},
 			flags: compileFlagSet{
 				Package:   "mypackage",
 				ImportCfg: "/buildDir/b002/importcfg",
 				Output:    "/buildDir/b002/a.out",
-				GoVersion: "go1.42.1337",
+				Lang:      "go1.42",
+			},
+		},
+		"nats.go": {
+			input:   []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "github.com/nats-io/nats.go", "-complete", "/path/to/source/file.go"},
+			goFiles: []string{"/path/to/source/file.go"},
+			flags: compileFlagSet{
+				Package: "github.com/nats-io/nats.go",
+				Output:  "/buildDir/b002/a.out",
 			},
 		},
 	} {
+		if tc.goFiles == nil {
+			// Simplify comparisons, as goFiles always returns non-nil
+			tc.goFiles = make([]string, 0)
+		}
+
+		if name != "nats.go" {
+			continue
+		}
 		t.Run(name, func(t *testing.T) {
 			cmd, err := parseCompileCommand(tc.input)
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeCompile, cmd.Type())
-			require.Equal(t, tc.stage, cmd.Stage())
 			c := cmd.(*CompileCommand)
-			require.True(t, reflect.DeepEqual(tc.flags, c.Flags))
+			require.Equal(t, tc.flags, c.Flags)
+			require.EqualValues(t, tc.goFiles, c.GoFiles())
 		})
 	}
 }

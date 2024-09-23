@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 //line <generated>
-	__orchestrion_instrument "github.com/datadog/orchestrion/instrument"
+	__orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
 )
 
 //line samples/server/gorilla.go:15

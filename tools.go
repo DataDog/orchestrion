@@ -13,5 +13,5 @@ import (
 	_ "github.com/google/go-licenses/v2"
 
 	// Instrumentation packages
-	_ "github.com/datadog/orchestrion/internal/injector/builtin"
+	_ "github.com/DataDog/orchestrion/internal/injector/builtin"
 )

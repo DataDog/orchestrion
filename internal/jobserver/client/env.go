@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/datadog/orchestrion/internal/filelock"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/log"
 )
 
 const (

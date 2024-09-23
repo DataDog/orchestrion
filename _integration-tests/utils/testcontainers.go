@@ -26,7 +26,6 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 			Image:        "amazon/dynamodb-local:latest",
 			ExposedPorts: []string{exposedPort},
 			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
-			Name:         "dynamodb-local",
 			WorkingDir:   "/home/dynamodblocal",
 			Cmd: []string{
 				"-jar", "DynamoDBLocal.jar",
