@@ -11,8 +11,6 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
@@ -23,6 +21,9 @@ import (
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -37,7 +38,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testredis.Run(ctx,
 		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(
 			wait.ForAll(
 				wait.ForLog("* Ready to accept connections"),
@@ -46,7 +47,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 			),
 		),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertError(t, err)
 
 	redisURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {

@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testvault "github.com/testcontainers/testcontainers-go/modules/vault"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
@@ -34,10 +34,10 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testvault.Run(ctx,
 		"vault:1.7.3",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 		testvault.WithToken("root"),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertError(t, err)
 
 	addr, err := tc.server.HttpHostAddress(ctx)
 	if err != nil {

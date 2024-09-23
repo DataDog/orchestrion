@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 
-	"orchestrion/integration/utils"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -30,7 +30,7 @@ type base struct {
 }
 
 func (b *base) setup(t *testing.T) {
-	b.server, b.host, b.port = utils.StartDynamoDBTestContainer(t)
+	b.server, b.host, b.port = testcontainersutils.StartDynamoDBTestContainer(t)
 }
 
 func (b *base) teardown(t *testing.T) {

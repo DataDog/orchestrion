@@ -13,14 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 const (
@@ -47,9 +47,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
 		redpanda.WithAutoCreateTopics(),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertError(t, err)
 
 	addr, err := tc.server.KafkaSeedBroker(ctx)
 	require.NoError(t, err, "failed to get seed broker address")
