@@ -92,7 +92,7 @@ func (tc *TestCase) receiveMessage(t *testing.T) {
 	defer cancel()
 
 	sub := tc.client.Subscription(testSubscription)
-	err := sub.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
+	err := sub.Receive(ctx, func(_ context.Context, message *pubsub.Message) {
 		assert.Equal(t, message.Data, []byte("Hello, World!"))
 		message.Ack()
 		tc.publishTime = message.PublishTime
