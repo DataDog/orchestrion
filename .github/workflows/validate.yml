@@ -258,7 +258,11 @@ jobs:
             ${{ runner.temp }}/benchmarks.txt     \
             > ${{ runner.temp }}/benchmarks-formatted.txt
       - name: Setting Job Summary
-        run: echo "### Benchmark Report\n\n```\n$(cat ${{ runner.temp }}/benchmarks-formatted.txt)```\n" >> "${GITHUB_STEP_SUMMARY}"
+        run: |-
+          echo "### Benchmark Report"                     >> "${GITHUB_STEP_SUMMARY}"
+          echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
+          cat ${{ runner.temp }}/benchmarks-formatted.txt >> "${GITHUB_STEP_SUMMARY}"
+          echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
 
 
   ##############################################################################
