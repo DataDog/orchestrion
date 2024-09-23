@@ -45,13 +45,9 @@ func New(t *testing.T) *MockAgent {
 			Image:        "ghcr.io/datadog/dd-apm-test-agent/ddapm-test-agent:latest",
 			ExposedPorts: []string{exposedPort},
 			WaitingFor:   wait.ForListeningPort(nat.Port(exposedPort)),
-			LogConsumerCfg: &testcontainers.LogConsumerConfig{
-				Consumers: []testcontainers.LogConsumer{testcontainersutils.TestLogConsumer(t)},
-			},
 		},
 		Started: true,
 		Reuse:   true,
-		Logger:  testcontainers.TestLogger(t),
 	})
 	testcontainersutils.AssertError(t, err)
 
