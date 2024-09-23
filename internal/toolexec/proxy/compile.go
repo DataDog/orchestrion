@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-//go:generate go run github.com/datadog/orchestrion/internal/toolexec/proxy/generator -command=compile
+//go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile
 
 type compileFlagSet struct {
 	Package     string `ddflag:"-p"`

@@ -10,8 +10,8 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            event: github.com/datadog/orchestrion/instrument/event
-            instrument: github.com/datadog/orchestrion/instrument
+            event: github.com/DataDog/orchestrion/instrument/event
+            instrument: github.com/DataDog/orchestrion/instrument
           template: |-
             {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
             {{- $name := .Function.Name -}}
@@ -25,8 +25,8 @@ aspects:
             {{- end -}})
 
 syntheticReferences:
-  github.com/datadog/orchestrion/instrument: true
-  github.com/datadog/orchestrion/instrument/event: true
+  github.com/DataDog/orchestrion/instrument: true
+  github.com/DataDog/orchestrion/instrument/event: true
 
 code: |-
   package test

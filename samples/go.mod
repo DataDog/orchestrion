@@ -1,16 +1,16 @@
-module github.com/datadog/orchestrion/samples
+module github.com/DataDog/orchestrion/samples
 
 go 1.22.6
 
-replace github.com/datadog/orchestrion => ../
+replace github.com/DataDog/orchestrion => ../
 
 require (
+	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/IBM/sarama v1.43.3
 	github.com/Shopify/sarama v1.38.1
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.30.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.60.1
-	github.com/datadog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis/v7 v7.4.1

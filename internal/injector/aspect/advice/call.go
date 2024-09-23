@@ -10,9 +10,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"

@@ -9,7 +9,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/datadog/orchestrion/instrument/event"
+	"github.com/DataDog/orchestrion/instrument/event"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )

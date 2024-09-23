@@ -15,9 +15,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/injector/builtin"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )
@@ -34,6 +34,7 @@ func Test(t *testing.T) {
 
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
+	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
 
 	getArgs := []string{"get"}
 	for _, pkg := range builtin.InjectedPaths {
@@ -76,7 +77,7 @@ func Test(t *testing.T) {
 	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 42"), 0o644))
 
 	// Replace the orchestrion package with the copy we just made...
-	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/datadog/orchestrion=%s", copyDir))
+	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", copyDir))
 	runGo(t, tmp, "mod", "tidy") // The hash of the dependency has changed... go list would complain...
 	updated := inDir(t, tmp, func() string {
 		v, err := ComputeVersion(cmd)

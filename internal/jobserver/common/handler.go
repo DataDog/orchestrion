@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/nats-io/nats.go"
 )
 

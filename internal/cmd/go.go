@@ -9,8 +9,8 @@ import (
 	"errors"
 	"os/exec"
 
-	"github.com/datadog/orchestrion/internal/goproxy"
-	"github.com/datadog/orchestrion/internal/pin"
+	"github.com/DataDog/orchestrion/internal/goproxy"
+	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/urfave/cli/v2"
 )
 

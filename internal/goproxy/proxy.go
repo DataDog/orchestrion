@@ -11,11 +11,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/goenv"
-	"github.com/datadog/orchestrion/internal/goflags"
-	"github.com/datadog/orchestrion/internal/jobserver"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/goflags"
+	"github.com/DataDog/orchestrion/internal/jobserver"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/log"
 )
 
 type config struct {

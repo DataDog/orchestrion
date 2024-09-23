@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/stretchr/testify/require"
 )
 

@@ -8,7 +8,7 @@ package join
 import (
 	"fmt"
 
-	"github.com/datadog/orchestrion/internal/injector/singleton"
+	"github.com/DataDog/orchestrion/internal/injector/singleton"
 	"gopkg.in/yaml.v3"
 )
 

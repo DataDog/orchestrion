@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/datadog/orchestrion/internal/ensure"
+	"github.com/DataDog/orchestrion/internal/ensure"
 )
 
 // main is the entry point of a command that is used by the `ensure` integration

@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/log"
 )
 
 // ProcessDashC gets the command line arguments passed to a "go" command (without "go" itself), and processes the "-C"

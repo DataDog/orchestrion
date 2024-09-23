@@ -8,11 +8,11 @@
 package advice
 
 import (
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/injector/code"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/code"
 )
 
-const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/advice"
+const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 
 // Advice is the interface abstracting actual AST changes performed by
 // injections.

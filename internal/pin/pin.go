@@ -12,17 +12,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/ensure"
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/datadog/orchestrion/internal/ensure"
-	"github.com/datadog/orchestrion/internal/goenv"
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/version"
 	"github.com/dave/jennifer/jen"
 	"golang.org/x/term"
 )
 
 const (
-	orchestrionImportPath = "github.com/datadog/orchestrion"
+	orchestrionImportPath = "github.com/DataDog/orchestrion"
 	orchestrionToolGo     = "orchestrion.tool.go"
 	envVarCheckedGoMod    = "DD_ORCHESTRION_IS_GOMOD_VERSION"
 	envValTrue            = "true"

@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/datadog/orchestrion/internal/goflags"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/goflags"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 )
 
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts

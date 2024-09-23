@@ -14,8 +14,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/log"
 	"golang.org/x/tools/go/packages"
 )
 
