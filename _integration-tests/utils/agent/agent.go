@@ -15,6 +15,7 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -77,25 +78,20 @@ func (a *MockAgent) NewSession(t *testing.T) *Session {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/test/session/start?test_session_token=%s", a.Addr(), session.token.String()), nil)
+	req, err := retryablehttp.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		fmt.Sprintf("http://%s/test/session/start?test_session_token=%s", a.Addr(), session.token.String()),
+		nil,
+	)
 	require.NoError(t, err)
 
-	for {
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			select {
-			case <-ctx.Done():
-				require.FailNow(t, "timeout trying to create mock agent test session")
-			default:
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-		}
-		if resp.StatusCode != 200 {
-			require.FailNow(t, "test agent returned non-200 status code")
-		}
-		break
-	}
+	retryClient := retryablehttp.NewClient()
+	retryClient.Logger = t
+	retryClient.RetryMax = 10
+	resp, err := retryClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, resp.StatusCode, "received non-success response status code creating test session")
 
 	t.Logf("Started test session with ID %s\n", session.token.String())
 
@@ -151,6 +147,13 @@ type testLogger struct {
 	*testing.T
 }
 
+// Printf implements retryablehttp.Logger
+func (l testLogger) Printf(msg string, args ...interface{}) {
+	logArgs := append([]interface{}{}, msg, args)
+	l.T.Log(logArgs...)
+}
+
+// Log implements ddtrace.Logger
 func (l testLogger) Log(msg string) {
 	l.T.Log(msg)
 }
