@@ -150,8 +150,8 @@ type testLogger struct {
 }
 
 // Printf implements retryablehttp.Logger
-func (l testLogger) Printf(msg string, args ...interface{}) {
-	logArgs := append([]interface{}{}, msg, args)
+func (l testLogger) Printf(msg string, args ...any) {
+	logArgs := append(make([]any, len(args)+1), msg, args)
 	l.T.Log(logArgs...)
 }
 
