@@ -378,6 +378,7 @@ jobs:
       - lint-workflows
       - unit-tests
       - integration-tests
+      - benchmark
     if: '!cancelled()'
     steps:
       - name: Success
