@@ -86,8 +86,10 @@ func (a *MockAgent) NewSession(t *testing.T) *Session {
 	)
 	require.NoError(t, err)
 
+	logger := testLogger{t}
+
 	retryClient := retryablehttp.NewClient()
-	retryClient.Logger = t
+	retryClient.Logger = logger
 	retryClient.RetryMax = 10
 	resp, err := retryClient.Do(req)
 	require.NoError(t, err)
@@ -99,7 +101,7 @@ func (a *MockAgent) NewSession(t *testing.T) *Session {
 		tracer.WithAgentAddr(a.Addr()),
 		tracer.WithSampler(tracer.NewAllSampler()),
 		tracer.WithLogStartup(false),
-		tracer.WithLogger(testLogger{t}),
+		tracer.WithLogger(logger),
 		tracer.WithHTTPClient(&http.Client{
 			Transport: &sessionTokenTransport{
 				rt:           http.DefaultTransport,
