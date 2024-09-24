@@ -244,7 +244,9 @@ jobs:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Run benchmarks
-        run: go test -bench=. -run=^$ ./... | tee ${{ runner.temp }}/benchmarks.txt
+        run: |-
+          set -euo pipefail
+          go test -bench=. -run=^$ ./... | tee ${{ runner.temp }}/benchmarks.txt
       - name: Upload benchmark report (raw)
         uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
         with:
