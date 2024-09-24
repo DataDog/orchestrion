@@ -9,15 +9,8 @@ Each test is a directory within the `tests` directory. This directory must conta
 ## Running Tests Locally
 
 Tests can be run locally with `go test`, using Orchestrion.
-First, install the `ddapm-test-agent` if you haven't already:
 
-``` console
-$ python3 -m venv venv
-$ source ./venv/bin/activate
-$ pip install -r ./utils/agent/requirements.txt
-```
-
-Then, ensure that Docker is installed and the daemon is running.
+First, ensure that Docker is installed and the daemon is running.
 
 Then, compile Orchestrion and use it to run the tests:
 

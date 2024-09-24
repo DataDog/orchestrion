@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package utils
+package testcontainers
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 
 	ctx := context.Background()
 	server, err := testcontainers.GenericContainer(ctx, req)
-	AssertTestContainersError(t, err)
+	AssertError(t, err)
 
 	mappedPort, err := server.MappedPort(ctx, nat.Port(exposedPort))
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 		"confluentinc/confluent-local:7.5.0",
 		kafka.WithClusterID("test-cluster"),
 	)
-	AssertTestContainersError(t, err)
+	AssertError(t, err)
 
 	mappedPort, err := container.MappedPort(ctx, nat.Port(exposedPort))
 	require.NoError(t, err)
@@ -75,9 +75,9 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 	return container, addr
 }
 
-// AssertTestContainersError decides whether the provided testcontainers error should make the test fail or mark it as
+// AssertError decides whether the provided testcontainers error should make the test fail or mark it as
 // skipped, depending on the environment where the test is running.
-func AssertTestContainersError(t *testing.T, err error) {
+func AssertError(t *testing.T, err error) {
 	if err == nil {
 		return
 	}
