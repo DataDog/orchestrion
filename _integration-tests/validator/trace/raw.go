@@ -17,12 +17,12 @@ import (
 // field that can be used to reconstruct the hierarchy.
 type RawSpan struct {
 	ParentID SpanID `json:"parent_id"`
-	Span
+	Trace
 }
 
 var _ json.Unmarshaler = &RawSpan{}
 
-func ParseRaw(data []byte, traces *[]*Span) error {
+func ParseRaw(data []byte, traces *[]*Trace) error {
 	var rawSpanGroups [][]*RawSpan
 	if err := json.Unmarshal(data, &rawSpanGroups); err != nil {
 		return err
@@ -40,11 +40,11 @@ func ParseRaw(data []byte, traces *[]*Span) error {
 	}
 
 	// Second pass: build up parent-child relationships
-	roots := make([]*Span, 0, len(spans))
+	roots := make([]*Trace, 0, len(spans))
 	for _, span := range spans {
 		if span.ParentID == 0 {
 			// This is a root span
-			roots = append(roots, &span.Span)
+			roots = append(roots, &span.Trace)
 			continue
 		}
 
@@ -53,7 +53,7 @@ func ParseRaw(data []byte, traces *[]*Span) error {
 		if !found {
 			return fmt.Errorf("span %d has unknown parent %d", span.ID, span.ParentID)
 		}
-		parent.Children = append(parent.Children, &span.Span)
+		parent.Children = append(parent.Children, &span.Trace)
 	}
 
 	// We're done here!
@@ -64,7 +64,7 @@ func ParseRaw(data []byte, traces *[]*Span) error {
 func (span *RawSpan) UnmarshalJSON(data []byte) error {
 	span.ID = 0
 	span.ParentID = 0
-	span.Span = Span{Tags: make(map[string]any)}
+	span.Trace = Trace{Tags: make(map[string]any)}
 
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {

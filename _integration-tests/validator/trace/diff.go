@@ -24,27 +24,27 @@ const (
 )
 
 // RequireAnyMatch asserts that any of the traces in `others` corresponds to the receiver.
-func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
+func (tr *Trace) RequireAnyMatch(t *testing.T, others []*Trace) {
 	t.Helper()
 
-	span, diff := span.matchesAny(others, treeprint.NewWithRoot("Root"))
-	require.NotNil(t, span, "no match found for trace:\n%s", diff)
-	t.Logf("Found matching trace:\n%s", span)
+	tr, diff := tr.matchesAny(others, treeprint.NewWithRoot("Root"))
+	require.NotNil(t, t, "no match found for trace:\n%s", diff)
+	t.Logf("Found matching trace:\n%s", tr)
 }
 
-func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) {
+func (tr *Trace) matchesAny(others []*Trace, diff treeprint.Tree) (*Trace, Diff) {
 	if len(others) == 0 {
-		span.into(diff.AddMetaBranch(markerRemoved, "No spans to match against"))
+		tr.into(diff.AddMetaBranch(markerRemoved, "No spans to match against"))
 		return nil, diff
 	}
 
 	for idx, other := range others {
-		id := fmt.Sprintf("Span at index %d", idx)
+		id := fmt.Sprintf("Trace at index %d", idx)
 		if other.ID != 0 {
 			id = fmt.Sprintf("Span ID %d", other.ID)
 		}
 		branch := diff.AddMetaBranch(markerChanged, id)
-		if span.matches(other, branch) {
+		if tr.matches(other, branch) {
 			return other, nil
 		}
 	}
@@ -53,12 +53,12 @@ func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) 
 
 // macthes determines whether the receiving span matches the other span, and
 // adds difference information to the provided diff tree.
-func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
+func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
 	matches = true
 
-	keys := make([]string, 0, len(span.Tags))
+	keys := make([]string, 0, len(tr.Tags))
 	maxLen := 1
-	for key := range span.Tags {
+	for key := range tr.Tags {
 		keys = append(keys, key)
 		if len := len(key); len > maxLen {
 			maxLen = len
@@ -66,7 +66,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	}
 	sort.Strings(keys)
 	for _, tag := range keys {
-		expected := span.Tags[tag]
+		expected := tr.Tags[tag]
 		actual := other.Tags[tag]
 		if expected != actual && (tag != "service" || fmt.Sprintf("%s.exe", expected) != actual) {
 			branch := diff.AddMetaBranch(markerChanged, tag)
@@ -78,9 +78,9 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 		}
 	}
 
-	keys = make([]string, 0, len(span.Meta))
+	keys = make([]string, 0, len(tr.Meta))
 	maxLen = 1
-	for key := range span.Meta {
+	for key := range tr.Meta {
 		keys = append(keys, key)
 		if len := len(key); len > maxLen {
 			maxLen = len
@@ -89,7 +89,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	sort.Strings(keys)
 	var metaNode treeprint.Tree
 	for _, key := range keys {
-		expected := span.Meta[key]
+		expected := tr.Meta[key]
 		actual, actualExists := other.Meta[key]
 		if metaNode == nil {
 			metaNode = diff.AddBranch("meta")
@@ -109,7 +109,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	}
 
 	var childrenNode treeprint.Tree
-	for idx, child := range span.Children {
+	for idx, child := range tr.Children {
 		if childrenNode == nil {
 			childrenNode = diff.AddBranch("_children")
 		}

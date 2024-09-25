@@ -43,11 +43,11 @@ type TestCase interface {
 	// Setup, such as stopping services or deleting test data.
 	Teardown(*testing.T)
 
-	// ExpectedTraces returns a trace.Spans object describing all traces expected
+	// ExpectedTraces returns a trace.Traces object describing all traces expected
 	// to be produced by the `Run` function. There should be one entry per trace
-	// root span expected to be produced. Every item in the returned `trace.Spans`
+	// root span expected to be produced. Every item in the returned `trace.Traces`
 	// must match at least one trace received by the agent during the test run.
-	ExpectedTraces() trace.Spans
+	ExpectedTraces() trace.Traces
 }
 
 func RunTest(t *testing.T, tc TestCase) {
@@ -72,23 +72,24 @@ func RunTest(t *testing.T, tc TestCase) {
 	t.Log("Running test")
 	tc.Run(t)
 
-	checkTrace(t, tc, sess)
+	checkTraces(t, tc, sess)
 }
 
-func checkTrace(t *testing.T, tc TestCase, sess *agent.Session) {
+func checkTraces(t *testing.T, tc TestCase, sess *agent.Session) {
 	t.Helper()
 
 	jsonTraces, err := sess.Close(t)
 	require.NoError(t, err)
 
-	var spans trace.Spans
-	require.NoError(t, trace.ParseRaw(jsonTraces, &spans))
-	t.Logf("Received %d spans", len(spans))
-	for i, span := range spans {
-		t.Logf("[%d]: %v", i, span)
+	var traces trace.Traces
+	require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
+	t.Logf("Received %d traces", len(traces))
+	for i, tr := range traces {
+		t.Logf("[%d] Trace contains a total of %d spans", i, tr.NumSpans())
+		t.Logf("[%d]: %v", i, tr)
 	}
 
 	for _, expected := range tc.ExpectedTraces() {
-		expected.RequireAnyMatch(t, spans)
+		expected.RequireAnyMatch(t, traces)
 	}
 }

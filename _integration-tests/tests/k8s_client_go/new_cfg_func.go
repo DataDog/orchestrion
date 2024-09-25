@@ -44,6 +44,6 @@ func (tc *TestCaseNewCfgFunc) Teardown(t *testing.T) {
 	tc.base.teardown(t)
 }
 
-func (tc *TestCaseNewCfgFunc) ExpectedTraces() trace.Spans {
-	return tc.base.expectedSpans()
+func (tc *TestCaseNewCfgFunc) ExpectedTraces() trace.Traces {
+	return tc.base.expectedTraces()
 }

@@ -80,13 +80,13 @@ func (b *base) run(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (b *base) expectedSpans() trace.Spans {
-	return trace.Spans{
+func (b *base) expectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name": "test.root",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "cassandra.query",

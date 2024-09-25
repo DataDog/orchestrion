@@ -46,6 +46,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		Brokers:  []string{tc.addr},
 		GroupID:  consumerGroup,
 		Topic:    topic,
+		MaxWait:  10 * time.Millisecond,
 		MaxBytes: 10e6, // 10MB
 	})
 
@@ -144,8 +145,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.kafka.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":     "kafka.produce",
@@ -157,7 +158,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"span.kind": "producer",
 				"component": "segmentio/kafka.go.v0",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "kafka.consume",

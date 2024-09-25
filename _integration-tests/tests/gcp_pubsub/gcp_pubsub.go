@@ -118,8 +118,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.container.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (tc *TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":     "pubsub.publish",
@@ -132,7 +132,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"component":    "cloud.google.com/go/pubsub.v1",
 				"ordering_key": "ordering-key",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "pubsub.receive",

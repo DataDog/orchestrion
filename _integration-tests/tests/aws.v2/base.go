@@ -47,8 +47,8 @@ func (b *base) run(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (b *base) expectedSpans() trace.Spans {
-	return trace.Spans{
+func (b *base) expectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":     "DynamoDB.request",
@@ -64,7 +64,7 @@ func (b *base) expectedSpans() trace.Spans {
 				"component":     "aws/aws-sdk-go-v2/aws",
 				"span.kind":     "client",
 			},
-			Children: []*trace.Span{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",

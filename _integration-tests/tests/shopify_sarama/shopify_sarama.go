@@ -97,8 +97,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":    "kafka.produce",
@@ -109,7 +109,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"span.kind": "producer",
 				"component": "Shopify/sarama",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":    "kafka.consume",
