@@ -60,7 +60,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"resource": "GET /",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"component": "net/http",
 				"span.kind": "client",
 			},
@@ -71,7 +71,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component": "net/http",
 						"span.kind": "server",
 					},
@@ -82,7 +82,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 								"resource": "POST /hit",
 								"type":     "http",
 							},
-							Meta: map[string]any{
+							Meta: map[string]string{
 								"http.url":                 fmt.Sprintf("http://%s/hit", tc.Server.Addr),
 								"component":                "net/http",
 								"span.kind":                "client",
@@ -97,7 +97,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 										"resource": "POST /hit",
 										"type":     "web",
 									},
-									Meta: map[string]any{
+									Meta: map[string]string{
 										"http.useragent":   "Go-http-client/1.1",
 										"http.status_code": "200",
 										"http.host":        tc.Server.Addr,

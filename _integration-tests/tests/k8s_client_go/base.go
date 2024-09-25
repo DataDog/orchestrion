@@ -59,7 +59,7 @@ func (b *base) expectedSpans() trace.Spans {
 			"resource": "GET /api/v1/namespaces",
 			"type":     "web",
 		},
-		Meta: map[string]any{
+		Meta: map[string]string{
 			"component":        "net/http",
 			"span.kind":        "server",
 			"http.useragent":   rest.DefaultKubernetesUserAgent(),
@@ -75,7 +75,7 @@ func (b *base) expectedSpans() trace.Spans {
 			"resource": "GET /api/v1/namespaces",
 			"type":     "http",
 		},
-		Meta: map[string]any{
+		Meta: map[string]string{
 			"component":                "net/http",
 			"span.kind":                "client",
 			"network.destination.name": "127.0.0.1",
@@ -91,7 +91,7 @@ func (b *base) expectedSpans() trace.Spans {
 			"resource": "GET namespaces",
 			"type":     "http",
 		},
-		Meta: map[string]any{
+		Meta: map[string]string{
 			"component": "k8s.io/client-go/kubernetes",
 			"span.kind": "client",
 		},

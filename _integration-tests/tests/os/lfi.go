@@ -73,7 +73,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"resource": "GET /",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"component": "net/http",
 				"span.kind": "client",
 			},
@@ -84,7 +84,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":         "net/http",
 						"span.kind":         "server",
 						"appsec.blocked":    "true",

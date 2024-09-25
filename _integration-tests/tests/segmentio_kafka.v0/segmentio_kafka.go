@@ -7,6 +7,7 @@ package segmentio_kafka_v0
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strconv"
 	"testing"
@@ -83,16 +84,37 @@ func (tc *TestCase) produce(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := tc.writer.WriteMessages(ctx,
-		kafka.Message{
+	messages := []kafka.Message{
+		{
 			Key:   []byte("Key-A"),
 			Value: []byte("Hello World!"),
 		},
-		//kafka.Message{
-		//	Key:   []byte("Key-A"),
-		//	Value: []byte("Second message"),
-		//},
+		{
+			Key:   []byte("Key-A"),
+			Value: []byte("Second message"),
+		},
+	}
+	const (
+		maxRetries = 10
+		retryDelay = 100 * time.Millisecond
 	)
+	var (
+		retryCount int
+		err        error
+	)
+	for retryCount < maxRetries {
+		err = tc.writer.WriteMessages(ctx, messages...)
+		if err == nil {
+			break
+		}
+		// This error happens sometimes with brand-new topics, as there is a delay between when the topic is created
+		// on the broker, and when the topic can actually be written to.
+		if errors.Is(err, kafka.UnknownTopicOrPartition) {
+			retryCount++
+			t.Logf("failed to produce kafka messages, will retry in %s (retryCount: %d)", retryDelay, retryCount)
+			time.Sleep(retryDelay)
+		}
+	}
 	require.NoError(t, err)
 	require.NoError(t, tc.writer.Close())
 }
@@ -106,15 +128,14 @@ func (tc *TestCase) consume(t *testing.T) {
 	assert.Equal(t, "Hello World!", string(m.Value))
 	assert.Equal(t, "Key-A", string(m.Key))
 
-	//m, err = tc.reader.FetchMessage(ctx)
-	//require.NoError(t, err)
-	//assert.Equal(t, "Second message", string(m.Value))
-	//assert.Equal(t, "Key-A", string(m.Key))
-	//err = tc.reader.CommitMessages(ctx, m)
-	//require.NoError(t, err)
+	m, err = tc.reader.FetchMessage(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "Second message", string(m.Value))
+	assert.Equal(t, "Key-A", string(m.Key))
+	err = tc.reader.CommitMessages(ctx, m)
+	require.NoError(t, err)
 
 	require.NoError(t, tc.reader.Close())
-	time.Sleep(10 * time.Second)
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
@@ -132,7 +153,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"service":  "kafka",
 				"resource": "Produce Topic topic-A",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"span.kind": "producer",
 				"component": "segmentio/kafka.go.v0",
 			},
@@ -144,7 +165,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"service":  "kafka",
 						"resource": "Consume Topic topic-A",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"span.kind": "consumer",
 						"component": "segmentio/kafka.go.v0",
 					},

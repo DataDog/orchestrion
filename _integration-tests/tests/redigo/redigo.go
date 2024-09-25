@@ -110,7 +110,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"name":     "redis.command",
 						"service":  "redis.conn",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.raw_command": "GET test_key",
 						"db.system":         "redis",
 						"component":         "gomodule/redigo",
@@ -127,7 +127,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"name":     "redis.command",
 						"service":  "redis.conn",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.raw_command": "",
 						"db.system":         "redis",
 						"component":         "gomodule/redigo",

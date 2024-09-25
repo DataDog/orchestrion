@@ -67,7 +67,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"name":     "sqlite3.query",
 				"service":  "sqlite3.db",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"component":      "database/sql",
 				"span.kind":      "client",
 				"sql.query_type": "Exec",

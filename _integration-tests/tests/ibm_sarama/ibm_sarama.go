@@ -129,7 +129,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"type":    "queue",
 				"service": "kafka",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"span.kind": "producer",
 				"component": "IBM/sarama",
 			},
@@ -140,7 +140,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"type":    "queue",
 						"service": "kafka",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"span.kind": "consumer",
 						"component": "IBM/sarama",
 					},

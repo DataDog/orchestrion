@@ -23,7 +23,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 					Tags: map[string]any{
 						"name": "spanFromHTTPRequest",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"function-name": "spanFromHTTPRequest",
 						"foo":           "bar",
 					},
@@ -32,7 +32,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 							Tags: map[string]any{
 								"name": "functionWithBuildTag",
 							},
-							Meta: map[string]any{
+							Meta: map[string]string{
 								"function-name": "tagSpecificSpan",
 								"variant":       "tag",
 								"error.message": "Artificial error for testing!",

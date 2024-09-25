@@ -56,7 +56,7 @@ func (b *base) expectedSpans() trace.Spans {
 				"resource": "DynamoDB.ListTables",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"aws.operation": "ListTables",
 				"aws.region":    "test-region-1337",
 				"aws_service":   "DynamoDB",
@@ -72,7 +72,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "POST /",
 						"type":     "http",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.method":              "POST",
 						"http.status_code":         "200",
 						"http.url":                 fmt.Sprintf("http://localhost:%s/", b.port),

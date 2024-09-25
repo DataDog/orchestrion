@@ -96,7 +96,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "mongo.insert",
 						"type":     "mongodb",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component": "go.mongodb.org/mongo-driver/mongo",
 						"span.kind": "client",
 						"db.system": "mongodb",
@@ -109,7 +109,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "mongo.find",
 						"type":     "mongodb",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component": "go.mongodb.org/mongo-driver/mongo",
 						"span.kind": "client",
 						"db.system": "mongodb",

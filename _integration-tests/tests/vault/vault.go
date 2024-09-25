@@ -84,7 +84,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /v1/secret/key",
 						"type":     "http",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.method": "GET",
 						"http.url":    "/v1/secret/key",
 						"span.kind":   "client",

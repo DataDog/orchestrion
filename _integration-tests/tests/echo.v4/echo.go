@@ -69,7 +69,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /ping",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.url": "http://" + tc.addr + "/ping",
 					},
 				},

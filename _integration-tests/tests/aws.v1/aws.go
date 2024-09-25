@@ -61,7 +61,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"resource": "dynamodb.ListTables",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"aws.operation":    "ListTables",
 				"aws.region":       "test-region-1337",
 				"aws_service":      "dynamodb",

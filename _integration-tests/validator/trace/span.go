@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/xlab/treeprint"
 )
@@ -19,7 +20,8 @@ type SpanID uint64
 // via the Children property.
 type Span struct {
 	ID       SpanID `json:"span_id"`
-	Meta     map[string]any
+	Meta     map[string]string
+	Metrics  map[string]float64
 	Tags     map[string]any
 	Children []*Span
 }
@@ -45,6 +47,8 @@ func (span *Span) UnmarshalJSON(data []byte) error {
 			err = json.Unmarshal(value, &span.Children)
 		case "meta":
 			err = json.Unmarshal(value, &span.Meta)
+		case "metrics":
+			err = json.Unmarshal(value, &span.Metrics)
 		case "span_id":
 			err = json.Unmarshal(value, &span.ID)
 			if err == nil {
@@ -83,25 +87,39 @@ func (span *Span) into(tree treeprint.Tree) {
 		tree.AddNode(fmt.Sprintf("%-*s = %q", maxLen, tag, span.Tags[tag]))
 	}
 
-	if len(span.Meta) > 0 {
-		keys = make([]string, 0, len(span.Meta))
-		maxLen := 1
-		for key := range span.Meta {
-			keys = append(keys, key)
-			if len := len(key); len > maxLen {
-				maxLen = len
-			}
-		}
-		sort.Strings(keys)
-		meta := tree.AddBranch("meta")
-		for _, key := range keys {
-			meta.AddNode(fmt.Sprintf("%-*s = %q", maxLen, key, span.Meta[key]))
-		}
-	}
+	addMapBranch(tree, span.Meta, "meta")
+	addMapBranch(tree, span.Metrics, "metrics")
+
 	if len(span.Children) > 0 {
 		children := tree.AddBranch("_children")
 		for i, child := range span.Children {
 			child.into(children.AddBranch(fmt.Sprintf("#%d", i)))
+		}
+	}
+}
+
+func addMapBranch[T string | float64](tree treeprint.Tree, m map[string]T, name string) {
+	if len(m) > 0 {
+		keys := make([]string, 0, len(m))
+		maxLen := 1
+		for key := range m {
+			keys = append(keys, key)
+			if l := len(key); l > maxLen {
+				maxLen = l
+			}
+		}
+		sort.Strings(keys)
+		br := tree.AddBranch(name)
+		for _, key := range keys {
+			val := m[key]
+			printVal := ""
+			switch v := any(val).(type) {
+			case string:
+				printVal = fmt.Sprintf("%q", v)
+			case float64:
+				printVal = strconv.FormatFloat(v, 'f', -1, 64)
+			}
+			br.AddNode(fmt.Sprintf("%-*s = %s", maxLen, key, printVal))
 		}
 	}
 }

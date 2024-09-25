@@ -91,7 +91,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "set",
 						"type":     "redis",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.args_length": "3",
 						"component":         "go-redis/redis.v7",
 						"out.db":            "0",
@@ -108,7 +108,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "get",
 						"type":     "redis",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.args_length": "2",
 						"component":         "go-redis/redis.v7",
 						"out.db":            "0",

@@ -90,14 +90,18 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	var metaNode treeprint.Tree
 	for _, key := range keys {
 		expected := span.Meta[key]
-		actual := other.Meta[key]
+		actual, actualExists := other.Meta[key]
 		if metaNode == nil {
 			metaNode = diff.AddBranch("meta")
 		}
 		if expected != actual {
 			branch := metaNode.AddMetaBranch(markerChanged, key)
 			branch.AddMetaNode(markerRemoved, expected)
-			branch.AddMetaNode(markerAdded, actual)
+			if actualExists {
+				branch.AddMetaNode(markerAdded, actual)
+			} else {
+				branch.AddMetaNode(markerAdded, nil)
+			}
 			matches = false
 		} else {
 			metaNode.AddMetaNode(markerEqual, fmt.Sprintf("%-*s = %q", maxLen, key, expected))

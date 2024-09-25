@@ -94,7 +94,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "CREATE KEYSPACE if not exists trace WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1}",
 						"type":     "cassandra",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":            "gocql/gocql",
 						"span.kind":            "client",
 						"db.system":            "cassandra",
@@ -110,7 +110,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "CREATE TABLE if not exists trace.person (name text PRIMARY KEY, age int, description text)",
 						"type":     "cassandra",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":            "gocql/gocql",
 						"span.kind":            "client",
 						"db.system":            "cassandra",
@@ -126,7 +126,7 @@ func (b *base) expectedSpans() trace.Spans {
 						"resource": "INSERT INTO trace.person (name, age, description) VALUES ('Cassandra', 100, 'A cruel mistress')",
 						"type":     "cassandra",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":            "gocql/gocql",
 						"span.kind":            "client",
 						"db.system":            "cassandra",

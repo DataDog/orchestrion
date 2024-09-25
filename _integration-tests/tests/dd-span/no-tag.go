@@ -22,7 +22,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 					Tags: map[string]any{
 						"name": "spanFromHTTPRequest",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"function-name": "spanFromHTTPRequest",
 						"foo":           "bar",
 					},
@@ -31,7 +31,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 							Tags: map[string]any{
 								"name": "tagSpecificSpan",
 							},
-							Meta: map[string]any{
+							Meta: map[string]string{
 								"function-name": "tagSpecificSpan",
 								"variant":       "notag",
 							},
