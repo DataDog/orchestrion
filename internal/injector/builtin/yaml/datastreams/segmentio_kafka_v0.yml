@@ -94,51 +94,16 @@ aspects:
           name: __dd_prev
           type: "__dd_Span"
 
-  - id: Modify kafka.Reader.ReadMessage to call tracing functions
-    join-point:
-      function-body:
-        function:
-          - receiver: '*github.com/segmentio/kafka-go.Reader'
-          - name: ReadMessage
-    advice:
-      - prepend-statements:
-          imports:
-            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
-            fmt: fmt
-          template: |-
-            {{- $r := .Function.Receiver -}}
-            {{- $ctx := .Function.Argument 0 -}}
-            {{- $msg := .Function.Result 0 -}}
-            {{- $err := .Function.Result 1 -}}
-            __dd_initReader(r)
-            
-            if {{ $r }}.__dd_prev != nil {
-            fmt.Println("ReadMessage: Closing previous span")
-              {{ $r }}.__dd_prev.Finish()
-              {{ $r }}.__dd_prev = nil
-            }
-            
-            defer func() {
-              if {{ $err }} != nil {
-                return
-              }
-              fmt.Println("ReadMessage: tracing.StartConsumeSpan")
-              tMsg := __dd_tracingMessage(&{{ $msg }})
-              {{ $r }}.__dd_prev = tracing.StartConsumeSpan({{ $ctx }}, {{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)
-              tracing.SetConsumeDSMCheckpoint({{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)
-            }()
-
   - id: Modify kafka.Reader.FetchMessage to call tracing functions
     join-point:
       function-body:
         function:
           - receiver: '*github.com/segmentio/kafka-go.Reader'
-          - name: FetchMessage
+          - name: FetchMessage # ReadMessage calls FetchMessage internally, so tracing this should be enough.
     advice:
       - prepend-statements:
           imports:
             tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
-            fmt: fmt
           template: |-
             {{- $r := .Function.Receiver -}}
             {{- $ctx := .Function.Argument 0 -}}
@@ -147,7 +112,6 @@ aspects:
             __dd_initReader(r)
             
             if {{ $r }}.__dd_prev != nil {
-              fmt.Println("FetchMessage: Closing previous span")
               {{ $r }}.__dd_prev.Finish()
               {{ $r }}.__dd_prev = nil
             }
@@ -168,12 +132,9 @@ aspects:
           - name: Close
     advice:
       - prepend-statements:
-          imports:
-            fmt: fmt
           template: |-
             {{- $r := .Function.Receiver -}}
             if {{ $r }}.__dd_prev != nil {
-              fmt.Println("Close: Closing previous span")
               {{ $r }}.__dd_prev.Finish()
               {{ $r }}.__dd_prev = nil
             }
