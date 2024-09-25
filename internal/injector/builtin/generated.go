@@ -321,7 +321,7 @@ var Aspects = [...]aspect.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $r := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initReader(r)\n\nif {{ $r }}.__dd_prev != nil {\n  fmt.Println(\"ReadMessage: Closing previous span\")\n  {{ $r }}.__dd_prev.Finish()\n  {{ $r }}.__dd_prev = nil\n}\n\ndefer func() {\n  if {{ $err }} != nil {\n    return\n  }\n  fmt.Println(\"ReadMessage: tracing.StartConsumeSpan\")\n  tMsg := __dd_tracingMessage(&{{ $msg }})\n  {{ $r }}.__dd_prev = tracing.StartConsumeSpan({{ $ctx }}, {{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)\n  tracing.SetConsumeDSMCheckpoint({{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)\n}()",
+				"{{- $r := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initReader(r)\n\nif {{ $r }}.__dd_prev != nil {\nfmt.Println(\"ReadMessage: Closing previous span\")\n  {{ $r }}.__dd_prev.Finish()\n  {{ $r }}.__dd_prev = nil\n}\n\ndefer func() {\n  if {{ $err }} != nil {\n    return\n  }\n  fmt.Println(\"ReadMessage: tracing.StartConsumeSpan\")\n  tMsg := __dd_tracingMessage(&{{ $msg }})\n  {{ $r }}.__dd_prev = tracing.StartConsumeSpan({{ $ctx }}, {{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)\n  tracing.SetConsumeDSMCheckpoint({{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)\n}()",
 				map[string]string{
 					"fmt":     "fmt",
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
@@ -976,4 +976,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:/GhM4ejVCra1GRcmjhh9pkMapex+iptg3P6n8qjJtnEvn4v2qiy8lyRX1Koj0ObY2/4m/3HB9iSNZfN/od/fTA=="
+const Checksum = "sha512:uBQEyyjzZZlDBdnvVKHkgaE1WZVQg+sYGAnqwaAUWyDRIN23EmXtKXwS0tAocZgasbKm1CdKJj2ycTfMoiqfmw=="
