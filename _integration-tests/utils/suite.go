@@ -69,12 +69,10 @@ func RunTest(t *testing.T, tc TestCase) {
 	sess, err := mockAgent.NewSession(t)
 	require.NoError(t, err)
 
-	// Defer this, so it runs even if the test panics (e.g, as the result of a failed assertion).
-	// If this does not happen, the test session will remain open; which is undesirable.
-	defer checkTrace(t, tc, sess)
-
 	t.Log("Running test")
 	tc.Run(t)
+
+	checkTrace(t, tc, sess)
 }
 
 func checkTrace(t *testing.T, tc TestCase, sess *agent.Session) {

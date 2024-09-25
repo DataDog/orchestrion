@@ -88,8 +88,13 @@ func (tc *TestCase) produce(t *testing.T) {
 			Key:   []byte("Key-A"),
 			Value: []byte("Hello World!"),
 		},
+		//kafka.Message{
+		//	Key:   []byte("Key-A"),
+		//	Value: []byte("Second message"),
+		//},
 	)
 	require.NoError(t, err)
+	require.NoError(t, tc.writer.Close())
 }
 
 func (tc *TestCase) consume(t *testing.T) {
@@ -100,12 +105,19 @@ func (tc *TestCase) consume(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Hello World!", string(m.Value))
 	assert.Equal(t, "Key-A", string(m.Key))
+
+	//m, err = tc.reader.FetchMessage(ctx)
+	//require.NoError(t, err)
+	//assert.Equal(t, "Second message", string(m.Value))
+	//assert.Equal(t, "Key-A", string(m.Key))
+	//err = tc.reader.CommitMessages(ctx, m)
+	//require.NoError(t, err)
+
+	require.NoError(t, tc.reader.Close())
+	time.Sleep(10 * time.Second)
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
-	require.NoError(t, tc.writer.Close())
-	require.NoError(t, tc.reader.Close())
-
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	require.NoError(t, tc.kafka.Terminate(ctx))

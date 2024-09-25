@@ -2,6 +2,9 @@ module github.com/DataDog/orchestrion
 
 go 1.22.6
 
+// TODO: remove
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240924150618-477c7b2be37a
+
 require (
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/dave/dst v0.27.3
@@ -46,9 +49,9 @@ require (
 	github.com/BurntSushi/locker v0.0.0-20171006230638-a6e239ea1c69 // indirect
 	github.com/DataDog/appsec-internal-go v1.7.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.56.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.56.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.57.0 // indirect
 	github.com/DataDog/datadog-go/v5 v5.5.0 // indirect
-	github.com/DataDog/go-libddwaf/v3 v3.3.0 // indirect
+	github.com/DataDog/go-libddwaf/v3 v3.4.0 // indirect
 	github.com/DataDog/go-sqllexer v0.0.14 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
@@ -257,7 +260,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.20.37 // indirect
 	github.com/tdewolff/parse/v2 v2.7.15 // indirect
 	github.com/tetratelabs/wazero v1.8.0 // indirect
-	github.com/tinylib/msgp v1.2.0 // indirect
+	github.com/tinylib/msgp v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

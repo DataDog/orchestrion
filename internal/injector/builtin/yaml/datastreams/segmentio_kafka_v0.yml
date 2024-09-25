@@ -1,0 +1,239 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+---
+# yaml-language-server: $schema=../../../../../docs/static/schema.json
+meta:
+  name: github.com/segmentio/kafka-go
+  description: Kafka library in Go
+  icon: fast-forward
+
+aspects:
+
+  ## Trace Consume ##
+
+  - id: Add struct fields to kafka.Reader
+    join-point:
+      struct-definition: github.com/segmentio/kafka-go.Reader
+    advice:
+      - inject-declarations:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
+            ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
+            strings: strings
+          template: |-
+            func __dd_tracingMessage(msg *Message) *tracing.KafkaMessage {
+              setHeaders := func(newHeaders []tracing.KafkaHeader) {
+                hs := make([]Header, len(newHeaders))
+                for _, h := range newHeaders {
+                  hs = append(hs, Header{
+                    Key:   h.Key,
+                    Value: h.Value,
+                  })
+                }
+                msg.Headers = hs
+              }
+              return &tracing.KafkaMessage{
+                Topic:      msg.Topic,
+                Partition:  msg.Partition,
+                Offset:     msg.Offset,
+                Headers:    __dd_tracingKafkaHeaders(msg.Headers),
+                SetHeaders: setHeaders,
+                Value:      msg.Value,
+                Key:        msg.Key,
+              }
+            }
+              
+            func __dd_tracingKafkaHeaders(headers []Header) []tracing.KafkaHeader {
+              hs := make([]tracing.KafkaHeader, len(headers))
+              for _, h := range headers {
+                hs = append(hs, tracing.KafkaHeader{
+                  Key:   h.Key,
+                  Value: h.Value,
+                })
+              }
+              return hs
+            }
+            
+            func __dd_tracingWriter(w *Writer) *tracing.KafkaWriter {
+              return &tracing.KafkaWriter{
+                Topic: w.Topic,
+              }
+            }
+
+            func __dd_kafkaConfigFromReader(r *Reader) *tracing.KafkaConfig {
+              kafkaCfg := new(tracing.KafkaConfig)
+              if r.Config().Brokers != nil {
+                kafkaCfg.BootstrapServers = strings.Join(r.Config().Brokers, ",")
+              }
+              if r.Config().GroupID != "" {
+                kafkaCfg.ConsumerGroupID = r.Config().GroupID
+              }
+              return kafkaCfg
+            }
+            
+            func __dd_initReader(r *Reader) {
+              if r.__dd_cfg == nil {
+                r.__dd_cfg = tracing.NewConfig()
+              }
+              if r.__dd_kafkaCfg == nil {
+                r.__dd_kafkaCfg = __dd_kafkaConfigFromReader(r)
+              }
+            }
+            
+            type __dd_Span = ddtrace.Span
+
+      - add-struct-field:
+          name: __dd_cfg
+          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Config"
+      - add-struct-field:
+          name: __dd_kafkaCfg
+          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.KafkaConfig"
+      - add-struct-field:
+          name: __dd_prev
+          type: "__dd_Span"
+
+  - id: Modify kafka.Reader.ReadMessage to call tracing functions
+    join-point:
+      function-body:
+        function:
+          - receiver: '*github.com/segmentio/kafka-go.Reader'
+          - name: ReadMessage
+    advice:
+      - prepend-statements:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
+            fmt: fmt
+          template: |-
+            {{- $r := .Function.Receiver -}}
+            {{- $ctx := .Function.Argument 0 -}}
+            {{- $msg := .Function.Result 0 -}}
+            {{- $err := .Function.Result 1 -}}
+            __dd_initReader(r)
+            
+            if {{ $r }}.__dd_prev != nil {
+            fmt.Println("ReadMessage: Closing previous span")
+              {{ $r }}.__dd_prev.Finish()
+              {{ $r }}.__dd_prev = nil
+            }
+            
+            defer func() {
+              if {{ $err }} != nil {
+                return
+              }
+              fmt.Println("ReadMessage: tracing.StartConsumeSpan")
+              tMsg := __dd_tracingMessage(&{{ $msg }})
+              {{ $r }}.__dd_prev = tracing.StartConsumeSpan({{ $ctx }}, {{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)
+              tracing.SetConsumeDSMCheckpoint({{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, tMsg)
+            }()
+
+  - id: Modify kafka.Reader.FetchMessage to call tracing functions
+    join-point:
+      function-body:
+        function:
+          - receiver: '*github.com/segmentio/kafka-go.Reader'
+          - name: FetchMessage
+    advice:
+      - prepend-statements:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
+            fmt: fmt
+          template: |-
+            {{- $r := .Function.Receiver -}}
+            {{- $ctx := .Function.Argument 0 -}}
+            {{- $msg := .Function.Result 0 -}}
+            {{- $err := .Function.Result 1 -}}
+            __dd_initReader(r)
+            
+            if {{ $r }}.__dd_prev != nil {
+              fmt.Println("FetchMessage: Closing previous span")
+              {{ $r }}.__dd_prev.Finish()
+              {{ $r }}.__dd_prev = nil
+            }
+            
+            defer func() {
+              if {{ $err }} != nil {
+                return
+              }
+              {{ $r }}.__dd_prev = tracing.StartConsumeSpan({{ $ctx }}, {{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, __dd_tracingMessage(&{{ $msg }}))
+              tracing.SetConsumeDSMCheckpoint({{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, __dd_tracingMessage(&{{ $msg }}))
+            }()
+
+  - id: Modify kafka.Reader.Close to call tracing functions
+    join-point:
+      function-body:
+        function:
+          - receiver: '*github.com/segmentio/kafka-go.Reader'
+          - name: Close
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            {{- $r := .Function.Receiver -}}
+            if {{ $r }}.__dd_prev != nil {
+              fmt.Println("Close: Closing previous span")
+              {{ $r }}.__dd_prev.Finish()
+              {{ $r }}.__dd_prev = nil
+            }
+
+  ## Trace Produce ##
+
+  - id: Add struct fields to kafka.Writer
+    join-point:
+      struct-definition: github.com/segmentio/kafka-go.Writer
+    advice:
+      - inject-declarations:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
+          template: |-
+            func __dd_initWriter(w *Writer) {
+              if w.__dd_cfg == nil {
+                w.__dd_cfg = tracing.NewConfig()
+              }
+              if w.__dd_kafkaCfg == nil {
+                w.__dd_kafkaCfg = &tracing.KafkaConfig{
+                  BootstrapServers: w.Addr.String(),
+                }
+              }
+            }
+
+      - add-struct-field:
+          name: __dd_cfg
+          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Config"
+      - add-struct-field:
+          name: __dd_kafkaCfg
+          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.KafkaConfig"
+
+  - id: Modify kafka.Writer.WriteMessages to call tracing functions
+    join-point:
+      function-body:
+        function:
+          - receiver: '*github.com/segmentio/kafka-go.Writer'
+          - name: WriteMessages
+    advice:
+      - prepend-statements:
+          imports:
+            ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
+          template: |-
+            {{- $w := .Function.Receiver -}}
+            {{- $ctx := .Function.Argument 0 -}}
+            {{- $msgs := .Function.Argument 1 -}}
+            {{- $err := .Function.Result 0 -}}
+            spans := make([]ddtrace.Span, len(msgs))
+            __dd_initWriter(w)
+            
+            for i := range msgs {
+              tMsg := __dd_tracingMessage(&{{ $msgs }}[i])
+              tWriter := __dd_tracingWriter({{ $w }})
+              spans[i] = tracing.StartProduceSpan({{ $ctx }}, {{ $w }}.__dd_cfg, {{ $w }}.__dd_kafkaCfg, tWriter, tMsg)
+              tracing.SetProduceDSMCheckpoint({{ $w }}.__dd_cfg, tMsg, tWriter)
+            }
+            
+            defer func() {
+              for i, span := range spans {
+                tracing.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})
+              }
+            }()
