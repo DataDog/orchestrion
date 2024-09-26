@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	topic         = "topic-A"
+	topicA        = "topic-A"
+	topicB        = "topic-B"
 	consumerGroup = "group-A"
 )
 
@@ -31,7 +32,6 @@ type TestCase struct {
 	kafka  *kafkatest.KafkaContainer
 	addr   string
 	writer *kafka.Writer
-	reader *kafka.Reader
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
@@ -39,18 +39,19 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	tc.writer = &kafka.Writer{
 		Addr:     kafka.TCP(tc.addr),
-		Topic:    topic,
 		Balancer: &kafka.LeastBytes{},
 	}
-	tc.reader = kafka.NewReader(kafka.ReaderConfig{
+	tc.createTopic(t)
+}
+
+func (tc *TestCase) newReader(topic string) *kafka.Reader {
+	return kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{tc.addr},
 		GroupID:  consumerGroup,
 		Topic:    topic,
 		MaxWait:  10 * time.Millisecond,
 		MaxBytes: 10e6, // 10MB
 	})
-
-	tc.createTopic(t)
 }
 
 func (tc *TestCase) createTopic(t *testing.T) {
@@ -67,7 +68,12 @@ func (tc *TestCase) createTopic(t *testing.T) {
 
 	topicConfigs := []kafka.TopicConfig{
 		{
-			Topic:             topic,
+			Topic:             topicA,
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		},
+		{
+			Topic:             topicB,
 			NumPartitions:     1,
 			ReplicationFactor: 1,
 		},
@@ -87,10 +93,12 @@ func (tc *TestCase) produce(t *testing.T) {
 
 	messages := []kafka.Message{
 		{
+			Topic: topicA,
 			Key:   []byte("Key-A"),
 			Value: []byte("Hello World!"),
 		},
 		{
+			Topic: topicB,
 			Key:   []byte("Key-A"),
 			Value: []byte("Second message"),
 		},
@@ -124,19 +132,21 @@ func (tc *TestCase) consume(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	m, err := tc.reader.ReadMessage(ctx)
+	readerA := tc.newReader(topicA)
+	m, err := readerA.ReadMessage(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "Hello World!", string(m.Value))
 	assert.Equal(t, "Key-A", string(m.Key))
+	require.NoError(t, readerA.Close())
 
-	m, err = tc.reader.FetchMessage(ctx)
+	readerB := tc.newReader(topicB)
+	m, err = readerB.FetchMessage(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, "Second message", string(m.Value))
 	assert.Equal(t, "Key-A", string(m.Key))
-	err = tc.reader.CommitMessages(ctx, m)
+	err = readerB.CommitMessages(ctx, m)
 	require.NoError(t, err)
-
-	require.NoError(t, tc.reader.Close())
+	require.NoError(t, readerB.Close())
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
@@ -165,6 +175,32 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 						"type":     "queue",
 						"service":  "kafka",
 						"resource": "Consume Topic topic-A",
+					},
+					Meta: map[string]string{
+						"span.kind": "consumer",
+						"component": "segmentio/kafka.go.v0",
+					},
+				},
+			},
+		},
+		{
+			Tags: map[string]any{
+				"name":     "kafka.produce",
+				"type":     "queue",
+				"service":  "kafka",
+				"resource": "Produce Topic topic-B",
+			},
+			Meta: map[string]string{
+				"span.kind": "producer",
+				"component": "segmentio/kafka.go.v0",
+			},
+			Children: trace.Traces{
+				{
+					Tags: map[string]any{
+						"name":     "kafka.consume",
+						"type":     "queue",
+						"service":  "kafka",
+						"resource": "Consume Topic topic-B",
 					},
 					Meta: map[string]string{
 						"span.kind": "consumer",

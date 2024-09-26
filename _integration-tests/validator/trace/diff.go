@@ -10,7 +10,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"github.com/xlab/treeprint"
 )
 
@@ -23,13 +23,16 @@ const (
 	markerEqual   = "="
 )
 
-// RequireAnyMatch asserts that any of the traces in `others` corresponds to the receiver.
-func (tr *Trace) RequireAnyMatch(t *testing.T, others []*Trace) {
+// RequireAnyMatch asserts that any of the traces in `got` corresponds to the receiver.
+func (tr *Trace) RequireAnyMatch(t *testing.T, got []*Trace) {
 	t.Helper()
 
-	tr, diff := tr.matchesAny(others, treeprint.NewWithRoot("Root"))
-	require.NotNil(t, t, "no match found for trace:\n%s", diff)
-	t.Logf("Found matching trace:\n%s", tr)
+	foundTrace, diff := tr.matchesAny(got, treeprint.NewWithRoot("Root"))
+	if foundTrace == nil {
+		assert.Fail(t, "no match found for trace", diff)
+	} else {
+		t.Logf("Found matching trace:\n%s", foundTrace)
+	}
 }
 
 func (tr *Trace) matchesAny(others []*Trace, diff treeprint.Tree) (*Trace, Diff) {

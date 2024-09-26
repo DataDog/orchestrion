@@ -81,15 +81,15 @@ func checkTraces(t *testing.T, tc TestCase, sess *agent.Session) {
 	jsonTraces, err := sess.Close(t)
 	require.NoError(t, err)
 
-	var traces trace.Traces
-	require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
-	t.Logf("Received %d traces", len(traces))
-	for i, tr := range traces {
+	var got trace.Traces
+	require.NoError(t, trace.ParseRaw(jsonTraces, &got))
+	t.Logf("Received %d traces", len(got))
+	for i, tr := range got {
 		t.Logf("[%d] Trace contains a total of %d spans", i, tr.NumSpans())
 		t.Logf("[%d]: %v", i, tr)
 	}
 
 	for _, expected := range tc.ExpectedTraces() {
-		expected.RequireAnyMatch(t, traces)
+		expected.RequireAnyMatch(t, got)
 	}
 }
