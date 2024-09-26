@@ -178,6 +178,8 @@ aspects:
           imports:
             ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
             tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+            fmt: fmt
           template: |-
             {{- $w := .Function.Receiver -}}
             {{- $ctx := .Function.Argument 0 -}}
@@ -187,6 +189,14 @@ aspects:
             __dd_initWriter(w)
             
             for i := range msgs {
+              // TODO: remove this
+              prevSpan, ok := tracer.SpanFromContext({{ $ctx }})
+              if ok {
+                fmt.Printf("[msg %d] found a span in the context: %v\n", i, prevSpan)
+              } else {
+                fmt.Printf("[msg %d] didn't find a span in the context\n", i)
+              }
+              //
               tMsg := __dd_tracingMessage(&{{ $msgs }}[i])
               tWriter := __dd_tracingWriter({{ $w }})
               spans[i] = tracing.StartProduceSpan({{ $ctx }}, {{ $w }}.__dd_cfg, {{ $w }}.__dd_kafkaCfg, tWriter, tMsg)

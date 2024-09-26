@@ -102,6 +102,11 @@ func (tc *TestCase) produce(t *testing.T) {
 			Key:   []byte("Key-A"),
 			Value: []byte("Second message"),
 		},
+		{
+			Topic: topicB,
+			Key:   []byte("Key-A"),
+			Value: []byte("Third message"),
+		},
 	}
 	const (
 		maxRetries = 10
