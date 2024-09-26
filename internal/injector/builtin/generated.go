@@ -360,7 +360,7 @@ var Aspects = [...]aspect.Aspect{
 		)),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $w := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msgs := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\nspans := make([]ddtrace.Span, len(msgs))\n__dd_initWriter(w)\n\nfor i := range msgs {\n  // TODO: remove this\n  prevSpan, ok := tracer.SpanFromContext({{ $ctx }})\n  if ok {\n    fmt.Printf(\"[msg %d] found a span in the context: %v\\n\", i, prevSpan)\n  } else {\n    fmt.Printf(\"[msg %d] didn't find a span in the context\\n\", i)\n  }\n  //\n  tMsg := __dd_tracingMessage(&{{ $msgs }}[i])\n  tWriter := __dd_tracingWriter({{ $w }})\n  spans[i] = tracing.StartProduceSpan({{ $ctx }}, {{ $w }}.__dd_cfg, {{ $w }}.__dd_kafkaCfg, tWriter, tMsg)\n  tracing.SetProduceDSMCheckpoint({{ $w }}.__dd_cfg, tMsg, tWriter)\n}\n\ndefer func() {\n  for i, span := range spans {\n    tracing.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})\n  }\n}()",
+				"{{- $w := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msgs := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\nspans := make([]ddtrace.Span, len(msgs))\n__dd_initWriter(w)\nvar spanOpts []tracer.StartSpanOption\nprevSpan, ok := tracer.SpanFromContext({{ $ctx }})\nif ok {\n  spanOpts = append(spanOpts, tracer.ChildOf(prevSpan.Context()))\n}\nfor i := range msgs {\n  // TODO: remove this\n  p, ok := tracer.SpanFromContext({{ $ctx }})\n  if ok {\n    fmt.Printf(\"[msg %d] found a span in the context: %v\\n\", i, p)\n  } else {\n    fmt.Printf(\"[msg %d] didn't find a span in the context\\n\", i)\n  }\n  //\n  tMsg := __dd_tracingMessage(&{{ $msgs }}[i])\n  tWriter := __dd_tracingWriter({{ $w }})\n  spans[i] = tracing.StartProduceSpan(nil, {{ $w }}.__dd_cfg, {{ $w }}.__dd_kafkaCfg, tWriter, tMsg, spanOpts...)\n  tracing.SetProduceDSMCheckpoint({{ $w }}.__dd_cfg, tMsg, tWriter)\n}\n\ndefer func() {\n  for i, span := range spans {\n    tracing.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})\n  }\n}()",
 				map[string]string{
 					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 					"fmt":     "fmt",
@@ -960,4 +960,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:IDBM8NK7FcyWTa6ytmFVd6LLqdsbgE+E2cDYbXWKSmqSquHnTPijIXAcTC59XXdQaHckHzofCUulG0ijJ8ty7Q=="
+const Checksum = "sha512:rVXR0iiL/DKa3O3SXjHPYDIgUbO1gafijlKtBPRg3xwQvQD6vck2BJBo9OzUytGkp3mlZn0+zz4vlOIDwAAxcQ=="

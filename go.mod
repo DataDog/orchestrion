@@ -3,7 +3,7 @@ module github.com/DataDog/orchestrion
 go 1.22.6
 
 // TODO: remove
-replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240924150618-477c7b2be37a
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240926152443-e7a15d17544d
 
 require (
 	github.com/charmbracelet/lipgloss v0.13.0

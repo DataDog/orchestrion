@@ -214,5 +214,18 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 				},
 			},
 		},
+		{
+			Tags: map[string]any{
+				"name":     "kafka.produce",
+				"type":     "queue",
+				"service":  "kafka",
+				"resource": "Produce Topic topic-B",
+			},
+			Meta: map[string]string{
+				"span.kind": "producer",
+				"component": "segmentio/kafka.go.v0",
+			},
+			Children: nil,
+		},
 	}
 }
