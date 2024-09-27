@@ -30,7 +30,10 @@ type testCase interface {
 
 var testCases = map[string]func(b *testing.B) testCase{
 	"DataDog:orchestrion": benchmarkOrchestrion,
-	"traefik:traefik":     benchmarkTraefik,
+	"traefik:traefik":     benchmarkGithub("traefik", "traefik", "./..."),
+	"go-delve:delve":      benchmarkGithub("go-delve", "delve", "./..."),
+	"jlegrone:tctx":       benchmarkGithub("jlegrone", "tctx", "./..."),
+	"tinylib:msgp":        benchmarkGithub("tinylib", "msgp", "./..."),
 }
 
 func Benchmark(b *testing.B) {
@@ -52,22 +55,25 @@ func Benchmark(b *testing.B) {
 	}
 }
 
-type benchTraefik struct {
+type benchGithub struct {
 	harness
 }
 
-func benchmarkTraefik(b *testing.B) testCase {
-	b.Helper()
+func benchmarkGithub(owner, repo, build string) func(b *testing.B) testCase {
+	return func(b *testing.B) testCase {
+		b.Helper()
 
-	tc := &benchTraefik{harness{B: b, build: "./..."}}
+		tc := &benchGithub{harness{B: b, build: build}}
 
-	tag := tc.findLatestGithubReleaseTag("traefik", "traefik")
-	tc.gitCloneGithub("traefik", "traefik", tag)
-	tc.exec("go", "mod", "download")
-	tc.exec("go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
-	tc.exec(buildOrchestrion(b), "pin")
+		tag := tc.findLatestGithubReleaseTag(owner, repo)
+		tc.gitCloneGithub(owner, repo, tag)
+		tc.exec("go", "mod", "download")
+		tc.exec("go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+		tc.exec(buildOrchestrion(b), "pin")
+		tc.exec("go", "mod", "vendor")
 
-	return tc
+		return tc
+	}
 }
 
 type benchOrchestrion struct {
@@ -138,8 +144,7 @@ func (h *harness) findLatestGithubReleaseTag(owner string, repo string) string {
 	require.NoError(h, err)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
-	// If a GITHUB_TOKEN is available, authenticate the request to enjoy higher request limits...
-	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+	if token, ok := getGithubToken(); ok {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
 
@@ -170,6 +175,23 @@ func (h *harness) findLatestGithubReleaseTag(owner string, repo string) string {
 	require.NotEmpty(h, tagName)
 
 	return tagName
+}
+
+func getGithubToken() (string, bool) {
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		return token, true
+	}
+
+	var bytes bytes.Buffer
+	cmd := exec.Command("gh", "auth", "token")
+	cmd.Stdout = &bytes
+	cmd.Stderr = &bytes
+
+	if err := cmd.Run(); err != nil {
+		return "", false
+	}
+
+	return bytes.String(), true
 }
 
 func (h *harness) gitCloneGithub(owner string, repo string, tag string) string {
