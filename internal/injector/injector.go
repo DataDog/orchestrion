@@ -11,8 +11,10 @@ package injector
 import (
 	"errors"
 	"fmt"
+	"go/ast"
 	"go/importer"
 	"go/token"
+	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
@@ -84,26 +86,48 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 		return nil, err
 	}
 
-	decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
-	dstFiles := make([]*dst.File, len(astFiles))
-	for idx, astFile := range astFiles {
-		dstFiles[idx], err = decorator.DecorateFile(astFile)
-		if err != nil {
-			return nil, err
-		}
-	}
+	var (
+		wg       sync.WaitGroup
+		errs     []error
+		errsMu   sync.Mutex
+		result   = make(map[string]InjectedFile, len(astFiles))
+		resultMu sync.Mutex
+	)
 
-	result := make(map[string]InjectedFile, len(files))
-	for idx, dstFile := range dstFiles {
-		res, err := i.injectFile(decorator, dstFile)
-		if err != nil {
-			return nil, err
-		}
-		if res.Modified {
+	wg.Add(len(astFiles))
+	for idx, astFile := range astFiles {
+		go func(astFile *ast.File) {
+			defer wg.Done()
+
+			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
+			dstFile, err := decorator.DecorateFile(astFile)
+			if err != nil {
+				errsMu.Lock()
+				defer errsMu.Unlock()
+				errs = append(errs, err)
+				return
+			}
+
+			res, err := i.injectFile(decorator, dstFile)
+			if err != nil {
+				errsMu.Lock()
+				defer errsMu.Unlock()
+				errs = append(errs, err)
+				return
+			}
+
+			if !res.Modified {
+				return
+			}
+
+			resultMu.Lock()
+			defer resultMu.Unlock()
 			result[files[idx]] = res.InjectedFile
-		}
+		}(astFile)
 	}
-	return result, nil
+	wg.Wait()
+
+	return result, errors.Join(errs...)
 }
 
 func (i *Injector) validate() error {

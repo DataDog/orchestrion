@@ -10,6 +10,7 @@ import (
 	"go/importer"
 	"go/token"
 	"go/types"
+	"sync"
 
 	"github.com/dave/dst/decorator"
 	"golang.org/x/tools/go/gcexportdata"
@@ -20,6 +21,8 @@ type lookupResolver struct {
 
 	fset    *token.FileSet
 	imports map[string]*types.Package
+
+	mu sync.Mutex
 }
 
 func (i *Injector) newRestorer(filename string) *decorator.FileRestorer {
@@ -38,6 +41,9 @@ func (r *lookupResolver) ResolvePackage(path string) (string, error) {
 	if path == "unsafe" {
 		return "unsafe", nil
 	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	// If this is present in "cache", we can return right away!
 	if pkg, ok := r.imports[path]; ok {
