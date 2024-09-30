@@ -88,8 +88,8 @@ func main() {
 			),
 		))
 
-		// TODO: If the type is a Stringer, we need to directly implement `String() string`, otherwise the one from the
-		// embedded proxy will not be found (there would be a conflict).
+		// TODO: If the type is a [fmt.Stringer], we need to directly implement `String() string`, otherwise the one from
+		// the embedded proxy will not be found (there would be a conflict).
 
 		for i := 0; i < def.NumFields(); i++ {
 			field := def.Field(i)

@@ -24,7 +24,7 @@ const (
 )
 
 var envIgnoreList = map[string]func(*ResolveRequest, string){
-	// We don't use this, instead rely on the `Dir` field.
+	// We don't use this, instead rely on the [ResolveRequest.Dir] field.
 	"PWD": nil,
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
 	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
@@ -39,7 +39,7 @@ type (
 		Pattern    string   `json:"pattern"`              // Package pattern to resolve
 
 		// Fields set by canonicalization
-		resolveParentID    string // The value of the `envVarParentID` environment variable
+		resolveParentID    string // The value of the [envVarParentID] environment variable
 		toolexecImportpath string // The value of the TOOLEXEC_IMPORTPATH environment variable
 		canonical          bool   // Whether this request was canonicalized yet
 	}
