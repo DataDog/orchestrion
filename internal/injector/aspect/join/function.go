@@ -18,17 +18,16 @@ import (
 
 type (
 	functionInformation struct {
-		ImportPath  string          // The import path of the package containing the function
-		Receiver    dst.Expr        // The receiver if this is a method declaration
-		Name        string          // The name of the function (blank for function literal expressions)
-		Type        *dst.FuncType   // The function's type signature
-		Decorations []*dst.NodeDecs // The function's decoration chain
+		Receiver   dst.Expr      // The receiver if this is a method declaration
+		Type       *dst.FuncType // The function's type signature
+		ImportPath string        // The import path of the package containing the function
+		Name       string        // The name of the function (blank for function literal expressions)
 	}
 
 	FunctionOption interface {
 		code.AsCode
 		impliesImported() []string
-		evaluate(*functionInformation) bool
+		evaluate(functionInformation) bool
 		toHTML() string
 	}
 
@@ -52,8 +51,7 @@ func (s *funcDecl) ImpliesImported() (list []string) {
 
 func (s *funcDecl) Matches(ctx context.AspectContext) bool {
 	info := functionInformation{
-		ImportPath:  ctx.ImportPath(),
-		Decorations: []*dst.NodeDecs{ctx.Node().Decorations()},
+		ImportPath: ctx.ImportPath(),
 	}
 
 	if decl, ok := ctx.Node().(*dst.FuncDecl); ok {
@@ -64,17 +62,12 @@ func (s *funcDecl) Matches(ctx context.AspectContext) bool {
 		info.Type = decl.Type
 	} else if lit, ok := ctx.Node().(*dst.FuncLit); ok {
 		info.Type = lit.Type
-		if parent := ctx.Parent(); parent != nil {
-			if parent, ok := parent.Node().(*dst.AssignStmt); ok {
-				info.Decorations = append(info.Decorations, parent.Decorations())
-			}
-		}
 	} else {
 		return false
 	}
 
 	for _, opt := range s.opts {
-		if !opt.evaluate(&info) {
+		if !opt.evaluate(info) {
 			return false
 		}
 	}
@@ -118,7 +111,7 @@ func (funcName) impliesImported() []string {
 	return nil
 }
 
-func (fo funcName) evaluate(info *functionInformation) bool {
+func (fo funcName) evaluate(info functionInformation) bool {
 	return info.Name == string(fo)
 }
 
@@ -158,7 +151,7 @@ func (fo *signature) impliesImported() (list []string) {
 	return
 }
 
-func (fo *signature) evaluate(info *functionInformation) bool {
+func (fo *signature) evaluate(info functionInformation) bool {
 	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
 		if len(fo.returns) != 0 {
 			return false
@@ -282,7 +275,7 @@ func (fo oneOfFunctions) impliesImported() (list []string) {
 	return
 }
 
-func (fo oneOfFunctions) evaluate(info *functionInformation) bool {
+func (fo oneOfFunctions) evaluate(info functionInformation) bool {
 	for _, opt := range fo {
 		if opt.evaluate(info) {
 			return true
@@ -323,7 +316,7 @@ func (fo *receives) impliesImported() []string {
 	return nil
 }
 
-func (fo *receives) evaluate(info *functionInformation) bool {
+func (fo *receives) evaluate(info functionInformation) bool {
 	for _, param := range info.Type.Params.List {
 		if fo.typeName.Matches(param.Type) {
 			return true
@@ -348,7 +341,7 @@ func Receiver(typeName TypeName) FunctionOption {
 	return &receiver{typeName}
 }
 
-func (fo *receiver) evaluate(info *functionInformation) bool {
+func (fo *receiver) evaluate(info functionInformation) bool {
 	return info.Receiver != nil && fo.typeName.MatchesDefinition(info.Receiver, info.ImportPath)
 }
 
@@ -482,9 +475,9 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 		o.FunctionOption = Receives(tn)
 	case "signature":
 		var sig struct {
+			Extra map[string]yaml.Node `yaml:",inline"`
 			Args  []string             `yaml:"args"`
 			Ret   []string             `yaml:"returns"`
-			Extra map[string]yaml.Node `yaml:",inline"`
 		}
 		if err := node.Content[1].Decode(&sig); err != nil {
 			return err

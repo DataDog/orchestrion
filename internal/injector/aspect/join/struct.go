@@ -63,8 +63,8 @@ func (s *structDefinition) RenderHTML() string {
 type (
 	StructLiteralMatch int
 	structLiteral      struct {
-		typeName TypeName
 		field    string
+		typeName TypeName
 		match    StructLiteralMatch
 	}
 )

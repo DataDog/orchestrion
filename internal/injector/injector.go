@@ -188,7 +188,11 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 
 	post := func(csor *dstutil.Cursor) bool {
 		// Pop the ancestry stack now that we're done with this node.
-		defer func() { chain = chain.Parent() }()
+		defer func() {
+			old := chain
+			chain = chain.Parent()
+			old.Release()
+		}()
 
 		var changed bool
 		changed, err = i.injectNode(chain.Context(

@@ -6,6 +6,8 @@
 package context
 
 import (
+	"sync"
+
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )
@@ -19,16 +21,32 @@ type NodeChain struct {
 	index  int
 }
 
+var pool = sync.Pool{New: func() any { return &NodeChain{} }}
+
+// Child creates a new [NodeChain] that represents the node pointed to by the provided
+// [dstutil.Cursor]. The cursor's parent must match the receiver. Values returned by
+// [NodeChain.Child] should be returned to the pool by calling [NodeChain.Release] on them, as this
+// allows for a significant reduction of allocations.
 func (n *NodeChain) Child(cursor *dstutil.Cursor) *NodeChain {
 	if n != nil && n.node != cursor.Parent() {
 		panic("cursor does not point to a child of this node")
 	}
-	return &NodeChain{
-		parent: n,
-		node:   cursor.Node(),
-		name:   cursor.Name(),
-		index:  cursor.Index(),
-	}
+
+	c := pool.Get().(*NodeChain)
+	c.parent = n
+	c.node = cursor.Node()
+	c.name = cursor.Name()
+	c.index = cursor.Index()
+
+	return c
+}
+
+// Release returns the [NodeChain] to the backing pool so that it can be re-used. This signficicantly
+// reduces allocations while walking ASTs, as one [NodeChain] is used for each AST node, but they are
+// very short-lived.
+func (n *NodeChain) Release() {
+	*n = NodeChain{} // Zero it off
+	pool.Put(n)
 }
 
 func (n *NodeChain) SetConfig(val map[string]string) {
