@@ -56,6 +56,6 @@ func (n *NodeChain) PropertyName() string {
 	return n.name
 }
 
-func (n *NodeChain) Index() string {
-	return n.Index()
+func (n *NodeChain) Index() int {
+	return n.index
 }
