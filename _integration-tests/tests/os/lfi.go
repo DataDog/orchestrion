@@ -65,26 +65,26 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":     "http.request",
 				"resource": "GET /",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"component": "net/http",
 				"span.kind": "client",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
 						"resource": "GET /",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component":         "net/http",
 						"span.kind":         "server",
 						"appsec.blocked":    "true",

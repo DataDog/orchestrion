@@ -54,13 +54,13 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	assert.NoError(t, tc.DB.Close())
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name": "test.root",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"resource": "SELECT * FROM \"notes\"  WHERE \"notes\".\"deleted_at\" IS NULL AND ((user_id = ?)) ORDER BY \"notes\".\"id\" ASC LIMIT 1",
@@ -68,7 +68,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"name":     "gorm.query",
 						"service":  "gorm.db",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"component": "jinzhu/gorm",
 					},
 				},
