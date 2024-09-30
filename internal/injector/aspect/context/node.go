@@ -32,7 +32,7 @@ func (n *NodeChain) Child(cursor *dstutil.Cursor) *NodeChain {
 		panic("cursor does not point to a child of this node")
 	}
 
-	c := pool.Get().(*NodeChain)
+	c, _ := pool.Get().(*NodeChain)
 	c.parent = n
 	c.node = cursor.Node()
 	c.name = cursor.Name()
