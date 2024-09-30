@@ -59,7 +59,7 @@ type benchGithub struct {
 	harness
 }
 
-func benchmarkGithub(owner, repo, build string) func(b *testing.B) testCase {
+func benchmarkGithub(owner string, repo string, build string) func(b *testing.B) testCase {
 	return func(b *testing.B) testCase {
 		b.Helper()
 
