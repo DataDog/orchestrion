@@ -33,8 +33,8 @@ func TestMatchesAny(t *testing.T) {
 			t.Parallel()
 
 			var (
-				expected *Span
-				actual   []*Span
+				expected *Trace
+				actual   []*Trace
 			)
 			{
 				data, err := os.ReadFile(filepath.Join(testdata, name, "expected.json"))

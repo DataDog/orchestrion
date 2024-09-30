@@ -97,26 +97,26 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":    "kafka.produce",
 				"type":    "queue",
 				"service": "kafka",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"span.kind": "producer",
 				"component": "Shopify/sarama",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":    "kafka.consume",
 						"type":    "queue",
 						"service": "kafka",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"span.kind": "consumer",
 						"component": "Shopify/sarama",
 					},

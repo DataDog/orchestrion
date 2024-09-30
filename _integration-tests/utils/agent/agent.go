@@ -136,6 +136,7 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 		tracer.WithLogStartup(false),
 		tracer.WithLogger(testLogger{t}),
 	)
+	t.Cleanup(tracer.Stop)
 
 	return session, nil
 }

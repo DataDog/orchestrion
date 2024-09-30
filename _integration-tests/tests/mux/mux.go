@@ -57,9 +57,9 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
+func (tc *TestCase) ExpectedTraces() trace.Traces {
 	url := fmt.Sprintf("http://%s/ping", tc.Server.Addr)
-	return trace.Spans{
+	return trace.Traces{
 		{
 			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
 			Tags: map[string]any{
@@ -67,17 +67,17 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"resource": "GET /ping",
 				"type":     "http",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"http.url": url,
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
 						"resource": "GET /ping",
 						"type":     "web",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.url": url,
 					},
 				},

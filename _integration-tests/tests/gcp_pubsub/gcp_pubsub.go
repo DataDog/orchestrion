@@ -118,8 +118,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.container.Terminate(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (tc *TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":     "pubsub.publish",
@@ -127,12 +127,12 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 				"resource": "projects/pstest-orchestrion/topics/pstest-orchestrion-topic",
 				"service":  "gcp_pubsub.test",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"span.kind":    "producer",
 				"component":    "cloud.google.com/go/pubsub.v1",
 				"ordering_key": "ordering-key",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "pubsub.receive",
@@ -140,7 +140,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 						"resource": "projects/pstest-orchestrion/subscriptions/pstest-orchestrion-subscription",
 						"service":  "gcp_pubsub.test",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"span.kind":        "consumer",
 						"component":        "cloud.google.com/go/pubsub.v1",
 						"messaging.system": "googlepubsub",

@@ -49,6 +49,6 @@ func (tc *TestCaseStructLiteralWithParam) Teardown(t *testing.T) {
 	tc.base.teardown(t)
 }
 
-func (tc *TestCaseStructLiteralWithParam) ExpectedTraces() trace.Spans {
-	return tc.base.expectedSpans()
+func (tc *TestCaseStructLiteralWithParam) ExpectedTraces() trace.Traces {
+	return tc.base.expectedTraces()
 }

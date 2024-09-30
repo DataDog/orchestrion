@@ -43,11 +43,11 @@ type TestCase interface {
 	// Setup, such as stopping services or deleting test data.
 	Teardown(*testing.T)
 
-	// ExpectedTraces returns a trace.Spans object describing all traces expected
+	// ExpectedTraces returns a trace.Traces object describing all traces expected
 	// to be produced by the `Run` function. There should be one entry per trace
-	// root span expected to be produced. Every item in the returned `trace.Spans`
+	// root span expected to be produced. Every item in the returned `trace.Traces`
 	// must match at least one trace received by the agent during the test run.
-	ExpectedTraces() trace.Spans
+	ExpectedTraces() trace.Traces
 }
 
 func RunTest(t *testing.T, tc TestCase) {
@@ -69,25 +69,26 @@ func RunTest(t *testing.T, tc TestCase) {
 	sess, err := mockAgent.NewSession(t)
 	require.NoError(t, err)
 
-	// Defer this, so it runs even if the test panics (e.g, as the result of a failed assertion).
-	// If this does not happen, the test session will remain open; which is undesirable.
-	defer checkTrace(t, tc, sess)
-
 	t.Log("Running test")
 	tc.Run(t)
+
+	checkTraces(t, tc, sess)
 }
 
-func checkTrace(t *testing.T, tc TestCase, sess *agent.Session) {
+func checkTraces(t *testing.T, tc TestCase, sess *agent.Session) {
 	t.Helper()
 
 	jsonTraces, err := sess.Close(t)
 	require.NoError(t, err)
 
-	var traces trace.Spans
-	require.NoError(t, trace.ParseRaw(jsonTraces, &traces))
-	t.Logf("Received %d traces", len(traces))
+	var got trace.Traces
+	require.NoError(t, trace.ParseRaw(jsonTraces, &got))
+	t.Logf("Received %d traces", len(got))
+	for i, tr := range got {
+		t.Logf("[%d] Trace contains a total of %d spans:\n%v", i, tr.NumSpans(), tr)
+	}
 
 	for _, expected := range tc.ExpectedTraces() {
-		expected.RequireAnyMatch(t, traces)
+		expected.RequireAnyMatch(t, got)
 	}
 }

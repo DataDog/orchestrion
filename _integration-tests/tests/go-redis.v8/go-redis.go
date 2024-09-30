@@ -77,13 +77,13 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	assert.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name": "test.root",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "redis.command",
@@ -91,7 +91,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "set",
 						"type":     "redis",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.args_length": "3",
 						"component":         "go-redis/redis.v8",
 						"out.db":            "0",
@@ -108,7 +108,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "get",
 						"type":     "redis",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"redis.args_length": "2",
 						"component":         "go-redis/redis.v8",
 						"out.db":            "0",
