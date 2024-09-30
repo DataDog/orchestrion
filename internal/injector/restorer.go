@@ -26,10 +26,6 @@ type lookupResolver struct {
 }
 
 func (i *Injector) newRestorer(filename string) *decorator.FileRestorer {
-	if i.restorerResolver == nil {
-		i.restorerResolver = &lookupResolver{lookup: i.Lookup}
-	}
-
 	return &decorator.FileRestorer{
 		Restorer: decorator.NewRestorerWithImports(i.ImportPath, i.restorerResolver),
 		Name:     filename,

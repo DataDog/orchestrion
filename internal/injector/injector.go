@@ -138,6 +138,10 @@ func (i *Injector) validate() error {
 	if i.Lookup == nil {
 		err = errors.Join(err, fmt.Errorf("invalid %T: missing Lookup", i))
 	}
+
+	// Initialize the restorerResolver field, too...
+	i.restorerResolver = &lookupResolver{lookup: i.Lookup}
+
 	return err
 }
 
