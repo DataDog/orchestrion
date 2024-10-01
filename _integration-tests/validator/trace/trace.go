@@ -8,10 +8,11 @@ package trace
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/xlab/treeprint"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/xlab/treeprint"
 )
 
 type ID uint64

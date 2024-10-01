@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"orchestrion/integration/utils"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -47,9 +47,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 		"gcr.io/google.com/cloudsdktool/cloud-sdk:490.0.0-emulators",
 		gcloud.WithProjectID("pstest-orchestrion"),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	projectID := tc.container.Settings.ProjectID
 

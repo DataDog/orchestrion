@@ -11,8 +11,6 @@ import (
 	"context"
 	"log"
 	"net/url"
-	testcontainersutils "orchestrion/integration/utils/testcontainers"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
@@ -23,6 +21,9 @@ import (
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {
