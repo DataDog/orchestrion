@@ -20,7 +20,6 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gomodule/redigo v1.9.2
 	github.com/gorilla/mux v1.8.1
-	github.com/graphql-go/handler v0.2.3
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
