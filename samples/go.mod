@@ -4,6 +4,9 @@ go 1.22.6
 
 replace github.com/DataDog/orchestrion => ../
 
+// TODO: remove
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240926152443-e7a15d17544d
+
 require (
 	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/IBM/sarama v1.43.3

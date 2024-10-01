@@ -4,6 +4,9 @@ go 1.22.6
 
 replace github.com/DataDog/orchestrion => ../
 
+// TODO: remove
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240926152443-e7a15d17544d
+
 require (
 	cloud.google.com/go/pubsub v1.42.0
 	github.com/DataDog/orchestrion v0.7.4
@@ -30,6 +33,7 @@ require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/redis/go-redis/v9 v9.6.1
+	github.com/segmentio/kafka-go v0.4.42
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/cassandra v0.33.0
