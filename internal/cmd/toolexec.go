@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/pin"
-	"github.com/datadog/orchestrion/internal/toolexec"
-	"github.com/datadog/orchestrion/internal/toolexec/aspect"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/pin"
+	"github.com/DataDog/orchestrion/internal/toolexec"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/urfave/cli/v2"
 )
 
@@ -63,7 +63,7 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Tracef("Toolexec final command:    %q/n", proxyCmd.Args())
+		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
 		return proxy.RunCommand(proxyCmd)
 	},
 }

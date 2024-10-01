@@ -17,10 +17,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/cmd"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/cmd"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/urfave/cli/v2"
 )
 

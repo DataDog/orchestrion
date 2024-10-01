@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 )
 
 // DirectiveArgument represents arguments provided to directives (`//<directive> <args...>`), where

@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/cmd"
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/cmd"
+	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )

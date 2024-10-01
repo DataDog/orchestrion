@@ -10,7 +10,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"github.com/xlab/treeprint"
 )
 
@@ -23,28 +23,31 @@ const (
 	markerEqual   = "="
 )
 
-// RequireAnyMatch asserts that any of the traces in `others` corresponds to the receiver.
-func (span *Span) RequireAnyMatch(t *testing.T, others []*Span) {
+// RequireAnyMatch asserts that any of the traces in `got` corresponds to the receiver.
+func (tr *Trace) RequireAnyMatch(t *testing.T, got []*Trace) {
 	t.Helper()
 
-	span, diff := span.matchesAny(others, treeprint.NewWithRoot("Root"))
-	require.NotNil(t, span, "no match found for trace:\n%s", diff)
-	t.Logf("Found matching trace:\n%s", span)
+	foundTrace, diff := tr.matchesAny(got, treeprint.NewWithRoot("Root"))
+	if foundTrace == nil {
+		assert.Fail(t, "no match found for trace", diff)
+	} else {
+		t.Logf("Found matching trace:\n%s", foundTrace)
+	}
 }
 
-func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) {
+func (tr *Trace) matchesAny(others []*Trace, diff treeprint.Tree) (*Trace, Diff) {
 	if len(others) == 0 {
-		span.into(diff.AddMetaBranch(markerRemoved, "No spans to match against"))
+		tr.into(diff.AddMetaBranch(markerRemoved, "No spans to match against"))
 		return nil, diff
 	}
 
 	for idx, other := range others {
-		id := fmt.Sprintf("Span at index %d", idx)
-		if other.ID != 0 {
-			id = fmt.Sprintf("Span ID %d", other.ID)
+		id := fmt.Sprintf("Trace at index %d", idx)
+		if other.SpanID != 0 {
+			id = fmt.Sprintf("Span ID %d", other.SpanID)
 		}
 		branch := diff.AddMetaBranch(markerChanged, id)
-		if span.matches(other, branch) {
+		if tr.matches(other, branch) {
 			return other, nil
 		}
 	}
@@ -53,7 +56,8 @@ func (span *Span) matchesAny(others []*Span, diff treeprint.Tree) (*Span, Diff) 
 
 // macthes determines whether the receiving span matches the other span, and
 // adds difference information to the provided diff tree.
-func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
+func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
+	span := tr
 	matches = true
 
 	keys := make([]string, 0, len(span.Tags))
@@ -90,14 +94,18 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	var metaNode treeprint.Tree
 	for _, key := range keys {
 		expected := span.Meta[key]
-		actual := other.Meta[key]
+		actual, actualExists := other.Meta[key]
 		if metaNode == nil {
 			metaNode = diff.AddBranch("meta")
 		}
 		if expected != actual {
 			branch := metaNode.AddMetaBranch(markerChanged, key)
 			branch.AddMetaNode(markerRemoved, expected)
-			branch.AddMetaNode(markerAdded, actual)
+			if actualExists {
+				branch.AddMetaNode(markerAdded, actual)
+			} else {
+				branch.AddMetaNode(markerAdded, nil)
+			}
 			matches = false
 		} else {
 			metaNode.AddMetaNode(markerEqual, fmt.Sprintf("%-*s = %q", maxLen, key, expected))
@@ -105,7 +113,7 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 	}
 
 	var childrenNode treeprint.Tree
-	for idx, child := range span.Children {
+	for idx, child := range tr.Children {
 		if childrenNode == nil {
 			childrenNode = diff.AddBranch("_children")
 		}
@@ -116,9 +124,10 @@ func (span *Span) matches(other *Span, diff treeprint.Tree) (matches bool) {
 			continue
 		}
 
-		if span, childDiff := child.matchesAny(other.Children, treeprint.New()); span != nil {
-			if span.ID != 0 {
-				nodeName = fmt.Sprintf("Span #%d", span.ID)
+		if tr, childDiff := child.matchesAny(other.Children, treeprint.New()); tr != nil {
+			span := tr
+			if span.SpanID != 0 {
+				nodeName = fmt.Sprintf("Span #%d", span.SpanID)
 			}
 			child.into(childrenNode.AddMetaBranch(markerEqual, nodeName))
 		} else {

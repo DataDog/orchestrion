@@ -39,6 +39,6 @@ func (tc *TestCaseNewConfig) Teardown(t *testing.T) {
 	tc.base.teardown(t)
 }
 
-func (tc *TestCaseNewConfig) ExpectedTraces() trace.Spans {
-	return tc.base.expectedSpans()
+func (tc *TestCaseNewConfig) ExpectedTraces() trace.Traces {
+	return tc.base.expectedTraces()
 }

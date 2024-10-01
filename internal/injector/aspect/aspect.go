@@ -8,8 +8,8 @@ package aspect
 import (
 	"errors"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/advice"
-	"github.com/datadog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
@@ -27,7 +27,7 @@ type Aspect struct {
 
 func (a *Aspect) AsCode() (jp jen.Code, adv jen.Code) {
 	jp = a.JoinPoint.AsCode()
-	adv = jen.Index().Qual("github.com/datadog/orchestrion/internal/injector/aspect/advice", "Advice").ValuesFunc(func(g *jen.Group) {
+	adv = jen.Index().Qual("github.com/DataDog/orchestrion/internal/injector/aspect/advice", "Advice").ValuesFunc(func(g *jen.Group) {
 		for _, a := range a.Advice {
 			g.Line().Add(a.AsCode())
 		}

@@ -6,6 +6,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,9 +14,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo/trace"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
@@ -89,7 +89,7 @@ func (m *MockAgent) Start(t *testing.T) {
 	t.Cleanup(tracer.Stop)
 }
 
-func (m *MockAgent) Spans() trace.Spans {
+func (m *MockAgent) Traces(t *testing.T) trace.Traces {
 	m.T.Log("mockagent: fetching spans")
 
 	tracer.Flush()
@@ -99,26 +99,22 @@ func (m *MockAgent) Spans() trace.Spans {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	spansByID := make(map[trace.SpanID]*trace.Span)
+	spansByID := make(map[trace.ID]*trace.Trace)
 	for _, payload := range m.payloads {
 		for _, spans := range payload {
 			for _, span := range spans {
-				spansByID[trace.SpanID(span.SpanID)] = &trace.Span{
-					ID:       trace.SpanID(span.SpanID),
-					ParentID: trace.SpanID(span.ParentID),
-					Meta:     span.Meta,
-					Tags: map[string]any{
-						"name":     span.Name,
-						"type":     span.Type,
-						"service":  span.Service,
-						"resource": span.Resource,
-					},
-					Children: nil,
-				}
+				b, err := json.Marshal(span)
+				require.NoError(t, err)
+
+				var tr trace.Trace
+				err = json.Unmarshal(b, &tr)
+				require.NoError(t, err)
+
+				spansByID[trace.ID(span.SpanID)] = &tr
 			}
 		}
 	}
-	var result trace.Spans
+	var result trace.Traces
 	for _, span := range spansByID {
 		if span.ParentID == 0 {
 			result = append(result, span)
@@ -129,7 +125,6 @@ func (m *MockAgent) Spans() trace.Spans {
 			parent.Children = append(parent.Children, span)
 		}
 	}
-	m.T.Logf("Received %d spans", len(result))
 	return result
 }
 

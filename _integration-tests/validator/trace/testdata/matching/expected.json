@@ -21,6 +21,14 @@
       "meta": {
         "component": "database/sql",
         "span.kind": "client"
+      },
+      "metrics": {
+        "_dd.agent_psr": 1.0,
+        "_dd.profiling.enabled": 0.0,
+        "_dd.top_level": 1.0,
+        "_dd.trace_span_attribute_schema": 0.0,
+        "_sampling_priority_v1": 1.0,
+        "process_id": 97959.0
       }
     }
   ]

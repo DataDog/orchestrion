@@ -28,4 +28,4 @@ Root
                     │   └── [+]  gorm.io/gorm.v1
                     └── [±]  span.kind
                         ├── [-]  client
-                        └── [+]
+                        └── [+]  <nil>

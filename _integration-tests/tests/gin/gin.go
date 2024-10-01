@@ -52,8 +52,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (tc *TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
 			Tags: map[string]any{
@@ -64,7 +64,7 @@ func (tc *TestCase) ExpectedTraces() trace.Spans {
 			Meta: map[string]string{
 				"http.url": "http://" + tc.Server.Addr + "/ping",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",

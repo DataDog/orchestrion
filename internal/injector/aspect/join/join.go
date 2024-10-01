@@ -12,13 +12,13 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/datadog/orchestrion/internal/injector/aspect/context"
-	"github.com/datadog/orchestrion/internal/injector/code"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/code"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 )
 
-const pkgPath = "github.com/datadog/orchestrion/internal/injector/aspect/join"
+const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/join"
 
 // Point is the interface that abstracts selection of nodes where to inject
 // code.

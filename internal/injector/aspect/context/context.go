@@ -6,7 +6,7 @@
 package context
 
 import (
-	"github.com/datadog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )

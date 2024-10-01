@@ -55,8 +55,8 @@ func (tc *TestCase) Teardown(*testing.T) {
 	tc.Server.GracefulStop()
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":     "grpc.client",
@@ -64,7 +64,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"resource": "/helloworld.Greeter/SayHello",
 				"type":     "rpc",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "grpc.server",

@@ -10,17 +10,16 @@ package ibm_sarama
 import (
 	"context"
 	"fmt"
-	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"testing"
 	"time"
-
-	"orchestrion/integration/validator/trace"
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/redpanda"
+	"github.com/testcontainers/testcontainers-go/modules/kafka"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 const (
@@ -29,31 +28,18 @@ const (
 )
 
 type TestCase struct {
-	server *redpanda.Container
+	server *kafka.KafkaContainer
 	cfg    *sarama.Config
 	addrs  []string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	var (
-		err error
-		ctx = context.Background()
-	)
 	tc.cfg = sarama.NewConfig()
 	tc.cfg.Version = sarama.V0_11_0_0
 	tc.cfg.Producer.Return.Successes = true
 
-	tc.server, err = redpanda.Run(ctx,
-		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
-		redpanda.WithAutoCreateTopics(),
-		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		testcontainersutils.WithTestLogConsumer(t),
-	)
-	testcontainersutils.AssertTestContainersError(t, err)
-
-	addr, err := tc.server.KafkaSeedBroker(ctx)
-	require.NoError(t, err, "failed to get seed broker address")
-
+	container, addr := testcontainersutils.StartKafkaTestContainer(t)
+	tc.server = container
 	tc.addrs = []string{addr}
 }
 
@@ -135,8 +121,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name":    "kafka.produce",
@@ -147,7 +133,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"span.kind": "producer",
 				"component": "IBM/sarama",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":    "kafka.consume",

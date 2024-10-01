@@ -12,14 +12,14 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/datadog/orchestrion/internal/injector"
-	"github.com/datadog/orchestrion/internal/injector/aspect"
-	"github.com/datadog/orchestrion/internal/injector/builtin"
-	"github.com/datadog/orchestrion/internal/injector/typed"
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/toolexec/aspect/linkdeps"
-	"github.com/datadog/orchestrion/internal/toolexec/importcfg"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/injector"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 )
 
 type specialCaseBehavior int
@@ -31,9 +31,9 @@ const (
 
 var (
 	weavingSpecialCase = map[*regexp.Regexp]specialCaseBehavior{
-		regexp.MustCompile(`^github\.com/datadog/orchestrion(?:/.+)?$`):  neverWeave,
-		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`): weaveTracerInternal,
-		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):        neverWeave,
+		regexp.MustCompile(`^github\.com/[Dd]ata[Dd]og/orchestrion(?:/.+)?$`): neverWeave,
+		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`):      weaveTracerInternal,
+		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):             neverWeave,
 	}
 )
 
@@ -71,7 +71,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
-		GoVersion:  cmd.Flags.GoVersion,
+		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
 		},
