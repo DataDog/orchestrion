@@ -11,8 +11,8 @@ meta:
   caveats: |-
     This configuration introduces a way to access the Goroutine Local Storage (GLS), which is not
     meant to be used directly by end-users. This is intended to be used only by tracer internals to
-    enable trace context forwarding in places where a {{<godoc "context" "Context">}} value is not
-    available.
+    enable trace context forwarding in places where a {{<godoc import-path="context" name="Context">}}
+    value is not available.
 aspects:
   - id: GLS Access
     join-point:

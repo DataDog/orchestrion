@@ -16,7 +16,7 @@ import (
 )
 
 type assignValue struct {
-	template code.Template
+	Template code.Template
 }
 
 func AssignValue(template code.Template) *assignValue {
@@ -29,7 +29,7 @@ func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
 		return false, fmt.Errorf("expected *dst.ValueSpec, got %T", ctx.Node())
 	}
 
-	expr, err := a.template.CompileExpression(ctx)
+	expr, err := a.Template.CompileExpression(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -43,15 +43,11 @@ func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
 }
 
 func (a *assignValue) AddedImports() []string {
-	return a.template.AddedImports()
+	return a.Template.AddedImports()
 }
 
 func (a *assignValue) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AssignValue").Call(a.template.AsCode())
-}
-
-func (a *assignValue) RenderHTML() string {
-	return fmt.Sprintf(`<div class="advice assign-value"><div class="type">Set initial value to:</div>%s</div>`, a.template.RenderHTML())
+	return jen.Qual(pkgPath, "AssignValue").Call(a.Template.AsCode())
 }
 
 func init() {
