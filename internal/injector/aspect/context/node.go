@@ -21,7 +21,7 @@ type NodeChain struct {
 	index  int
 }
 
-var pool = sync.Pool{New: func() any { return &NodeChain{} }}
+var chainPool = sync.Pool{New: func() any { return new(NodeChain) }}
 
 // Child creates a new [NodeChain] that represents the node pointed to by the provided
 // [dstutil.Cursor]. The cursor's parent must match the receiver. Values returned by
@@ -32,11 +32,13 @@ func (n *NodeChain) Child(cursor *dstutil.Cursor) *NodeChain {
 		panic("cursor does not point to a child of this node")
 	}
 
-	c, _ := pool.Get().(*NodeChain)
-	c.parent = n
-	c.node = cursor.Node()
-	c.name = cursor.Name()
-	c.index = cursor.Index()
+	c, _ := chainPool.Get().(*NodeChain)
+	*c = NodeChain{
+		parent: n,
+		node:   cursor.Node(),
+		name:   cursor.Name(),
+		index:  cursor.Index(),
+	}
 
 	return c
 }
@@ -46,7 +48,7 @@ func (n *NodeChain) Child(cursor *dstutil.Cursor) *NodeChain {
 // very short-lived.
 func (n *NodeChain) Release() {
 	*n = NodeChain{} // Zero it off
-	pool.Put(n)
+	chainPool.Put(n)
 }
 
 func (n *NodeChain) SetConfig(val map[string]string) {

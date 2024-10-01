@@ -24,22 +24,26 @@ func Directive(name string) directive {
 }
 
 func (d directive) Matches(ctx context.AspectContext) bool {
-	for _, dec := range ctx.Node().Decorations().Start.All() {
+	return d.matchesChain(ctx.Chain())
+}
+
+func (d directive) matchesChain(chain *context.NodeChain) bool {
+	for _, dec := range chain.Node().Decorations().Start.All() {
 		if d.matches(dec) {
 			return true
 		}
 	}
 
 	// If this is a spec (variable, const, import), so we need to also check the parent for directives!
-	if _, isSpec := ctx.Node().(dst.Spec); isSpec {
-		if parent := ctx.Parent(); parent != nil && d.Matches(parent) {
+	if _, isSpec := chain.Node().(dst.Spec); isSpec {
+		if parent := chain.Parent(); parent != nil && d.matchesChain(parent) {
 			return true
 		}
 	}
 
 	// If the parent is an assignment statement, so we also check it for directives.
-	if parent := ctx.Parent(); parent != nil {
-		if _, isAssign := parent.Node().(*dst.AssignStmt); isAssign && d.Matches(parent) {
+	if parent := chain.Parent(); parent != nil {
+		if _, isAssign := parent.Node().(*dst.AssignStmt); isAssign && d.matchesChain(parent) {
 			return true
 		}
 	}

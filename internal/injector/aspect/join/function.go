@@ -374,11 +374,16 @@ func (s *funcBody) ImpliesImported() []string {
 }
 
 func (s *funcBody) Matches(ctx context.AspectContext) bool {
-	if parent := ctx.Parent(); parent == nil || !s.up.Matches(parent) {
+	parent := ctx.Parent()
+	if parent == nil {
+		return false
+	}
+	defer parent.Release()
+	if !s.up.Matches(parent) {
 		return false
 	}
 
-	switch parent := ctx.Parent().Node().(type) {
+	switch parent := parent.Node().(type) {
 	case *dst.FuncDecl:
 		return ctx.Node() == parent.Body
 	case *dst.FuncLit:

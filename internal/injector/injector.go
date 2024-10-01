@@ -195,13 +195,15 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		}()
 
 		var changed bool
-		changed, err = i.injectNode(chain.Context(
+		ctx := chain.Context(
 			csor,
 			decorator.Path,
 			file,
 			&references,
 			decorator,
-		))
+		)
+		defer ctx.Release()
+		changed, err = i.injectNode(ctx)
 		modified = modified || changed
 
 		return err == nil
