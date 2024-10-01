@@ -28,7 +28,7 @@ type TestCase struct {
 	server *handler.Server
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(*testing.T) {
 	schema := gqlparser.MustLoadSchema(&ast.Source{Input: `
 		type Query {
 			topLevel(id: String!): TopLevel!
@@ -75,7 +75,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	}, resp)
 }
 
-func (tc *TestCase) Teardown(*testing.T) {}
+func (*TestCase) Teardown(*testing.T) {}
 
 func (*TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
@@ -163,7 +163,7 @@ func execFunc(ctx context.Context) graphql.ResponseHandler {
 
 			for _, field := range fields {
 				ctx := graphql.WithFieldContext(ctx, &graphql.FieldContext{Object: "Query", Field: field, Args: field.ArgumentMap(op.Variables)})
-				fieldVal, err := op.ResolverMiddleware(ctx, func(ctx context.Context) (any, error) {
+				fieldVal, err := op.ResolverMiddleware(ctx, func(context.Context) (any, error) {
 					switch field.Name {
 					case "topLevel":
 						arg := field.Arguments.ForName("id")
@@ -181,7 +181,7 @@ func execFunc(ctx context.Context) graphql.ResponseHandler {
 				redux := make(map[string]any, len(field.SelectionSet))
 				for _, nested := range graphql.CollectFields(op, field.SelectionSet, []string{"TopLevel"}) {
 					ctx := graphql.WithFieldContext(ctx, &graphql.FieldContext{Object: "TopLevel", Field: nested, Args: nested.ArgumentMap(op.Variables)})
-					nestedVal, err := op.ResolverMiddleware(ctx, func(ctx context.Context) (any, error) {
+					nestedVal, err := op.ResolverMiddleware(ctx, func(context.Context) (any, error) {
 						switch nested.Name {
 						case "nested":
 							arg := nested.Arguments.ForName("id")

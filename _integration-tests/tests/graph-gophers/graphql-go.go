@@ -67,7 +67,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.Equal(t, "Hello, world!", res.Data.Hello)
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {
+func (tc *TestCase) Teardown(*testing.T) {
 	tc.server.Close()
 }
 

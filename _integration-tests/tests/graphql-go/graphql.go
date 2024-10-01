@@ -34,7 +34,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 				"hello": &graphql.Field{
 					Name: "hello",
 					Type: graphql.NewNonNull(graphql.String),
-					Resolve: func(p graphql.ResolveParams) (any, error) {
+					Resolve: func(graphql.ResolveParams) (any, error) {
 						return "Hello, world!", nil
 					},
 				},
@@ -67,7 +67,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.Equal(t, "Hello, world!", res.Data.Hello)
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {
+func (tc *TestCase) Teardown(*testing.T) {
 	tc.server.Close()
 }
 
