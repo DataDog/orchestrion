@@ -54,35 +54,21 @@ func RunTest(t *testing.T, tc TestCase) {
 	t.Helper()
 	require.True(t, orchestrionEnabled, "this test suite must be run with orchestrion enabled")
 
-	mockAgent, err := agent.New(t)
-	require.NoError(t, err)
-	defer mockAgent.Close()
+	mockAgent := agent.New(t)
 
 	t.Log("Running setup")
 	tc.Setup(t)
-
 	defer func() {
 		t.Log("Running teardown")
 		tc.Teardown(t)
 	}()
 
-	sess, err := mockAgent.NewSession(t)
-	require.NoError(t, err)
+	mockAgent.Start(t)
 
 	t.Log("Running test")
 	tc.Run(t)
 
-	checkTraces(t, tc, sess)
-}
-
-func checkTraces(t *testing.T, tc TestCase, sess *agent.Session) {
-	t.Helper()
-
-	jsonTraces, err := sess.Close(t)
-	require.NoError(t, err)
-
-	var got trace.Traces
-	require.NoError(t, trace.ParseRaw(jsonTraces, &got))
+	got := mockAgent.Traces(t)
 	t.Logf("Received %d traces", len(got))
 	for i, tr := range got {
 		t.Logf("[%d] Trace contains a total of %d spans:\n%v", i, tr.NumSpans(), tr)

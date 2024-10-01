@@ -11,7 +11,7 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
@@ -39,9 +39,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server, err = testmongo.Run(ctx,
 		"mongo:6",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	mongoURI, err := tc.server.ConnectionString(ctx)
 	if err != nil {

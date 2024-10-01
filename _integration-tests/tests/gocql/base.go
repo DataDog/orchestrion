@@ -10,6 +10,7 @@ package gocql
 import (
 	"context"
 	"net"
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
 	"testing"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	testcassandra "github.com/testcontainers/testcontainers-go/modules/cassandra"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
-	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
 )
 
@@ -38,9 +38,9 @@ func (b *base) setup(t *testing.T) {
 	b.container, err = testcassandra.Run(ctx,
 		"cassandra:4.1",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
+		testcontainersutils.WithTestLogConsumer(t),
 	)
-	utils.AssertTestContainersError(t, err)
+	testcontainersutils.AssertTestContainersError(t, err)
 
 	b.hostPort, err = b.container.ConnectionHost(ctx)
 	require.NoError(t, err)

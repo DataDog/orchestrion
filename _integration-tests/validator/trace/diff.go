@@ -43,8 +43,8 @@ func (tr *Trace) matchesAny(others []*Trace, diff treeprint.Tree) (*Trace, Diff)
 
 	for idx, other := range others {
 		id := fmt.Sprintf("Trace at index %d", idx)
-		if other.ID != 0 {
-			id = fmt.Sprintf("Span ID %d", other.ID)
+		if other.SpanID != 0 {
+			id = fmt.Sprintf("Span ID %d", other.SpanID)
 		}
 		branch := diff.AddMetaBranch(markerChanged, id)
 		if tr.matches(other, branch) {
@@ -57,11 +57,12 @@ func (tr *Trace) matchesAny(others []*Trace, diff treeprint.Tree) (*Trace, Diff)
 // macthes determines whether the receiving span matches the other span, and
 // adds difference information to the provided diff tree.
 func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
+	span := tr
 	matches = true
 
-	keys := make([]string, 0, len(tr.Tags))
+	keys := make([]string, 0, len(span.Tags))
 	maxLen := 1
-	for key := range tr.Tags {
+	for key := range span.Tags {
 		keys = append(keys, key)
 		if len := len(key); len > maxLen {
 			maxLen = len
@@ -69,7 +70,7 @@ func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
 	}
 	sort.Strings(keys)
 	for _, tag := range keys {
-		expected := tr.Tags[tag]
+		expected := span.Tags[tag]
 		actual := other.Tags[tag]
 		if expected != actual && (tag != "service" || fmt.Sprintf("%s.exe", expected) != actual) {
 			branch := diff.AddMetaBranch(markerChanged, tag)
@@ -81,9 +82,9 @@ func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
 		}
 	}
 
-	keys = make([]string, 0, len(tr.Meta))
+	keys = make([]string, 0, len(span.Meta))
 	maxLen = 1
-	for key := range tr.Meta {
+	for key := range span.Meta {
 		keys = append(keys, key)
 		if len := len(key); len > maxLen {
 			maxLen = len
@@ -92,7 +93,7 @@ func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
 	sort.Strings(keys)
 	var metaNode treeprint.Tree
 	for _, key := range keys {
-		expected := tr.Meta[key]
+		expected := span.Meta[key]
 		actual, actualExists := other.Meta[key]
 		if metaNode == nil {
 			metaNode = diff.AddBranch("meta")
@@ -123,9 +124,10 @@ func (tr *Trace) matches(other *Trace, diff treeprint.Tree) (matches bool) {
 			continue
 		}
 
-		if span, childDiff := child.matchesAny(other.Children, treeprint.New()); span != nil {
-			if span.ID != 0 {
-				nodeName = fmt.Sprintf("Span #%d", span.ID)
+		if tr, childDiff := child.matchesAny(other.Children, treeprint.New()); tr != nil {
+			span := tr
+			if span.SpanID != 0 {
+				nodeName = fmt.Sprintf("Span #%d", span.SpanID)
 			}
 			child.into(childrenNode.AddMetaBranch(markerEqual, nodeName))
 		} else {

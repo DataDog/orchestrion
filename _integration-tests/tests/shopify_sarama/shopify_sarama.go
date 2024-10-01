@@ -9,16 +9,16 @@ package shopify_sarama
 
 import (
 	"context"
-	"orchestrion/integration/utils"
 	"testing"
 	"time"
-
-	"orchestrion/integration/validator/trace"
 
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
+
+	testcontainersutils "orchestrion/integration/utils/testcontainers"
+	"orchestrion/integration/validator/trace"
 )
 
 const (
@@ -37,7 +37,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.cfg.Version = sarama.V0_11_0_0
 	tc.cfg.Producer.Return.Successes = true
 
-	container, addr := utils.StartKafkaTestContainer(t)
+	container, addr := testcontainersutils.StartKafkaTestContainer(t)
 	tc.server = container
 	tc.addrs = []string{addr}
 }
