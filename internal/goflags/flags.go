@@ -15,9 +15,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/datadog/orchestrion/internal/goenv"
-	"github.com/datadog/orchestrion/internal/goflags/quoted"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/goflags/quoted"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/tools/go/packages"
 )

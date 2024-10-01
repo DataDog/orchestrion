@@ -14,13 +14,13 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/version"
 	"golang.org/x/tools/go/packages"
 )
 
 const (
-	orchestrionPkgPath    = "github.com/datadog/orchestrion"
+	orchestrionPkgPath    = "github.com/DataDog/orchestrion"
 	envVarRespawnedFor    = "DD_ORCHESTRION_RESPAWNED_FOR"
 	envVarStartupVersion  = "DD_ORCHESTRION_STARTUP_VERSION"
 	envValRespawnReplaced = "<replaced>"
@@ -123,7 +123,7 @@ func requiredVersion(
 	return syscallExec(goBin, args, env)
 }
 
-// goModVersion returns the version and path of the "github.com/datadog/orchestrion" module that is
+// goModVersion returns the version and path of the "github.com/DataDog/orchestrion" module that is
 // required in the specified directory's "go.mod" file. If dir is blank, the process' current
 // working directory is used. The version may be blank if a replace directive is in effect; in which
 // case the path value may indicate the location of the source code that is being used instead.

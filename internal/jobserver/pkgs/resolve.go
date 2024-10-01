@@ -14,8 +14,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/log"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -139,7 +139,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 			return nil, err
 		}
 
-		var resp ResolveResponse
+		resp := make(ResolveResponse)
 		for _, pkg := range pkgs {
 			resp.mergeFrom(pkg)
 		}
@@ -150,16 +150,6 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	}
 
 	return resp, nil
-}
-
-func hashArray(items []string) string {
-	h := sha512.New512_224()
-
-	for idx, item := range items {
-		_, _ = fmt.Fprintf(h, "\x01%d\x02%s\x03", idx, item)
-	}
-
-	return base64.URLEncoding.EncodeToString(h.Sum(nil))
 }
 
 func (r *ResolveRequest) canonicalize() {
@@ -186,15 +176,14 @@ func (r *ResolveRequest) hash() (string, error) {
 	return base64.URLEncoding.EncodeToString(hash.Sum(sum[:0])), nil
 }
 
-func (r *ResolveResponse) mergeFrom(pkg *packages.Package) {
-	if pkg.PkgPath == "" || pkg.PkgPath == "unsafe" {
+func (r ResolveResponse) mergeFrom(pkg *packages.Package) {
+	if pkg.PkgPath == "" || pkg.PkgPath == "unsafe" || r[pkg.PkgPath] != "" {
+		// Ignore the "unsafe" package (no archive file, ever), packages with an empty import path
+		// (standard library), and those already present in the map (already processed previously).
 		return
 	}
-	if *r == nil {
-		*r = make(ResolveResponse)
-	}
-	(*r)[pkg.PkgPath] = pkg.ExportFile
 
+	r[pkg.PkgPath] = pkg.ExportFile
 	for _, dep := range pkg.Imports {
 		r.mergeFrom(dep)
 	}

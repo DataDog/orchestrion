@@ -12,11 +12,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/jobserver"
-	"github.com/datadog/orchestrion/internal/jobserver/buildid"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/log"
-	"github.com/datadog/orchestrion/internal/toolexec/proxy"
+	"github.com/DataDog/orchestrion/internal/jobserver"
+	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 )
 
 // ComputeVersion returns the complete version string to be produced when the toolexec is invoked

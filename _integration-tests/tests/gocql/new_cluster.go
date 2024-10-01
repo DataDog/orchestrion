@@ -37,6 +37,6 @@ func (tc *TestCaseNewCluster) Teardown(t *testing.T) {
 	tc.base.teardown(t)
 }
 
-func (tc *TestCaseNewCluster) ExpectedTraces() trace.Spans {
-	return tc.base.expectedSpans()
+func (tc *TestCaseNewCluster) ExpectedTraces() trace.Traces {
+	return tc.base.expectedTraces()
 }

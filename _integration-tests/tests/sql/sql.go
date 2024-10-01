@@ -58,8 +58,8 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.DB.Close())
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"resource": "INSERT INTO notes (userid, content, created) VALUES (?, ?, datetime('now'));",
@@ -67,7 +67,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 				"name":     "sqlite3.query",
 				"service":  "sqlite3.db",
 			},
-			Meta: map[string]any{
+			Meta: map[string]string{
 				"component":      "database/sql",
 				"span.kind":      "client",
 				"sql.query_type": "Exec",

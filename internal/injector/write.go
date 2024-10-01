@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/datadog/orchestrion/internal/injector/lineinfo"
+	"github.com/DataDog/orchestrion/internal/injector/lineinfo"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 )

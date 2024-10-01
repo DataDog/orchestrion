@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/datadog/orchestrion/internal/injector/basiclit"
+	"github.com/DataDog/orchestrion/internal/injector/basiclit"
 	"github.com/dave/dst"
 )
 

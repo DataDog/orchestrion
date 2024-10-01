@@ -8,14 +8,14 @@ aspects:
     advice:
       - wrap-expression:
           imports:
-            instrument: github.com/datadog/orchestrion/instrument
+            instrument: github.com/DataDog/orchestrion/instrument
           template: |-
             //dd:startwrap
             instrument.WrapHandler({{ . }})
             //dd:endwrap
 
 syntheticReferences:
-  github.com/datadog/orchestrion/instrument: true
+  github.com/DataDog/orchestrion/instrument: true
 
 code: |-
   package main

@@ -36,12 +36,12 @@ jobs:
     name: Integration Smoke Tests
     steps:
       - name: Checkout orchestrion
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4
         with:
           path: orchestrion
           repository: DataDog/orchestrion
       - name: Checkout dd-trace-go
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4
         with:
           path: dd-trace-go
           repository: DataDog/dd-trace-go
@@ -68,4 +68,4 @@ jobs:
           cd orchestrion/_integration-tests
           ./orchestrion.exe go mod edit -replace=gopkg.in/DataDog/dd-trace-go.v1=../../dd-trace-go
           ./orchestrion.exe go mod tidy
-          ./orchestrion.exe go test -v -tags=integration,buildtag -shuffle=on ./...
+          ./orchestrion.exe go test -tags=integration,buildtag -shuffle=on ./...

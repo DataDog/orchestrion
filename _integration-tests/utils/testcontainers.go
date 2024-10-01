@@ -7,6 +7,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -26,7 +28,6 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 			Image:        "amazon/dynamodb-local:latest",
 			ExposedPorts: []string{exposedPort},
 			WaitingFor:   wait.ForHTTP("").WithStatusCodeMatcher(func(int) bool { return true }),
-			Name:         "dynamodb-local",
 			WorkingDir:   "/home/dynamodblocal",
 			Cmd: []string{
 				"-jar", "DynamoDBLocal.jar",
@@ -52,6 +53,26 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 	require.NoError(t, err)
 
 	return server, host, mappedPort.Port()
+}
+
+func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
+	ctx := context.Background()
+	exposedPort := "9093/tcp"
+
+	container, err := kafka.Run(ctx,
+		"confluentinc/confluent-local:7.5.0",
+		kafka.WithClusterID("test-cluster"),
+	)
+	AssertTestContainersError(t, err)
+
+	mappedPort, err := container.MappedPort(ctx, nat.Port(exposedPort))
+	require.NoError(t, err)
+
+	host, err := container.Host(ctx)
+	require.NoError(t, err)
+
+	addr := fmt.Sprintf("%s:%s", host, mappedPort.Port())
+	return container, addr
 }
 
 // AssertTestContainersError decides whether the provided testcontainers error should make the test fail or mark it as

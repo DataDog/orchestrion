@@ -11,9 +11,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/datadog/orchestrion/internal/jobserver"
-	"github.com/datadog/orchestrion/internal/jobserver/client"
-	"github.com/datadog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/jobserver"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/stretchr/testify/require"
 )
 

@@ -13,4 +13,4 @@
 
 package tools
 
-import _ "github.com/datadog/orchestrion"
+import _ "github.com/DataDog/orchestrion"

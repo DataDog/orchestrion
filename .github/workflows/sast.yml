@@ -30,17 +30,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@8214744c546c1e5c8f03dde8fab3a7353211988d # v3
+        uses: github/codeql-action/init@e2b3eafc8d227b0241d48be5f425d47c2d750a13 # v3
         with:
           languages: go
           build-mode: autobuild
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@8214744c546c1e5c8f03dde8fab3a7353211988d # v3
+        uses: github/codeql-action/analyze@e2b3eafc8d227b0241d48be5f425d47c2d750a13 # v3
         with:
           category: "/language:go"
           # Currently, the upload fails for merge group checks, but still run the checks...

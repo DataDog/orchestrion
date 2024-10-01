@@ -52,14 +52,14 @@ func (b *base) run(t *testing.T) {
 	require.EqualError(t, err, "serializer for text/plain; charset=utf-8 doesn't exist")
 }
 
-func (b *base) expectedSpans() trace.Spans {
-	httpServerSpan := &trace.Span{
+func (b *base) expectedTraces() trace.Traces {
+	httpServerSpan := &trace.Trace{
 		Tags: map[string]any{
 			"name":     "http.request",
 			"resource": "GET /api/v1/namespaces",
 			"type":     "web",
 		},
-		Meta: map[string]any{
+		Meta: map[string]string{
 			"component":        "net/http",
 			"span.kind":        "server",
 			"http.useragent":   rest.DefaultKubernetesUserAgent(),
@@ -69,13 +69,13 @@ func (b *base) expectedSpans() trace.Spans {
 			"http.method":      "GET",
 		},
 	}
-	httpClientSpan := &trace.Span{
+	httpClientSpan := &trace.Trace{
 		Tags: map[string]any{
 			"name":     "http.request",
 			"resource": "GET /api/v1/namespaces",
 			"type":     "http",
 		},
-		Meta: map[string]any{
+		Meta: map[string]string{
 			"component":                "net/http",
 			"span.kind":                "client",
 			"network.destination.name": "127.0.0.1",
@@ -83,19 +83,19 @@ func (b *base) expectedSpans() trace.Spans {
 			"http.method":              "GET",
 			"http.url":                 fmt.Sprintf("%s/api/v1/namespaces", b.server.URL),
 		},
-		Children: trace.Spans{httpServerSpan},
+		Children: trace.Traces{httpServerSpan},
 	}
-	k8sClientSpan := &trace.Span{
+	k8sClientSpan := &trace.Trace{
 		Tags: map[string]any{
 			"name":     "http.request",
 			"resource": "GET namespaces",
 			"type":     "http",
 		},
-		Meta: map[string]any{
+		Meta: map[string]string{
 			"component": "k8s.io/client-go/kubernetes",
 			"span.kind": "client",
 		},
-		Children: trace.Spans{httpClientSpan},
+		Children: trace.Traces{httpClientSpan},
 	}
-	return trace.Spans{k8sClientSpan}
+	return trace.Traces{k8sClientSpan}
 }

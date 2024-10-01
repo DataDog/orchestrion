@@ -70,13 +70,13 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.server.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
 			Tags: map[string]any{
 				"name": "test.root",
 			},
-			Children: trace.Spans{
+			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
@@ -84,7 +84,7 @@ func (*TestCase) ExpectedTraces() trace.Spans {
 						"resource": "GET /v1/secret/key",
 						"type":     "http",
 					},
-					Meta: map[string]any{
+					Meta: map[string]string{
 						"http.method": "GET",
 						"http.url":    "/v1/secret/key",
 						"span.kind":   "client",

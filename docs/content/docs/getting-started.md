@@ -32,7 +32,7 @@ This is achieved using the following steps:
 ### Step 1
 Install Orchestrion in your environment:
 ```console
-$ go install github.com/datadog/orchestrion@latest
+$ go install github.com/DataDog/orchestrion@latest
 ```
 
 If necessary, also add the `GOBIN` directory to your `PATH`:
