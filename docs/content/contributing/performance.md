@@ -40,3 +40,16 @@ compiled, and should typically be safe for users to share with maintainers. When
 investigating customer performance issues that cannot be reproduced (e.g,
 because there is no simple reproduction and their code is private), consider
 asking customers to submit both a `cpu` and `heap` profile for investigation.
+
+## `go tool pprof`
+
+For more information on how to use `go tool pprof`, you may refer to the
+following resources:
+
+- [The `pprof` documentation][pprof]
+- [Profiling Go Programs][go-prof] on the _Go Blog_
+- [Profiling Go programs with pprof][jvns] by _Julia Evans_
+
+[pprof]: https://github.com/google/pprof/blob/main/doc/README.md
+[go-prof]: https://go.dev/blog/pprof
+[jvns]: https://jvns.ca/blog/2017/09/24/profiling-go-with-pprof/
