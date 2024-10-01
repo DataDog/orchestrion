@@ -16,11 +16,11 @@ import (
 )
 
 type wrapExpression struct {
-	template code.Template
+	Template code.Template
 }
 
 func WrapExpression(template code.Template) *wrapExpression {
-	return &wrapExpression{template: template}
+	return &wrapExpression{Template: template}
 }
 
 func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
@@ -35,7 +35,7 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", ctx.Node())
 	}
 
-	repl, err := a.template.CompileExpression(ctx)
+	repl, err := a.Template.CompileExpression(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -50,15 +50,11 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 }
 
 func (a *wrapExpression) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "WrapExpression").Call(a.template.AsCode())
+	return jen.Qual(pkgPath, "WrapExpression").Call(a.Template.AsCode())
 }
 
 func (a *wrapExpression) AddedImports() []string {
-	return a.template.AddedImports()
-}
-
-func (a *wrapExpression) RenderHTML() string {
-	return fmt.Sprintf(`<div class="advice wrap-expression"><div class="type">Replace the expression using the template:</div>%s</div>`, a.template.RenderHTML())
+	return a.Template.AddedImports()
 }
 
 func init() {

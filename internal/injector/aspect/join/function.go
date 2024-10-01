@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/code"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -26,31 +25,32 @@ type (
 	}
 
 	FunctionOption interface {
-		code.AsCode
+		// asCode produces a jen.Code representation of the receiver.
+		asCode() jen.Code
+
 		impliesImported() []string
 		evaluate(*functionInformation) bool
-		toHTML() string
 	}
 
-	funcDecl struct {
-		opts []FunctionOption
+	functionDeclaration struct {
+		Options []FunctionOption
 	}
 )
 
 // Function matches function declaration nodes based on properties of
 // their signature.
-func Function(opts ...FunctionOption) *funcDecl {
-	return &funcDecl{opts: opts}
+func Function(opts ...FunctionOption) *functionDeclaration {
+	return &functionDeclaration{Options: opts}
 }
 
-func (s *funcDecl) ImpliesImported() (list []string) {
-	for _, opt := range s.opts {
+func (s *functionDeclaration) ImpliesImported() (list []string) {
+	for _, opt := range s.Options {
 		list = append(list, opt.impliesImported()...)
 	}
 	return
 }
 
-func (s *funcDecl) Matches(ctx context.AspectContext) bool {
+func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
 	info := functionInformation{
 		ImportPath:  ctx.ImportPath(),
 		Decorations: []*dst.NodeDecs{ctx.Node().Decorations()},
@@ -73,7 +73,7 @@ func (s *funcDecl) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	for _, opt := range s.opts {
+	for _, opt := range s.Options {
 		if !opt.evaluate(&info) {
 			return false
 		}
@@ -82,75 +82,51 @@ func (s *funcDecl) Matches(ctx context.AspectContext) bool {
 	return true
 }
 
-func (s *funcDecl) AsCode() jen.Code {
+func (s *functionDeclaration) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Function").CallFunc(func(g *jen.Group) {
-		for _, opt := range s.opts {
-			g.Line().Add(opt.AsCode())
+		for _, opt := range s.Options {
+			g.Line().Add(opt.asCode())
 		}
 		g.Empty().Line()
 	})
 }
 
-func (s *funcDecl) RenderHTML() string {
-	var buf strings.Builder
-
-	_, _ = buf.WriteString("<div class=\"join-point function-declaratop,\">\n")
-	_, _ = buf.WriteString("  <span class=\"type pill\">Function declaration</span>\n")
-	_, _ = buf.WriteString("  <ul>\n")
-	for _, opt := range s.opts {
-		_, _ = buf.WriteString("    <li>\n")
-		_, _ = buf.WriteString(opt.toHTML())
-		_, _ = buf.WriteString("    </li>\n")
-	}
-	_, _ = buf.WriteString("  </ul>\n")
-	_, _ = buf.WriteString("</div>\n")
-
-	return buf.String()
-}
-
-type funcName string
+type functionName string
 
 func Name(name string) FunctionOption {
-	return funcName(name)
+	return functionName(name)
 }
 
-func (funcName) impliesImported() []string {
+func (functionName) impliesImported() []string {
 	return nil
 }
 
-func (fo funcName) evaluate(info *functionInformation) bool {
+func (fo functionName) evaluate(info *functionInformation) bool {
 	return info.Name == string(fo)
 }
 
-func (fo funcName) AsCode() jen.Code {
+func (fo functionName) asCode() jen.Code {
 	return jen.Qual(pkgPath, "Name").Call(jen.Lit(string(fo)))
 }
 
-func (fo funcName) toHTML() string {
-	if fo == "" {
-		return "<div class=\"join-point function-option fo-name\"><span class=\"type pill\">Function literal expression</span></div>"
-	}
-	return fmt.Sprintf("<div class=\"join-point flex function-option fo-name\"><span class=\"type\">Function name</span><code>%s</code></div>", string(fo))
-}
-
 type signature struct {
-	args    []TypeName
-	returns []TypeName
+	Arguments []TypeName
+	Results   []TypeName
 }
 
 // Signature matches function declarations based on their arguments and return
 // value types.
 func Signature(args []TypeName, ret []TypeName) FunctionOption {
-	return &signature{args: args, returns: ret}
+	return &signature{Arguments: args, Results: ret}
 }
 
 func (fo *signature) impliesImported() (list []string) {
-	for _, tn := range fo.args {
+	for _, tn := range fo.Arguments {
 		if path := tn.ImportPath(); path != "" {
 			list = append(list, path)
 		}
 	}
-	for _, tn := range fo.returns {
+	for _, tn := range fo.Results {
 		if path := tn.ImportPath(); path != "" {
 			list = append(list, path)
 		}
@@ -160,28 +136,28 @@ func (fo *signature) impliesImported() (list []string) {
 
 func (fo *signature) evaluate(info *functionInformation) bool {
 	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
-		if len(fo.returns) != 0 {
+		if len(fo.Results) != 0 {
 			return false
 		}
-	} else if len(info.Type.Results.List) != len(fo.returns) {
+	} else if len(info.Type.Results.List) != len(fo.Results) {
 		return false
 	} else {
-		for i := 0; i < len(fo.returns); i++ {
-			if !fo.returns[i].Matches(info.Type.Results.List[i].Type) {
+		for i := 0; i < len(fo.Results); i++ {
+			if !fo.Results[i].Matches(info.Type.Results.List[i].Type) {
 				return false
 			}
 		}
 	}
 
 	if info.Type.Params == nil || len(info.Type.Params.List) == 0 {
-		if len(fo.args) != 0 {
+		if len(fo.Arguments) != 0 {
 			return false
 		}
-	} else if len(info.Type.Params.List) != len(fo.args) {
+	} else if len(info.Type.Params.List) != len(fo.Arguments) {
 		return false
 	} else {
-		for i := 0; i < len(fo.args); i++ {
-			if !fo.args[i].Matches(info.Type.Params.List[i].Type) {
+		for i := 0; i < len(fo.Arguments); i++ {
+			if !fo.Arguments[i].Matches(info.Type.Params.List[i].Type) {
 				return false
 			}
 		}
@@ -190,20 +166,20 @@ func (fo *signature) evaluate(info *functionInformation) bool {
 	return true
 }
 
-func (fo *signature) AsCode() jen.Code {
+func (fo *signature) asCode() jen.Code {
 	return jen.Qual(pkgPath, "Signature").CallFunc(func(g *jen.Group) {
-		if len(fo.args) > 0 {
+		if len(fo.Arguments) > 0 {
 			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
-				for _, arg := range fo.args {
+				for _, arg := range fo.Arguments {
 					g.Add(arg.AsCode())
 				}
 			})
 		} else {
 			g.Line().Nil()
 		}
-		if len(fo.returns) > 0 {
+		if len(fo.Results) > 0 {
 			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
-				for _, ret := range fo.returns {
+				for _, ret := range fo.Results {
 					g.Add(ret.AsCode())
 				}
 			})
@@ -214,134 +190,8 @@ func (fo *signature) AsCode() jen.Code {
 	})
 }
 
-func (fo *signature) toHTML() string {
-	var buf strings.Builder
-
-	_, _ = buf.WriteString("<div class=\"join-point function-option fo-signature\">\n")
-	_, _ = buf.WriteString("  <span class=\"type pill\">Signature matches</span>\n")
-	_, _ = buf.WriteString("<ul>\n")
-
-	if len(fo.args) > 0 {
-		_, _ = buf.WriteString("    <li>\n")
-		_, _ = buf.WriteString("      <span class=\"type pill\">Arguments</span>\n")
-		_, _ = buf.WriteString("      <ol>\n")
-		for _, arg := range fo.args {
-			_, _ = buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
-			_, _ = buf.WriteString(arg.RenderHTML())
-			_, _ = buf.WriteString("        </li>\n")
-		}
-		_, _ = buf.WriteString("      </ol>\n")
-		_, _ = buf.WriteString("    </li>\n")
-	} else {
-		_, _ = buf.WriteString("    <li class=\"flex\"><span class=\"type\">Arguments</span><span class=\"value\">None</span></li>\n")
-	}
-
-	if len(fo.returns) > 0 {
-		_, _ = buf.WriteString("    <li>\n")
-		_, _ = buf.WriteString("      <span class=\"type pill\">Return Values</span>\n")
-		_, _ = buf.WriteString("      <ol>\n")
-		for _, arg := range fo.returns {
-			_, _ = buf.WriteString("        <li class=\"flex\"><span class=\"id\"></span>\n")
-			_, _ = buf.WriteString(arg.RenderHTML())
-			_, _ = buf.WriteString("        </li>\n")
-		}
-		_, _ = buf.WriteString("      </ol>\n")
-		_, _ = buf.WriteString("    </li>\n")
-	} else {
-		_, _ = buf.WriteString("    <li class=\"flex\"><span class=\"type\">Return Values</span><span class=\"value\">None</span></li>\n")
-	}
-
-	_, _ = buf.WriteString("</ul>\n")
-	_, _ = buf.WriteString("</div>\n")
-
-	return buf.String()
-}
-
-type oneOfFunctions []FunctionOption
-
-func OneOfFunctions(opts ...FunctionOption) oneOfFunctions {
-	return oneOfFunctions(opts)
-}
-
-func (fo oneOfFunctions) impliesImported() (list []string) {
-	// We can only assume a package is imported if all candidates imply it.
-	counts := make(map[string]uint)
-	for _, opt := range fo {
-		for _, path := range opt.impliesImported() {
-			counts[path]++
-		}
-	}
-
-	total := uint(len(fo))
-	list = make([]string, 0, len(counts))
-	for path, count := range counts {
-		if count == total {
-			list = append(list, path)
-		}
-	}
-	return
-}
-
-func (fo oneOfFunctions) evaluate(info *functionInformation) bool {
-	for _, opt := range fo {
-		if opt.evaluate(info) {
-			return true
-		}
-	}
-	return false
-}
-
-func (fo oneOfFunctions) AsCode() jen.Code {
-	if len(fo) == 1 {
-		return (fo)[0].AsCode()
-	}
-
-	return jen.Qual(pkgPath, "OneOfFunctions").CallFunc(func(g *jen.Group) {
-		for _, opt := range fo {
-			g.Line().Add(opt.AsCode())
-		}
-		g.Line().Empty()
-	})
-}
-
-func (oneOfFunctions) toHTML() string {
-	return "one-of"
-}
-
-type receives struct {
-	typeName TypeName
-}
-
-func Receives(typeName TypeName) FunctionOption {
-	return &receives{typeName}
-}
-
-func (fo *receives) impliesImported() []string {
-	if path := fo.typeName.ImportPath(); path != "" {
-		return []string{path}
-	}
-	return nil
-}
-
-func (fo *receives) evaluate(info *functionInformation) bool {
-	for _, param := range info.Type.Params.List {
-		if fo.typeName.Matches(param.Type) {
-			return true
-		}
-	}
-	return false
-}
-
-func (fo *receives) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Receives").Call(fo.typeName.AsCode())
-}
-
-func (fo *receives) toHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point function-option fo-receives"><span class="type">Has parameter</span>%s</div>`, fo.typeName.RenderHTML())
-}
-
 type receiver struct {
-	typeName TypeName
+	TypeName TypeName
 }
 
 func Receiver(typeName TypeName) FunctionOption {
@@ -349,39 +199,35 @@ func Receiver(typeName TypeName) FunctionOption {
 }
 
 func (fo *receiver) evaluate(info *functionInformation) bool {
-	return info.Receiver != nil && fo.typeName.MatchesDefinition(info.Receiver, info.ImportPath)
+	return info.Receiver != nil && fo.TypeName.MatchesDefinition(info.Receiver, info.ImportPath)
 }
 
 func (*receiver) impliesImported() []string {
 	return nil
 }
 
-func (fo *receiver) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Receiver").Call(fo.typeName.AsCode())
+func (fo *receiver) asCode() jen.Code {
+	return jen.Qual(pkgPath, "Receiver").Call(fo.TypeName.AsCode())
 }
 
-func (fo *receiver) toHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point function-option fo-receiver"><span class="type">Is method of</span>%s</div>`, fo.typeName.RenderHTML())
-}
-
-type funcBody struct {
-	up Point
+type functionBody struct {
+	Function Point
 }
 
 // FunctionBody returns the *dst.BlockStmt of the matched *dst.FuncDecl body.
-func FunctionBody(up Point) *funcBody {
+func FunctionBody(up Point) *functionBody {
 	if up == nil {
 		panic("upstream FunctionDeclaration InjectionPoint cannot be nil")
 	}
-	return &funcBody{up: up}
+	return &functionBody{Function: up}
 }
 
-func (s *funcBody) ImpliesImported() []string {
-	return s.up.ImpliesImported()
+func (s *functionBody) ImpliesImported() []string {
+	return s.Function.ImpliesImported()
 }
 
-func (s *funcBody) Matches(ctx context.AspectContext) bool {
-	if parent := ctx.Parent(); parent == nil || !s.up.Matches(parent) {
+func (s *functionBody) Matches(ctx context.AspectContext) bool {
+	if parent := ctx.Parent(); parent == nil || !s.Function.Matches(parent) {
 		return false
 	}
 
@@ -395,12 +241,8 @@ func (s *funcBody) Matches(ctx context.AspectContext) bool {
 	}
 }
 
-func (s *funcBody) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "FunctionBody").Call(s.up.AsCode())
-}
-
-func (s *funcBody) RenderHTML() string {
-	return fmt.Sprintf(`<div class="join-point function-body"><span class="type pill">Function body</span><ul><li>%s</li></ul></div>`, s.up.RenderHTML())
+func (s *functionBody) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "FunctionBody").Call(s.Function.AsCode())
 }
 
 func init() {
@@ -450,16 +292,6 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		o.FunctionOption = Name(name)
-	case "one-of":
-		var opts []unmarshalFuncDeclOption
-		if err := node.Content[1].Decode(&opts); err != nil {
-			return err
-		}
-		matchers := make([]FunctionOption, len(opts))
-		for i, opt := range opts {
-			matchers[i] = opt.FunctionOption
-		}
-		o.FunctionOption = OneOfFunctions(matchers...)
 	case "receiver":
 		var arg string
 		if err := node.Content[1].Decode(&arg); err != nil {
@@ -470,16 +302,6 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		o.FunctionOption = Receiver(tn)
-	case "receives":
-		var arg string
-		if err := node.Content[1].Decode(&arg); err != nil {
-			return err
-		}
-		tn, err := NewTypeName(arg)
-		if err != nil {
-			return err
-		}
-		o.FunctionOption = Receives(tn)
 	case "signature":
 		var sig struct {
 			Args  []string             `yaml:"args"`

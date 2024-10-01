@@ -1,0 +1,11 @@
+<div class="join-point configuration">
+  <span class="type pill">Configuration</span>
+  <ul>{{ range $key, $value := . }}
+    <li class="flex">
+      <span class="type">{{ $key }}</span>
+      <code>
+        {{ $value }}
+      </code>
+    </li>
+  {{ end }}</ul>
+</div>
