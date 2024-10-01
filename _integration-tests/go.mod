@@ -6,6 +6,7 @@ replace github.com/DataDog/orchestrion => ../
 
 require (
 	cloud.google.com/go/pubsub v1.42.0
+	github.com/99designs/gqlgen v0.17.36
 	github.com/DataDog/orchestrion v0.7.4
 	github.com/IBM/sarama v1.43.3
 	github.com/Shopify/sarama v1.38.1
@@ -25,6 +26,9 @@ require (
 	github.com/gomodule/redigo v1.9.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
+	github.com/graph-gophers/graphql-go v1.5.0
+	github.com/graphql-go/graphql v0.8.1
+	github.com/graphql-go/handler v0.2.3
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
@@ -38,6 +42,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
+	github.com/vektah/gqlparser/v2 v2.5.16
 	github.com/xlab/treeprint v1.2.0
 	go.mongodb.org/mongo-driver v1.16.1
 	google.golang.org/api v0.194.0
@@ -81,6 +86,7 @@ require (
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/aclements/go-moremath v0.0.0-20210112150236-f10218a38794 // indirect
+	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect

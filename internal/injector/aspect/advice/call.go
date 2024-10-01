@@ -108,7 +108,9 @@ func (a *appendArgs) AsCode() jen.Code {
 
 func (a *appendArgs) AddedImports() []string {
 	imports := make([]string, 0, len(a.templates)+1)
-	imports = append(imports, a.typeName.ImportPath())
+	if argTypeImportPath := a.typeName.ImportPath(); argTypeImportPath != "" {
+		imports = append(imports, argTypeImportPath)
+	}
 	for _, t := range a.templates {
 		imports = append(imports, t.AddedImports()...)
 	}

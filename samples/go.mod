@@ -5,6 +5,7 @@ go 1.22.6
 replace github.com/DataDog/orchestrion => ../
 
 require (
+	github.com/99designs/gqlgen v0.17.36
 	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/IBM/sarama v1.43.3
 	github.com/Shopify/sarama v1.38.1
@@ -19,11 +20,13 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gomodule/redigo v1.9.2
 	github.com/gorilla/mux v1.8.1
+	github.com/graphql-go/handler v0.2.3
 	github.com/hashicorp/vault/api v1.14.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/redis/go-redis/v9 v9.6.1
+	github.com/vektah/gqlparser/v2 v2.5.16
 	go.mongodb.org/mongo-driver v1.16.1
 	google.golang.org/grpc v1.65.0
 	gorm.io/driver/postgres v1.5.9
@@ -56,6 +59,7 @@ require (
 	github.com/DataDog/sketches-go v1.4.6 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/aclements/go-moremath v0.0.0-20210112150236-f10218a38794 // indirect
+	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/armon/go-radix v1.0.1-0.20221118154546-54df44f2176c // indirect
@@ -167,6 +171,8 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/graph-gophers/graphql-go v1.5.0 // indirect
+	github.com/graphql-go/graphql v0.8.1 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hairyhenderson/go-codeowners v0.5.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
