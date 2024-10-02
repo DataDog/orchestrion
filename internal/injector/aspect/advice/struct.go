@@ -15,17 +15,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type addStuctField struct {
-	fieldName string
-	fieldType join.TypeName
+type addStructField struct {
+	Name     string
+	TypeName join.TypeName
 }
 
 // AddStructField adds a new synthetic field at the tail end of a struct declaration.
-func AddStructField(fieldName string, fieldType join.TypeName) *addStuctField {
-	return &addStuctField{fieldName, fieldType}
+func AddStructField(fieldName string, fieldType join.TypeName) *addStructField {
+	return &addStructField{fieldName, fieldType}
 }
 
-func (a *addStuctField) Apply(ctx context.AdviceContext) (bool, error) {
+func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 	node, ok := ctx.Node().(*dst.TypeSpec)
 	if !ok {
 		return false, fmt.Errorf("add-struct-field advice can only be applied to *dst.TypeSpec (got %T)", ctx.Node())
@@ -41,26 +41,22 @@ func (a *addStuctField) Apply(ctx context.AdviceContext) (bool, error) {
 	}
 
 	typeDef.Fields.List = append(typeDef.Fields.List, &dst.Field{
-		Names: []*dst.Ident{dst.NewIdent(a.fieldName)},
-		Type:  a.fieldType.AsNode(),
+		Names: []*dst.Ident{dst.NewIdent(a.Name)},
+		Type:  a.TypeName.AsNode(),
 	})
 
 	return true, nil
 }
 
-func (a *addStuctField) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AddStructField").Call(jen.Lit(a.fieldName), a.fieldType.AsCode())
+func (a *addStructField) AsCode() jen.Code {
+	return jen.Qual(pkgPath, "AddStructField").Call(jen.Lit(a.Name), a.TypeName.AsCode())
 }
 
-func (a *addStuctField) AddedImports() []string {
-	if path := a.fieldType.ImportPath(); path != "" {
+func (a *addStructField) AddedImports() []string {
+	if path := a.TypeName.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
-}
-
-func (a *addStuctField) RenderHTML() string {
-	return fmt.Sprintf(`<div class="advice add-struct-field"><div class="type">Add new field named <code>%s</code> typed as %s.</div>`, a.fieldName, a.fieldType.RenderHTML())
 }
 
 func init() {

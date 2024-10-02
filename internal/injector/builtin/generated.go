@@ -72,6 +72,21 @@ var Aspects = [...]aspect.Aspect{
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/go-redis/redis.NewClient"),
+			join.FunctionCall("github.com/go-redis/redis.NewFailoverClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{ . }}\n  trace.WrapClient(client)\n  return\n}()",
+				map[string]string{
+					"redis": "github.com/go-redis/redis",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
 			join.FunctionCall("github.com/go-redis/redis/v7.NewClient"),
 			join.FunctionCall("github.com/go-redis/redis/v7.NewFailoverClient"),
 		),
@@ -883,6 +898,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",

@@ -9,7 +9,7 @@ package advice
 
 import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/code"
+	"github.com/dave/jennifer/jen"
 )
 
 const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
@@ -17,16 +17,16 @@ const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 // Advice is the interface abstracting actual AST changes performed by
 // injections.
 type Advice interface {
-	code.AsCode
-	code.ImportAdder
+	// AsCode produces a jen.Code representation of the receiver.
+	AsCode() jen.Code
+
+	// AddedImports returns the list of import paths the receiver may introduce in
+	// modified code.
+	AddedImports() []string
 
 	// Apply performs the necessary AST changes on the supplied node. It returns a
 	// boolean indicating whether the node was modified or not (some actions may
 	// short-circuit and not do anything; e.g. import injection may be skipped if
 	// the import already exists).
 	Apply(context.AdviceContext) (bool, error)
-
-	// RenderHTML renders and HTML representation of this advice for documentation
-	// purposes.
-	RenderHTML() string
 }
