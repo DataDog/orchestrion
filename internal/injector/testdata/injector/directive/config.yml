@@ -3,30 +3,59 @@
 aspects:
   - join-point:
       function-body:
-        all-of:
-          - function:
-              - receives: context.Context
-          - directive: 'dd:span'
+        directive: 'dd:span'
     advice:
       - prepend-statements:
           imports:
-            event: github.com/DataDog/orchestrion/instrument/event
-            instrument: github.com/DataDog/orchestrion/instrument
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
             {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
-            {{- $name := .Function.Name -}}
-            instrument.Report({{$ctx}}, event.EventStart{{with $name}}, "name", {{printf "%q" .}}{{end}}
+            {{- $req := .Function.ArgumentOfType "*net/http.Request" -}}
+            {{- if (eq $ctx "") -}}
+              {{- $ctx = "ctx" -}}
+              ctx := {{- with $req -}}
+                {{ $req }}.Context()
+              {{- else -}}
+                context.TODO()
+              {{- end }}
+            {{ end -}}
+
+            {{ $functionName := .Function.Name -}}
+            {{- $opName := $functionName -}}
             {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
-            defer instrument.Report({{$ctx}}, event.EventEnd{{with $name}}, "name", {{printf "%q" .}}{{end}}
-            {{- range .DirectiveArgs "dd:span" -}}
-              , {{printf "%q" .Key}}, {{printf "%q" .Value}}
-            {{- end -}})
+              {{- if eq $opName "" -}}
+                {{ $opName = .Value }}
+              {{- end -}}
+              {{- if eq .Key "span.name" -}}
+                {{- $opName = .Value -}}
+                {{- break -}}
+              {{- end -}}
+            {{- end -}}
+
+            var span tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf "%q" $opName }},
+              {{- with $functionName }}
+                tracer.Tag("function-name", {{ printf "%q" $functionName }}),
+              {{ end -}}
+              {{- range .DirectiveArgs "dd:span" }}
+                {{ if eq .Key "span.name" -}}{{- continue -}}{{- end -}}
+                tracer.Tag({{ printf "%q" .Key }}, {{ printf "%q" .Value }}),
+              {{- end }}
+            )
+            {{- with $req }}
+              {{ $req }} = {{ $req }}.WithContext({{ $ctx }})
+            {{- end }}
+
+            {{ with .Function.ResultOfType "error" -}}
+              defer func(){
+                span.Finish(tracer.WithError({{ . }}))
+              }()
+            {{ else -}}
+              defer span.Finish()
+            {{- end -}}
 
 syntheticReferences:
-  github.com/DataDog/orchestrion/instrument: true
-  github.com/DataDog/orchestrion/instrument/event: true
+  gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer: true
 
 code: |-
   package test

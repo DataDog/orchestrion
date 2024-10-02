@@ -6,7 +6,6 @@
 package join
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -78,10 +77,6 @@ func (directive) ImpliesImported() []string {
 
 func (d directive) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(string(d)))
-}
-
-func (d directive) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point directive"><span class="type">Has directive</span><code>//%s</code></div>`, string(d))
 }
 
 func init() {

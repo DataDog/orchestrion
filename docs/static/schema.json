@@ -382,7 +382,7 @@
           {
             "all-of": [
               { "directive": "dd:span" },
-              { "function": [{ "receives": "context.Context" }] }
+              { "function": [{ "receiver": "*net/http.RoundTripper" }] }
             ]
           }
         ]
@@ -461,19 +461,6 @@
             "unevaluatedProperties": false,
             "oneOf": [
               {
-                "required": ["one-of"],
-                "properties": {
-                  "one-of": {
-                    "description": "Matches any function that matches at least one of the children attributes.",
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/$defs/join-point/function/$defs/option"
-                    },
-                    "minItems": 2
-                  }
-                }
-              },
-              {
                 "required": ["name"],
                 "unevaluatedProperties": false,
                 "properties": {
@@ -492,16 +479,6 @@
                 "properties": {
                   "receiver": {
                     "description": "Matches only method declarations for the provided receiver type.",
-                    "$ref": "#/$defs/go/qualified-identifier"
-                  }
-                }
-              },
-              {
-                "required": ["receives"],
-                "unevaluatedProperties": false,
-                "properties": {
-                  "receives": {
-                    "description": "Matches only functions that accept an argument of the provided type.",
                     "$ref": "#/$defs/go/qualified-identifier"
                   }
                 }

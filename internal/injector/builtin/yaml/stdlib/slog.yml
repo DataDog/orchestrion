@@ -6,7 +6,9 @@
 # yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
   name: log/slog
-  description: log/slog logger
+  description: |-
+    Package slog provides structured logging, in which log records include a message, a severity level, and various
+    other attributes expressed as key-value pairs.
   icon: at-symbol
 aspects:
   - id: Wrap slog Handlers

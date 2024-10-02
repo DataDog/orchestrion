@@ -13,7 +13,6 @@ import (
 	"regexp"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/code"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
 )
@@ -23,7 +22,8 @@ const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/join"
 // Point is the interface that abstracts selection of nodes where to inject
 // code.
 type Point interface {
-	code.AsCode
+	// AsCode produces a jen.Code representation of the receiver.
+	AsCode() jen.Code
 
 	// ImpliesImported returns a list of import paths that are known to already be
 	// imported if the join point matches.
@@ -33,10 +33,6 @@ type Point interface {
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.
 	Matches(ctx context.AspectContext) bool
-
-	// RenderHTML renders an HTML block containing the join point's description
-	// for documentation purposes.
-	RenderHTML() string
 }
 
 type TypeName struct {
@@ -75,23 +71,23 @@ func MustTypeName(n string) (tn TypeName) {
 
 // ImportPath returns the import path for this type name, or a blank string if
 // this refers to a local or built-in type.
-func (n *TypeName) ImportPath() string {
+func (n TypeName) ImportPath() string {
 	return n.path
 }
 
 // Name returns the unqualified name of this type.
-func (n *TypeName) Name() string {
+func (n TypeName) Name() string {
 	return n.name
 }
 
 // Pointer returns whether this is a pointer type.
-func (n *TypeName) Pointer() bool {
+func (n TypeName) Pointer() bool {
 	return n.pointer
 }
 
 // Matches determines whether the provided node represents the same type as this
 // TypeName.
-func (n *TypeName) Matches(node dst.Expr) bool {
+func (n TypeName) Matches(node dst.Expr) bool {
 	switch node := node.(type) {
 	case *dst.Ident:
 		return !n.pointer && n.path == node.Path && n.name == node.Name
@@ -123,7 +119,7 @@ func (n *TypeName) Matches(node dst.Expr) bool {
 // MacthesDefinition determines whether the provided node matches the definition
 // of this TypeName. The `importPath` argument determines the context in which
 // the assertion is made.
-func (n *TypeName) MatchesDefinition(node dst.Expr, importPath string) bool {
+func (n TypeName) MatchesDefinition(node dst.Expr, importPath string) bool {
 	if n.path != importPath {
 		return false
 	}
@@ -139,7 +135,7 @@ func (n *TypeName) AsNode() dst.Expr {
 	return ident
 }
 
-func (n *TypeName) AsCode() jen.Code {
+func (n TypeName) AsCode() jen.Code {
 	str := bytes.NewBuffer(make([]byte, 0, 1+len(n.path)+len(n.name)))
 	if n.pointer {
 		_, _ = str.WriteString("*")
@@ -153,7 +149,7 @@ func (n *TypeName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
 }
 
-func (n *TypeName) RenderHTML() string {
+func (n TypeName) RenderHTML() string {
 	var ptr string
 	if n.pointer {
 		ptr = "*"

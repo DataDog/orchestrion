@@ -10,7 +10,7 @@ meta:
   icon: fast-forward
 
 aspects:
-  - id: Wrap sarama.NewConsumer and sarama.NewConsumerClient
+  - id: Wrap NewConsumer and NewConsumerClient
     join-point:
       one-of:
         - function-call: github.com/Shopify/sarama.NewConsumer
@@ -27,7 +27,7 @@ aspects:
               }
               return c, err
             }({{ . }})
-  - id: Wrap sarama.NewSyncProducer and sarama.NewSyncProducerFromClient
+  - id: Wrap NewSyncProducer and NewSyncProducerFromClient
     join-point:
       one-of:
         - function-call: github.com/Shopify/sarama.NewSyncProducer
@@ -52,7 +52,7 @@ aspects:
               }
               return p, err
             }({{ . }})
-  - id: Wrap sarama.NewAsyncProducer and sarama.NewAsyncProducerFromClient
+  - id: Wrap NewAsyncProducer and NewAsyncProducerFromClient
     join-point:
       one-of:
         - function-call: github.com/Shopify/sarama.NewAsyncProducer
