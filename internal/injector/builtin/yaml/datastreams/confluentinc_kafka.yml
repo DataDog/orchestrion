@@ -6,39 +6,78 @@
 # yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
   name: github.com/confluentinc/confluent-kafka-go/kafka
-  description: Sarama is a Go library for Apache Kafka
+  description: confluent-kafka-go is a Go library for Apache Kafka
   icon: fast-forward
 
 aspects:
-  - id: Wrap kafka.NewConsumer
+  - id: Add struct fields to kafka.Producer
     join-point:
-      function-call: github.com/confluentinc/confluent-kafka-go/kafka.NewConsumer
+      struct-definition: github.com/confluentinc/confluent-kafka-go/kafka.Producer
     advice:
-      - wrap-expression:
-          imports:
-            kafkatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka
-            kafka: github.com/confluentinc/confluent-kafka-go/kafka
-          template: |-
-            func(c *kafka.Consumer, err error) (*kafkatrace.Consumer, error) {
-              var wc *kafkatrace.Consumer
-              if c != nil {
-                wc = kafkatrace.WrapConsumer(c)
-              }
-              return wc, err
-            }({{ . }})
-  - id: Wrap kafka.NewProducer
+      - add-struct-field:
+          name: _ddTracer
+          type: '*gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing.ProducerTracer'
+  - id: Instrument kafka.Producer
     join-point:
-      function-call: github.com/confluentinc/confluent-kafka-go/kafka.NewProducer
+      all-of:
+        - import-path: github.com/confluentinc/confluent-kafka-go/kafka
+        - function-body:
+            function:
+              - name: NewProducer
     advice:
-      - wrap-expression:
+      - prepend-statements:
           imports:
-            kafkatrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka
-            kafka: github.com/confluentinc/confluent-kafka-go/kafka
+            contribinternal: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing
           template: |-
-            func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {
-              var wp *kafkatrace.Producer
-              if p != nil {
-                wp = kafkatrace.WrapProducer(p)
+            {{- $p := .Function.ReturnOfType "*kafka.Producer" -}}
+            defer func() {
+              cfg := contribinternal.NewConfig()
+              $p._ddTracer = tracing.NewProducerTracer(
+                cfg.Ctx,
+                $p,
+                cfg.DataStreamsEnabled,
+                tracing.StartSpanConfig{
+                  Service:          cfg.ProducerServiceName,
+                  Operation:        cfg.ProducerSpanName,
+                  BootstrapServers: cfg.BootstrapServers,
+                  AnalyticsRate:    cfg.AnalyticsRate,
+                },
+              )
+            }
+  - id: Instrument kafka.Producer#Produce
+    join-point:
+      function:
+        - name: Produce
+        - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Producer'
+    advice:
+      - prepend-statements:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing
+          template: |-
+            {{- $err := .Function.ReturnOfType "error" -}}
+            {{- $msg := .Function.Argument 0 -}}
+            {{- $ch := .Function.Argument 1 -}}
+            {{- $p := .Function.Receiver -}}
+            stop := $p._ddTracer.WrapProduce($msg, $ch)
+            defer stop($err)
+  - id: Instrument kafka.Producer#Stop
+    join-point:
+      all-of:
+        - import-path: github.com/confluentinc/confluent-kafka-go/kafka
+        - function-body:
+            function:
+              - name: Stop
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Producer'
+    advice:
+      - prepend-statements:
+          imports:
+            contribinternal: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing
+          template: |-
+            {{- $p := .Function.Receiver -}}
+            defer func() {
+              if $p._ddTracer != nil {
+                $p._ddTracer.Stop()
               }
-              return wp, err
-            }({{ . }})
+            }

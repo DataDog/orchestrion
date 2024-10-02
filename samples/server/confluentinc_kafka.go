@@ -19,5 +19,10 @@ func confluentincKafkaProducer() {
 	if err != nil {
 		panic(err)
 	}
+	topic := "gotest"
+	producer.Produce(&kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Value:          []byte("Hello Go!"),
+	}, nil)
 	defer producer.Close()
 }

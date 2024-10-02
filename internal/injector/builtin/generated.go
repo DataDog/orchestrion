@@ -200,44 +200,11 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
-<<<<<<< HEAD
 	// From datastreams/confluentinc_kafka.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/kafka.NewConsumer"),
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"func(c *kafka.Consumer, err error) (*kafkatrace.Consumer, error) {\n  var wc *kafkatrace.Consumer\n  if c != nil {\n    wc = kafkatrace.WrapConsumer(c)\n  }\n  return wc, err\n}({{ . }})",
-				map[string]string{
-					"kafka":      "github.com/confluentinc/confluent-kafka-go/kafka",
-					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
-=======
-	// From datastreams/gcp_pubsub.yml
-	{
-		JoinPoint: join.FunctionBody(join.Function(
-			join.Receiver(join.MustTypeName("*cloud.google.com/go/pubsub.Subscription")),
-			join.Name("Receive"),
-		)),
-		Advice: []advice.Advice{
-			advice.PrependStmts(code.MustTemplate(
-				"{{- $subscription := .Function.Receiver -}}\n{{- $handler := .Function.Argument 1 -}}\n__dd_traceFn := tracing.TraceReceiveFunc({{ $subscription }})\n__dd_wrapHandler := func(h func(ctx context.Context, msg *Message)) func(ctx context.Context, msg *Message) {\n  return func(ctx context.Context, msg *Message) {\n    __dd_traceMsg := &tracing.Message{\n      ID:              msg.ID,\n      Data:            msg.Data,\n      OrderingKey:     msg.OrderingKey,\n      Attributes:      msg.Attributes,\n      DeliveryAttempt: msg.DeliveryAttempt,\n      PublishTime:     msg.PublishTime,\n    }\n    ctx, closeSpan := __dd_traceFn(ctx, __dd_traceMsg)\n    defer closeSpan()\n    h(ctx, msg)\n  }\n}\n{{ $handler }} = __dd_wrapHandler({{ $handler }})",
-				map[string]string{
-					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
->>>>>>> origin
-				},
-			)),
-		},
-	},
-	{
-<<<<<<< HEAD
-		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/kafka.NewProducer"),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
-				map[string]string{
-					"kafka":      "github.com/confluentinc/confluent-kafka-go/kafka",
-					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
-				},
-			)),
+			advice.AddStructField("_ddTracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing.ProducerTracer")),
 		},
 	},
 	// From datastreams/confluentinc_kafka_v2.yml
@@ -249,7 +216,38 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
 					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
-=======
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewProducer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
+	// From datastreams/gcp_pubsub.yml
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*cloud.google.com/go/pubsub.Subscription")),
+			join.Name("Receive"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $subscription := .Function.Receiver -}}\n{{- $handler := .Function.Argument 1 -}}\n__dd_traceFn := tracing.TraceReceiveFunc({{ $subscription }})\n__dd_wrapHandler := func(h func(ctx context.Context, msg *Message)) func(ctx context.Context, msg *Message) {\n  return func(ctx context.Context, msg *Message) {\n    __dd_traceMsg := &tracing.Message{\n      ID:              msg.ID,\n      Data:            msg.Data,\n      OrderingKey:     msg.OrderingKey,\n      Attributes:      msg.Attributes,\n      DeliveryAttempt: msg.DeliveryAttempt,\n      PublishTime:     msg.PublishTime,\n    }\n    ctx, closeSpan := __dd_traceFn(ctx, __dd_traceMsg)\n    defer closeSpan()\n    h(ctx, msg)\n  }\n}\n{{ $handler }} = __dd_wrapHandler({{ $handler }})",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
+				},
+			)),
+		},
+	},
+	{
 		JoinPoint: join.StructDefinition(join.MustTypeName("cloud.google.com/go/internal/pubsub.PublishResult")),
 		Advice: []advice.Advice{
 			advice.InjectDeclarations(code.MustTemplate(
@@ -269,22 +267,11 @@ var Aspects = [...]aspect.Aspect{
 				"{{- $topic := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Argument 1 -}}\n{{- $publishResult := .Function.Result 0 -}}\n__dd_traceMsg := &tracing.Message{\n  ID:              {{ $msg }}.ID,\n  Data:            {{ $msg }}.Data,\n  OrderingKey:     {{ $msg }}.OrderingKey,\n  Attributes:      {{ $msg }}.Attributes,\n  DeliveryAttempt: {{ $msg }}.DeliveryAttempt,\n  PublishTime:     {{ $msg }}.PublishTime,\n}\n__dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, __dd_traceMsg)\n{{ $ctx }} = __dd_ctx\n{{ $msg }}.Attributes = __dd_traceMsg.Attributes\n\ndefer func() {\n  {{ $publishResult }}.DDCloseSpan = __dd_closeSpan\n}()",
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
->>>>>>> origin
 				},
 			)),
 		},
 	},
 	{
-<<<<<<< HEAD
-		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewProducer"),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
-				map[string]string{
-					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
-					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
-				},
-=======
 		JoinPoint: join.FunctionBody(join.Function(
 			join.Receiver(join.MustTypeName("*cloud.google.com/go/internal/pubsub.PublishResult")),
 			join.Name("Get"),
@@ -293,7 +280,6 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"{{- $publishResult := .Function.Receiver -}}\n{{- $serverID := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\ndefer func() {\n  if {{ $publishResult }}.DDCloseSpan != nil {\n    {{ $publishResult }}.DDCloseSpan({{ $serverID }}, {{ $err }})\n  }\n}()",
 				map[string]string{},
->>>>>>> origin
 			)),
 		},
 	},
@@ -890,12 +876,9 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
-<<<<<<< HEAD
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka",
-	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
-=======
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
->>>>>>> origin
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -937,8 +920,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-<<<<<<< HEAD
-const Checksum = "sha512:6ygNit1V8B4UH1mqIy80O59MSFX4rikAivvjw0SiKcpgSDxiS14EmdvLIR2QyathZs7RfdGbxxpp91z8FEqRfA=="
-=======
-const Checksum = "sha512:NB8IV3fYeE+6FMXZtx2EFoeSWlhraYLzuBmH4f6iLZCxGjDHc4CZrVByuV1jHjJFyLR8e5qzIabizGeIVQVLnA=="
->>>>>>> origin
+const Checksum = "sha512:1NTio2PeFO3S6Y0d4ooWqMjye8QTMZkolwbjgYODTV4zI3DkgPVbmOEJY+h8avE1AD1zJ/agdJNnYEYfOH3RRQ=="

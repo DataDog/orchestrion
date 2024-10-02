@@ -14,6 +14,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.30
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.29
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.34.6
+	github.com/confluentinc/confluent-kafka-go v1.9.2
+	github.com/confluentinc/confluent-kafka-go/v2 v2.2.0
 	github.com/dave/jennifer v1.7.0
 	github.com/docker/go-connections v0.5.0
 	github.com/gin-gonic/gin v1.10.0
@@ -37,6 +39,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
 	github.com/xlab/treeprint v1.2.0
 	go.mongodb.org/mongo-driver v1.16.1
