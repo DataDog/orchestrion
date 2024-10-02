@@ -31,6 +31,7 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 
 	if kve, ok = ctx.Node().(*dst.KeyValueExpr); ok {
 		ctx = ctx.Child(kve.Value, "Value", -1)
+		defer ctx.Release()
 	} else if _, ok = ctx.Node().(dst.Expr); !ok {
 		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", ctx.Node())
 	}

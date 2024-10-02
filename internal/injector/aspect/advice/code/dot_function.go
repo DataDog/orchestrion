@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
 )
@@ -56,7 +55,7 @@ var (
 )
 
 func (d *dot) Function() function {
-	for curr := context.AspectContext(d.context); curr != nil; curr = curr.Parent() {
+	for curr := d.context.Chain(); curr != nil; curr = curr.Parent() {
 		switch node := curr.Node().(type) {
 		case *dst.FuncDecl:
 			return &declaredFunc{signature{node.Type}, node}

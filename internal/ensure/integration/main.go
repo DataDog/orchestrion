@@ -12,8 +12,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/ensure"
 )
 
-// main is the entry point of a command that is used by the `ensure` integration
-// test to verify the `ensure.RequiredVersion()` function behaves correctly in
+// main is the entry point of a command that is used by the [ensure] integration
+// test to verify the [ensure.RequiredVersion] function behaves correctly in
 // real conditions.
 func main() {
 	if err := ensure.RequiredVersion(); err != nil {

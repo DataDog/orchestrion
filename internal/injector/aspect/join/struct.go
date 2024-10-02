@@ -114,7 +114,7 @@ func (s *structLiteral) Matches(ctx context.AspectContext) bool {
 
 		case StructLiteralMatchValueOnly:
 			// do not match if the parent is equal to &
-			if parent := ctx.Parent(); parent != nil {
+			if parent := ctx.Chain().Parent(); parent != nil {
 				if expr, ok := parent.Node().(*dst.UnaryExpr); ok && expr.Op == token.AND {
 					return false
 				}
@@ -131,7 +131,7 @@ func (s *structLiteral) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	if parent := ctx.Parent(); parent == nil || !s.matchesLiteral(parent.Node()) {
+	if parent := ctx.Chain().Parent(); parent == nil || !s.matchesLiteral(parent.Node()) {
 		return false
 	}
 

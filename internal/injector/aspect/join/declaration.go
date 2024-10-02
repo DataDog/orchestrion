@@ -21,7 +21,7 @@ func ValueDeclaration(typeName TypeName) *valueDeclaration {
 }
 
 func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
-	parent := ctx.Parent()
+	parent := ctx.Chain().Parent()
 	if parent == nil {
 		return false
 	}

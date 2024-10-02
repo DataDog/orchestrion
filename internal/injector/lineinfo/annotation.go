@@ -45,8 +45,8 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 		last := len(v.stack) - 1
 
 		if node, isGenDecl := v.stack[last].(*dst.GenDecl); isGenDecl {
-			// If this is a `*dst.GenDecl` with a single item that's rendered without parentheses, we
-			// hoist decorations from the single item to the `*dst.GenDecl` itself, as it'll render
+			// If this is a [*dst.GenDecl] with a single item that's rendered without parentheses, we
+			// hoist decorations from the single item to the [*dst.GenDecl] itself, as it'll render
 			// better.
 			if node.Lparen && len(node.Specs) == 1 {
 				specDeco := node.Specs[0].Decorations()
@@ -68,7 +68,7 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 	dstNode := v.res.Dst.Nodes[node]
 	v.stack = append(v.stack, dstNode)
 	if dstNode == nil {
-		// Nodes such as `ast.FuncType` are not mapped directly by dst... They anyway do not represent
+		// Nodes such as [ast.FuncType] are not mapped directly by dst... They anyway do not represent
 		// lines that can show on stack frames, so it's not all that important...
 		return v
 	}
@@ -86,8 +86,8 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 
 	if adjPosition.Filename == "" {
 		if _, isIdent := dstNode.(*dst.Ident); isIdent && adjPosition.Line == 0 {
-			// This is a virtual `*dst.Ident` node that was created by import management. It does not map
-			// back to a node in the original AST, and it's part of a `*dst.SelectorExpr` that we'll be
+			// This is a virtual [*dst.Ident] node that was created by import management. It does not map
+			// back to a node in the original AST, and it's part of a [*dst.SelectorExpr] that we'll be
 			// able to properly map; so we can safely ignore it now.
 			return v
 		}
