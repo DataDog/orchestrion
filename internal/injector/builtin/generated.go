@@ -72,6 +72,21 @@ var Aspects = [...]aspect.Aspect{
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/go-redis/redis.NewClient"),
+			join.FunctionCall("github.com/go-redis/redis.NewFailoverClient"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func() (client *redis.Client) {\n  client = {{ . }}\n  trace.WrapClient(client)\n  return\n}()",
+				map[string]string{
+					"redis": "github.com/go-redis/redis",
+					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
 			join.FunctionCall("github.com/go-redis/redis/v7.NewClient"),
 			join.FunctionCall("github.com/go-redis/redis/v7.NewFailoverClient"),
 		),
@@ -849,6 +864,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
@@ -886,4 +902,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:kkyTw2KjHw/58XzX2nUjpfUMbdledTlygKkbxoZrHh1VFeXw6rIppmv+r7/HAi1y+31d5PAdpO/eximdA3EDlw=="
+const Checksum = "sha512:Z3JxT6M1P2R2y0LTauBpTytjCBSfA4UTuaU4j5YdZJw1Ssm+qEETXtz4tYXuRr39B23T092cda/wo1ZIlGAiJA=="
