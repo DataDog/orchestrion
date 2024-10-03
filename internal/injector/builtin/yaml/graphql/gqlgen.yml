@@ -19,9 +19,9 @@ aspects:
       - wrap-expression:
           imports:
             handler: github.com/99designs/gqlgen/graphql/handler
-            tracer: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen
+            gqlgentrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen
           template: |-
             func(s *handler.Server) *handler.Server {
-              s.Use(tracer.NewTracer())
+              s.Use(gqlgentrace.NewTracer())
               return s
             }({{ . }})

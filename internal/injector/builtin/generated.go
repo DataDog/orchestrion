@@ -402,10 +402,10 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func(s *handler.Server) *handler.Server {\n  s.Use(tracer.NewTracer())\n  return s\n}({{ . }})",
+				"func(s *handler.Server) *handler.Server {\n  s.Use(gqlgentrace.NewTracer())\n  return s\n}({{ . }})",
 				map[string]string{
-					"handler": "github.com/99designs/gqlgen/graphql/handler",
-					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
+					"gqlgentrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
+					"handler":     "github.com/99designs/gqlgen/graphql/handler",
 				},
 			)),
 		},
@@ -420,10 +420,10 @@ var Aspects = [...]aspect.Aspect{
 			advice.AppendArgs(
 				join.MustTypeName("any"),
 				code.MustTemplate(
-					"graphql.Tracer(trace.NewTracer())",
+					"graphql.Tracer(graphqltrace.NewTracer())",
 					map[string]string{
-						"graphql": "github.com/graph-gophers/graphql-go",
-						"trace":   "gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
+						"graphql":      "github.com/graph-gophers/graphql-go",
+						"graphqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
 					},
 				),
 			),
@@ -931,4 +931,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:okKXZSjb9NqaOO9zeogThPcCtCtXVSioUNVb8cKajzvaYG0YpBmZ0c1wNuEwIr2wkRVNwC6gY+hKkCv1EfRiTQ=="
+const Checksum = "sha512:gIXVUSSUZlXrqBYT/ICQ5co+NHWfHXCVfMs1YMqnqbsxMAHyiaiGExcz1Sgd0OAijKXvhncrVpcJ9dPrO2mHHA=="

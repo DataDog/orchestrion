@@ -22,5 +22,5 @@ aspects:
           values:
             - imports:
                 graphql: github.com/graph-gophers/graphql-go
-                trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go
-              template: graphql.Tracer(trace.NewTracer())
+                graphqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go
+              template: graphql.Tracer(graphqltrace.NewTracer())
