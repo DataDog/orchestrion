@@ -62,8 +62,8 @@ func (v *canonicalizationVisitor) Visit(node dst.Node) dst.Visitor {
 		return v
 	}
 
-	// Don't space up the statements if they're not within a *dst.Block.
-	if _, isBlock := parent.node.(*dst.BlockStmt); !isBlock {
+	// Don't space up the statements if they're not within a *dst.Block, or if the block contains exactly 1 statement.
+	if block, isBlock := parent.node.(*dst.BlockStmt); !isBlock || len(block.List) == 1 {
 		return v
 	}
 
