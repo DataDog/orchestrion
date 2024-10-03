@@ -10,6 +10,24 @@ meta:
   icon: database
 aspects:
   ################################################################################
+  # V0
+  - id: Wrap V0 client
+    join-point:
+      one-of:
+        - function-call: github.com/go-redis/redis.NewClient
+        - function-call: github.com/go-redis/redis.NewFailoverClient
+    advice:
+      - wrap-expression:
+          imports:
+            redis: github.com/go-redis/redis
+            trace: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis
+          template: |-
+            func() (client *redis.Client) {
+              client = {{ . }}
+              trace.WrapClient(client)
+              return
+            }()
+
   # V7
   - id: Wrap V7 client
     join-point:

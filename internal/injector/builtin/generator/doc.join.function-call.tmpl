@@ -1,0 +1,6 @@
+<div class="flex join-point function-call">
+  <span class="type">Call to</span>
+  {{ "{{" -}}
+  <godoc import-path="{{ .ImportPath }}" package="{{ packageName .ImportPath }}" name="{{ .Name }}">
+  {{- "}}" }}
+</div>

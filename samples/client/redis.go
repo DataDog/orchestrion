@@ -9,11 +9,20 @@ import (
 	"context"
 	"fmt"
 
+	redisv0 "github.com/go-redis/redis"
 	redisv7 "github.com/go-redis/redis/v7"
 	redisv8 "github.com/go-redis/redis/v8"
 	redigo "github.com/gomodule/redigo/redis"
 	redisv9 "github.com/redis/go-redis/v9"
 )
+
+func redisV0Client() {
+	client := redisv0.NewClient(&redisv0.Options{Addr: "127.0.0.1", Password: "", DB: 0})
+	defer client.Close()
+	if res := client.Set("test_key", "test_value", 0); res.Err() != nil {
+		panic(res.Err())
+	}
+}
 
 func redisV7Client() {
 	client := redisv7.NewClient(&redisv7.Options{Addr: "127.0.0.1", Password: "", DB: 0})

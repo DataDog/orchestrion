@@ -6,63 +6,79 @@
 package code_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/v3/golden"
 )
 
 func TestTemplate(t *testing.T) {
-	ctx := mockAdviceContext{}
-
 	t.Run("ParseError", func(t *testing.T) {
 		tmpl := code.MustTemplate(`this.IsNotValidGo("because it's missing a closing parenthesis"`, nil)
-		stmt, err := tmpl.CompileBlock(ctx)
+		stmt, err := tmpl.CompileBlock(mockAdviceContext{t})
 		require.Nil(t, stmt)
 		require.Error(t, err)
 		golden.Assert(t, err.Error(), "parse_error.txt")
 	})
 }
 
-type mockAdviceContext struct{}
+type mockAdviceContext struct {
+	t *testing.T
+}
 
 func (mockAdviceContext) ParseSource(src []byte) (*dst.File, error) {
 	return decorator.Parse(src)
 }
 
 // The rest is not used by the tests as of now...
-func (mockAdviceContext) Node() dst.Node {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Release() {
+	assert.FailNow(m.t, "unexpected method call")
 }
-func (mockAdviceContext) Parent() context.AspectContext {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Chain() *context.NodeChain {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
 }
-func (mockAdviceContext) Config(string) (string, bool) {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Node() dst.Node {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
 }
-func (mockAdviceContext) File() *dst.File {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Parent() context.AspectContext {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
 }
-func (mockAdviceContext) ImportPath() string {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Config(string) (string, bool) {
+	assert.FailNow(m.t, "unexpected method call")
+	return "", false
 }
-func (mockAdviceContext) Package() string {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) File() *dst.File {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
 }
-func (mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) ImportPath() string {
+	assert.FailNow(m.t, "unexpected method call")
+	return ""
 }
-func (mockAdviceContext) ReplaceNode(dst.Node) {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Package() string {
+	assert.FailNow(m.t, "unexpected method call")
+	return ""
 }
-func (mockAdviceContext) AddImport(string, string) bool {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
 }
-func (mockAdviceContext) AddLink(string) bool {
-	panic(errors.ErrUnsupported)
+func (m mockAdviceContext) ReplaceNode(dst.Node) {
+	assert.FailNow(m.t, "unexpected method call")
+}
+func (m mockAdviceContext) AddImport(string, string) bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
+}
+func (m mockAdviceContext) AddLink(string) bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
 }

@@ -18,14 +18,14 @@ import (
 const orchestrionEnabled = false
 
 // TestCase describes the general contract for tests. Each package in this
-// directory is expected to export a `TestCase` structure implementing this
+// directory is expected to export a [TestCase] structure implementing this
 // interface.
 type TestCase interface {
 	// Setup is called before the test is run. It should be used to prepare any
 	// the test for execution, such as starting up services (e.g, databse servers)
-	// or setting up test data. The Setup function can call `t.SkipNow()` to skip
-	// the test entirely, for example if prerequisites of its dependencies are not
-	// satisfied by the test environment.
+	// or setting up test data. The Setup function can call [testing.T.SkipNow] to
+	// skip the test entirely, for example if prerequisites of its dependencies
+	// are not satisfied by the test environment.
 	//
 	// The tracer is not yet started when Setup is executed.
 	Setup(*testing.T)
@@ -38,15 +38,17 @@ type TestCase interface {
 	// outstanding spans are flushed to the agent.
 	Run(*testing.T)
 
-	// Teardown runs if `Setup` was executed successfully and did not call
-	// `t.SkipNow()`. This can be used to clean up any resources created during
-	// Setup, such as stopping services or deleting test data.
+	// Teardown runs if [TestCase.Setup] was executed successfully and did not
+	// call [testing.T.SkipNow]. This can be used to clean up any resources
+	// created during [TestCase.Setup], such as stopping services or deleting test
+	// data.
 	Teardown(*testing.T)
 
 	// ExpectedTraces returns a trace.Traces object describing all traces expected
-	// to be produced by the `Run` function. There should be one entry per trace
-	// root span expected to be produced. Every item in the returned `trace.Traces`
-	// must match at least one trace received by the agent during the test run.
+	// to be produced by the [TestCase.Run] function. There should be one entry
+	// per trace root span expected to be produced. Every item in the returned
+	// [trace.Traces] must match at least one trace received by the agent during
+	// the test run.
 	ExpectedTraces() trace.Traces
 }
 

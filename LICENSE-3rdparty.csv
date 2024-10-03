@@ -7,6 +7,9 @@ orchestrion,github.com/DataDog/go-libddwaf/v3,Apache-2.0,"Copyright 2016-present
 orchestrion,github.com/DataDog/go-sqllexer,MIT,"Copyright (c) 2023 Datadog, Inc."
 orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,"Copyright (c) 2014-2020 Prime Directive, Inc. All rights reserved."
 orchestrion,github.com/DataDog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
+orchestrion,github.com/Masterminds/goutils,Apache-2.0,unknown
+orchestrion,github.com/Masterminds/semver,MIT,"Copyright (C) 2014-2019, Matt Butcher and Matt Farina"
+orchestrion,github.com/Masterminds/sprig,MIT,Copyright (C) 2013 Masterminds
 orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
 orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
 orchestrion,github.com/cespare/xxhash/v2,MIT,Copyright (c) 2016 Caleb Spare
@@ -25,13 +28,17 @@ orchestrion,github.com/google/uuid,BSD-3-Clause,"Copyright (c) 2009,2014 Google 
 orchestrion,github.com/hashicorp/go-secure-stdlib/parseutil,MPL-2.0,"Copyright (c) 2020 HashiCorp, Inc."
 orchestrion,github.com/hashicorp/go-secure-stdlib/strutil,MPL-2.0,unknown
 orchestrion,github.com/hashicorp/go-sockaddr,MPL-2.0,"Copyright (c) 2016 HashiCorp, Inc."
+orchestrion,github.com/huandu/xstrings,MIT,Copyright (c) 2015 Huan Du
+orchestrion,github.com/imdario/mergo,BSD-3-Clause,Copyright (c) 2013 Dario Castañé. All rights reserved. | Copyright (c) 2012 The Go Authors. All rights reserved.
 orchestrion,github.com/klauspost/compress,MIT,Copyright (c) 2012 The Go Authors. All rights reserved. | Copyright (c) 2019 Klaus Post. All rights reserved. | Copyright 2016-2017 The New York Times Company | Copyright (c) 2015 Klaus Post | Copyright (c) 2011 The Snappy-Go Authors. All rights reserved. | Copyright 2016 The filepathx Authors
 orchestrion,github.com/klauspost/compress/s2,BSD-3-Clause,Copyright (c) 2011 The Snappy-Go Authors. All rights reserved. | Copyright (c) 2019 Klaus Post. All rights reserved.
 orchestrion,github.com/lucasb-eyer/go-colorful,MIT,Copyright (c) 2013 Lucas Beyer
 orchestrion,github.com/mattn/go-isatty,MIT,unknown
 orchestrion,github.com/mattn/go-runewidth,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
 orchestrion,github.com/minio/highwayhash,Apache-2.0,unknown
+orchestrion,github.com/mitchellh/copystructure,MIT,Copyright (c) 2014 Mitchell Hashimoto
 orchestrion,github.com/mitchellh/mapstructure,MIT,Copyright (c) 2013 Mitchell Hashimoto
+orchestrion,github.com/mitchellh/reflectwalk,MIT,Copyright (c) 2013 Mitchell Hashimoto
 orchestrion,github.com/muesli/termenv,MIT,Copyright (c) 2019 Christian Muehlhaeuser
 orchestrion,github.com/nats-io/jwt/v2,Apache-2.0,unknown
 orchestrion,github.com/nats-io/nats-server/v2,Apache-2.0,unknown

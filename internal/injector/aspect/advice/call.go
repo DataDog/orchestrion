@@ -19,8 +19,8 @@ import (
 )
 
 type appendArgs struct {
-	typeName  join.TypeName
-	templates []code.Template
+	TypeName  join.TypeName
+	Templates []code.Template
 }
 
 // AppendArgs appends arguments of a given type to the end of a function call. All arguments must be
@@ -35,9 +35,9 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", ctx.Node())
 	}
 
-	newArgs := make([]dst.Expr, len(a.templates))
+	newArgs := make([]dst.Expr, len(a.Templates))
 	var err error
-	for i, t := range a.templates {
+	for i, t := range a.Templates {
 		newArgs[i], err = t.CompileExpression(ctx)
 		if err != nil {
 			return false, err
@@ -59,12 +59,12 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 				Params: &dst.FieldList{
 					List: []*dst.Field{{
 						Names: []*dst.Ident{dst.NewIdent("opts")},
-						Type:  &dst.Ellipsis{Elt: a.typeName.AsNode()},
+						Type:  &dst.Ellipsis{Elt: a.TypeName.AsNode()},
 					}},
 				},
 				Results: &dst.FieldList{
 					List: []*dst.Field{{
-						Type: &dst.ArrayType{Elt: a.typeName.AsNode()},
+						Type: &dst.ArrayType{Elt: a.TypeName.AsNode()},
 					}},
 				},
 			},
@@ -89,7 +89,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 		Ellipsis: true,
 	}
 
-	if importPath := a.typeName.ImportPath(); importPath != "" {
+	if importPath := a.TypeName.ImportPath(); importPath != "" {
 		ctx.AddImport(importPath, inferPkgName(importPath))
 	}
 
@@ -98,8 +98,8 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 
 func (a *appendArgs) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "AppendArgs").CallFunc(func(group *jen.Group) {
-		group.Line().Add(a.typeName.AsCode())
-		for _, t := range a.templates {
+		group.Line().Add(a.TypeName.AsCode())
+		for _, t := range a.Templates {
 			group.Line().Add(t.AsCode())
 		}
 		group.Empty().Line()
@@ -107,38 +107,19 @@ func (a *appendArgs) AsCode() jen.Code {
 }
 
 func (a *appendArgs) AddedImports() []string {
-	imports := make([]string, 0, len(a.templates)+1)
-	if argTypeImportPath := a.typeName.ImportPath(); argTypeImportPath != "" {
+	imports := make([]string, 0, len(a.Templates)+1)
+	if argTypeImportPath := a.TypeName.ImportPath(); argTypeImportPath != "" {
 		imports = append(imports, argTypeImportPath)
 	}
-	for _, t := range a.templates {
+	for _, t := range a.Templates {
 		imports = append(imports, t.AddedImports()...)
 	}
 	return imports
 }
 
-func (a *appendArgs) RenderHTML() string {
-	var buf strings.Builder
-
-	_, _ = buf.WriteString("<div class=\"advice append-arguments\">\n")
-	_, _ = buf.WriteString("  <div class=\"type\">Append the following ")
-	_, _ = buf.WriteString(a.typeName.RenderHTML())
-	_, _ = buf.WriteString(" arguments to the function call:</div>\n")
-	_, _ = buf.WriteString("  <ol>\n")
-	for _, t := range a.templates {
-		_, _ = buf.WriteString("    <li>")
-		_, _ = buf.WriteString(t.RenderHTML())
-		_, _ = buf.WriteString("</li>\n")
-	}
-	_, _ = buf.WriteString("  </ol>\n")
-	_, _ = buf.WriteString("</div>\n")
-
-	return buf.String()
-}
-
 type redirectCall struct {
-	path string
-	name string
+	ImportPath string
+	Name       string
 }
 
 // ReplaceFunction replaces the called function with the provided drop-in replacement. The signature
@@ -154,33 +135,29 @@ func (r *redirectCall) Apply(ctx context.AdviceContext) (bool, error) {
 	}
 
 	if id, ok := node.Fun.(*dst.Ident); ok {
-		id.Path = r.path
-		id.Name = r.name
+		id.Path = r.ImportPath
+		id.Name = r.Name
 		id.Obj = nil // Just in case
 	} else {
-		node.Fun = &dst.Ident{Path: r.path, Name: r.name}
+		node.Fun = &dst.Ident{Path: r.ImportPath, Name: r.Name}
 	}
 
-	if r.path != "" {
-		ctx.AddImport(r.path, inferPkgName(r.path))
+	if r.ImportPath != "" {
+		ctx.AddImport(r.ImportPath, inferPkgName(r.ImportPath))
 	}
 
 	return true, nil
 }
 
 func (r *redirectCall) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "ReplaceFunction").Call(jen.Lit(r.path), jen.Lit(r.name))
+	return jen.Qual(pkgPath, "ReplaceFunction").Call(jen.Lit(r.ImportPath), jen.Lit(r.Name))
 }
 
 func (r *redirectCall) AddedImports() []string {
-	if r.path != "" {
-		return []string{r.path}
+	if r.ImportPath != "" {
+		return []string{r.ImportPath}
 	}
 	return nil
-}
-
-func (a *redirectCall) RenderHTML() string {
-	return fmt.Sprintf(`<div class="advice redirect-call"><div class="type">Redirect the call to {{<godoc %q %q>}}.</div></div>`, a.path, a.name)
 }
 
 func init() {

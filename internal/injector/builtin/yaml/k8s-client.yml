@@ -9,7 +9,7 @@ meta:
   description: Go client for Kubernetes.
   icon: at-symbol
 aspects:
-  - id: Update config from k8s.io/client-go/rest.Config struct literal.
+  - id: Add tracer middleware to Config literals
     join-point:
       struct-literal:
         type: k8s.io/client-go/rest.Config
