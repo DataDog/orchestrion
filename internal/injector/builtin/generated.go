@@ -409,6 +409,48 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From graphql/gqlgen.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler.New"),
+			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler.NewDefaultServer"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(s *handler.Server) *handler.Server {\n  s.Use(gqlgentrace.NewTracer())\n  return s\n}({{ . }})",
+				map[string]string{
+					"gqlgentrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
+					"handler":     "github.com/99designs/gqlgen/graphql/handler",
+				},
+			)),
+		},
+	},
+	// From graphql/graph-gophers.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/graph-gophers/graphql-go.MustParseSchema"),
+			join.FunctionCall("github.com/graph-gophers/graphql-go.ParseSchema"),
+		),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				join.MustTypeName("any"),
+				code.MustTemplate(
+					"graphql.Tracer(graphqltrace.NewTracer())",
+					map[string]string{
+						"graphql":      "github.com/graph-gophers/graphql-go",
+						"graphqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
+					},
+				),
+			),
+		},
+	},
+	// From graphql/graphql-go.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/graphql-go/graphql.NewSchema"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql", "NewSchema"),
+		},
+	},
 	// From grpc.yml
 	{
 		JoinPoint: join.OneOf(
@@ -855,6 +897,7 @@ var InjectedPaths = [...]string{
 	"github.com/DataDog/orchestrion/instrument/event",
 	"github.com/DataDog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
@@ -873,6 +916,8 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
@@ -902,4 +947,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:Z3JxT6M1P2R2y0LTauBpTytjCBSfA4UTuaU4j5YdZJw1Ssm+qEETXtz4tYXuRr39B23T092cda/wo1ZIlGAiJA=="
+const Checksum = "sha512:nhpM4PMwbOYG59ltTFFH4IYjMl7wG/gm1RDfLuq6zdj03WwIu1taNm0PXM1GzA6gQjeuQHcqpVWMs1iUq/Kn5w=="
