@@ -131,7 +131,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 				Dir:        req.Dir,
 				Env:        env,
 				BuildFlags: req.BuildFlags,
-				Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+				Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
 			},
 			req.Pattern,
 		)
@@ -181,6 +181,10 @@ func (r ResolveResponse) mergeFrom(pkg *packages.Package) {
 		// Ignore the "unsafe" package (no archive file, ever), packages with an empty import path
 		// (standard library), and those already present in the map (already processed previously).
 		return
+	}
+
+	for _, err := range pkg.Errors {
+		log.Errorf("[JOBSERVER] Error during resolution of %q: %v\n", pkg.PkgPath, err)
 	}
 
 	r[pkg.PkgPath] = pkg.ExportFile

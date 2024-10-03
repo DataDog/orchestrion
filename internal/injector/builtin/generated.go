@@ -398,11 +398,23 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		),
 		Advice: []advice.Advice{
-			advice.PrependStmts(code.MustTemplate(
-				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()\n\nswitch os.Getenv(\"DD_PROFILING_ENABLED\") {\ncase \"1\", \"true\", \"auto\":\n  // The \"auto\" value can be set if profiling is enabled via the\n  // Datadog Admission Controller. We always turn on the profiler in\n  // the \"auto\" case since we only send profiles after at least a\n  // minute, and we assume anything running that long is worth\n  // profiling.\n  err := profiler.Start(\n    profiler.WithProfileTypes(\n      profiler.CPUProfile,\n      profiler.HeapProfile,\n      // Non-default profiles which are highly likely to be useful:\n      profiler.GoroutineProfile,\n      profiler.MutexProfile,\n    ),\n    profiler.WithTags(\"orchestrion:true\"),\n  )\n  if err != nil {\n    // TODO: is there a better reporting mechanism?\n    // The tracer and profiler already use the stdlib logger, so\n    // we're not adding anything new. But users might be using a\n    // different logger.\n    log.Printf(\"failed to start profiling: %s\", err)\n  }\n  defer profiler.Stop()\n}",
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n}",
+				map[string]string{
+					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+			), []string{}),
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  switch os.Getenv(\"DD_PROFILING_ENABLED\") {\n  case \"1\", \"true\", \"auto\":\n    // The \"auto\" value can be set if profiling is enabled via the\n    // Datadog Admission Controller. We always turn on the profiler in\n    // the \"auto\" case since we only send profiles after at least a\n    // minute, and we assume anything running that long is worth\n    // profiling.\n    err := profiler.Start(\n      profiler.WithProfileTypes(\n        profiler.CPUProfile,\n        profiler.HeapProfile,\n        // Non-default profiles which are highly likely to be useful:\n        profiler.GoroutineProfile,\n        profiler.MutexProfile,\n      ),\n      profiler.WithTags(\"orchestrion:true\"),\n    )\n    if err != nil {\n      // TODO: is there a better reporting mechanism?\n      // The tracer and profiler already use the stdlib logger, so\n      // we're not adding anything new. But users might be using a\n      // different logger.\n      log.Printf(\"failed to start profiling: %s\", err)\n    }\n  }\n}",
 				map[string]string{
 					"log":      "log",
 					"os":       "os",
+					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
+				},
+			), []string{}),
+			advice.PrependStmts(code.MustTemplate(
+				"defer tracer.Stop()\ndefer profiler.Stop()",
+				map[string]string{
 					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
 					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
@@ -937,6 +949,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler",
 	"k8s.io/client-go/transport",
 	"log",
@@ -947,4 +960,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:nhpM4PMwbOYG59ltTFFH4IYjMl7wG/gm1RDfLuq6zdj03WwIu1taNm0PXM1GzA6gQjeuQHcqpVWMs1iUq/Kn5w=="
+const Checksum = "sha512:pXFHjupxWE+tdgFLK/03Q7H+ireSfSHPXx8ETxc5ZuHABZLZc1DPOpFxCcZmOP2tCoSAc+K6iWr3iwKmJE3/qQ=="

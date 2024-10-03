@@ -56,6 +56,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	_ "k8s.io/client-go/transport"
 	_ "log"

@@ -64,7 +64,7 @@ func (a injectDeclarations) AsCode() jen.Code {
 }
 
 func (a injectDeclarations) AddedImports() []string {
-	return a.Links
+	return append(a.Template.AddedImports(), a.Links...)
 }
 
 func init() {
