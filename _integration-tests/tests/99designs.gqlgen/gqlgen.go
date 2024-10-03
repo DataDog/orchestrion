@@ -8,20 +8,16 @@
 package gqlgen
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"orchestrion/integration/validator/trace"
 	"testing"
 
+	"orchestrion/integration/tests/99designs.gqlgen/generated/graph"
+	"orchestrion/integration/validator/trace"
+
 	"github.com/99designs/gqlgen/client"
-	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/stretchr/testify/require"
-	"github.com/vektah/gqlparser/v2"
-	"github.com/vektah/gqlparser/v2/ast"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 type TestCase struct {
@@ -29,20 +25,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(*testing.T) {
-	schema := gqlparser.MustLoadSchema(&ast.Source{Input: `
-		type Query {
-			topLevel(id: String!): TopLevel!
-		}
-
-		type TopLevel {
-			nested(id: String!): String!
-		}
-	`})
-
-	tc.server = handler.New(&graphql.ExecutableSchemaMock{
-		ExecFunc:   execFunc,
-		SchemaFunc: func() *ast.Schema { return schema },
-	})
+	schema := graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}})
+	tc.server = handler.New(schema)
 	tc.server.AddTransport(transport.POST{})
 }
 
@@ -146,69 +130,5 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 				},
 			},
 		},
-	}
-}
-
-func execFunc(ctx context.Context) graphql.ResponseHandler {
-	type topLevel struct{ id string }
-
-	switch op := graphql.GetOperationContext(ctx); op.Operation.Operation {
-	case ast.Query:
-		return func(ctx context.Context) *graphql.Response {
-			fields := graphql.CollectFields(op, op.Operation.SelectionSet, []string{"Query"})
-			var (
-				val    = make(map[string]any, len(fields))
-				errors gqlerror.List
-			)
-
-			for _, field := range fields {
-				ctx := graphql.WithFieldContext(ctx, &graphql.FieldContext{Object: "Query", Field: field, Args: field.ArgumentMap(op.Variables)})
-				fieldVal, err := op.ResolverMiddleware(ctx, func(context.Context) (any, error) {
-					switch field.Name {
-					case "topLevel":
-						arg := field.Arguments.ForName("id")
-						id, err := arg.Value.Value(op.Variables)
-						strId, _ := id.(string)
-						return &topLevel{strId}, err
-					default:
-						return nil, fmt.Errorf("unknown field: %q", field.Name)
-					}
-				})
-				if err != nil {
-					errors = append(errors, gqlerror.Errorf("%v", err))
-					continue
-				}
-				redux := make(map[string]any, len(field.SelectionSet))
-				for _, nested := range graphql.CollectFields(op, field.SelectionSet, []string{"TopLevel"}) {
-					ctx := graphql.WithFieldContext(ctx, &graphql.FieldContext{Object: "TopLevel", Field: nested, Args: nested.ArgumentMap(op.Variables)})
-					nestedVal, err := op.ResolverMiddleware(ctx, func(context.Context) (any, error) {
-						switch nested.Name {
-						case "nested":
-							arg := nested.Arguments.ForName("id")
-							topVal, _ := fieldVal.(*topLevel)
-							id, err := arg.Value.Value(op.Variables)
-							strId, _ := id.(string)
-							return fmt.Sprintf("%s/%s", topVal.id, strId), err
-						default:
-							return nil, fmt.Errorf("unknown field: %q", nested.Name)
-						}
-					})
-					if err != nil {
-						errors = append(errors, gqlerror.Errorf("%v", err))
-						continue
-					}
-					redux[nested.Alias] = nestedVal
-				}
-				val[field.Alias] = redux
-			}
-
-			data, err := json.Marshal(val)
-			if err != nil {
-				errors = append(errors, gqlerror.Errorf("%v", err))
-			}
-			return &graphql.Response{Data: data, Errors: errors}
-		}
-	default:
-		return graphql.OneShot(graphql.ErrorResponse(ctx, "not implemented"))
 	}
 }
