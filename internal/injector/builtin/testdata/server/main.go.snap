@@ -19,6 +19,12 @@ import (
 
 //line samples/server/main.go:14
 func main() {
+//line <generated>
+	{
+		defer __orchestrion_tracer.Stop()
+		defer __orchestrion_profiler.Stop()
+	}
+//line samples/server/main.go:15
 	s := &http.Server{
 		Addr: ":8080",
 		Handler:
@@ -66,7 +72,6 @@ func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 //line <generated>
 func init() {
 	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-	defer __orchestrion_tracer.Stop()
 }
 func init() {
 	switch __orchestrion_os.Getenv("DD_PROFILING_ENABLED") {
@@ -87,6 +92,5 @@ func init() {
 			// different logger.
 			log.Printf("failed to start profiling: %s", err)
 		}
-		defer __orchestrion_profiler.Stop()
 	}
 }

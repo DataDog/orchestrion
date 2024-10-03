@@ -28,7 +28,6 @@ aspects:
           template: |-
             func init() {
               tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
-              defer tracer.Stop()
             }
 
       - inject-declarations:
@@ -66,7 +65,15 @@ aspects:
                   // different logger.
                   log.Printf("failed to start profiling: %s", err)
                 }
-                defer profiler.Stop()
               }
             }
 
+      # We need to stop the tracer and profiler at the end of `main` to ensure profiles are complete and all spans are
+      # properly flushed.
+      - prepend-statements:
+          imports:
+            profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+          template: |-
+            defer tracer.Stop()
+            defer profiler.Stop()

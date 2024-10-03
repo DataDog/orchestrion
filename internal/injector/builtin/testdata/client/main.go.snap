@@ -25,6 +25,10 @@ import (
 func main() {
 //line <generated>
 	{
+		defer __orchestrion_tracer.Stop()
+		defer __orchestrion_profiler.Stop()
+	}
+	{
 		ctx := context.TODO()
 		var span __orchestrion_tracer.Span
 		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "main",
@@ -65,7 +69,6 @@ func main() {
 //line <generated>
 func init() {
 	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-	defer __orchestrion_tracer.Stop()
 }
 func init() {
 	switch os.Getenv("DD_PROFILING_ENABLED") {
@@ -86,6 +89,5 @@ func init() {
 			// different logger.
 			__orchestrion_log.Printf("failed to start profiling: %s", err)
 		}
-		defer __orchestrion_profiler.Stop()
 	}
 }
