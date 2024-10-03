@@ -30,11 +30,11 @@ type testCase interface {
 }
 
 var testCases = map[string]func(b *testing.B) testCase{
-	// "DataDog:orchestrion": benchmarkOrchestrion,
-	"traefik:traefik": benchmarkGithub("traefik", "traefik", "./..."),
-	// "go-delve:delve":      benchmarkGithub("go-delve", "delve", "./..."),
-	// "jlegrone:tctx":       benchmarkGithub("jlegrone", "tctx", "./..."),
-	// "tinylib:msgp":        benchmarkGithub("tinylib", "msgp", "./..."),
+	"DataDog:orchestrion": benchmarkOrchestrion,
+	"traefik:traefik":     benchmarkGithub("traefik", "traefik", "./..."),
+	"go-delve:delve":      benchmarkGithub("go-delve", "delve", "./..."),
+	"jlegrone:tctx":       benchmarkGithub("jlegrone", "tctx", "./..."),
+	"tinylib:msgp":        benchmarkGithub("tinylib", "msgp", "./..."),
 }
 
 func Benchmark(b *testing.B) {
