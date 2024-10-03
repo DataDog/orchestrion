@@ -67,7 +67,8 @@ func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 func init() {
 	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 	defer __orchestrion_tracer.Stop()
-
+}
+func init() {
 	switch __orchestrion_os.Getenv("DD_PROFILING_ENABLED") {
 	case "1", "true", "auto":
 		// The "auto" value can be set if profiling is enabled via the
