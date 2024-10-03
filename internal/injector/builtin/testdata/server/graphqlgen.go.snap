@@ -1,4 +1,4 @@
-//line samples/server/graphql.go:1:1
+//line samples/server/graphqlgen.go:1:1
 // Unless explicitly stated otherwise all files in this repository are licensed
 // under the Apache License Version 2.0.
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
@@ -15,10 +15,10 @@ import (
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 //line <generated>
-	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen"
+	__orchestrion_gqlgentrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen"
 )
 
-//line samples/server/graphql.go:18
+//line samples/server/graphqlgen.go:18
 func Serve99Designs() {
 	schema := gqlparser.MustLoadSchema(&ast.Source{Input: `
 	type Query {
@@ -33,10 +33,10 @@ func Serve99Designs() {
 	server :=
 //line <generated>
 		func(s *handler.Server) *handler.Server {
-			s.Use(__orchestrion_tracer.NewTracer())
+			s.Use(__orchestrion_gqlgentrace.NewTracer())
 			return s
 		}(
-//line samples/server/graphql.go:29
+//line samples/server/graphqlgen.go:29
 			handler.New(&graphql.ExecutableSchemaMock{
 				ExecFunc:   execFunc,
 				SchemaFunc: func() *ast.Schema { return schema },
