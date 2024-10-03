@@ -31,6 +31,8 @@ require (
 	k8s.io/client-go v0.31.0
 )
 
+replace gopkg.in/DataDog/dd-trace-go.v1 => github.com/DataDog/dd-trace-go v1.39.0-alpha.1.0.20241001124004-79dcb906f8f0
+
 require (
 	cloud.google.com/go v0.115.1 // indirect
 	cloud.google.com/go/auth v0.9.1 // indirect

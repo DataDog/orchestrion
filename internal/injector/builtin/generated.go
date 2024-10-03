@@ -215,6 +215,38 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
 		},
 	},
+	// From datastreams/confluentinc_kafka.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+		Advice: []advice.Advice{
+			advice.AddStructField("_ddTracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing.ProducerTracer")),
+		},
+	},
+	// From datastreams/confluentinc_kafka_v2.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewConsumer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(c *kafka.Consumer, err error) (*kafkatrace.Consumer, error) {\n  var wc *kafkatrace.Consumer\n  if c != nil {\n    wc = kafkatrace.WrapConsumer(c)\n  }\n  return wc, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("github.com/confluentinc/confluent-kafka-go/v2/kafka.NewProducer"),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(p *kafka.Producer, err error) (*kafkatrace.Producer, error) {\n  var wp *kafkatrace.Producer\n  if p != nil {\n    wp = kafkatrace.WrapProducer(p)\n  }\n  return wp, err\n}({{ . }})",
+				map[string]string{
+					"kafka":      "github.com/confluentinc/confluent-kafka-go/v2/kafka",
+					"kafkatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+				},
+			)),
+		},
+	},
 	// From datastreams/gcp_pubsub.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
@@ -860,6 +892,8 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
@@ -902,4 +936,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:Z3JxT6M1P2R2y0LTauBpTytjCBSfA4UTuaU4j5YdZJw1Ssm+qEETXtz4tYXuRr39B23T092cda/wo1ZIlGAiJA=="
+const Checksum = "sha512:1NTio2PeFO3S6Y0d4ooWqMjye8QTMZkolwbjgYODTV4zI3DkgPVbmOEJY+h8avE1AD1zJ/agdJNnYEYfOH3RRQ=="

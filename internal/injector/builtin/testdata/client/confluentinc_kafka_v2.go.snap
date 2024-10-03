@@ -1,0 +1,36 @@
+//line samples/client/confluentinc_kafka_v2.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+//line <generated>
+	__orchestrion_kafkatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2"
+)
+
+//line samples/client/confluentinc_kafka_v2.go:12
+func confluentincV2KafkaConsumer() {
+	cfg := &kafka.ConfigMap{
+		"group.id":          "gotest",
+		"bootstrap.servers": "localhost:9092",
+	}
+	consumer, err :=
+//line <generated>
+		func(c *kafka.Consumer, err error) (*__orchestrion_kafkatrace.Consumer, error) {
+			var wc *__orchestrion_kafkatrace.Consumer
+			if c != nil {
+				wc = __orchestrion_kafkatrace.WrapConsumer(c)
+			}
+			return wc, err
+		}(
+//line samples/client/confluentinc_kafka_v2.go:17
+			kafka.NewConsumer(cfg))
+	if err != nil {
+		panic(err)
+	}
+	defer consumer.Close()
+}
