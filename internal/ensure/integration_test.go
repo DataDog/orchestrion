@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/version"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
 )
@@ -102,7 +101,7 @@ func Test(t *testing.T) {
 				_, ok := err.(*exec.ExitError)
 				require.True(t, ok, "unexpected error while running test_main: %v", err)
 			} else {
-				assert.NoError(t, err, "failed to run %q", testMain)
+				require.NoError(t, err, "failed to run test_main helper")
 				require.Equal(t, test.output, out, "unexpected output from test_main helper")
 			}
 		})
