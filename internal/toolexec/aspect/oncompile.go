@@ -7,11 +7,6 @@ package aspect
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/builtin"
@@ -20,6 +15,12 @@ import (
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
+	"go/version"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
 )
 
 type specialCaseBehavior int
@@ -83,9 +84,15 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return err
 	}
 
+	orchestrionLang := version.Lang(runtime.Version())
+	if len(results) > 0 && shouldReplaceLangVersion(cmd.Flags.Lang, orchestrionLang) {
+		log.Debugf("Need to replace -lang version: (prev: %q | new: %q)\n", cmd.Flags.Lang, orchestrionLang)
+		cmd.SetLang(orchestrionLang)
+	}
+
 	references := typed.ReferenceMap{}
 	for gofile, modFile := range results {
-		log.Debugf("Modified source code: %q => %q\n", gofile, modFile.Filename)
+		log.Infof("Modified source code: %q => %q\n", gofile, modFile.Filename)
 		if err := cmd.ReplaceParam(gofile, modFile.Filename); err != nil {
 			return fmt.Errorf("replacing %q with %q: %w", gofile, modFile.Filename, err)
 		}
@@ -185,6 +192,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	})
 
 	return nil
+}
+
+func shouldReplaceLangVersion(cmdVersion, orchestrionVersion string) bool {
+	cmdVersion = version.Lang(cmdVersion)
+	return version.Compare(cmdVersion, orchestrionVersion) < 0
 }
 
 func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err error) {

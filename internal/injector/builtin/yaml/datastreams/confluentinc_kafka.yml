@@ -209,6 +209,7 @@ aspects:
                 opts = append(opts, tracing.WithConfig(__dd_wrapConfigMap(c.__dd_confmap)))
               }
               c.__dd_tracer = __dd_newKafkaTracer(opts...)
+              // TODO: accessing c.events here might break if the library renames this variable...
               c.__dd_events = tracing.WrapConsumeEventsChannel(c.__dd_tracer, c.events, c, __dd_wrapEvent)
             }
 
@@ -217,6 +218,8 @@ aspects:
                 return
               }
               p.__dd_tracer = __dd_newKafkaTracer()
+              // TODO: accessing p.events and p.produceChannel here might break if the library renames this variable...
+              p.__dd_events = p.events
               p.__dd_produceChannel = tracing.WrapProduceChannel(p.__dd_tracer, p.produceChannel, __dd_wrapMessage)
               if p.__dd_tracer.DSMEnabled() {
                 p.__dd_events = tracing.WrapProduceEventsChannel(p.__dd_tracer, p.events, __dd_wrapEvent)
@@ -247,16 +250,44 @@ aspects:
           name: __dd_confmap
           type: "*ConfigMap"
 
+  - id: Trace kafka.NewConsumer
+    join-point:
+      one-of:
+        - all-of:
+          - import-path: github.com/confluentinc/confluent-kafka-go/kafka
+          - function-body:
+              function:
+                  - name: NewConsumer
+        - all-of:
+            - import-path: github.com/confluentinc/confluent-kafka-go/v2/kafka
+            - function-body:
+                function:
+                  - name: NewConsumer
+    advice:
+      - prepend-statements:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing
+          template: |-
+            {{- $conf := .Function.Argument 0 -}}
+            {{- $c := .Function.Result 0 -}}
+            defer func() {
+              if {{ $c }} == nil {
+                return
+              }
+              {{ $c }}.__dd_confmap = {{ $conf }}
+              __dd_initConsumer({{ $c }})
+            }()
+
   - id: Trace kafka.Consumer#Close
     join-point:
       one-of:
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Consumer'
               - name: Close
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer'
               - name: Close
     advice:
       - prepend-statements:
@@ -277,11 +308,11 @@ aspects:
       one-of:
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Consumer'
               - name: Events
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer'
               - name: Events
     advice:
       - prepend-statements:
@@ -295,16 +326,17 @@ aspects:
               {{ $events }} = {{ $c }}.__dd_events
             }()
 
+  # kafka.Consumer#ReadMessage calls kafka.Consumer#Poll internally, so there's no need to trace it.
   - id: Trace kafka.Consumer#Poll
     join-point:
       one-of:
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Consumer'
               - name: Poll
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer'
               - name: Poll
     advice:
       - prepend-statements:
@@ -330,49 +362,16 @@ aspects:
                 }
             }()
 
-  - id: Trace kafka.Consumer#ReadMessage
-    join-point:
-      one-of:
-        - function-body:
-            function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
-              - name: ReadMessage
-        - function-body:
-            function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
-              - name: ReadMessage
-    advice:
-      - prepend-statements:
-          imports:
-            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing
-          template: |-
-            {{- $c := .Function.Receiver -}}
-            {{- $msg := .Function.Result 0 -}}
-            {{- $err := .Function.Result 1 -}}
-            __dd_initConsumer({{ $c }})
-            if {{ $c }}.__dd_tracer.PrevSpan != nil {
-              {{ $c }}.__dd_tracer.PrevSpan.Finish()
-              {{ $c }}.__dd_tracer.PrevSpan = nil
-            }
-            defer func() {
-              if {{ $err }} != nil {
-                return
-              }
-              tMsg := __dd_wrapMessage({{ $msg }})
-              {{ $c }}.__dd_tracer.SetConsumeCheckpoint(tMsg)
-              {{ $c }}.__dd_tracer.PrevSpan = {{ $c }}.__dd_tracer.StartConsumeSpan(tMsg)
-            }()
-
   - id: Trace kafka.Consumer#Commit
     join-point:
       one-of:
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Consumer'
               - name: Commit
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer'
               - name: Commit
     advice:
       - prepend-statements:
@@ -394,11 +393,11 @@ aspects:
       one-of:
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Consumer'
               - name: CommitMessage
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer'
               - name: CommitMessage
     advice:
       - prepend-statements:
@@ -420,11 +419,11 @@ aspects:
       one-of:
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Consumer'
               - name: CommitOffsets
         - function-body:
             function:
-              - receiver: github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer'
               - name: CommitOffsets
     advice:
       - prepend-statements:
@@ -458,3 +457,96 @@ aspects:
       - add-struct-field:
           name: __dd_produceChannel
           type: "__dd_messageChan"
+
+
+  - id: Trace kafka.Producer#Events
+    join-point:
+      one-of:
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Producer'
+              - name: Events
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer'
+              - name: Events
+    advice:
+      - prepend-statements:
+          template: |-
+            {{- $p := .Function.Receiver -}}
+            {{- $events := .Function.Result 0 -}}
+            __dd_initProducer({{ $p }})
+            defer func() {
+              {{ $events }} = {{ $p }}.__dd_events
+            }()
+
+  - id: Trace kafka.Producer#ProduceChannel
+    join-point:
+      one-of:
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Producer'
+              - name: ProduceChannel
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer'
+              - name: ProduceChannel
+    advice:
+      - prepend-statements:
+          template: |-
+            {{- $p := .Function.Receiver -}}
+            {{- $produceChannel := .Function.Result 0 -}}
+            __dd_initProducer({{ $p }})
+            defer func() {
+              {{ $produceChannel }} = {{ $p }}.__dd_produceChannel
+            }()
+
+  - id: Trace kafka.Producer#Close
+    join-point:
+      one-of:
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Producer'
+              - name: Close
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer'
+              - name: Close
+    advice:
+      - prepend-statements:
+          template: |-
+            {{- $p := .Function.Receiver -}}
+            __dd_initProducer({{ $p }})
+            close({{ $p }}.__dd_produceChannel)
+
+  - id: Trace kafka.Producer#Produce
+    join-point:
+      one-of:
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/kafka.Producer'
+              - name: Produce
+        - function-body:
+            function:
+              - receiver: '*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer'
+              - name: Produce
+    advice:
+      - prepend-statements:
+          imports:
+            tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+          template: |-
+            {{- $p := .Function.Receiver -}}
+            {{- $msg := .Function.Argument 0 -}}
+            {{- $deliveryChan := .Function.Argument 1 -}}
+            {{- $err := .Function.Result 0 -}}
+            __dd_initProducer({{ $p }})
+            tMsg := __dd_wrapMessage({{ $msg }})
+            span := p.__dd_tracer.StartProduceSpan(tMsg)
+            {{ $deliveryChan }} = tracing.WrapDeliveryChannel({{ $p }}.__dd_tracer, {{ $deliveryChan }}, span, __dd_wrapEvent)
+            {{ $p }}.__dd_tracer.SetProduceCheckpoint(tMsg)
+            defer func() {
+              if {{ $err }} != nil || {{ $deliveryChan }} == nil {
+                span.Finish(tracer.WithError({{ $err }}))
+              }
+            }()
