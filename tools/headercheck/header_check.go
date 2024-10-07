@@ -21,9 +21,6 @@ func main() {
 		"// This product includes software developed at Datadog (https://www.datadoghq.com/).",
 		"// Copyright 2023-present Datadog, Inc.",
 	}
-	skip := map[string]struct{}{
-		"event_string.go": {}, // Auto generated file
-	}
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -35,9 +32,6 @@ func main() {
 			log.Fatal(err)
 		}
 		if !strings.HasSuffix(info.Name(), ".go") {
-			return nil
-		}
-		if _, skipped := skip[info.Name()]; skipped {
 			return nil
 		}
 		file, err := os.Open(path)

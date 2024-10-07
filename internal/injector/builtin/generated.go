@@ -597,15 +597,69 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		),
 		Advice: []advice.Advice{
-			advice.PrependStmts(code.MustTemplate(
-				"tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\ndefer tracer.Stop()\n\nswitch os.Getenv(\"DD_PROFILING_ENABLED\") {\ncase \"1\", \"true\", \"auto\":\n  // The \"auto\" value can be set if profiling is enabled via the\n  // Datadog Admission Controller. We always turn on the profiler in\n  // the \"auto\" case since we only send profiles after at least a\n  // minute, and we assume anything running that long is worth\n  // profiling.\n  err := profiler.Start(\n    profiler.WithProfileTypes(\n      profiler.CPUProfile,\n      profiler.HeapProfile,\n      // Non-default profiles which are highly likely to be useful:\n      profiler.GoroutineProfile,\n      profiler.MutexProfile,\n    ),\n    profiler.WithTags(\"orchestrion:true\"),\n  )\n  if err != nil {\n    // TODO: is there a better reporting mechanism?\n    // The tracer and profiler already use the stdlib logger, so\n    // we're not adding anything new. But users might be using a\n    // different logger.\n    log.Printf(\"failed to start profiling: %s\", err)\n  }\n  defer profiler.Stop()\n}",
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n}",
+				map[string]string{
+					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+			), []string{}),
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  switch os.Getenv(\"DD_PROFILING_ENABLED\") {\n  case \"1\", \"true\", \"auto\":\n    // The \"auto\" value can be set if profiling is enabled via the\n    // Datadog Admission Controller. We always turn on the profiler in\n    // the \"auto\" case since we only send profiles after at least a\n    // minute, and we assume anything running that long is worth\n    // profiling.\n    err := profiler.Start(\n      profiler.WithProfileTypes(\n        profiler.CPUProfile,\n        profiler.HeapProfile,\n        // Non-default profiles which are highly likely to be useful:\n        profiler.GoroutineProfile,\n        profiler.MutexProfile,\n      ),\n      profiler.WithTags(\"orchestrion:true\"),\n    )\n    if err != nil {\n      // TODO: is there a better reporting mechanism?\n      // The tracer and profiler already use the stdlib logger, so\n      // we're not adding anything new. But users might be using a\n      // different logger.\n      log.Printf(\"failed to start profiling: %s\", err)\n    }\n  }\n}",
 				map[string]string{
 					"log":      "log",
 					"os":       "os",
 					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
+				},
+			), []string{}),
+			advice.PrependStmts(code.MustTemplate(
+				"defer tracer.Stop()\ndefer profiler.Stop()",
+				map[string]string{
+					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
 					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
+		},
+	},
+	// From graphql/gqlgen.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler.New"),
+			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler.NewDefaultServer"),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(s *handler.Server) *handler.Server {\n  s.Use(gqlgentrace.NewTracer())\n  return s\n}({{ . }})",
+				map[string]string{
+					"gqlgentrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
+					"handler":     "github.com/99designs/gqlgen/graphql/handler",
+				},
+			)),
+		},
+	},
+	// From graphql/graph-gophers.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("github.com/graph-gophers/graphql-go.MustParseSchema"),
+			join.FunctionCall("github.com/graph-gophers/graphql-go.ParseSchema"),
+		),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				join.MustTypeName("any"),
+				code.MustTemplate(
+					"graphql.Tracer(graphqltrace.NewTracer())",
+					map[string]string{
+						"graphql":      "github.com/graph-gophers/graphql-go",
+						"graphqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
+					},
+				),
+			),
+		},
+	},
+	// From graphql/graphql-go.yml
+	{
+		JoinPoint: join.FunctionCall("github.com/graphql-go/graphql.NewSchema"),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql", "NewSchema"),
 		},
 	},
 	// From grpc.yml
@@ -1054,6 +1108,7 @@ var InjectedPaths = [...]string{
 	"github.com/DataDog/orchestrion/instrument/event",
 	"github.com/DataDog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
@@ -1073,6 +1128,8 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
@@ -1092,6 +1149,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler",
 	"k8s.io/client-go/transport",
 	"log",
@@ -1102,4 +1160,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:aqpn4OuWm8oFqGGRzozLczp2JnEMN7QgG6t09QIWj6MvbEkigoaMSu6HWNlN2kncMOBst+QySdPY9uUCDcvr5A=="
+const Checksum = "sha512:ObCxFitlDwn4dt5vaSU5itrAGVXnZixeqddmhe1dyD0GGCnbXUbu+ja7Hsv9SJWbbToFVutteuW2xkCcgHCBNQ=="

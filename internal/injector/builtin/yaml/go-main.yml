@@ -18,39 +18,62 @@ aspects:
               - name: main
               - signature: {}
     advice:
-      - prepend-statements:
+      - inject-declarations:
           imports:
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+          # Note: it is valid to have multiple func init() in a single compile unit (e.g, `.go` file), in which case
+          # they get executed in declaration order. This means it's okay for us to add a new init function if there is
+          # already one in the file, but as it currently is appended AFTER all other declarations in the file, it means
+          # that it will be executed last (tracing contents of previous init functions will not be possible).
+          template: |-
+            func init() {
+              tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
+            }
+
+      - inject-declarations:
+          imports:
             profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
             log: log
             os: os
+          # Note: it is valid to have multiple func init() in a single compile unit (e.g, `.go` file), in which case
+          # they get executed in declaration order. This means it's okay for us to add a new init function if there is
+          # already one in the file, but as it currently is appended AFTER all other declarations in the file, it means
+          # that it will be executed last (tracing contents of previous init functions will not be possible).
           template: |-
-            tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
-            defer tracer.Stop()
-
-            switch os.Getenv("DD_PROFILING_ENABLED") {
-            case "1", "true", "auto":
-              // The "auto" value can be set if profiling is enabled via the
-              // Datadog Admission Controller. We always turn on the profiler in
-              // the "auto" case since we only send profiles after at least a
-              // minute, and we assume anything running that long is worth
-              // profiling.
-              err := profiler.Start(
-                profiler.WithProfileTypes(
-                  profiler.CPUProfile,
-                  profiler.HeapProfile,
-                  // Non-default profiles which are highly likely to be useful:
-                  profiler.GoroutineProfile,
-                  profiler.MutexProfile,
-                ),
-                profiler.WithTags("orchestrion:true"),
-              )
-              if err != nil {
-                // TODO: is there a better reporting mechanism?
-                // The tracer and profiler already use the stdlib logger, so
-                // we're not adding anything new. But users might be using a
-                // different logger.
-                log.Printf("failed to start profiling: %s", err)
+            func init() {
+              switch os.Getenv("DD_PROFILING_ENABLED") {
+              case "1", "true", "auto":
+                // The "auto" value can be set if profiling is enabled via the
+                // Datadog Admission Controller. We always turn on the profiler in
+                // the "auto" case since we only send profiles after at least a
+                // minute, and we assume anything running that long is worth
+                // profiling.
+                err := profiler.Start(
+                  profiler.WithProfileTypes(
+                    profiler.CPUProfile,
+                    profiler.HeapProfile,
+                    // Non-default profiles which are highly likely to be useful:
+                    profiler.GoroutineProfile,
+                    profiler.MutexProfile,
+                  ),
+                  profiler.WithTags("orchestrion:true"),
+                )
+                if err != nil {
+                  // TODO: is there a better reporting mechanism?
+                  // The tracer and profiler already use the stdlib logger, so
+                  // we're not adding anything new. But users might be using a
+                  // different logger.
+                  log.Printf("failed to start profiling: %s", err)
+                }
               }
-              defer profiler.Stop()
             }
+
+      # We need to stop the tracer and profiler at the end of `main` to ensure profiles are complete and all spans are
+      # properly flushed.
+      - prepend-statements:
+          imports:
+            profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+          template: |-
+            defer tracer.Stop()
+            defer profiler.Stop()

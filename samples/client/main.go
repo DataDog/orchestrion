@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+//dd:span
 func main() {
 	if len(os.Args) < 2 {
 		return

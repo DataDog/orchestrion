@@ -20,35 +20,24 @@ import (
 	__orchestrion_log "log"
 )
 
-//line samples/client/main.go:18
+//dd:span
+//line samples/client/main.go:19
 func main() {
 //line <generated>
 	{
-		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 		defer __orchestrion_tracer.Stop()
-
-		switch os.Getenv("DD_PROFILING_ENABLED") {
-		case "1", "true", "auto":
-			// The "auto" value can be set if profiling is enabled via the
-			// Datadog Admission Controller. We always turn on the profiler in
-			// the "auto" case since we only send profiles after at least a
-			// minute, and we assume anything running that long is worth
-			// profiling.
-			err := __orchestrion_profiler.Start(
-				__orchestrion_profiler.WithProfileTypes(__orchestrion_profiler.CPUProfile, __orchestrion_profiler.HeapProfile, __orchestrion_profiler.GoroutineProfile, __orchestrion_profiler.MutexProfile),
-				__orchestrion_profiler.WithTags("orchestrion:true"),
-			)
-			if err != nil {
-				// TODO: is there a better reporting mechanism?
-				// The tracer and profiler already use the stdlib logger, so
-				// we're not adding anything new. But users might be using a
-				// different logger.
-				__orchestrion_log.Printf("failed to start profiling: %s", err)
-			}
-			defer __orchestrion_profiler.Stop()
-		}
+		defer __orchestrion_profiler.Stop()
 	}
-//line samples/client/main.go:19
+	{
+		ctx := context.TODO()
+		var span __orchestrion_tracer.Span
+		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "main",
+			__orchestrion_tracer.Tag("function-name", "main"),
+		)
+
+		defer span.Finish()
+	}
+//line samples/client/main.go:20
 	if len(os.Args) < 2 {
 		return
 	}
@@ -75,4 +64,30 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(string(b))
+}
+
+//line <generated>
+func init() {
+	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
+}
+func init() {
+	switch os.Getenv("DD_PROFILING_ENABLED") {
+	case "1", "true", "auto":
+		// The "auto" value can be set if profiling is enabled via the
+		// Datadog Admission Controller. We always turn on the profiler in
+		// the "auto" case since we only send profiles after at least a
+		// minute, and we assume anything running that long is worth
+		// profiling.
+		err := __orchestrion_profiler.Start(
+			__orchestrion_profiler.WithProfileTypes(__orchestrion_profiler.CPUProfile, __orchestrion_profiler.HeapProfile, __orchestrion_profiler.GoroutineProfile, __orchestrion_profiler.MutexProfile),
+			__orchestrion_profiler.WithTags("orchestrion:true"),
+		)
+		if err != nil {
+			// TODO: is there a better reporting mechanism?
+			// The tracer and profiler already use the stdlib logger, so
+			// we're not adding anything new. But users might be using a
+			// different logger.
+			__orchestrion_log.Printf("failed to start profiling: %s", err)
+		}
+	}
 }
