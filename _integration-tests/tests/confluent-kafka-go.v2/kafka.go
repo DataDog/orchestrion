@@ -9,7 +9,6 @@ package kafka
 
 import (
 	"context"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -19,58 +18,42 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/redpanda"
+	kafkatest "github.com/testcontainers/testcontainers-go/modules/kafka"
 )
 
 var (
-	topic     = "gotest"
-	partition = int32(0)
+	topic         = "gotest"
+	consumerGroup = "gotest"
+	partition     = int32(0)
 )
 
 type TestCase struct {
-	server *redpanda.Container
-	addr   []string
+	container *kafkatest.KafkaContainer
+	addr      []string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test on Windows")
-	}
-	var (
-		err error
-		ctx = context.Background()
-	)
-	tc.server, err = redpanda.Run(ctx,
-		"docker.redpanda.com/redpandadata/redpanda:v24.2.1",
-		redpanda.WithAutoCreateTopics(),
-		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
-	)
-	if err != nil {
-		t.Skipf("Failed to start kafka test container: %v\n", err)
-	}
-
-	addr, err := tc.server.KafkaSeedBroker(ctx)
-	require.NoError(t, err, "failed to get seed broker address")
-
+	container, addr := utils.StartKafkaTestContainer(t)
+	tc.container = container
 	tc.addr = []string{addr}
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	produceMessage(t, &kafka.ConfigMap{
-		"group.id":            "gotest",
-		"bootstrap.servers":   strings.Join(tc.addr, ","),
-		"go.delivery.reports": true,
-	})
-	consumeMessage(t, &kafka.ConfigMap{
-		"group.id":          "gotest",
-		"bootstrap.servers": strings.Join(tc.addr, ","),
-	})
+	tc.produceMessage(t)
+	tc.consumeMessage(t)
 }
 
-func produceMessage(t *testing.T, cfg *kafka.ConfigMap) {
+func (tc *TestCase) kafkaBootstrapServers() string {
+	return strings.Join(tc.addr, ",")
+}
+
+func (tc *TestCase) produceMessage(t *testing.T) {
 	t.Helper()
+
+	cfg := &kafka.ConfigMap{
+		"bootstrap.servers":   tc.kafkaBootstrapServers(),
+		"go.delivery.reports": true,
+	}
 	delivery := make(chan kafka.Event, 1)
 
 	producer, err := kafka.NewProducer(cfg)
@@ -91,9 +74,17 @@ func produceMessage(t *testing.T, cfg *kafka.ConfigMap) {
 	require.NoError(t, err, "failed to send message")
 }
 
-func consumeMessage(t *testing.T, cfg *kafka.ConfigMap) {
+func (tc *TestCase) consumeMessage(t *testing.T) {
 	t.Helper()
 
+	cfg := &kafka.ConfigMap{
+		"group.id":                 consumerGroup,
+		"bootstrap.servers":        tc.kafkaBootstrapServers(),
+		"fetch.wait.max.ms":        500,
+		"socket.timeout.ms":        1500,
+		"session.timeout.ms":       1500,
+		"enable.auto.offset.store": false,
+	}
 	c, err := kafka.NewConsumer(cfg)
 	require.NoError(t, err, "failed to create consumer")
 	defer c.Close()
@@ -116,33 +107,31 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	require.NoError(t, tc.server.Terminate(ctx))
+	require.NoError(t, tc.container.Terminate(ctx))
 }
 
-func (*TestCase) ExpectedTraces() trace.Spans {
-	return trace.Spans{
+func (*TestCase) ExpectedTraces() trace.Traces {
+	return trace.Traces{
 		{
-			Tags: map[string]interface{}{
-				"service": "kafka",
+			Tags: map[string]any{
 				"name":    "kafka.produce",
 				"type":    "queue",
+				"service": "kafka",
 			},
-			Meta: map[string]interface{}{
-				"component":        "confluentinc/confluent-kafka-go/kafka.v2",
-				"messaging.system": "kafka",
-				"span.kind":        "producer",
+			Meta: map[string]string{
+				"span.kind": "producer",
+				"component": "confluentinc/confluent-kafka-go/kafka.v2",
 			},
-			Children: []*trace.Span{
+			Children: trace.Traces{
 				{
-					Tags: map[string]interface{}{
-						"service": "kafka",
+					Tags: map[string]any{
 						"name":    "kafka.consume",
 						"type":    "queue",
+						"service": "kafka",
 					},
-					Meta: map[string]interface{}{
-						"component":        "confluentinc/confluent-kafka-go/kafka.v2",
-						"messaging.system": "kafka",
-						"span.kind":        "consumer",
+					Meta: map[string]string{
+						"span.kind": "consumer",
+						"component": "confluentinc/confluent-kafka-go/kafka.v2",
 					},
 				},
 			},

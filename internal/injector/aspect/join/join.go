@@ -45,6 +45,7 @@ type TypeName struct {
 	pointer bool
 }
 
+// FIXME: this does not support all the type syntax, like: "chan Event"
 var typeNameRe = regexp.MustCompile(`\A(\*)?\s*(?:([A-Za-z_][A-Za-z0-9_.-]+(?:/[A-Za-z_.-][A-Za-z0-9_.-]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
 
 func NewTypeName(n string) (tn TypeName, err error) {
