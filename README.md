@@ -117,33 +117,37 @@ In addition to this, Orchestrion only supports projects using [Go modules][go-mo
 
 Orchestrion supports automatic tracing of the following libraries:
 
-Library                             | Since    | Notes
-------------------------------------|:--------:|-----------------------------------------------
-`database/sql`                      | `v0.7.0` | [Aspect][db-sql]
-`github.com/gin-gonic/gin`          | `v0.7.0` | [Aspect][gin]
-`github.com/go-chi/chi/v5`          | `v0.7.0` | [Aspect][chi-v5]
-`github.com/go-chi/chi`             | `v0.7.0` | [Aspect][chi-v1]
-`github.com/go-redis/redis/v7`      | `v0.7.0` | [Aspect][go-redis-v7]
-`github.com/go-redis/redis/v8`      | `v0.7.0` | [Aspect][go-redis-v8]
-`github.com/gofiber/fiber/v2`       | `v0.7.0` | [Aspect][fiber-v2]
-`github.com/gomodule/redigo/redis`  | `v0.7.0` | [Aspect][redigo]
-`github.com/gorilla/mux`            | `v0.7.0` | [Aspect][gorilla]. Cannot be opted out of via `//dd:ignore`
-`github.com/jinzhu/gorm`            | `v0.7.0` | [Aspect][jinzhu-gorm]
-`github.com/labstack/echo/v4`       | `v0.7.0` | [Aspect][echo]
-`google.golang.org/grpc`            | `v0.7.0` | [Aspect][grpc]
-`gorm.io/gorm`                      | `v0.7.0` | [Aspect][gorm]
-`net/http`                          | `v0.7.0` | [Client][net-http.client] / [Server][net-http.server]
-`go.mongodb.org/mongo-driver/mongo` | `v0.7.3` | [Aspect][mongo]
-`github.com/aws-sdk-go/aws`         | `v0.7.4` | [Aspect][aws-sdk-go]
-`github.com/hashicorp/vault`        | `v0.7.4` | [Aspect][hashicorp-vault]
-`github.com/IBM/sarama`             | `v0.7.4` | [Aspect][ibm-sarama]
-`github.com/Shopify/sarama`         | `v0.7.4` | [Aspect][shopify-sarama]
-`k8s.io/client-go`                  | `v0.7.4` | [Aspect][k8s-client]
-`log/slog`                          | `v0.7.4` | [Aspect][log-slog]
-`os`                                | `v0.8.0` | [Aspect][os]
-`github.com/aws/aws-sdk-go-v2`      | `v0.8.0` | [Aspect][aws-sdk-go-v2]
-`github.com/redis/go-redis/v9`      | `v0.8.0` | [Aspect][go-redis-v9]
-`github.com/gocql/gocql`            | `v0.8.0` | [Aspect][gocql]
+Library                               | Since    | Notes
+--------------------------------------|:--------:|-----------------------------------------------
+`database/sql`                        | `v0.7.0` | [Aspect][db-sql]
+`github.com/gin-gonic/gin`            | `v0.7.0` | [Aspect][gin]
+`github.com/go-chi/chi/v5`            | `v0.7.0` | [Aspect][chi-v5]
+`github.com/go-chi/chi`               | `v0.7.0` | [Aspect][chi-v1]
+`github.com/go-redis/redis/v7`        | `v0.7.0` | [Aspect][go-redis-v7]
+`github.com/go-redis/redis/v8`        | `v0.7.0` | [Aspect][go-redis-v8]
+`github.com/gofiber/fiber/v2`         | `v0.7.0` | [Aspect][fiber-v2]
+`github.com/gomodule/redigo/redis`    | `v0.7.0` | [Aspect][redigo]
+`github.com/gorilla/mux`              | `v0.7.0` | [Aspect][gorilla]. Cannot be opted out of via `//dd:ignore`
+`github.com/jinzhu/gorm`              | `v0.7.0` | [Aspect][jinzhu-gorm]
+`github.com/labstack/echo/v4`         | `v0.7.0` | [Aspect][echo]
+`google.golang.org/grpc`              | `v0.7.0` | [Aspect][grpc]
+`gorm.io/gorm`                        | `v0.7.0` | [Aspect][gorm]
+`net/http`                            | `v0.7.0` | [Client][net-http.client] / [Server][net-http.server]
+`go.mongodb.org/mongo-driver/mongo`   | `v0.7.3` | [Aspect][mongo]
+`github.com/aws-sdk-go/aws`           | `v0.7.4` | [Aspect][aws-sdk-go]
+`github.com/hashicorp/vault`          | `v0.7.4` | [Aspect][hashicorp-vault]
+`github.com/IBM/sarama`               | `v0.7.4` | [Aspect][ibm-sarama]
+`github.com/Shopify/sarama`           | `v0.7.4` | [Aspect][shopify-sarama]
+`k8s.io/client-go`                    | `v0.7.4` | [Aspect][k8s-client]
+`log/slog`                            | `v0.7.4` | [Aspect][log-slog]
+`os`                                  | `v0.8.0` | [Aspect][os]
+`github.com/aws/aws-sdk-go-v2`        | `v0.8.0` | [Aspect][aws-sdk-go-v2]
+`github.com/redis/go-redis/v9`        | `v0.8.0` | [Aspect][go-redis-v9]
+`github.com/gocql/gocql`              | `v0.8.0` | [Aspect][gocql]
+`cloud.google.com/go/pubsub`          | `v0.9.0` | [Aspect][pubsub]
+`github.com/99designs/gqlgen`         | `v0.9.1` | [Aspect][gqlgen]
+`github.com/graph-gophers/graphql-go` | `v0.9.1` | [Aspect][graph-gophers]
+`github.com/graphql-go/graphql`       | `v0.9.1` | [Aspect][graphql]
 
 [db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
 [gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
@@ -171,6 +175,10 @@ Library                             | Since    | Notes
 [shopify-sarama]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/shopify_sarama/
 [os]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/ossec/
 [gocql]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gocql/
+[pubsub]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/gcp_pubsub/
+[gqlgen]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/gqlgen/
+[graph-gophers]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graph-gophers/
+[graphql]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graphql-go/
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.
