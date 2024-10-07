@@ -35,6 +35,8 @@ require (
 	gorm.io/gorm v1.25.11
 )
 
+require github.com/imdario/mergo v0.3.16 // indirect
+
 require (
 	cloud.google.com/go v0.115.1 // indirect
 	cloud.google.com/go/auth v0.9.1 // indirect
@@ -117,8 +119,6 @@ require (
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/confluentinc/confluent-kafka-go v1.9.2
-	github.com/confluentinc/confluent-kafka-go/v2 v2.5.3
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/dave/dst v0.27.3 // indirect
 	github.com/dave/jennifer v1.7.0 // indirect
