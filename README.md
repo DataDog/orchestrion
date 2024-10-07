@@ -146,6 +146,7 @@ Library                               | Since    | Notes
 `github.com/gocql/gocql`              | `v0.8.0` | [Aspect][gocql]
 `cloud.google.com/go/pubsub`          | `v0.9.0` | [Aspect][pubsub]
 `github.com/99designs/gqlgen`         | `v0.9.1` | [Aspect][gqlgen]
+`github.com/redis/go-redis`           | `v0.9.1` | [Aspect][go-redis]
 `github.com/graph-gophers/graphql-go` | `v0.9.1` | [Aspect][graph-gophers]
 `github.com/graphql-go/graphql`       | `v0.9.1` | [Aspect][graphql]
 
@@ -177,6 +178,7 @@ Library                               | Since    | Notes
 [gocql]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gocql/
 [pubsub]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/gcp_pubsub/
 [gqlgen]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/gqlgen/
+[go-redis]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v0-client
 [graph-gophers]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graph-gophers/
 [graphql]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graphql-go/
 
