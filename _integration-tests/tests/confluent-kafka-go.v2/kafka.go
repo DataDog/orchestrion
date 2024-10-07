@@ -114,24 +114,29 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{
 			Tags: map[string]any{
-				"name":    "kafka.produce",
-				"type":    "queue",
-				"service": "kafka",
+				"name":     "kafka.produce",
+				"type":     "queue",
+				"service":  "kafka",
+				"resource": "Produce Topic gotest",
 			},
 			Meta: map[string]string{
-				"span.kind": "producer",
-				"component": "confluentinc/confluent-kafka-go/kafka.v2",
+				"span.kind":        "producer",
+				"component":        "confluentinc/confluent-kafka-go/kafka.v2",
+				"messaging.system": "kafka",
 			},
 			Children: trace.Traces{
 				{
 					Tags: map[string]any{
-						"name":    "kafka.consume",
-						"type":    "queue",
-						"service": "kafka",
+						"name":     "kafka.consume",
+						"type":     "queue",
+						"service":  "kafka",
+						"resource": "Consume Topic gotest",
 					},
 					Meta: map[string]string{
-						"span.kind": "consumer",
-						"component": "confluentinc/confluent-kafka-go/kafka.v2",
+						"span.kind":                         "consumer",
+						"component":                         "confluentinc/confluent-kafka-go/kafka.v2",
+						"messaging.system":                  "kafka",
+						"messaging.kafka.bootstrap.servers": "localhost",
 					},
 				},
 			},

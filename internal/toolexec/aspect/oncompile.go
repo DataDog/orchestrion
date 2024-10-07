@@ -7,6 +7,13 @@ package aspect
 
 import (
 	"fmt"
+	"go/version"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/builtin"
@@ -15,12 +22,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"go/version"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"runtime"
 )
 
 type specialCaseBehavior int
@@ -92,7 +93,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 	references := typed.ReferenceMap{}
 	for gofile, modFile := range results {
-		log.Infof("Modified source code: %q => %q\n", gofile, modFile.Filename)
+		log.Debugf("Modified source code: %q => %q\n", gofile, modFile.Filename)
 		if err := cmd.ReplaceParam(gofile, modFile.Filename); err != nil {
 			return fmt.Errorf("replacing %q with %q: %w", gofile, modFile.Filename, err)
 		}

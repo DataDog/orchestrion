@@ -231,9 +231,7 @@ aspects:
             type __dd_kafkaTracer = tracing.KafkaTracer
 
   ## Trace Consumer ##
-
-  # TODO: add the confmap in NewConsumer
-
+  
   - id: Add struct fields to kafka.Consumer
     join-point:
       one-of:
