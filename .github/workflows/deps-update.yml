@@ -111,11 +111,14 @@ jobs:
       - name: Create PR
         run: |-
           git fetch origin "${{ steps.create-branch.outputs.branch }}"
+          git reset --hard HEAD
           git switch "${{ steps.create-branch.outputs.branch }}"
           gh pr create --title "chore: update all dependencies" \
                        --body "Updated all go.mod dependencies to latest." \
                        --head="${{ steps.create-branch.outputs.branch }}"
         env:
+          # Create the PR as "github-actions[bot]" so that even the owner of the mutator token can
+          # approve the PR.
           GITHUB_TOKEN: ${{ github.token }}
 
       # The standard GitHub Token will not trigger downstream workflows, so in order to kick off CI,
