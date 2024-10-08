@@ -49,7 +49,7 @@ func Test(t *testing.T) {
 		fails bool
 	}
 	for name, test := range map[string]test{
-		"v0.9.0":   {version: "v0.9.0", output: "v0.9.0"},
+		"v0.9.0":   {version: "v0.9.0", output: "orchestrion v0.9.0"},
 		"replaced": {version: "v0.9.0", replaces: true, output: "This command has not respawned!"},
 		"none":     {fails: true},
 	} {
@@ -96,7 +96,7 @@ func Test(t *testing.T) {
 			_, err := shell(wd, "go", "mod", "tidy")
 			require.NoError(t, err, "failed to 'go mod tidy'")
 
-			out, err := shell(wd, testMain, "-v")
+			out, err := shell(wd, testMain, "version")
 			if test.fails {
 				_, ok := err.(*exec.ExitError)
 				require.True(t, ok, "unexpected error while running test_main: %v", err)
