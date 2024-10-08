@@ -86,7 +86,7 @@ jobs:
           git diff --staged --patch --exit-code > .repo.patch || echo 'result=true' >> "${GITHUB_OUTPUT}"
       - name: Upload patch
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
+        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4
         with:
           if-no-files-found: error
           include-hidden-files: true
@@ -248,7 +248,7 @@ jobs:
           set -euo pipefail
           go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks.txt
       - name: Upload benchmark report (raw)
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
+        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4
         with:
           if-no-files-found: error
           name: Benchmark Report
