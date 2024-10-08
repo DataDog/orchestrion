@@ -2,8 +2,8 @@ module github.com/DataDog/orchestrion
 
 go 1.22.6
 
-// TODO: remove // 1ca6f4cd6917603d48e93d593c64e70821f04f62
-replace gopkg.in/DataDog/dd-trace-go.v1 => github.com/DataDog/dd-trace-go v1.39.0-alpha.1.0.20241007155017-aad992f3461a
+// TODO: remove
+replace gopkg.in/DataDog/dd-trace-go.v1 => github.com/DataDog/dd-trace-go v1.39.0-alpha.1.0.20241007193313-0eb451d7fc20
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible

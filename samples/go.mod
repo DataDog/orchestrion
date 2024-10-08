@@ -4,7 +4,7 @@ go 1.22.6
 
 replace github.com/DataDog/orchestrion => ../
 
-replace gopkg.in/DataDog/dd-trace-go.v1 => github.com/DataDog/dd-trace-go v1.39.0-alpha.1.0.20241007155017-aad992f3461a
+replace gopkg.in/DataDog/dd-trace-go.v1 => github.com/DataDog/dd-trace-go v1.39.0-alpha.1.0.20241007193313-0eb451d7fc20
 
 require (
 	github.com/99designs/gqlgen v0.17.36

@@ -39,6 +39,8 @@ aspects:
       - inject-declarations:
           imports:
             tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing
+            telemetry: gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
             type __dd_wMessage struct {
               *Message
@@ -192,7 +194,8 @@ aspects:
             }
   
             func init() {
-              tracing.InitInstrumentation(__dd_ckgoVersion)
+              telemetry.LoadIntegration(tracing.ComponentName(__dd_ckgoVersion))
+              tracer.MarkIntegrationImported(tracing.IntegrationName(__dd_ckgoVersion))
             }
             
             func __dd_newKafkaTracer(opts ...tracing.Option) *tracing.KafkaTracer {
@@ -231,7 +234,7 @@ aspects:
             type __dd_kafkaTracer = tracing.KafkaTracer
 
   ## Trace Consumer ##
-  
+
   - id: Add struct fields to kafka.Consumer
     join-point:
       one-of:
@@ -455,7 +458,6 @@ aspects:
       - add-struct-field:
           name: __dd_produceChannel
           type: "__dd_messageChan"
-
 
   - id: Trace kafka.Producer#Events
     join-point:

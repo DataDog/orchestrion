@@ -195,7 +195,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	return nil
 }
 
-func shouldReplaceLangVersion(cmdVersion, orchestrionVersion string) bool {
+func shouldReplaceLangVersion(cmdVersion string, orchestrionVersion string) bool {
 	cmdVersion = version.Lang(cmdVersion)
 	return version.Compare(cmdVersion, orchestrionVersion) < 0
 }

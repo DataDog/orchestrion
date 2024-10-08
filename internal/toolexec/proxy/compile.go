@@ -65,8 +65,12 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 func (cmd *CompileCommand) SetLang(lang string) {
 	cmd.Flags.Lang = lang
 	for i, arg := range cmd.args {
-		if strings.HasPrefix(arg, "-lang") {
+		if strings.HasPrefix(arg, "-lang=") {
 			cmd.args[i] = "-lang=" + lang
+			break
+		} else if arg == "-lang" && i+1 < len(cmd.args) {
+			cmd.args[i+1] = lang
+			break
 		}
 	}
 }
