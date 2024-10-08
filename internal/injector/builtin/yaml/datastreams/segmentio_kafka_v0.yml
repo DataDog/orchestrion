@@ -23,78 +23,107 @@ aspects:
             ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
             strings: strings
           template: |-
-            func __dd_tracingMessage(msg *Message) *tracing.KafkaMessage {
-              setHeaders := func(newHeaders []tracing.KafkaHeader) {
-                hs := make([]Header, len(newHeaders))
-                for _, h := range newHeaders {
-                  hs = append(hs, Header{
-                    Key:   h.Key,
-                    Value: h.Value,
-                  })
-                }
-                msg.Headers = hs
-              }
-              return &tracing.KafkaMessage{
-                Topic:      msg.Topic,
-                Partition:  msg.Partition,
-                Offset:     msg.Offset,
-                Headers:    __dd_tracingKafkaHeaders(msg.Headers),
-                SetHeaders: setHeaders,
-                Value:      msg.Value,
-                Key:        msg.Key,
-              }
+            type __dd_wMessage struct {
+              *Message
             }
               
-            func __dd_tracingKafkaHeaders(headers []Header) []tracing.KafkaHeader {
-              hs := make([]tracing.KafkaHeader, len(headers))
-              for _, h := range headers {
-                hs = append(hs, tracing.KafkaHeader{
-                  Key:   h.Key,
-                  Value: h.Value,
-                })
+            func __dd_wrapMessage(msg *Message) tracing.Message {
+              if msg == nil {
+                return nil
+              }
+              return &__dd_wMessage{msg}
+            }
+              
+            func (w *__dd_wMessage) GetValue() []byte {
+              return w.Value
+            }
+              
+            func (w *__dd_wMessage) GetKey() []byte {
+              return w.Key
+            }
+              
+            func (w *__dd_wMessage) GetHeaders() []tracing.Header {
+              hs := make([]tracing.Header, 0, len(w.Headers))
+              for _, h := range w.Headers {
+                hs = append(hs, __dd_wrapHeader(h))
               }
               return hs
             }
-            
-            func __dd_tracingWriter(w *Writer) *tracing.KafkaWriter {
-              return &tracing.KafkaWriter{
-                Topic: w.Topic,
+              
+            func (w *__dd_wMessage) SetHeaders(headers []tracing.Header) {
+              hs := make([]Header, 0, len(headers))
+              for _, h := range headers {
+                hs = append(hs, Header{
+                  Key:   h.GetKey(),
+                  Value: h.GetValue(),
+                })
               }
+              w.Message.Headers = hs
             }
-
-            func __dd_kafkaConfigFromReader(r *Reader) *tracing.KafkaConfig {
-              kafkaCfg := new(tracing.KafkaConfig)
+              
+            func (w *__dd_wMessage) GetTopic() string {
+              return w.Topic
+            }
+              
+            func (w *__dd_wMessage) GetPartition() int {
+              return w.Partition
+            }
+              
+            func (w *__dd_wMessage) GetOffset() int64 {
+              return w.Offset
+            }
+              
+            type __dd_wHeader struct {
+              Header
+            }
+              
+            func __dd_wrapHeader(h Header) tracing.Header {
+              return &__dd_wHeader{h}
+            }
+              
+            func (w __dd_wHeader) GetKey() string {
+              return w.Key
+            }
+              
+            func (w __dd_wHeader) GetValue() []byte {
+              return w.Value
+            }
+              
+            type __dd_wWriter struct {
+              *Writer
+            }
+              
+            func (w *__dd_wWriter) GetTopic() string {
+              return w.Topic
+            }
+              
+            func __dd_wrapTracingWriter(w *Writer) tracing.Writer {
+              return &__dd_wWriter{w}
+            }
+            
+            func __dd_initReader(r *Reader) {
+              if r.__dd_tracer != nil {
+                return
+              }
+              kafkaCfg := tracing.KafkaConfig{}
               if r.Config().Brokers != nil {
                 kafkaCfg.BootstrapServers = strings.Join(r.Config().Brokers, ",")
               }
               if r.Config().GroupID != "" {
                 kafkaCfg.ConsumerGroupID = r.Config().GroupID
               }
-              return kafkaCfg
+              r.__dd_tracer = tracing.NewTracer(kafkaCfg)
             }
             
-            func __dd_initReader(r *Reader) {
-              if r.__dd_cfg == nil {
-                r.__dd_cfg = tracing.NewConfig()
-              }
-              if r.__dd_kafkaCfg == nil {
-                r.__dd_kafkaCfg = __dd_kafkaConfigFromReader(r)
-              }
-            }
-            
-            type __dd_Span = ddtrace.Span
+            type __dd_span = ddtrace.Span
+      - add-struct-field:
+          name: __dd_tracer
+          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer"
+      - add-struct-field:
+          name: __dd_prevSpan
+          type: "__dd_span"
 
-      - add-struct-field:
-          name: __dd_cfg
-          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Config"
-      - add-struct-field:
-          name: __dd_kafkaCfg
-          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.KafkaConfig"
-      - add-struct-field:
-          name: __dd_prev
-          type: "__dd_Span"
-
-  - id: Modify kafka.Reader.FetchMessage to call tracing functions
+  - id: Trace kafka.Reader#FetchMessage
     join-point:
       function-body:
         function:
@@ -110,21 +139,20 @@ aspects:
             {{- $msg := .Function.Result 0 -}}
             {{- $err := .Function.Result 1 -}}
             __dd_initReader(r)
-            
-            if {{ $r }}.__dd_prev != nil {
-              {{ $r }}.__dd_prev.Finish()
-              {{ $r }}.__dd_prev = nil
+            if {{ $r }}.__dd_prevSpan != nil {
+              {{ $r }}.__dd_prevSpan.Finish()
+              {{ $r }}.__dd_prevSpan = nil
             }
-            
             defer func() {
               if {{ $err }} != nil {
                 return
               }
-              {{ $r }}.__dd_prev = tracing.StartConsumeSpan({{ $ctx }}, {{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, __dd_tracingMessage(&{{ $msg }}))
-              tracing.SetConsumeDSMCheckpoint({{ $r }}.__dd_cfg, {{ $r }}.__dd_kafkaCfg, __dd_tracingMessage(&{{ $msg }}))
+              tMsg := __dd_wrapMessage(&{{ $msg }})
+              {{ $r }}.__dd_prevSpan = {{ $r }}.__dd_tracer.StartConsumeSpan({{ $ctx }}, tMsg)
+              {{ $r }}.__dd_tracer.SetConsumeDSMCheckpoint(tMsg)
             }()
 
-  - id: Modify kafka.Reader.Close to call tracing functions
+  - id: Trace kafka.Reader#Close
     join-point:
       function-body:
         function:
@@ -134,9 +162,9 @@ aspects:
       - prepend-statements:
           template: |-
             {{- $r := .Function.Receiver -}}
-            if {{ $r }}.__dd_prev != nil {
-              {{ $r }}.__dd_prev.Finish()
-              {{ $r }}.__dd_prev = nil
+            if {{ $r }}.__dd_prevSpan != nil {
+              {{ $r }}.__dd_prevSpan.Finish()
+              {{ $r }}.__dd_prevSpan = nil
             }
 
   ## Trace Produce ##
@@ -150,24 +178,19 @@ aspects:
             tracing: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing
           template: |-
             func __dd_initWriter(w *Writer) {
-              if w.__dd_cfg == nil {
-                w.__dd_cfg = tracing.NewConfig()
+              if w.__dd_tracer != nil {
+                return
               }
-              if w.__dd_kafkaCfg == nil {
-                w.__dd_kafkaCfg = &tracing.KafkaConfig{
-                  BootstrapServers: w.Addr.String(),
-                }
+              kafkaCfg := tracing.KafkaConfig{
+                BootstrapServers: w.Addr.String(),
               }
+              w.__dd_tracer = tracing.NewTracer(kafkaCfg)
             }
-
       - add-struct-field:
-          name: __dd_cfg
-          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Config"
-      - add-struct-field:
-          name: __dd_kafkaCfg
-          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.KafkaConfig"
+          name: __dd_tracer
+          type: "*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer"
 
-  - id: Modify kafka.Writer.WriteMessages to call tracing functions
+  - id: Trace kafka.Writer#WriteMessages
     join-point:
       function-body:
         function:
@@ -187,7 +210,7 @@ aspects:
             {{- $ctx := .Function.Argument 0 -}}
             {{- $msgs := .Function.Argument 1 -}}
             {{- $err := .Function.Result 0 -}}
-            spans := make([]ddtrace.Span, len(msgs))
+            spans := make([]ddtrace.Span, len({{ $msgs }}))
             __dd_initWriter(w)
             
             var spanOpts []tracer.StartSpanOption
@@ -196,15 +219,15 @@ aspects:
               spanOpts = append(spanOpts, tracer.ChildOf(prevSpan.Context()))
             }
             
-            for i := range msgs {
-              tMsg := __dd_tracingMessage(&{{ $msgs }}[i])
-              tWriter := __dd_tracingWriter({{ $w }})
-              spans[i] = tracing.StartProduceSpan(nil, {{ $w }}.__dd_cfg, {{ $w }}.__dd_kafkaCfg, tWriter, tMsg, spanOpts...)
-              tracing.SetProduceDSMCheckpoint({{ $w }}.__dd_cfg, tMsg, tWriter)
+            for i := range {{ $msgs }} {
+              tMsg := __dd_wrapMessage(&{{ $msgs }}[i])
+              tWriter := __dd_wrapTracingWriter({{ $w }})
+              spans[i] = {{ $w }}.__dd_tracer.StartProduceSpan(nil, tWriter, tMsg, spanOpts...)
+              {{ $w }}.__dd_tracer.SetProduceDSMCheckpoint(tMsg, tWriter)
             }
             
             defer func() {
               for i, span := range spans {
-                tracing.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})
+                {{ $w }}.__dd_tracer.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})
               }
             }()

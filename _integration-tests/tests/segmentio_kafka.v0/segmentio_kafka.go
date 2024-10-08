@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	kafkatest "github.com/testcontainers/testcontainers-go/modules/kafka"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
 	"orchestrion/integration/utils"
 	"orchestrion/integration/validator/trace"
@@ -91,6 +92,9 @@ func (tc *TestCase) produce(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
+	defer span.Finish()
+
 	messages := []kafka.Message{
 		{
 			Topic: topicA,
@@ -164,68 +168,75 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{
 			Tags: map[string]any{
-				"name":     "kafka.produce",
-				"type":     "queue",
-				"service":  "kafka",
-				"resource": "Produce Topic topic-A",
-			},
-			Meta: map[string]string{
-				"span.kind": "producer",
-				"component": "segmentio/kafka.go.v0",
+				"name": "test.root",
 			},
 			Children: trace.Traces{
 				{
 					Tags: map[string]any{
-						"name":     "kafka.consume",
+						"name":     "kafka.produce",
 						"type":     "queue",
 						"service":  "kafka",
-						"resource": "Consume Topic topic-A",
+						"resource": "Produce Topic topic-A",
 					},
 					Meta: map[string]string{
-						"span.kind": "consumer",
+						"span.kind": "producer",
 						"component": "segmentio/kafka.go.v0",
 					},
+					Children: trace.Traces{
+						{
+							Tags: map[string]any{
+								"name":     "kafka.consume",
+								"type":     "queue",
+								"service":  "kafka",
+								"resource": "Consume Topic topic-A",
+							},
+							Meta: map[string]string{
+								"span.kind": "consumer",
+								"component": "segmentio/kafka.go.v0",
+							},
+						},
+					},
 				},
-			},
-		},
-		{
-			Tags: map[string]any{
-				"name":     "kafka.produce",
-				"type":     "queue",
-				"service":  "kafka",
-				"resource": "Produce Topic topic-B",
-			},
-			Meta: map[string]string{
-				"span.kind": "producer",
-				"component": "segmentio/kafka.go.v0",
-			},
-			Children: trace.Traces{
 				{
 					Tags: map[string]any{
-						"name":     "kafka.consume",
+						"name":     "kafka.produce",
 						"type":     "queue",
 						"service":  "kafka",
-						"resource": "Consume Topic topic-B",
+						"resource": "Produce Topic topic-B",
 					},
 					Meta: map[string]string{
-						"span.kind": "consumer",
+						"span.kind": "producer",
 						"component": "segmentio/kafka.go.v0",
 					},
+					Children: trace.Traces{
+						{
+							Tags: map[string]any{
+								"name":     "kafka.consume",
+								"type":     "queue",
+								"service":  "kafka",
+								"resource": "Consume Topic topic-B",
+							},
+							Meta: map[string]string{
+								"span.kind": "consumer",
+								"component": "segmentio/kafka.go.v0",
+							},
+						},
+					},
+				},
+				{
+					Tags: map[string]any{
+						"name":     "kafka.produce",
+						"type":     "queue",
+						"service":  "kafka",
+						"resource": "Produce Topic topic-B",
+					},
+					Meta: map[string]string{
+						"span.kind": "producer",
+						"component": "segmentio/kafka.go.v0",
+					},
+					Children: nil,
 				},
 			},
-		},
-		{
-			Tags: map[string]any{
-				"name":     "kafka.produce",
-				"type":     "queue",
-				"service":  "kafka",
-				"resource": "Produce Topic topic-B",
-			},
-			Meta: map[string]string{
-				"span.kind": "producer",
-				"component": "segmentio/kafka.go.v0",
-			},
-			Children: nil,
 		},
 	}
 }

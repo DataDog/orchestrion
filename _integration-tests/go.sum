@@ -657,8 +657,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.3.2 h1:o7IhLm0Msx3BaB+n3Ag7L8EVlByGnpq14C4YWiu/gL8=
 github.com/BurntSushi/toml v1.3.2/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/DataDog/appsec-internal-go v1.7.0 h1:iKRNLih83dJeVya3IoUfK+6HLD/hQsIbyBlfvLmAeb0=
-github.com/DataDog/appsec-internal-go v1.7.0/go.mod h1:wW0cRfWBo4C044jHGwYiyh5moQV2x0AhnwqMuiX7O/g=
+github.com/DataDog/appsec-internal-go v1.8.0 h1:1Tfn3LEogntRqZtf88twSApOCAAO3V+NILYhuQIo4J4=
+github.com/DataDog/appsec-internal-go v1.8.0/go.mod h1:wW0cRfWBo4C044jHGwYiyh5moQV2x0AhnwqMuiX7O/g=
 github.com/DataDog/datadog-agent/pkg/obfuscate v0.56.0 h1:UdBCkJ1a4uxQNzggUEEbPylagIUaCWvFDxuf9QKWMXE=
 github.com/DataDog/datadog-agent/pkg/obfuscate v0.56.0/go.mod h1:NHgTieB5DpTc4AZrzx1xE+tPCWTJ7Hw3TVRiWuK505U=
 github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.57.0 h1:LplNAmMgZvGU7kKA0+4c1xWOjz828xweW5TCi8Mw9Q0=
@@ -2374,8 +2374,8 @@ google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqw
 google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
 google.golang.org/protobuf v1.34.2 h1:6xV6lTsCfpGD21XK49h7MhtcApnLqkfYgPcdHftf6hg=
 google.golang.org/protobuf v1.34.2/go.mod h1:qYOHts0dSfpeUzUFpOMr/WGzszTmLH+DiWniOlNbLDw=
-gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240926152443-e7a15d17544d h1:UZdBUaVd9zTXZmPZNl3Dypf9m8ZlpAqQqh+IFFTlhCg=
-gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20240926152443-e7a15d17544d/go.mod h1:fpMxtqDZZSI6QiZiZlaYP7eQdSlP+sLSmGd3ibTNr9U=
+gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20241008195158-49ec2955c1d0 h1:rRceEz0Vi5laWcU1xcn7X8Mgo9vHOGgAsKQN5HfA1vk=
+gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20241008195158-49ec2955c1d0/go.mod h1:U9AOeBHNAL95JXcd/SPf4a7O5GNeF/yD13sJtli/yaU=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
