@@ -6,6 +6,8 @@ toolchain go1.23.2
 
 replace github.com/DataDog/orchestrion => ../
 
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20241010143106-55426a1eca27
+
 require (
 	cloud.google.com/go/pubsub v1.43.0
 	github.com/99designs/gqlgen v0.17.55
@@ -34,6 +36,7 @@ require (
 	github.com/graphql-go/handler v0.2.3
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/jinzhu/gorm v1.9.16
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/redis/go-redis/v9 v9.6.1

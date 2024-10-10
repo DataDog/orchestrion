@@ -60,6 +60,21 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
+// SetLang sets the -lang flag used for compiling. The given string should be a valid
+// go lang version (e.g. "go1.23").
+func (cmd *CompileCommand) SetLang(lang string) {
+	cmd.Flags.Lang = lang
+	for i, arg := range cmd.args {
+		if strings.HasPrefix(arg, "-lang=") {
+			cmd.args[i] = "-lang=" + lang
+			break
+		} else if arg == "-lang" && i+1 < len(cmd.args) {
+			cmd.args[i+1] = lang
+			break
+		}
+	}
+}
+
 func parseCompileCommand(args []string) (Command, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")

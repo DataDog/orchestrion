@@ -4,6 +4,8 @@ go 1.22.8
 
 toolchain go1.23.2
 
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20241010143106-55426a1eca27
+
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/charmbracelet/lipgloss v0.13.0
