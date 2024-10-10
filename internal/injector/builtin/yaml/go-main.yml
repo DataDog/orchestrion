@@ -19,6 +19,8 @@ aspects:
               - signature: {}
     advice:
       - inject-declarations:
+          links:
+            - gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting
           imports:
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           # Note: it is valid to have multiple func init() in a single compile unit (e.g, `.go` file), in which case
@@ -26,8 +28,17 @@ aspects:
           # already one in the file, but as it currently is appended AFTER all other declarations in the file, it means
           # that it will be executed last (tracing contents of previous init functions will not be possible).
           template: |-
+            //go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled
+            func __dd_civisibility_isCiVisibilityEnabled() bool
+            
             func init() {
-              tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
+              // Only initialize if is not a test process (testdeps.ImportPath is set only on test processes since go1.9 in the first init function)
+              // and if CI Visibility has not been disabled (by the kill switch).
+              // For a test process the ci visibility instrumentation will initialize the tracer
+              isATestProcess := len(testdeps.ImportPath) != 0
+              if !isATestProcess || !__dd_civisibility_isCiVisibilityEnabled() {
+                tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
+              }
             }
 
       - inject-declarations:
@@ -75,5 +86,12 @@ aspects:
             profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
-            defer tracer.Stop()
+            // Only finalize the tracer if is not a test process (testdeps.ImportPath is set only on test processes since go1.9 in the first init function)
+            // and if CI Visibility has not been disabled (by the kill switch).
+            // For a test process the ci visibility instrumentation will finalize the tracer
+            isATestProcess := len(testdeps.ImportPath) != 0
+            if !isATestProcess || !__dd_civisibility_isCiVisibilityEnabled() {
+              defer tracer.Stop()
+            }
+
             defer profiler.Stop()
