@@ -768,9 +768,6 @@ var Aspects = [...]aspect.Aspect{
 	// From stdlib/net-http.server.yml
 	{
 		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "wrap",
-			}),
 			join.StructLiteralField(join.MustTypeName("net/http.Server"), "Handler"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/go-chi/chi/v5"),
@@ -780,7 +777,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"//dd:startwrap\ninstrument.WrapHandler({{.}})\n//dd:endwrap",
+				"//dd:startwrap\ninstrument.MaybeWrapHandler({{.}})\n//dd:endwrap",
 				map[string]string{
 					"instrument": "github.com/DataDog/orchestrion/instrument",
 				},
@@ -788,26 +785,13 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "wrap",
-			}),
-			join.Function(
-				join.Name(""),
-				join.Signature(
-					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
-					nil,
-				),
-			),
-			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-				join.ImportPath("golang.org/x/net/http2"),
-			)),
+		JoinPoint: join.OneOf(
+			join.FunctionCall("net/http.ListenAndServe"),
+			join.FunctionCall("net/http.Serve"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"instrument.WrapHandlerFunc({{.}})",
+				"{{.AST.Fun}}(\n  {{ index .AST.Args 0}},\n  instrument.MaybeWrapHandler({{ index .AST.Args 1 }}),\n)",
 				map[string]string{
 					"instrument": "github.com/DataDog/orchestrion/instrument",
 				},
@@ -815,27 +799,14 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "report",
-			}),
-			join.FunctionBody(join.Function(
-				join.Signature(
-					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
-					nil,
-				),
-			)),
-			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-				join.ImportPath("golang.org/x/net/http2"),
-			)),
+		JoinPoint: join.OneOf(
+			join.FunctionCall("net/http.ListenAndServeTLS"),
+			join.FunctionCall("net/http.ServeTLS"),
 		),
 		Advice: []advice.Advice{
-			advice.PrependStmts(code.MustTemplate(
-				"{{- $arg := .Function.Argument 1 -}}\n{{- $name := .Function.Name -}}\n{{$arg}} = {{$arg}}.WithContext(instrument.Report(\n  {{$arg}}.Context(),\n  event.EventStart,\n  {{with $name}}\"function-name\", {{printf \"%q\" .}},{{end}}\n  \"span.kind\", \"server\",\n  \"http.method\", {{$arg}}.Method,\n  \"http.url\", {{$arg}}.URL,\n  \"http.useragent\", {{$arg}}.Header.Get(\"User-Agent\"),\n  {{ range .DirectiveArgs \"dd:span\" -}}{{printf \"%q, %q,\\n\" .Key .Value}}{{ end }}\n))\ndefer instrument.Report(\n  {{$arg}}.Context(),\n  event.EventEnd,\n  {{with $name}}\"function-name\", {{printf \"%q\" .}},{{end}}\n  \"span.kind\", \"server\",\n  \"http.method\", {{$arg}}.Method,\n  \"http.url\", {{$arg}}.URL,\n  \"http.useragent\", {{$arg}}.Header.Get(\"User-Agent\"),\n  {{ range .DirectiveArgs \"dd:span\" -}}{{printf \"%q, %q,\" .Key .Value}}{{- end }}\n)",
+			advice.WrapExpression(code.MustTemplate(
+				"{{.AST.Fun}}(\n  {{ index .AST.Args 0}},\n  {{ index .AST.Args 1}},\n  {{ index .AST.Args 2}},\n  instrument.MaybeWrapHandler({{ index .AST.Args 3 }}),\n)",
 				map[string]string{
-					"event":      "github.com/DataDog/orchestrion/instrument/event",
 					"instrument": "github.com/DataDog/orchestrion/instrument",
 				},
 			)),
@@ -906,7 +877,6 @@ var InjectedPaths = [...]string{
 	"context",
 	"fmt",
 	"github.com/DataDog/orchestrion/instrument",
-	"github.com/DataDog/orchestrion/instrument/event",
 	"github.com/DataDog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
@@ -960,4 +930,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:pXFHjupxWE+tdgFLK/03Q7H+ireSfSHPXx8ETxc5ZuHABZLZc1DPOpFxCcZmOP2tCoSAc+K6iWr3iwKmJE3/qQ=="
+const Checksum = "sha512:aqg9Dgqq1vXx4veNMV6aYcOFjwCgIlfmf5rTl5mnioph9LsDCpi2h4XYNHXx+yZ23KmPcgJP6ozzmtNOfSvjGA=="
