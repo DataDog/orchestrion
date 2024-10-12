@@ -66,4 +66,5 @@ import (
 	_ "net/http"
 	_ "os"
 	_ "strconv"
+	_ "testing/internal/testdeps"
 )

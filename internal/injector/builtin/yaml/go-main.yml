@@ -23,6 +23,7 @@ aspects:
             - gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting
           imports:
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+            testdeps: testing/internal/testdeps
           # Note: it is valid to have multiple func init() in a single compile unit (e.g, `.go` file), in which case
           # they get executed in declaration order. This means it's okay for us to add a new init function if there is
           # already one in the file, but as it currently is appended AFTER all other declarations in the file, it means
@@ -85,6 +86,7 @@ aspects:
           imports:
             profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+            testdeps: testing/internal/testdeps
           template: |-
             // Only finalize the tracer if is not a test process (testdeps.ImportPath is set only on test processes since go1.9 in the first init function)
             // and if CI Visibility has not been disabled (by the kill switch).
