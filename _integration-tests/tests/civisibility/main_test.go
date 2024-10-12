@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 	defer server.Close()
 
 	// because CI Visibility mode is enabled all tests are going to be instrumented
-	exitCode := m.Run()
+	m.Run()
 
 	// let's check the events inside the CiVisibility payloads
 	events := ciVisibilityPayloads.GetEvents()
@@ -50,16 +50,44 @@ func TestMain(m *testing.M) {
 		ShowResourceNames()
 
 	// test events
-	testEvents := events.CheckEventsByType("test", 2)
+	testEvents := events.CheckEventsByType("test", 7)
 	testEvents.
 		CheckEventsByResourceName("testing_test.go.TestNormal", 1).
+		CheckEventsByTagAndValue("test.status", "pass", 1).
+		ShowResourceNames()
+	testEvents.
+		CheckEventsByResourceName("testing_test.go.TestFail", 1).
+		CheckEventsByTagAndValue("test.status", "fail", 1).
+		CheckEventsByTagAndValue("error.type", "Fail", 1).
+		CheckEventsByTagAndValue("error.message", "failed test", 1).
+		ShowResourceNames()
+	testEvents.
+		CheckEventsByResourceName("testing_test.go.TestError", 1).
+		CheckEventsByTagAndValue("test.status", "fail", 1).
+		CheckEventsByTagAndValue("error.type", "Error", 1).
+		CheckEventsByTagAndValue("error.message", "My error test", 1).
+		ShowResourceNames()
+	testEvents.
+		CheckEventsByResourceName("testing_test.go.TestErrorf", 1).
+		CheckEventsByTagAndValue("test.status", "fail", 1).
+		CheckEventsByTagAndValue("error.type", "Errorf", 1).
+		CheckEventsByTagAndValue("error.message", "My error test: TestErrorf", 1).
 		ShowResourceNames()
 	testEvents.
 		CheckEventsByResourceName("testing_test.go.TestSkip", 1).
 		CheckEventsByTagAndValue("test.status", "skip", 1).
+		CheckEventsByTagAndValue("test.skip_reason", "My skipped test", 1).
 		ShowResourceNames()
-
-	os.Exit(exitCode)
+	testEvents.
+		CheckEventsByResourceName("testing_test.go.TestSkipf", 1).
+		CheckEventsByTagAndValue("test.status", "skip", 1).
+		CheckEventsByTagAndValue("test.skip_reason", "My skipped test: TestSkipf", 1).
+		ShowResourceNames()
+	testEvents.
+		CheckEventsByResourceName("testing_test.go.TestSkipNow", 1).
+		CheckEventsByTagAndValue("test.status", "skip", 1).
+		ShowResourceNames()
+	os.Exit(0)
 }
 
 func enableCiVisibilityEndpointMock() *httptest.Server {

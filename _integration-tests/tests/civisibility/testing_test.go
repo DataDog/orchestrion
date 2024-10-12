@@ -13,6 +13,26 @@ func TestNormal(t *testing.T) {
 	t.Log("Normal test")
 }
 
+func TestFail(t *testing.T) {
+	t.Fail()
+}
+
+func TestError(t *testing.T) {
+	t.Error("My error test")
+}
+
+func TestErrorf(t *testing.T) {
+	t.Errorf("My error test: %s", t.Name())
+}
+
 func TestSkip(t *testing.T) {
-	t.Skip("Skipped test")
+	t.Skip("My skipped test")
+}
+
+func TestSkipf(t *testing.T) {
+	t.Skipf("My skipped test: %s", t.Name())
+}
+
+func TestSkipNow(t *testing.T) {
+	t.SkipNow()
 }

@@ -86,7 +86,7 @@ func (m mockEvents) CheckEventsByType(eventType string, count int) mockEvents {
 	events := m.GetEventsByType(eventType)
 	numOfEvents := len(events)
 	if numOfEvents != count {
-		panic(fmt.Sprintf("expected exactly %d events with type name: %s, got %d", count, eventType, numOfEvents))
+		panic(fmt.Sprintf("expected exactly %d event(s) with type name: %s, got %d", count, eventType, numOfEvents))
 	}
 
 	return events
@@ -106,7 +106,7 @@ func (m mockEvents) CheckEventsByResourceName(resourceName string, count int) mo
 	events := m.GetEventsByResourceName(resourceName)
 	numOfEvents := len(events)
 	if numOfEvents != count {
-		panic(fmt.Sprintf("expected exactly %d events with resource name: %s, got %d", count, resourceName, numOfEvents))
+		panic(fmt.Sprintf("expected exactly %d event(s) with resource name: %s, got %d", count, resourceName, numOfEvents))
 	}
 
 	return events
@@ -126,7 +126,7 @@ func (m mockEvents) CheckEventsByTagName(tagName string, count int) mockEvents {
 	events := m.GetEventsByTagName(tagName)
 	numOfEvents := len(events)
 	if numOfEvents != count {
-		panic(fmt.Sprintf("expected exactly %d spans with tag name: %s, got %d", count, tagName, numOfEvents))
+		panic(fmt.Sprintf("expected exactly %d event(s) with tag name: %s, got %d", count, tagName, numOfEvents))
 	}
 
 	return events
@@ -146,7 +146,7 @@ func (m mockEvents) CheckEventsByTagAndValue(tagName string, tagValue string, co
 	events := m.GetEventsByTagAndValue(tagName, tagValue)
 	numOfEvents := len(events)
 	if numOfEvents != count {
-		panic(fmt.Sprintf("expected exactly %d spans with tag name: %s, got %d", count, tagName, numOfEvents))
+		panic(fmt.Sprintf("expected exactly %d event(s) with tag name: %s, got %d", count, tagName, numOfEvents))
 	}
 
 	return events
