@@ -13,6 +13,15 @@ func TestNormal(t *testing.T) {
 	t.Log("Normal test")
 }
 
+func TestWithSubTests(t *testing.T) {
+	t.Run("Sub1", func(t *testing.T) {
+		t.Log("Sub test 1")
+	})
+	t.Run("Sub2", func(t *testing.T) {
+		t.Log("Sub test 2")
+	})
+}
+
 func TestFail(t *testing.T) {
 	t.Fail()
 }

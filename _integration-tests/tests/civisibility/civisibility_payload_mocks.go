@@ -151,3 +151,30 @@ func (m mockEvents) CheckEventsByTagAndValue(tagName string, tagValue string, co
 
 	return events
 }
+
+func (m mockEvents) Except(events ...mockEvents) mockEvents {
+	var filtered mockEvents
+	for _, event := range m {
+		contains := false
+		for _, eventArray := range events {
+			for _, ev := range eventArray {
+				if event.Content.Resource == ev.Content.Resource {
+					contains = true
+				}
+			}
+		}
+		if !contains {
+			filtered = append(filtered, event)
+		}
+	}
+	return filtered
+}
+
+func (m mockEvents) HasCount(count int) mockEvents {
+	numOfEvents := len(m)
+	if numOfEvents != count {
+		panic(fmt.Sprintf("expected exactly %d event(s), got %d", count, numOfEvents))
+	}
+
+	return m
+}

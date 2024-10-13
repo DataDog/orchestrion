@@ -35,58 +35,74 @@ func TestMain(m *testing.M) {
 
 	// session event
 	events.
-		CheckEventsByType("test_session_end", 1).
-		ShowResourceNames()
+		CheckEventsByType("test_session_end", 1)
 
 	// module event
 	events.
 		CheckEventsByType("test_module_end", 1).
-		CheckEventsByResourceName("orchestrion/integration/tests/civisibility", 1).
-		ShowResourceNames()
+		CheckEventsByResourceName("orchestrion/integration/tests/civisibility", 1)
 
 	// test suite event
 	events.CheckEventsByType("test_suite_end", 1).
-		CheckEventsByResourceName("testing_test.go", 1).
-		ShowResourceNames()
+		CheckEventsByResourceName("testing_test.go", 1)
 
 	// test events
-	testEvents := events.CheckEventsByType("test", 7)
-	testEvents.
+	testEvents := events.CheckEventsByType("test", 10)
+	normalTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestNormal", 1).
-		CheckEventsByTagAndValue("test.status", "pass", 1).
-		ShowResourceNames()
-	testEvents.
+		CheckEventsByTagAndValue("test.status", "pass", 1)
+	failTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestFail", 1).
 		CheckEventsByTagAndValue("test.status", "fail", 1).
 		CheckEventsByTagAndValue("error.type", "Fail", 1).
-		CheckEventsByTagAndValue("error.message", "failed test", 1).
-		ShowResourceNames()
-	testEvents.
+		CheckEventsByTagAndValue("error.message", "failed test", 1)
+	errorTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestError", 1).
 		CheckEventsByTagAndValue("test.status", "fail", 1).
 		CheckEventsByTagAndValue("error.type", "Error", 1).
-		CheckEventsByTagAndValue("error.message", "My error test", 1).
-		ShowResourceNames()
-	testEvents.
+		CheckEventsByTagAndValue("error.message", "My error test", 1)
+	errorFTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestErrorf", 1).
 		CheckEventsByTagAndValue("test.status", "fail", 1).
 		CheckEventsByTagAndValue("error.type", "Errorf", 1).
-		CheckEventsByTagAndValue("error.message", "My error test: TestErrorf", 1).
-		ShowResourceNames()
-	testEvents.
+		CheckEventsByTagAndValue("error.message", "My error test: TestErrorf", 1)
+	skipTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestSkip", 1).
 		CheckEventsByTagAndValue("test.status", "skip", 1).
-		CheckEventsByTagAndValue("test.skip_reason", "My skipped test", 1).
-		ShowResourceNames()
-	testEvents.
+		CheckEventsByTagAndValue("test.skip_reason", "My skipped test", 1)
+	skipfTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestSkipf", 1).
 		CheckEventsByTagAndValue("test.status", "skip", 1).
-		CheckEventsByTagAndValue("test.skip_reason", "My skipped test: TestSkipf", 1).
-		ShowResourceNames()
-	testEvents.
+		CheckEventsByTagAndValue("test.skip_reason", "My skipped test: TestSkipf", 1)
+	skipNowTests := testEvents.
 		CheckEventsByResourceName("testing_test.go.TestSkipNow", 1).
-		CheckEventsByTagAndValue("test.status", "skip", 1).
+		CheckEventsByTagAndValue("test.status", "skip", 1)
+	testWithSubtests := testEvents.
+		CheckEventsByResourceName("testing_test.go.TestWithSubTests", 1).
+		CheckEventsByTagAndValue("test.status", "pass", 1)
+	testWithSubtestsChild1 := testEvents.
+		CheckEventsByResourceName("testing_test.go.TestWithSubTests/Sub1", 1).
+		CheckEventsByTagAndValue("test.status", "pass", 1)
+	testWithSubtestsChild2 := testEvents.
+		CheckEventsByResourceName("testing_test.go.TestWithSubTests/Sub2", 1).
+		CheckEventsByTagAndValue("test.status", "pass", 1)
+
+	// remaining must be 0
+	testEvents.
+		Except(
+			normalTests,
+			failTests,
+			errorTests,
+			errorFTests,
+			skipTests,
+			skipfTests,
+			skipNowTests,
+			testWithSubtests,
+			testWithSubtestsChild1,
+			testWithSubtestsChild2).
+		HasCount(0).
 		ShowResourceNames()
+
 	os.Exit(0)
 }
 
