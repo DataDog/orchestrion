@@ -6,6 +6,8 @@ toolchain go1.23.2
 
 replace github.com/DataDog/orchestrion => ../
 
+replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20241010143106-55426a1eca27
+
 require (
 	github.com/99designs/gqlgen v0.17.55
 	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
