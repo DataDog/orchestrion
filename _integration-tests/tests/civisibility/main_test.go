@@ -28,6 +28,8 @@ func TestMain(m *testing.M) {
 	defer server.Close()
 
 	// because CI Visibility mode is enabled all tests are going to be instrumented
+	// we have a few tests to check the different test statuses (including failures)
+	// that's why we don't use the exit code from the tests, but we check the events.
 	m.Run()
 
 	// let's check the events inside the CiVisibility payloads
@@ -102,6 +104,7 @@ func TestMain(m *testing.M) {
 			testWithSubtestsChild2).
 		HasCount(0)
 
+	// All previous checks will cause panic if they fail so we can safely exit with 0 here
 	os.Exit(0)
 }
 
