@@ -65,11 +65,11 @@ func (m *mockPayloads) GetEvents() mockEvents {
 	return events
 }
 
-func (e mockEvents) ShowResourceNames() mockEvents {
-	for i, event := range e {
+func (m mockEvents) ShowResourceNames() mockEvents {
+	for i, event := range m {
 		fmt.Printf("  [%d] = %v\n", i, event.Content.Resource)
 	}
-	return e
+	return m
 }
 
 func (m mockEvents) GetEventsByType(eventType string) mockEvents {
@@ -173,6 +173,7 @@ func (m mockEvents) Except(events ...mockEvents) mockEvents {
 func (m mockEvents) HasCount(count int) mockEvents {
 	numOfEvents := len(m)
 	if numOfEvents != count {
+		m.ShowResourceNames()
 		panic(fmt.Sprintf("expected exactly %d event(s), got %d", count, numOfEvents))
 	}
 

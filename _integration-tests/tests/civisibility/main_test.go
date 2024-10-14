@@ -100,8 +100,7 @@ func TestMain(m *testing.M) {
 			testWithSubtests,
 			testWithSubtestsChild1,
 			testWithSubtestsChild2).
-		HasCount(0).
-		ShowResourceNames()
+		HasCount(0)
 
 	os.Exit(0)
 }
