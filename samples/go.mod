@@ -2,8 +2,6 @@ module github.com/DataDog/orchestrion/samples
 
 go 1.22.8
 
-toolchain go1.23.2
-
 replace github.com/DataDog/orchestrion => ../
 
 require (
@@ -331,7 +329,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
 	google.golang.org/grpc/stats/opentelemetry v0.0.0-20241008095609-bdd444d17807 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.68.0 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.69.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
