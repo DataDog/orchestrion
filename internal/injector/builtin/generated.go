@@ -611,10 +611,10 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.InjectDeclarations(code.MustTemplate(
-				"//go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled\nfunc __dd_civisibility_isCiVisibilityEnabled() bool\n\nfunc init() {\n  // Only initialize if is not a test process (testdeps.ImportPath is set only on test processes since go1.9 in the first init function)\n  // and if CI Visibility has not been disabled (by the kill switch).\n  // For a test process the ci visibility instrumentation will initialize the tracer\n  isATestProcess := len(testdeps.ImportPath) != 0\n  if !isATestProcess || !__dd_civisibility_isCiVisibilityEnabled() {\n    tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n  }\n}",
+				"//go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled\nfunc __dd_civisibility_isCiVisibilityEnabled() bool\n\nfunc init() {\n  // Only initialize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n  // For a test process the ci visibility instrumentation will initialize the tracer\n  if !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n    tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n  }\n}",
 				map[string]string{
-					"testdeps": "testing/internal/testdeps",
-					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"testing": "testing",
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			), []string{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
@@ -628,10 +628,10 @@ var Aspects = [...]aspect.Aspect{
 				},
 			), []string{}),
 			advice.PrependStmts(code.MustTemplate(
-				"// Only finalize the tracer if is not a test process (testdeps.ImportPath is set only on test processes since go1.9 in the first init function)\n// and if CI Visibility has not been disabled (by the kill switch).\n// For a test process the ci visibility instrumentation will finalize the tracer\nisATestProcess := len(testdeps.ImportPath) != 0\nif !isATestProcess || !__dd_civisibility_isCiVisibilityEnabled() {\n  defer tracer.Stop()\n}\n\ndefer profiler.Stop()",
+				"// Only finalize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n// For a test process the ci visibility instrumentation will finalize the tracer\nif !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n  defer tracer.Stop()\n}\n\ndefer profiler.Stop()",
 				map[string]string{
 					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
-					"testdeps": "testing/internal/testdeps",
+					"testing":  "testing",
 					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
@@ -1175,8 +1175,8 @@ var InjectedPaths = [...]string{
 	"net/http",
 	"os",
 	"strconv",
-	"testing/internal/testdeps",
+	"testing",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:WVtd6/Mqq1HwNkNEVPag4XdWzkw54c+8BccXSGLiIcNjfNzWs5tU+25P/l4nuzyzlZbQVo99wbO/3zW6kbhXqQ=="
+const Checksum = "sha512:Ct5UAkMDzld9nH1Rz/hRto7ophPt6vRJpRyc6PJJ5nBofjkA9Dlss1O3KUyS/2yapPHNpt1DF24GU5XpvGosQQ=="
