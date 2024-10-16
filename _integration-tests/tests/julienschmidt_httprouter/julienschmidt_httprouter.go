@@ -36,8 +36,10 @@ func (tc *TestCase) Setup(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
-		Handler: router,
+		Addr:         "127.0.0.1:" + utils.GetFreePort(t),
+		Handler:      router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }
