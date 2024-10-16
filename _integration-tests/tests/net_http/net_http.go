@@ -26,6 +26,22 @@ type TestCase struct {
 	*http.Server
 }
 
+type handler struct{}
+
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+}
+
 func (tc *TestCase) Setup(t *testing.T) {
 	mux := http.NewServeMux()
 	tc.Server = &http.Server{
@@ -35,6 +51,21 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	mux.HandleFunc("/hit", tc.handleHit)
 	mux.HandleFunc("/", tc.handleRoot)
+	// TODO: hit these endpoints, check for spans
+	mux.Handle("/handler", handler{})
+	mux.HandleFunc("/literal", func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		b, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(b)
+	})
 
 	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 }

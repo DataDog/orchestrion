@@ -9,12 +9,9 @@ meta:
   description: HTTP server implementation.
   icon: at-symbol
 aspects:
-  # When httpmode is "wrap"
   - id: Wrap http.Server.Handler
     join-point:
       all-of:
-        - configuration:
-            httpmode: wrap
         - struct-literal:
             type: net/http.Server
             field: Handler
@@ -30,74 +27,35 @@ aspects:
             instrument: github.com/DataDog/orchestrion/instrument
           template: |-
             //dd:startwrap
-            instrument.WrapHandler({{.}})
+            instrument.MaybeWrapHandler({{.}})
             //dd:endwrap
-  - id: Wrap http.HandlerFunc
+  - id: "Wrap starting a server - part 1 - TODO: this description sucks"
     join-point:
-      all-of:
-        - configuration:
-            httpmode: wrap
-        - function:
-            - name: '' # This filters only *dst.FuncLit
-            - signature:
-                args: [net/http.ResponseWriter, '*net/http.Request']
-        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-        - not:
-            one-of:
-              - import-path: github.com/go-chi/chi/v5
-              - import-path: github.com/go-chi/chi/v5/middleware
-              # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
-              - import-path: golang.org/x/net/http2
+      one-of:
+        - function-call: net/http.ListenAndServe
+        - function-call: net/http.Serve
     advice:
       - wrap-expression:
           imports:
             instrument: "github.com/DataDog/orchestrion/instrument"
           template: |-
-            instrument.WrapHandlerFunc({{.}})
-
-  # When httpmode is "report"
-  - id: Report http.HandlerFunc calls
+            {{.AST.Fun}}(
+              {{ index .AST.Args 0}},
+              instrument.MaybeWrapHandler({{ index .AST.Args 1 }}),
+            )
+  - id: "Wrap starting a server - part 2 - TODO: this description sucks"
     join-point:
-      all-of:
-        - configuration:
-            httpmode: report
-        - function-body:
-            function:
-              - signature:
-                  args: [net/http.ResponseWriter, '*net/http.Request']
-        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular in wrap mode, and we
-        # don't want the behavior to be significantly different between wrap and report modes.
-        - not:
-            one-of:
-              - import-path: github.com/go-chi/chi/v5
-              - import-path: github.com/go-chi/chi/v5/middleware
-              # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
-              - import-path: golang.org/x/net/http2
+      one-of:
+        - function-call: net/http.ListenAndServeTLS
+        - function-call: net/http.ServeTLS
     advice:
-      - prepend-statements:
+      - wrap-expression:
           imports:
-            event: github.com/DataDog/orchestrion/instrument/event
-            instrument: github.com/DataDog/orchestrion/instrument
+            instrument: "github.com/DataDog/orchestrion/instrument"
           template: |-
-            {{- $arg := .Function.Argument 1 -}}
-            {{- $name := .Function.Name -}}
-            {{$arg}} = {{$arg}}.WithContext(instrument.Report(
-              {{$arg}}.Context(),
-              event.EventStart,
-              {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-              "span.kind", "server",
-              "http.method", {{$arg}}.Method,
-              "http.url", {{$arg}}.URL,
-              "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-              {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q,\n" .Key .Value}}{{ end }}
-            ))
-            defer instrument.Report(
-              {{$arg}}.Context(),
-              event.EventEnd,
-              {{with $name}}"function-name", {{printf "%q" .}},{{end}}
-              "span.kind", "server",
-              "http.method", {{$arg}}.Method,
-              "http.url", {{$arg}}.URL,
-              "http.useragent", {{$arg}}.Header.Get("User-Agent"),
-              {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
+            {{.AST.Fun}}(
+              {{ index .AST.Args 0}},
+              {{ index .AST.Args 1}},
+              {{ index .AST.Args 2}},
+              instrument.MaybeWrapHandler({{ index .AST.Args 3 }}),
             )

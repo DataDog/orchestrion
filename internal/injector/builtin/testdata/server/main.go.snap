@@ -30,7 +30,7 @@ func main() {
 		Handler:
 		//dd:startwrap
 //line <generated>
-		__orchestrion_instrument.WrapHandler(
+		__orchestrion_instrument.MaybeWrapHandler(
 //line samples/server/main.go:17
 			http.HandlerFunc(myHandler)),
 		//dd:endwrap

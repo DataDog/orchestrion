@@ -13,7 +13,6 @@ import (
 	_ "context"
 	_ "fmt"
 	_ "github.com/DataDog/orchestrion/instrument"
-	_ "github.com/DataDog/orchestrion/instrument/event"
 	_ "github.com/DataDog/orchestrion/instrument/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen"

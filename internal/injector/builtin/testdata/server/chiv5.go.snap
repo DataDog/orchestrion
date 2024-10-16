@@ -28,12 +28,15 @@ func chiV5Server() {
 			return mux
 		}()
 //line samples/server/chiv5.go:16
-	router.Get("/",
+	router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte("Hello World!\n"))
+	})
 //line <generated>
-		__orchestrion_instrument.WrapHandlerFunc(
-//line samples/server/chiv5.go:16
-			func(w http.ResponseWriter, _ *http.Request) {
-				w.Write([]byte("Hello World!\n"))
-			}))
-	http.ListenAndServe(":8080", router)
+//line samples/server/chiv5.go:19
+	http.ListenAndServe(":8080",
+//line <generated>
+		__orchestrion_instrument.MaybeWrapHandler(
+//line samples/server/chiv5.go:19
+			router),
+	)
 }

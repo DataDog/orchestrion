@@ -21,6 +21,24 @@ func resourceNamer(r *http.Request) string {
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 }
 
+// MaybeWrapHandler instruments an http.Handler if it is nil or an *http.ServeMux,
+// and otherwise returns the same handler.
+// This is intended for instrumenting http.ListenAndServe, etc,
+// where we may already be passed an instrumented handler.
+// We assume it is already instrumented unless it's a net/http handler.
+func MaybeWrapHandler(handler http.Handler) http.Handler {
+	if handler == nil {
+		handler = http.DefaultServeMux
+	}
+	switch handler.(type) {
+	case *http.ServeMux, *http.HandlerFunc:
+		return WrapHandler(handler)
+	default:
+		// Don't change it, it may have already been instrumented
+		return handler
+	}
+}
+
 func WrapHandler(handler http.Handler) http.Handler {
 	return httptrace.WrapHandler(handler, "", "", httptrace.WithResourceNamer(resourceNamer))
 	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
