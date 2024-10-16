@@ -26,6 +26,7 @@ jobs:
     name: Run all generators
     outputs:
       has-patch: ${{ steps.is-tree-dirty.outputs.result }}
+    if: (!cancelled() && !failure())
     steps:
       - name: Checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
