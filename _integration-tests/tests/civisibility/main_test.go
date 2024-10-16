@@ -151,7 +151,6 @@ func enableCiVisibilityEndpointMock() *httptest.Server {
 	fmt.Printf("mockapi: Url: %s\n", server.URL)
 
 	os.Setenv("DD_CIVISIBILITY_ENABLED", "true")
-	os.Setenv("DD_TRACE_DEBUG", "true")
 	os.Setenv("DD_CIVISIBILITY_AGENTLESS_ENABLED", "true")
 	os.Setenv("DD_CIVISIBILITY_AGENTLESS_URL", server.URL)
 	os.Setenv("DD_API_KEY", "***")
