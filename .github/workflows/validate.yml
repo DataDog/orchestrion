@@ -46,16 +46,16 @@ jobs:
           GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/DataDog/orchestrion/...,./...
           GOCOVERDIR: ${{ github.workspace }}/coverage
       - name: Consolidate coverage report
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage -o ./coverage/generator.out
       - name: Determine simple go version
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
         run: |-
           set -euo pipefail
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         uses: ./.github/actions/codecov-upload
         with:
           name: Generators
@@ -208,14 +208,14 @@ jobs:
           fi
           go -C _integration-tests test "${test_args[@]}" ./...
       - name: Determine simple go version
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
         shell: bash
         run: |-
           set -euo pipefail
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         uses: ./.github/actions/codecov-upload
         with:
           name: Unit Tests (go${{ steps.go.outputs.version }}, ${{ runner.os }}, ${{ runner.arch }})
@@ -342,17 +342,17 @@ jobs:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
       - name: Determine go minor version
         id: go
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         shell: bash
         run: |-
           set -euo pipefail
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
-        if: github.event_name != 'merge_group'
+        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         uses: ./.github/actions/codecov-upload
         with:
           name: Integration Tests (${{ matrix.build-mode }}, go${{ steps.go.outputs.version }}, ${{ runner.os }}, ${{ runner.arch }})
