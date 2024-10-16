@@ -141,8 +141,6 @@ func enableCiVisibilityEndpointMock() *httptest.Server {
 			}
 
 			ciVisibilityPayloads = append(ciVisibilityPayloads, &payload)
-
-			// fmt.Println(string(jsonBuf.Bytes()))
 			w.WriteHeader(http.StatusAccepted)
 			return
 		}

@@ -67,7 +67,7 @@ func (m *mockPayloads) GetEvents() mockEvents {
 
 func (m mockEvents) ShowResourceNames() mockEvents {
 	for i, event := range m {
-		fmt.Printf("  [%d] = %v\n", i, event.Content.Resource)
+		_ = fmt.Printf("  [%d] = %v\n", i, event.Content.Resource)
 	}
 	return m
 }
