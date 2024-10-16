@@ -9,7 +9,6 @@ package pgx
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -48,7 +47,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	dbURL, err := tc.container.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
-	fmt.Println(dbURL)
 
 	tc.conn, err = pgx.Connect(ctx, dbURL)
 	require.NoError(t, err)
