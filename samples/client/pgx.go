@@ -1,3 +1,8 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 package main
 
 import (
@@ -33,7 +38,9 @@ func pgxExample() {
 	}
 	defer conn.Close(ctx)
 
-	_, err = conn.Query(ctx, "SELECT * FROM users")
+	var name string
+	var weight int64
+	err = conn.QueryRow(context.Background(), "select name, weight from widgets where id=$1", 4).Scan(&name, &weight)
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +69,9 @@ func pgxPoolExample() {
 	}
 	defer pool.Close()
 
-	_, err = pool.Query(ctx, "SELECT 1")
+	var name string
+	var weight int64
+	err = pool.QueryRow(context.Background(), "select name, weight from widgets where id=$1", 4).Scan(&name, &weight)
 	if err != nil {
 		panic(err)
 	}
