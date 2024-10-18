@@ -54,6 +54,8 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"
@@ -64,4 +66,5 @@ import (
 	_ "net/http"
 	_ "os"
 	_ "strconv"
+	_ "testing"
 )
