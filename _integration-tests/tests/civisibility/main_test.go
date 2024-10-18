@@ -27,7 +27,6 @@ const isOrchestrionEnabled = false
 var ciVisibilityPayloads mockPayloads
 
 func TestMain(m *testing.M) {
-
 	// check if orchestrion is enabled
 	if !isOrchestrionEnabled {
 		panic("Orchestrion is not enabled, please run this test with orchestrion")
