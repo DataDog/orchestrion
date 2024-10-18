@@ -5,8 +5,8 @@
 ---
 # yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
-  name: go-testing
-  description: Go testing instrumentation
+  name: testing
+  description: Testing instrumentation
   icon: github
 aspects:
   - id: Instrument testing.M.Run

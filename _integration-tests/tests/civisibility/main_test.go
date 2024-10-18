@@ -12,6 +12,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,9 +21,18 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
+//dd:orchestrion-enabled
+const isOrchestrionEnabled = false
+
 var ciVisibilityPayloads mockPayloads
 
 func TestMain(m *testing.M) {
+
+	// check if orchestrion is enabled
+	if !isOrchestrionEnabled {
+		panic("Orchestrion is not enabled, please run this test with orchestrion")
+	}
+
 	// let's enable CI Visibility mode
 	server := enableCiVisibilityEndpointMock()
 	defer server.Close()
@@ -110,42 +120,45 @@ func TestMain(m *testing.M) {
 
 func enableCiVisibilityEndpointMock() *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v2/citestcycle" {
-			fmt.Printf("mockapi: test cycle payload received.\n")
-
-			// first we need to read the body
-			// then we need to unzip the body
-			// then we need to convert the body to json
-			// then we need to decode the json
-
-			gzipReader, err := gzip.NewReader(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			defer gzipReader.Close()
-
-			// Convert the message pack to json
-			jsonBuf := new(bytes.Buffer)
-			_, err = msgp.CopyToJSON(jsonBuf, gzipReader)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			var payload mockPayload
-			err = json.Unmarshal(jsonBuf.Bytes(), &payload)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			ciVisibilityPayloads = append(ciVisibilityPayloads, &payload)
-			w.WriteHeader(http.StatusAccepted)
+		if r.URL.Path != "/api/v2/citestcycle" {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("mockapi: test cycle payload received.\n")
+
+		// first we need to read the body
+		// then we need to gunzip the body
+		// then we need to convert the body from msgpack to json
+		// then we need to parse the json
+
+		gzipReader, err := gzip.NewReader(r.Body)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer gzipReader.Close()
+
+		// Convert the message pack to json
+		var jsonBuf bytes.Buffer
+		_, err = msgp.CopyToJSON(&jsonBuf, gzipReader)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		var payload mockPayload
+		err = json.Unmarshal(jsonBuf.Bytes(), &payload)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		ciVisibilityPayloads = append(ciVisibilityPayloads, &payload)
+		w.WriteHeader(http.StatusAccepted)
 	}))
 
 	fmt.Printf("mockapi: Url: %s\n", server.URL)
