@@ -1,0 +1,166 @@
+//line samples/client/elasticsearch.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	esv6 "github.com/elastic/go-elasticsearch/v6"
+	esv7 "github.com/elastic/go-elasticsearch/v7"
+	esv8 "github.com/elastic/go-elasticsearch/v8"
+//line <generated>
+	__orchestrion_elastictrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6"
+)
+
+//line samples/client/elasticsearch.go:17
+func SampleGoElasticsearch() {
+	var (
+		v6Client      *esv6.Client
+		v7Client      *esv7.Client
+		v8Client      *esv8.Client
+		v8TypedClient *esv8.TypedClient
+		err           error
+	)
+
+	v6Client, err = esv6.NewDefaultClient()
+	v6Client, err = esv6.NewClient(
+//line <generated>
+		func(cfg esv6.Config) esv6.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:27
+			esv6.Config{}))
+	v6Client, err = esv6.NewClient(
+//line <generated>
+		func(cfg esv6.Config) esv6.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:28
+			esv6.Config{
+				Transport: http.DefaultTransport,
+			}))
+
+	v7Client, err = esv7.NewDefaultClient()
+	v7Client, err = esv7.NewClient(
+//line <generated>
+		func(cfg esv7.Config) esv7.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:33
+			esv7.Config{}))
+	v7Client, err = esv7.NewClient(
+//line <generated>
+		func(cfg esv7.Config) esv7.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:34
+			esv7.Config{
+				Transport: http.DefaultTransport,
+			}))
+
+	v8Client, err = esv8.NewDefaultClient()
+	v8Client, err = esv8.NewClient(
+//line <generated>
+		func(cfg esv8.Config) esv8.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:39
+			esv8.Config{}))
+	v8Client, err = esv8.NewClient(
+//line <generated>
+		func(cfg esv8.Config) esv8.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:40
+			esv8.Config{
+				Transport: http.DefaultTransport,
+			}))
+	v8TypedClient, err = esv8.NewTypedClient(
+//line <generated>
+		func(cfg esv8.Config) esv8.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:43
+			esv8.Config{}))
+	v8TypedClient, err = esv8.NewTypedClient(
+//line <generated>
+		func(cfg esv8.Config) esv8.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:44
+			esv8.Config{
+				Transport: http.DefaultTransport,
+			}))
+
+	cfgPtr :=
+//line <generated>
+		func(cfg *esv8.Config) *esv8.Config {
+			if cfg.Transport == nil {
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
+			} else {
+				base := cfg.Transport
+				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper(__orchestrion_elastictrace.WithTransport(base))
+			}
+			return cfg
+		}(
+//line samples/client/elasticsearch.go:48
+			&esv8.Config{
+				Transport: http.DefaultTransport,
+			})
+	v8TypedClient, err = esv8.NewTypedClient(*cfgPtr)
+
+	fmt.Printf("v6: %v, v7: %v, v8: %v, v8 (typed): %v, err: %v\n", v6Client, v7Client, v8Client, v8TypedClient, err)
+}

@@ -69,6 +69,79 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/go-elasticsearch.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {            \n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v6",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {            \n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v6",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {            \n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v7",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  // FIXME: if cfg.CACert != nil, then we know the call to elasticsearch.NewClient is gonna return an error.\n  //  The workaround is to configure the certificate in the Transport instead, so should continue modifying\n  //  the config here so the user sees the error, or just silently return the unmodified code (which could be confusing\n  //  for the user as they won't see traces).\n  //  NOTE: this problem exists for v7 and v8.\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v7",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {            \n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v8",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {            \n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v8",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -916,6 +989,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
@@ -960,4 +1034,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:pXFHjupxWE+tdgFLK/03Q7H+ireSfSHPXx8ETxc5ZuHABZLZc1DPOpFxCcZmOP2tCoSAc+K6iWr3iwKmJE3/qQ=="
+const Checksum = "sha512:jC87VeUBZxNr/wdqoFgfHA8U4MS8OyG70vcRttYApCDD6ihJUN7bNlSCpcC5TFre2SKXqkJ1yf7wVsh1x4uTaA=="
