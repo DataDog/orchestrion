@@ -285,7 +285,7 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on }}-latest
+    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"group":"ARM LINUX SHARED","labels":"arm-4core-linux"}') || format('{0}-latest', matrix.runs-on) }}
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
       - name: Checkout
