@@ -16,8 +16,24 @@ aspects:
     join-point:
       function-call: github.com/gomodule/redigo/redis.Dial
     advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
+      - wrap-expression:
+          imports:
+            redigo: github.com/gomodule/redigo/redis
+            redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
+          template: |-
+            func() (redis.Conn, error) {
+              {{ $len := len .AST.Args }}
+              {{ if le $len 2 }}
+                return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+              {{ else }}
+                opts := {{ index .AST.Args 2 }}
+                anyOpts := make([]interface{}, 0, len(opts))
+                for i, v := range opts {
+                  anyOpts[i] = v
+                }
+                return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)
+              {{ end }}
+            }()
 
   ##############################################################################
   # DialContext
@@ -25,8 +41,24 @@ aspects:
     join-point:
       function-call: github.com/gomodule/redigo/redis.DialContext
     advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
+      - wrap-expression:
+          imports:
+            redigo: github.com/gomodule/redigo/redis
+            redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
+          template: |-
+            func() (redis.Conn, error) {
+              {{ $len := len .AST.Args }}
+              {{ if le $len 3 }}
+                return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }})
+              {{ else }}
+                opts := {{ index .AST.Args 3 }}
+                anyOpts := make([]interface{}, 0, len(opts))
+                for i, v := range opts {
+                  anyOpts[i] = v
+                }
+                return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)
+              {{ end }}
+            }()
 
   ##############################################################################
   # DialURL
@@ -34,5 +66,21 @@ aspects:
     join-point:
       function-call: github.com/gomodule/redigo/redis.DialURL
     advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
+      - wrap-expression:
+          imports:
+            redigo: github.com/gomodule/redigo/redis
+            redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
+          template: |-
+            func() (redis.Conn, error) {
+              {{ $len := len .AST.Args }}
+              {{ if le $len 1 }}
+                return redigotrace.DialURL({{ index .AST.Args 0 }})
+              {{ else }}
+                opts := {{ index .AST.Args 1 }}
+                anyOpts := make([]interface{}, 0, len(opts))
+                for i, v := range opts {
+                  anyOpts[i] = v
+                }
+                return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)
+              {{ end }}
+            }()
