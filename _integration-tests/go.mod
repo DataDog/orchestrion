@@ -44,6 +44,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
 	github.com/tinylib/msgp v1.2.2
+	github.com/twitchtv/twirp v8.1.3+incompatible
 	github.com/vektah/gqlparser/v2 v2.5.18
 	github.com/xlab/treeprint v1.2.0
 	go.mongodb.org/mongo-driver v1.17.1
