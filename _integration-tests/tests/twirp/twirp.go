@@ -9,7 +9,6 @@ package twirp
 
 import (
 	"context"
-	"math/rand"
 	"net"
 	"net/http"
 	"testing"
@@ -108,15 +107,13 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 
 type randomHaberdasher struct{}
 
-func (h *randomHaberdasher) MakeHat(_ context.Context, size *example.Size) (*example.Hat, error) {
+func (*randomHaberdasher) MakeHat(_ context.Context, size *example.Size) (*example.Hat, error) {
 	if size.Inches <= 0 {
 		return nil, twirp.InvalidArgumentError("Inches", "I can't make a hat that small!")
 	}
-	colors := []string{"white", "black", "brown", "red", "blue"}
-	names := []string{"bowler", "baseball cap", "top hat", "derby"}
 	return &example.Hat{
 		Size:  size.Inches,
-		Color: colors[rand.Intn(len(colors))],
-		Name:  names[rand.Intn(len(names))],
+		Color: "blue",
+		Name:  "top hat",
 	}, nil
 }
