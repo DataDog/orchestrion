@@ -61,6 +61,10 @@ func SampleGoElasticsearch() {
 	v7Client, err = esv7.NewClient(
 //line <generated>
 		func(cfg esv7.Config) esv7.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
@@ -74,6 +78,10 @@ func SampleGoElasticsearch() {
 	v7Client, err = esv7.NewClient(
 //line <generated>
 		func(cfg esv7.Config) esv7.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
@@ -91,6 +99,10 @@ func SampleGoElasticsearch() {
 	v8Client, err = esv8.NewClient(
 //line <generated>
 		func(cfg esv8.Config) esv8.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
@@ -104,6 +116,10 @@ func SampleGoElasticsearch() {
 	v8Client, err = esv8.NewClient(
 //line <generated>
 		func(cfg esv8.Config) esv8.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
@@ -119,6 +135,10 @@ func SampleGoElasticsearch() {
 	v8TypedClient, err = esv8.NewTypedClient(
 //line <generated>
 		func(cfg esv8.Config) esv8.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
@@ -132,6 +152,10 @@ func SampleGoElasticsearch() {
 	v8TypedClient, err = esv8.NewTypedClient(
 //line <generated>
 		func(cfg esv8.Config) esv8.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
@@ -148,6 +172,10 @@ func SampleGoElasticsearch() {
 	cfgPtr :=
 //line <generated>
 		func(cfg *esv8.Config) *esv8.Config {
+			if cfg.CACert != nil {
+				// refuse to set transport as it will make the NewClient call fail.
+				return cfg
+			}
 			if cfg.Transport == nil {
 				cfg.Transport = __orchestrion_elastictrace.NewRoundTripper()
 			} else {
