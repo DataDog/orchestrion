@@ -6,14 +6,22 @@
 # yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
   name: github.com/twitchtv/twirp
-  description: A simple RPC framework with protobuf service definitions.
+  description: |-
+    A simple RPC framework with protobuf service definitions.
+    
+    ### Details & Caveats
+    - This instrumentation currently uses the wrappers from the dd-trace-go `contrib/net/http` package, not the
+    ones from `contrib/twitchtv/twirp`.
+    - The server-side instrumentation additionally adds rpc / twirp specific spans using `*twirp.ServerHooks`.
+    - Currently, the `*twirp.ClientHooks` implementation is not available in dd-trace-go, so the only generated spans are
+    the ones from `net/http`.
   icon: at-symbol
 
 aspects:
   # TODO: Client Instrumentation - dd-trace-go does not have a *twirp.ClientHooks implementation for now.
 
   # Server Instrumentation
-  - id: Add twirp server interceptors
+  - id: Add twirp server hooks
     join-point:
       struct-literal:
         type: github.com/twitchtv/twirp.ServerOptions
@@ -21,6 +29,7 @@ aspects:
     advice:
       - wrap-expression:
           imports:
+            twirp: github.com/twitchtv/twirp
             twirptrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp
           template: |-
             {{- .AST.Type -}}{
@@ -28,9 +37,11 @@ aspects:
               {{ range .AST.Elts }}
               {{- if eq .Key.Name "Hooks" }}
               {{- $hasField = true -}}
-              {{- end -}}
+              Hooks: twirp.ChainHooks(twirptrace.NewServerHooks(), {{ .Value }}),
+              {{- else -}}
               {{ . }},
               {{ end -}}
+              {{ end }}
               {{- if not $hasField -}}
               Hooks: twirptrace.NewServerHooks(),
               {{- end }}

@@ -889,8 +889,9 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/twitchtv/twirp.ServerOptions"), join.StructLiteralMatchAny),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"Hooks\" }}\n  {{- $hasField = true -}}\n  {{- end -}}\n  {{ . }},\n  {{ end -}}\n  {{- if not $hasField -}}\n  Hooks: twirptrace.NewServerHooks(),\n  {{- end }}\n}",
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"Hooks\" }}\n  {{- $hasField = true -}}\n  Hooks: twirp.ChainHooks(twirptrace.NewServerHooks(), {{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  Hooks: twirptrace.NewServerHooks(),\n  {{- end }}\n}",
 				map[string]string{
+					"twirp":      "github.com/twitchtv/twirp",
 					"twirptrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 				},
 			)),
@@ -1192,4 +1193,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:e/0vHLBouOmNnacu+5onVdV/ECcwHaFPbdSG9+37duF7b6lqq+VquFmftxFvIlqiaZjkVICUo8mJTUtK82JM/w=="
+const Checksum = "sha512:lfSqbQjH/kRNh6nQuC9zEHNj+NuA4Ts4m89E/jlF76hauOJJzMSRnCAmobSkfW+9y7iYeh2kz/uwK25d4hYi3g=="
