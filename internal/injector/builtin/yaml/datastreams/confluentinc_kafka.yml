@@ -543,10 +543,17 @@ aspects:
             __dd_initProducer({{ $p }})
             tMsg := __dd_wrapMessage({{ $msg }})
             span := p.__dd_tracer.StartProduceSpan(tMsg)
-            {{ $deliveryChan }} = tracing.WrapDeliveryChannel({{ $p }}.__dd_tracer, {{ $deliveryChan }}, span, __dd_wrapEvent)
+            
+            var errChan chan error
+            {{ $deliveryChan }}, errChan = tracing.WrapDeliveryChannel({{ $p }}.__dd_tracer, {{ $deliveryChan }}, span, __dd_wrapEvent)
+            
             {{ $p }}.__dd_tracer.SetProduceCheckpoint(tMsg)
             defer func() {
-              if {{ $err }} != nil || {{ $deliveryChan }} == nil {
-                span.Finish(tracer.WithError({{ $err }}))
+              if {{ $err }} != nil {
+                if errChan != nil {
+                  errChan <- {{ $err }}
+                } else {
+                  span.Finish(tracer.WithError({{ $err }}))
+                }
               }
             }()

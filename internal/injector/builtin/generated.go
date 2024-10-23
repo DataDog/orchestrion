@@ -748,7 +748,7 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $p := .Function.Receiver -}}\n{{- $msg := .Function.Argument 0 -}}\n{{- $deliveryChan := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\n__dd_initProducer({{ $p }})\ntMsg := __dd_wrapMessage({{ $msg }})\nspan := p.__dd_tracer.StartProduceSpan(tMsg)\n{{ $deliveryChan }} = tracing.WrapDeliveryChannel({{ $p }}.__dd_tracer, {{ $deliveryChan }}, span, __dd_wrapEvent)\n{{ $p }}.__dd_tracer.SetProduceCheckpoint(tMsg)\ndefer func() {\n  if {{ $err }} != nil || {{ $deliveryChan }} == nil {\n    span.Finish(tracer.WithError({{ $err }}))\n  }\n}()",
+				"{{- $p := .Function.Receiver -}}\n{{- $msg := .Function.Argument 0 -}}\n{{- $deliveryChan := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\n__dd_initProducer({{ $p }})\ntMsg := __dd_wrapMessage({{ $msg }})\nspan := p.__dd_tracer.StartProduceSpan(tMsg)\n\nvar errChan chan error\n{{ $deliveryChan }}, errChan = tracing.WrapDeliveryChannel({{ $p }}.__dd_tracer, {{ $deliveryChan }}, span, __dd_wrapEvent)\n\n{{ $p }}.__dd_tracer.SetProduceCheckpoint(tMsg)\ndefer func() {\n  if {{ $err }} != nil {\n    if errChan != nil {\n      errChan <- {{ $err }}\n    } else {\n      span.Finish(tracer.WithError({{ $err }}))\n    }\n  }\n}()",
 				map[string]string{
 					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
@@ -1510,4 +1510,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:4IwPflKU3YO/NCktgna0MKA1w6peGRMgCeIlFVXOVkaDO07+ctyMsbczLLn373suET9+0wM4r/WnQLWYGYQ6zw=="
+const Checksum = "sha512:X7ilLRWTSXMTxfgDr/fzQUjHPinmOvIOsuWjmrplqFwol6G1ICq2vt1ugckPIdraFit3wZbtP7XcKfrDD6RKXg=="
