@@ -247,6 +247,8 @@ jobs:
         run: |-
           set -euo pipefail
           go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload benchmark report (raw)
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
