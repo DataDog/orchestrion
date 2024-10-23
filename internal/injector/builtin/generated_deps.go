@@ -41,6 +41,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
@@ -55,6 +56,8 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"
@@ -65,4 +68,5 @@ import (
 	_ "net/http"
 	_ "os"
 	_ "strconv"
+	_ "testing"
 )
