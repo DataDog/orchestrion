@@ -288,8 +288,8 @@ jobs:
     runs-on: ${{ matrix.runs-on == 'ubuntu' && 'arm-4core-linux' || format('{0}-latest', matrix.runs-on) }}
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
-      - name: Start docker daemon
-        if: runner.name == 'arm-4core-linux'
+      - name: Start docker daemon (arm-4core-linux only)
+        if: matrix.runs-on == 'ubuntu'
         run: sudo systemctl start docker
       - name: Checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
