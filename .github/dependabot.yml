@@ -4,9 +4,17 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
+      day: monday
+    groups:
+      GitHub Actions:
+        applies-to: version-updates
 
   - package-ecosystem: pip
     directory: /_integration-tests/utils/agent
     schedule:
-      interval: daily
+      interval: weekly
+      day: monday
+    groups:
+      Python Dependencies:
+        applies-to: version-updates
