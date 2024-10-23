@@ -34,6 +34,7 @@ require (
 	github.com/graphql-go/graphql v0.8.1
 	github.com/graphql-go/handler v0.2.3
 	github.com/hashicorp/vault/api v1.15.0
+	github.com/jackc/pgx/v5 v5.7.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
@@ -45,6 +46,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/gcloud v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
 	github.com/tinylib/msgp v1.2.2
@@ -241,6 +243,9 @@ require (
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.3.1 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gofork v1.7.6 // indirect
