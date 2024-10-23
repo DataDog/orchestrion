@@ -28,6 +28,218 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From civisibility/testing.yml
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Run"),
+				join.Receiver(join.MustTypeName("*testing.M")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"//go:linkname __dd_civisibility_instrumentTestingM gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingM\nfunc __dd_civisibility_instrumentTestingM(*M) func(int)",
+				map[string]string{},
+			), []string{
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
+			}),
+			advice.PrependStmts(code.MustTemplate(
+				"exitFunc := __dd_civisibility_instrumentTestingM({{ .Function.Receiver }})\ndefer exitFunc({{ .Function.Receiver }}.exitCode)",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Run"),
+				join.Receiver(join.MustTypeName("*testing.T")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"//go:linkname __dd_civisibility_instrumentTestingTFunc gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingTFunc\nfunc __dd_civisibility_instrumentTestingTFunc(func(*T)) func(*T)\n\n//go:linkname __dd_civisibility_instrumentSetErrorInfo gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentSetErrorInfo\nfunc __dd_civisibility_instrumentSetErrorInfo(tb TB, errType string, errMessage string, skip int)\n\n//go:linkname __dd_civisibility_instrumentCloseAndSkip gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentCloseAndSkip\nfunc __dd_civisibility_instrumentCloseAndSkip(tb TB, skipReason string)\n\n//go:linkname __dd_civisibility_instrumentSkipNow gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentSkipNow\nfunc __dd_civisibility_instrumentSkipNow(tb TB)\n\n//go:linkname __dd_civisibility_ExitCiVisibility gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations.ExitCiVisibility\nfunc __dd_civisibility_ExitCiVisibility()",
+				map[string]string{},
+			), []string{
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations",
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
+			}),
+			advice.PrependStmts(code.MustTemplate(
+				"{{ .Function.Argument 1 }} = __dd_civisibility_instrumentTestingTFunc({{ .Function.Argument 1 }})",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Run"),
+				join.Receiver(join.MustTypeName("*testing.B")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"//go:linkname __dd_civisibility_instrumentTestingBFunc gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingBFunc\nfunc __dd_civisibility_instrumentTestingBFunc(*B, string, func(*B)) (string, func(*B))",
+				map[string]string{},
+			), []string{
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
+			}),
+			advice.PrependStmts(code.MustTemplate(
+				"{{ .Function.Argument 0 }}, {{ .Function.Argument 1 }} = __dd_civisibility_instrumentTestingBFunc({{ .Function.Receiver }}, {{ .Function.Argument 0 }}, {{ .Function.Argument 1 }})",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Fail"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"Fail\", \"failed test\", 0)",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("FailNow"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"FailNow\", \"failed test\", 0)\n__dd_civisibility_ExitCiVisibility()",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Error"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"Error\", fmt.Sprint({{ .Function.Argument 0 }}...), 0)",
+				map[string]string{
+					"fmt": "fmt",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Errorf"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"Errorf\", fmt.Sprintf({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}...), 0)",
+				map[string]string{
+					"fmt": "fmt",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Fatal"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"Fatal\", fmt.Sprint({{ .Function.Argument 0 }}...), 0)",
+				map[string]string{
+					"fmt": "fmt",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Fatalf"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"Fatalf\", fmt.Sprintf({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}...), 0)",
+				map[string]string{
+					"fmt": "fmt",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Skip"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentCloseAndSkip({{ .Function.Receiver }}, fmt.Sprint({{ .Function.Argument 0 }}...))",
+				map[string]string{
+					"fmt": "fmt",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("Skipf"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentCloseAndSkip({{ .Function.Receiver }}, fmt.Sprintf({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}...))",
+				map[string]string{
+					"fmt": "fmt",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("testing"),
+			join.FunctionBody(join.Function(
+				join.Name("SkipNow"),
+				join.Receiver(join.MustTypeName("*testing.common")),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"__dd_civisibility_instrumentSkipNow({{ .Function.Receiver }})",
+				map[string]string{},
+			)),
+		},
+	},
 	// From cloud/aws-sdk-v2.yml
 	{
 		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), join.StructLiteralMatchValueOnly),
@@ -448,11 +660,14 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.InjectDeclarations(code.MustTemplate(
-				"func init() {\n  tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n}",
+				"//go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled\nfunc __dd_civisibility_isCiVisibilityEnabled() bool\n\nfunc init() {\n  // Only initialize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n  // For a test process the ci visibility instrumentation will initialize the tracer\n  if !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n    tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n  }\n}",
 				map[string]string{
-					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"testing": "testing",
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
-			), []string{}),
+			), []string{
+				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
+			}),
 			advice.InjectDeclarations(code.MustTemplate(
 				"func init() {\n  switch os.Getenv(\"DD_PROFILING_ENABLED\") {\n  case \"1\", \"true\", \"auto\":\n    // The \"auto\" value can be set if profiling is enabled via the\n    // Datadog Admission Controller. We always turn on the profiler in\n    // the \"auto\" case since we only send profiles after at least a\n    // minute, and we assume anything running that long is worth\n    // profiling.\n    err := profiler.Start(\n      profiler.WithProfileTypes(\n        profiler.CPUProfile,\n        profiler.HeapProfile,\n        // Non-default profiles which are highly likely to be useful:\n        profiler.GoroutineProfile,\n        profiler.MutexProfile,\n      ),\n      profiler.WithTags(\"orchestrion:true\"),\n    )\n    if err != nil {\n      // TODO: is there a better reporting mechanism?\n      // The tracer and profiler already use the stdlib logger, so\n      // we're not adding anything new. But users might be using a\n      // different logger.\n      log.Printf(\"failed to start profiling: %s\", err)\n    }\n  }\n}",
 				map[string]string{
@@ -462,9 +677,10 @@ var Aspects = [...]aspect.Aspect{
 				},
 			), []string{}),
 			advice.PrependStmts(code.MustTemplate(
-				"defer tracer.Stop()\ndefer profiler.Stop()",
+				"// Only finalize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n// For a test process the ci visibility instrumentation will finalize the tracer\nif !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n  defer tracer.Stop()\n}\n\ndefer profiler.Stop()",
 				map[string]string{
 					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
+					"testing":  "testing",
 					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 			)),
@@ -997,6 +1213,8 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/dyngo",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations",
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
@@ -1007,7 +1225,8 @@ var InjectedPaths = [...]string{
 	"net/http",
 	"os",
 	"strconv",
+	"testing",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:tHHH1zGT0Ztt5wQxSd+cwIuo4/ogie6YvFVqZrOUH0u1O5nGBVWVQyBZ0Sj96oskEHzUvxuxixZMJZ8awOlbBA=="
+const Checksum = "sha512:i0tLYCr+uaIDKaCgI5RP0XnsbVPYaqvAnnu2fH6gE02FCOP+6gwQRd9p5uMEePv+4ebKmaAORZRw3VybaC8u6w=="
