@@ -6,9 +6,7 @@
 package advice
 
 import (
-	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
@@ -17,8 +15,8 @@ import (
 )
 
 type injectDeclarations struct {
-	template code.Template
-	links    []string
+	Template code.Template
+	Links    []string
 }
 
 // InjectDeclarations merges all declarations in the provided source file into the current file. The package name of both
@@ -28,7 +26,7 @@ func InjectDeclarations(template code.Template, links []string) injectDeclaratio
 }
 
 func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
-	decls, err := a.template.CompileDeclarations(ctx)
+	decls, err := a.Template.CompileDeclarations(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -42,9 +40,9 @@ func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
 	file.Decls = append(file.Decls, decls...)
 
 	// Register any link-time dependencies that were declared...
-	if len(a.links) > 0 {
+	if len(a.Links) > 0 {
 		ctx.AddImport("unsafe", "_") // For go:linkname
-		for _, link := range a.links {
+		for _, link := range a.Links {
 			ctx.AddLink(link)
 		}
 	}
@@ -54,10 +52,10 @@ func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
 
 func (a injectDeclarations) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "InjectDeclarations").Call(
-		a.template.AsCode(),
+		a.Template.AsCode(),
 		jen.Index().String().ValuesFunc(func(g *jen.Group) {
-			sort.Strings(a.links)
-			for _, link := range a.links {
+			sort.Strings(a.Links)
+			for _, link := range a.Links {
 				g.Line().Lit(link)
 			}
 			g.Line()
@@ -66,27 +64,7 @@ func (a injectDeclarations) AsCode() jen.Code {
 }
 
 func (a injectDeclarations) AddedImports() []string {
-	return a.links
-}
-
-func (a injectDeclarations) RenderHTML() string {
-	var buf strings.Builder
-	_, _ = buf.WriteString("<div class=\"advice inject-declarations\">\n")
-	_, _ = buf.WriteString("  <div class=\"type\">Introduce new declarations:\n")
-	_, _ = buf.WriteString(a.template.RenderHTML())
-	_, _ = buf.WriteString("\n  </div>\n")
-	if len(a.links) > 0 {
-		_, _ = buf.WriteString("  <div class=\"type\">Record link-time dependencies on:\n")
-		_, _ = buf.WriteString("    <ul>\n")
-		for _, link := range a.links {
-			_, _ = buf.WriteString(fmt.Sprintf("      <li>{{<godoc %q>}}</li>\n", link))
-		}
-		_, _ = buf.WriteString("    </ul>\n")
-		_, _ = buf.WriteString("  </div>\n")
-	}
-	_, _ = buf.WriteString("</div>\n")
-
-	return buf.String()
+	return append(a.Template.AddedImports(), a.Links...)
 }
 
 func init() {

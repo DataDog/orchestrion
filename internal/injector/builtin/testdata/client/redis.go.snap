@@ -10,30 +10,50 @@ import (
 	"context"
 	"fmt"
 
+	redisv0 "github.com/go-redis/redis"
 	redisv7 "github.com/go-redis/redis/v7"
 	redisv8 "github.com/go-redis/redis/v8"
 	redigo "github.com/gomodule/redigo/redis"
 	redisv9 "github.com/redis/go-redis/v9"
 //line <generated>
-	__orchestrion_trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
-	__orchestrion_trace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
+	__orchestrion_trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis"
+	__orchestrion_trace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
+	__orchestrion_trace2 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
 	__orchestrion_redigo "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
-	__orchestrion_trace2 "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9"
+	__orchestrion_trace3 "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9"
 )
 
-//line samples/client/redis.go:18
+//line samples/client/redis.go:19
+func redisV0Client() {
+	client :=
+//line <generated>
+		func() (client *redisv0.Client) {
+			client =
+//line samples/client/redis.go:20
+				redisv0.NewClient(&redisv0.Options{Addr: "127.0.0.1", Password: "", DB: 0})
+//line <generated>
+			__orchestrion_trace.WrapClient(client)
+			return
+		}()
+//line samples/client/redis.go:21
+	defer client.Close()
+	if res := client.Set("test_key", "test_value", 0); res.Err() != nil {
+		panic(res.Err())
+	}
+}
+
 func redisV7Client() {
 	client :=
 //line <generated>
 		func() (client *redisv7.Client) {
 			client =
-//line samples/client/redis.go:19
+//line samples/client/redis.go:28
 				redisv7.NewClient(&redisv7.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>
-			__orchestrion_trace.WrapClient(client)
+			__orchestrion_trace1.WrapClient(client)
 			return
 		}()
-//line samples/client/redis.go:20
+//line samples/client/redis.go:29
 	defer client.Close()
 	if res := client.Set("test_key", "test_value", 0); res.Err() != nil {
 		panic(res.Err())
@@ -45,13 +65,13 @@ func redisV8Client(ctx context.Context) {
 //line <generated>
 		func() (client *redisv8.Client) {
 			client =
-//line samples/client/redis.go:27
+//line samples/client/redis.go:36
 				redisv8.NewClient(&redisv8.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>
-			__orchestrion_trace1.WrapClient(client)
+			__orchestrion_trace2.WrapClient(client)
 			return
 		}()
-//line samples/client/redis.go:28
+//line samples/client/redis.go:37
 	defer client.Close()
 	if res := client.Set(ctx, "test_key", "test_value", 0); res.Err() != nil {
 		panic(res.Err())
@@ -63,13 +83,13 @@ func redisV9Client(ctx context.Context) {
 //line <generated>
 		func() (client *redisv9.Client) {
 			client =
-//line samples/client/redis.go:35
+//line samples/client/redis.go:44
 				redisv9.NewClient(&redisv9.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>
-			__orchestrion_trace2.WrapClient(client)
+			__orchestrion_trace3.WrapClient(client)
 			return
 		}()
-//line samples/client/redis.go:36
+//line samples/client/redis.go:45
 	defer client.Close()
 	if res := client.Set(ctx, "test_key", "test_value", 0); res.Err() != nil {
 		panic(res.Err())

@@ -16,14 +16,14 @@ import (
 )
 
 type prependStatements struct {
-	template code.Template
+	Template code.Template
 }
 
 // PrependStmts prepends statements to the matched *dst.BlockStmt. This action
 // can only be used if the selector matches on a *dst.BlockStmt. The prepended
 // statements are wrapped in a new block statement to prevent scope leakage.
 func PrependStmts(template code.Template) *prependStatements {
-	return &prependStatements{template: template}
+	return &prependStatements{Template: template}
 }
 
 func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
@@ -32,7 +32,7 @@ func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
 		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", ctx.Node())
 	}
 
-	stmts, err := a.template.CompileBlock(ctx)
+	stmts, err := a.Template.CompileBlock(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -46,15 +46,11 @@ func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
 }
 
 func (a *prependStatements) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "PrependStmts").Call(a.template.AsCode())
+	return jen.Qual(pkgPath, "PrependStmts").Call(a.Template.AsCode())
 }
 
 func (a *prependStatements) AddedImports() []string {
-	return a.template.AddedImports()
-}
-
-func (a *prependStatements) RenderHTML() string {
-	return fmt.Sprintf(`<div class="advice prepend-statements"><div class="type">Prepend statements produced by the following template:</div>%s</div>`, a.template.RenderHTML())
+	return a.Template.AddedImports()
 }
 
 func init() {

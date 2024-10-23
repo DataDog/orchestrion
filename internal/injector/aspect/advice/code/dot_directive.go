@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 )
 
 // DirectiveArgument represents arguments provided to directives (`//<directive> <args...>`), where
@@ -28,7 +26,7 @@ var spaces = regexp.MustCompile(`\s+`)
 func (d *dot) DirectiveArgs(directive string) (args []DirectiveArgument) {
 	prefix := fmt.Sprintf(`//%s`, directive)
 
-	for curr := context.AspectContext(d.context); curr != nil; curr = curr.Parent() {
+	for curr := d.context.Chain(); curr != nil; curr = curr.Parent() {
 		for _, dec := range curr.Node().Decorations().Start {
 			if !strings.HasPrefix(dec, prefix) {
 				continue

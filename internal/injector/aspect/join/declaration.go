@@ -6,8 +6,6 @@
 package join
 
 import (
-	"fmt"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -15,7 +13,7 @@ import (
 )
 
 type valueDeclaration struct {
-	typeName TypeName
+	TypeName TypeName
 }
 
 func ValueDeclaration(typeName TypeName) *valueDeclaration {
@@ -23,7 +21,7 @@ func ValueDeclaration(typeName TypeName) *valueDeclaration {
 }
 
 func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
-	parent := ctx.Parent()
+	parent := ctx.Chain().Parent()
 	if parent == nil {
 		return false
 	}
@@ -37,22 +35,18 @@ func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	return spec.Type == nil || i.typeName.Matches(spec.Type)
+	return spec.Type == nil || i.TypeName.Matches(spec.Type)
 }
 
 func (i *valueDeclaration) ImpliesImported() []string {
-	if path := i.typeName.ImportPath(); path != "" {
+	if path := i.TypeName.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (i *valueDeclaration) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "ValueDeclaration").Call(i.typeName.AsCode())
-}
-
-func (i *valueDeclaration) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point value-declaration"><span class="type">Package-level <code style="display:inline">const</code> or <code style="display:inline">var</code></span>%s</div>`, i.typeName.RenderHTML())
+	return jen.Qual(pkgPath, "ValueDeclaration").Call(i.TypeName.AsCode())
 }
 
 func init() {

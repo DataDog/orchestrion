@@ -96,7 +96,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 
 	wg.Add(len(astFiles))
 	for idx, astFile := range astFiles {
-		go func(astFile *ast.File) {
+		go func(idx int, astFile *ast.File) {
 			defer wg.Done()
 
 			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
@@ -123,7 +123,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 			resultMu.Lock()
 			defer resultMu.Unlock()
 			result[files[idx]] = res.InjectedFile
-		}(astFile)
+		}(idx, astFile)
 	}
 	wg.Wait()
 
@@ -188,16 +188,22 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 
 	post := func(csor *dstutil.Cursor) bool {
 		// Pop the ancestry stack now that we're done with this node.
-		defer func() { chain = chain.Parent() }()
+		defer func() {
+			old := chain
+			chain = chain.Parent()
+			old.Release()
+		}()
 
 		var changed bool
-		changed, err = i.injectNode(chain.Context(
+		ctx := chain.Context(
 			csor,
 			decorator.Path,
 			file,
 			&references,
 			decorator,
-		))
+		)
+		defer ctx.Release()
+		changed, err = i.injectNode(ctx)
 		modified = modified || changed
 
 		return err == nil

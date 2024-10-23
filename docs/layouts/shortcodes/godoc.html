@@ -1,10 +1,16 @@
-<a href='https://pkg.go.dev/{{ or (.Get 0) "builtin" }}{{ with .Get 1 }}#{{ . }}{{ end }}' target='_blank' rel='noopener'><code>
-    {{- with .Get 2 -}}{{ . }}{{- end -}}
-    {{- if .Get 0 -}}
-      {{- .Get 0 -}}
-      {{- with .Get 1 }}<wbr>.{{ . }}{{ end -}}
+{{- $path := or (.Get "import-path") "builtin" -}}
+{{- $pkg := .Get "package" -}}
+<a href='https://pkg.go.dev/{{ $path }}{{ with .Get "name" }}#{{ . }}{{ end }}' target='_blank' rel='noopener'><code>
+    {{- with .Get "prefix" -}}{{ . }}{{- end -}}
+    {{- if and $path (ne $path "builtin") -}}
+      {{- if and $pkg (ne $pkg $path) -}}
+        <abbr title="{{ $path }}">{{ $pkg }}</abbr>
+      {{- else -}}
+        {{ strings.Replace (or $pkg $path) "/" "/<wbr>" | safe.HTML }}
+      {{- end -}}
+      {{- with $.Get "name" }}.{{ . }}{{ end -}}
     {{- else -}}
-      {{ .Get 1 }}
+      {{ .Get "name" }}
     {{- end -}}
 </code></a>
 {{- /* suppress trailing white space */ -}}

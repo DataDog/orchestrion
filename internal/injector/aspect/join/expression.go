@@ -16,8 +16,8 @@ import (
 )
 
 type functionCall struct {
-	path string
-	name string
+	ImportPath string
+	Name       string
 }
 
 func FunctionCall(pattern string) *functionCall {
@@ -26,11 +26,11 @@ func FunctionCall(pattern string) *functionCall {
 		panic(fmt.Errorf("invalid function name pattern: %q", pattern))
 	}
 
-	return &functionCall{path: matches[1], name: matches[2]}
+	return &functionCall{ImportPath: matches[1], Name: matches[2]}
 }
 
 func (i *functionCall) ImpliesImported() []string {
-	return []string{i.path}
+	return []string{i.ImportPath}
 }
 
 func (i *functionCall) Matches(ctx context.AspectContext) bool {
@@ -41,9 +41,9 @@ func (i *functionCall) Matches(ctx context.AspectContext) bool {
 
 	switch fun := call.Fun.(type) {
 	case *dst.Ident:
-		return fun.Path == i.path && fun.Name == i.name
+		return fun.Path == i.ImportPath && fun.Name == i.Name
 	case *dst.SelectorExpr:
-		if fun.Sel.Name != i.name {
+		if fun.Sel.Name != i.Name {
 			return false
 		}
 		ident, ok := fun.X.(*dst.Ident)
@@ -52,18 +52,14 @@ func (i *functionCall) Matches(ctx context.AspectContext) bool {
 		}
 
 		// TODO: Must actually look at whether ident.Name is the import of the relevant package path.
-		return ident.Path == i.path
+		return ident.Path == i.ImportPath
 	default:
 		return false
 	}
 }
 
 func (i *functionCall) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.path + "." + i.name))
-}
-
-func (i *functionCall) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point function-call"><span class="type">Call to</span>{{<godoc %q %q>}}</div>`, i.path, i.name)
+	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.ImportPath + "." + i.Name))
 }
 
 var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([^.]+)\z`)

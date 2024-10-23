@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"strconv"
 
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )
@@ -20,7 +21,7 @@ import (
 // To do so, it modifies the AST file so that it only includes a single import per path, using the
 // first non-empty alias found.
 func canonicalizeImports(file *dst.File) {
-	specsByPath := importSpecsByImportPath(file)
+	specsByPath := importSpecsByImportPath(file.Imports)
 
 	retain := filterExtraneousImports(specsByPath)
 
@@ -32,16 +33,16 @@ func canonicalizeImports(file *dst.File) {
 	filterDecls(file, retain)
 }
 
-func importSpecsByImportPath(file *dst.File) map[string][]*dst.ImportSpec {
-	byPath := make(map[string][]*dst.ImportSpec, len(file.Imports))
+func importSpecsByImportPath(imports []*dst.ImportSpec) map[string][]*dst.ImportSpec {
+	byPath := make(map[string][]*dst.ImportSpec, len(imports))
 
-	for _, imp := range file.Imports {
+	for _, imp := range imports {
 		path, err := strconv.Unquote(imp.Path.Value)
 		if err != nil {
+			log.Debugf("failed to unquote import path %q: %v\n", imp.Path.Value, err)
 			continue
 		}
-		list := append(byPath[path], imp)
-		byPath[path] = list
+		byPath[path] = append(byPath[path], imp)
 	}
 
 	return byPath
@@ -53,10 +54,22 @@ func filterExtraneousImports(byPath map[string][]*dst.ImportSpec) map[*dst.Impor
 	for _, specs := range byPath {
 		retain := specs[0]
 		for _, spec := range specs[1:] {
-			if (spec.Name == nil && (retain.Name == nil || retain.Name.Name != "_")) || spec.Name.Name == "_" {
+			// Preference order is: spec.Name == nil < spec.Name.Name == "_" < spec.Name.Name != "_"
+			if spec.Name == nil {
 				continue
 			}
-			retain = spec
+
+			if retain.Name == nil && spec.Name != nil {
+				retain = spec
+				continue
+			}
+
+			if retain.Name.Name == "_" && spec.Name.Name != "_" {
+				retain = spec
+				continue
+			}
+
+			// We found a non-empty alias, no need to look further.
 			break
 		}
 		result[retain] = struct{}{}

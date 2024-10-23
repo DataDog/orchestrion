@@ -1,0 +1,14 @@
+{{- with .Imports }}
+```go
+// Using the following synthetic imports:
+import (
+{{- range $key, $value := . }}
+{{ "\t" }}{{ $key }} "{{ $value }}"
+{{- end }}
+)
+```
+{{- end }}
+
+```go-template
+{{ .Source | tabIndent | safe }}
+```

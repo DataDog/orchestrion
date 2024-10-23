@@ -6,8 +6,6 @@
 package join
 
 import (
-	"fmt"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -31,10 +29,6 @@ func (p importPath) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ImportPath").Call(jen.Lit(string(p)))
 }
 
-func (p importPath) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point import-path"><span class="type">Import path</span>{{<godoc %q>}}</div>`, string(p))
-}
-
 type packageName string
 
 func PackageName(name string) packageName {
@@ -51,10 +45,6 @@ func (p packageName) Matches(ctx context.AspectContext) bool {
 
 func (p packageName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "PackageName").Call(jen.Lit(string(p)))
-}
-
-func (p packageName) RenderHTML() string {
-	return fmt.Sprintf(`<div class="flex join-point package-name"><span class="type">Package name</span><code>%s</code></div>`, string(p))
 }
 
 func init() {

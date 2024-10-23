@@ -17,7 +17,7 @@ jobs:
       GOTOOLCHAIN: local # Prohibits adding `toolchain` directives to go.mod files.
     steps:
       - name: Checkout repository
-        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
 
       - name: Set up Go
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
@@ -64,7 +64,7 @@ jobs:
           git diff --staged --patch > "${{ runner.temp }}/go.diff.patch"
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
           name: Patches
           path: ${{ runner.temp }}/go.diff.patch
@@ -80,7 +80,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
 
       - name: Download patches
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
@@ -100,7 +100,7 @@ jobs:
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
           git fetch origin "${branch}"
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@88c53665a0c85bc370b410610f2bcf1979204651 # v0.1.45
+        uses: planetscale/ghcommit-action@d4176bfacef926cc2db351eab20398dfc2f593b5 # v0.2.0
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ github.repository }}
@@ -111,17 +111,20 @@ jobs:
       - name: Create PR
         run: |-
           git fetch origin "${{ steps.create-branch.outputs.branch }}"
+          git reset --hard HEAD
           git switch "${{ steps.create-branch.outputs.branch }}"
           gh pr create --title "chore: update all dependencies" \
                        --body "Updated all go.mod dependencies to latest." \
                        --head="${{ steps.create-branch.outputs.branch }}"
         env:
+          # Create the PR as "github-actions[bot]" so that even the owner of the mutator token can
+          # approve the PR.
           GITHUB_TOKEN: ${{ github.token }}
 
       # The standard GitHub Token will not trigger downstream workflows, so in order to kick off CI,
       # we'll push a blank commit to the PR branch with the mutator token.
       - name: Trigger CI
-        uses: planetscale/ghcommit-action@88c53665a0c85bc370b410610f2bcf1979204651 # v0.1.45
+        uses: planetscale/ghcommit-action@d4176bfacef926cc2db351eab20398dfc2f593b5 # v0.2.0
         with:
           commit_message: "blank: trigger CI"
           repo: ${{ github.repository }}

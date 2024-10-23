@@ -6,9 +6,6 @@
 package join
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -61,24 +58,6 @@ func (o oneOf) AsCode() jen.Code {
 			g.Line().Empty()
 		}
 	})
-}
-
-func (o oneOf) RenderHTML() string {
-	return fmt.Sprintf(`<div class="join-point one-of"><span class="type pill">One of</span>%s</div>`, o.renderCandidatesHTML())
-}
-
-func (o oneOf) renderCandidatesHTML() string {
-	var buf strings.Builder
-
-	_, _ = buf.WriteString("<ul>\n")
-	for _, candidate := range o {
-		_, _ = buf.WriteString("  <li class=\"candidate\">\n")
-		_, _ = buf.WriteString(candidate.RenderHTML())
-		_, _ = buf.WriteString("  </li>\n")
-	}
-	_, _ = buf.WriteString("</ul>\n")
-
-	return buf.String()
 }
 
 func init() {

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/DataDog/orchestrion/internal/injector/lineinfo"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 )
@@ -20,9 +21,10 @@ import (
 // writeModifiedFile writes the modified file to disk after having restored it to Go source code,
 // and returns the path to the modified file.
 func (i *Injector) writeModifiedFile(decorator *decorator.Decorator, file *dst.File) (string, error) {
-	canonicalizeImports(file)
-
 	filename := decorator.Filenames[file]
+
+	log.Tracef("writing modified file %q\n", filename)
+	canonicalizeImports(file)
 
 	if err := lineinfo.AnnotateMovedNodes(decorator, file, i.newRestorer); err != nil {
 		return filename, fmt.Errorf("annotating moved nodes in %q: %w", filename, err)

@@ -14,6 +14,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -75,6 +77,9 @@ func TestCache(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
+	log.SetLevel(log.LevelTrace)
+	t.Cleanup(func() { log.SetLevel(log.LevelNone) })
+
 	server, err := jobserver.New(nil)
 	require.NoError(t, err)
 	defer server.Shutdown()
@@ -86,8 +91,9 @@ func TestError(t *testing.T) {
 	resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
 		context.Background(),
 		conn,
-		&pkgs.ResolveRequest{BuildFlags: []string{"--definitely-not-a-valid-build-flag"}, Pattern: "runtime"},
+		&pkgs.ResolveRequest{BuildFlags: []string{"-definitely-not-a-valid-build=flag"}, Pattern: "definitely.not/a@valid\x00package"},
 	)
+	assert.Nil(t, resp)
+	assert.EqualValues(t, 0, server.CacheStats.Hits())
 	require.Error(t, err)
-	require.Nil(t, resp)
 }

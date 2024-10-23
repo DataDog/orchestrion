@@ -8,6 +8,7 @@ package main
 import (
 	"crypto/sha512"
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -65,6 +66,7 @@ func main() {
 	// Ensure the files are sorted for determinism.
 	sort.Strings(matches)
 
+	docsToDelete := make(map[string]struct{})
 	if docsDir != "" {
 		filepath.WalkDir(docsDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -73,8 +75,17 @@ func main() {
 			if d.IsDir() || filepath.Ext(path) != ".md" || strings.HasPrefix(filepath.Base(path), "_") {
 				return nil
 			}
-			return os.Remove(path)
+			docsToDelete[path] = struct{}{}
+			return nil
 		})
+		defer func() {
+			// On exiting, remove no longer needed files
+			for path := range docsToDelete {
+				if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+					log.Fatalf("Failed to delete old file %q: %v\n", path, err)
+				}
+			}
+		}()
 	}
 
 	var (
@@ -128,9 +139,11 @@ func main() {
 			chomped := removeLeadingSegments(match, chomp)
 
 			if docsDir != "" {
-				if err := documentConfiguration(docsDir, chomped, &config); err != nil {
+				filename, err := documentConfiguration(docsDir, chomped, &config)
+				if err != nil {
 					log.Fatalf("failed to document aspects from %q: %v\n", match, err)
 				}
+				delete(docsToDelete, filename)
 			}
 
 			for i, entry := range config.Aspects {

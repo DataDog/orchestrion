@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 
@@ -191,7 +192,7 @@ func getGithubToken() (string, bool) {
 		return "", false
 	}
 
-	return bytes.String(), true
+	return strings.TrimSpace(bytes.String()), true
 }
 
 func (h *harness) gitCloneGithub(owner string, repo string, tag string) string {

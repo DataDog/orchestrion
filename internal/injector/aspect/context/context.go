@@ -6,12 +6,17 @@
 package context
 
 import (
+	"sync"
+
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 )
 
 type AspectContext interface {
+	// Chain returns the node chain at this context.
+	Chain() *NodeChain
+
 	// Node returns the node represented by this context. Upon entering a join
 	// point, this is the node being inspected. Upon entering advice, this is the
 	// node being advised.
@@ -34,6 +39,10 @@ type AspectContext interface {
 
 	// Package returns the name of the package containing this node.
 	Package() string
+
+	// Release returns this context to the memory pool so that it can be reused
+	// later.
+	Release()
 }
 
 type AdviceContext interface {
@@ -68,10 +77,16 @@ type context struct {
 	importPath   string
 }
 
+var contextPool = sync.Pool{New: func() any { return new(context) }}
+
 type SourceParser interface {
 	Parse(any) (*dst.File, error)
 }
 
+// Context returns a new [*context] instance that represents the ndoe at the
+// provided cursor. The [context.Release] function should be called on values
+// returned by this function to allow for memory re-use, which can significantly
+// reduce allocations performed during AST traversal.
 func (n *NodeChain) Context(
 	cursor *dstutil.Cursor,
 	importPath string,
@@ -79,7 +94,8 @@ func (n *NodeChain) Context(
 	refMap *typed.ReferenceMap,
 	sourceParser SourceParser,
 ) *context {
-	return &context{
+	c, _ := contextPool.Get().(*context)
+	*c = context{
 		NodeChain:    n,
 		cursor:       cursor,
 		file:         file,
@@ -87,10 +103,26 @@ func (n *NodeChain) Context(
 		sourceParser: sourceParser,
 		importPath:   importPath,
 	}
+
+	return c
 }
 
+// Release returns the [*context] to the pool so that it can be reused later.
+// Proper use can significantly reduce memory allocations perfomed during AST
+// traversal.
+func (c *context) Release() {
+	*c = context{} // Zero it off
+	contextPool.Put(c)
+}
+
+// Child returns a child context of this context, representing the provided node
+// that is found at the specified property name or index. The [context.Release]
+// function should be called on values returned by this function to allow for
+// memory re-use, which can significantly reduce allocations performed during
+// AST traversal.
 func (c *context) Child(node dst.Node, property string, index int) AdviceContext {
-	return &context{
+	r, _ := contextPool.Get().(*context)
+	*r = context{
 		NodeChain: &NodeChain{
 			parent: c.NodeChain,
 			node:   node,
@@ -103,20 +135,36 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		sourceParser: c.sourceParser,
 		importPath:   c.importPath,
 	}
+
+	return r
 }
 
+// Chain returns the backing [*NodeChain] for this context. Using this to
+// traverse the current node's ancestry is more efficient than using
+// [context.Parent].
+func (c *context) Chain() *NodeChain {
+	return c.NodeChain
+}
+
+// Parent returns a new [*context] representing the parent of the current node.
+// The [context.Release] function should be called on values returned by this
+// function to allow for memory re-use, which can significantly reduce
+// allocations performed during AST traversal.
 func (c *context) Parent() AspectContext {
 	parent := c.NodeChain.parent
 	if parent == nil {
 		return nil
 	}
 
-	return &context{
+	p, _ := contextPool.Get().(*context)
+	*p = context{
 		NodeChain:  parent,
 		file:       c.file,
 		refMap:     c.refMap,
 		importPath: c.importPath,
 	}
+
+	return p
 }
 
 func (c *context) ReplaceNode(newNode dst.Node) {

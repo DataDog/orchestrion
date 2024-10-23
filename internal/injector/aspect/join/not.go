@@ -6,15 +6,13 @@
 package join
 
 import (
-	"fmt"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
 type not struct {
-	jp Point
+	JoinPoint Point
 }
 
 func Not(jp Point) not {
@@ -26,18 +24,11 @@ func (not) ImpliesImported() []string {
 }
 
 func (n not) Matches(ctx context.AspectContext) bool {
-	return !n.jp.Matches(ctx)
+	return !n.JoinPoint.Matches(ctx)
 }
 
 func (n not) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Not").Call(n.jp.AsCode())
-}
-
-func (n not) RenderHTML() string {
-	if jp, ok := n.jp.(oneOf); ok {
-		return fmt.Sprintf(`<div class="join-point none-of"><span class="type pill">None of</span>%s</div>`, jp.renderCandidatesHTML())
-	}
-	return fmt.Sprintf(`<div class="join-point not"><span class="type pill">Not</span><ul><li>%s</li></ul></div>`, n.jp.RenderHTML())
+	return jen.Qual(pkgPath, "Not").Call(n.JoinPoint.AsCode())
 }
 
 func init() {
