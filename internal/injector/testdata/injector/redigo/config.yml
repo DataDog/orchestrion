@@ -1,21 +1,31 @@
 %YAML 1.1
 ---
 aspects:
-  - join-point:
+  - id: Dial
+    join-point:
       function-call: github.com/gomodule/redigo/redis.Dial
     advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.Dial
-  - join-point:
-      function-call: github.com/gomodule/redigo/redis.DialContext
-    advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialContext
-  - join-point:
-      function-call: github.com/gomodule/redigo/redis.DialURL
-    advice:
-      - replace-function:
-          gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo.DialURL
+      - wrap-expression:
+          imports:
+            redigo: github.com/gomodule/redigo/redis
+            redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
+          template: |-
+            func() (redis.Conn, error) {
+              {{ if .AST.Ellipsis }}
+                opts := {{ index .AST.Args 2 }}
+                anyOpts := make([]interface{}, len(opts))
+                for i, v := range opts {
+                  anyOpts[i] = v
+                }
+                return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)
+              {{ else }}
+                return redigotrace.Dial(
+                  {{- range .AST.Args -}}
+                    {{ . }},
+                  {{- end -}}
+                )
+              {{ end }}
+            }()
 
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
@@ -24,12 +34,12 @@ code: |-
   package test
 
   import (
-    "context"
+    "time"
 
     "github.com/gomodule/redigo/redis"
   )
 
-  func dial(net, address string) error {
+  func dial1(net, address string) error {
     c, err := redis.Dial(net, address)
     if err != nil {
       return err
@@ -38,8 +48,8 @@ code: |-
     return use(c)
   }
 
-  func dialContext(ctx context.Context, net, address string) error {
-    c, err := redis.DialContext(ctx, net, address)
+  func dial2(net, address string) error {
+    c, err := redis.Dial(net, address, redis.DialConnectTimeout(5*time.Second), redis.DialConnectTimeout(time.Minute))
     if err != nil {
       return err
     }
@@ -47,8 +57,11 @@ code: |-
     return use(c)
   }
 
-  func dialURL(url string) error {
-    c, err := redis.DialURL(url)
+  func dial3(net, address string) error {
+    options := []redis.DialOption{
+      redis.DialConnectTimeout(5*time.Second),
+    }
+    c, err := redis.Dial(net, address, options...)
     if err != nil {
       return err
     }

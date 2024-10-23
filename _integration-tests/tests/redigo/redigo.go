@@ -11,10 +11,11 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
+
+	"orchestrion/integration/utils"
+	"orchestrion/integration/validator/trace"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -60,9 +62,15 @@ func (tc *TestCase) Setup(t *testing.T) {
 	const network = "tcp"
 	address := redisURL.Host
 
+	var dialOptions = []redis.DialOption{
+		redis.DialReadTimeout(10 * time.Second),
+	}
+
 	tc.Pool = &redis.Pool{
-		Dial:        func() (redis.Conn, error) { return redis.Dial(network, address) },
-		DialContext: func(ctx context.Context) (redis.Conn, error) { return redis.DialContext(ctx, network, address) },
+		Dial: func() (redis.Conn, error) { return redis.Dial(network, address, dialOptions...) },
+		DialContext: func(ctx context.Context) (redis.Conn, error) {
+			return redis.DialContext(ctx, network, address)
+		},
 		TestOnBorrow: func(c redis.Conn, _ time.Time) error {
 			_, err := c.Do("PING")
 			return err
