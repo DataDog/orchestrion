@@ -413,7 +413,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (redis.Conn, error) {\n  {{ $len := len .AST.Args }}\n  {{ if le $len 2 }}\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})\n  {{ else }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, 0, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ end }}\n}()",
+				"func() (redis.Conn, error) {\n  {{ $len := len .AST.Args }}\n  {{ if le $len 2 }}\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})\n  {{ else }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ end }}\n}()",
 				map[string]string{
 					"redigo":      "github.com/gomodule/redigo/redis",
 					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
@@ -425,7 +425,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialContext"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (redis.Conn, error) {\n  {{ $len := len .AST.Args }}\n  {{ if le $len 3 }}\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }})\n  {{ else }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, 0, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ end }}\n}()",
+				"func() (redis.Conn, error) {\n  {{ $len := len .AST.Args }}\n  {{ if le $len 3 }}\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }})\n  {{ else }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ end }}\n}()",
 				map[string]string{
 					"redigo":      "github.com/gomodule/redigo/redis",
 					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
@@ -437,7 +437,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialURL"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (redis.Conn, error) {\n  {{ $len := len .AST.Args }}\n  {{ if le $len 1 }}\n    return redigotrace.DialURL({{ index .AST.Args 0 }})\n  {{ else }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, 0, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ end }}\n}()",
+				"func() (redis.Conn, error) {\n  {{ $len := len .AST.Args }}\n  {{ if le $len 1 }}\n    return redigotrace.DialURL({{ index .AST.Args 0 }})\n  {{ else }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ end }}\n}()",
 				map[string]string{
 					"redigo":      "github.com/gomodule/redigo/redis",
 					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
@@ -1197,4 +1197,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:eSiBPPG65Gd/uKqjkneFXwqoT2oFmTlzGMndrkwQr+YozFCN9Olf8xntnBrHRlf2ol5Zbc4lroP0CxIYtsoh4Q=="
+const Checksum = "sha512:S/762qOJ5MTVTw/45TnWIGVbreqd5IF8ooGr0J/DXbdxQJ3vAZJa1OB644qVgt/uTNyE8QrQ0xLPoTyALT4fcw=="

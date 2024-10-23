@@ -62,7 +62,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	const network = "tcp"
 	address := redisURL.Host
 
-	var dialOptions []redis.DialOption
+	var dialOptions = []redis.DialOption{
+		redis.DialReadTimeout(10 * time.Second),
+	}
 
 	tc.Pool = &redis.Pool{
 		Dial: func() (redis.Conn, error) { return redis.Dial(network, address, dialOptions...) },
