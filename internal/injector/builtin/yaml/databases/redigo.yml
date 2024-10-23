@@ -22,16 +22,19 @@ aspects:
             redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
           template: |-
             func() (redis.Conn, error) {
-              {{ $len := len .AST.Args }}
-              {{ if le $len 2 }}
-                return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
-              {{ else }}
+              {{ if .AST.Ellipsis }}
                 opts := {{ index .AST.Args 2 }}
                 anyOpts := make([]interface{}, len(opts))
                 for i, v := range opts {
                   anyOpts[i] = v
                 }
                 return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)
+              {{ else }}
+                return redigotrace.Dial(
+                  {{- range .AST.Args -}}
+                    {{ . }},
+                  {{- end -}}
+                )
               {{ end }}
             }()
 
@@ -47,16 +50,19 @@ aspects:
             redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
           template: |-
             func() (redis.Conn, error) {
-              {{ $len := len .AST.Args }}
-              {{ if le $len 3 }}
-                return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }})
-              {{ else }}
+              {{ if .AST.Ellipsis }}
                 opts := {{ index .AST.Args 3 }}
                 anyOpts := make([]interface{}, len(opts))
                 for i, v := range opts {
                   anyOpts[i] = v
                 }
                 return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)
+              {{ else }}
+                return redigotrace.DialContext(
+                  {{- range .AST.Args -}}
+                    {{ . }},
+                  {{- end -}}
+                )
               {{ end }}
             }()
 
@@ -72,15 +78,18 @@ aspects:
             redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
           template: |-
             func() (redis.Conn, error) {
-              {{ $len := len .AST.Args }}
-              {{ if le $len 1 }}
-                return redigotrace.DialURL({{ index .AST.Args 0 }})
-              {{ else }}
+              {{ if .AST.Ellipsis }}
                 opts := {{ index .AST.Args 1 }}
                 anyOpts := make([]interface{}, len(opts))
                 for i, v := range opts {
                   anyOpts[i] = v
                 }
                 return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)
+              {{ else }}
+                return redigotrace.DialURL(
+                  {{- range .AST.Args -}}
+                    {{ . }},
+                  {{- end -}}
+                )
               {{ end }}
             }()
