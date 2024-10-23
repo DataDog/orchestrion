@@ -4,9 +4,6 @@ go 1.22.8
 
 replace github.com/DataDog/orchestrion => ../
 
-// TODO: remove
-replace gopkg.in/DataDog/dd-trace-go.v1 => gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20241008195158-49ec2955c1d0
-
 require (
 	github.com/99designs/gqlgen v0.17.55
 	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
@@ -332,7 +329,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/grpc/stats/opentelemetry v0.0.0-20241018153737-98959d9a4904 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.69.0 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.69.1-rc.4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
