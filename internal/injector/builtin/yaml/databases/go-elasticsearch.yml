@@ -47,7 +47,7 @@ aspects:
           imports:
             elasticsearch: github.com/elastic/go-elasticsearch/v6
             elastictrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
-          template: |-
+          template: |- 
             func(cfg *elasticsearch.Config) *elasticsearch.Config {
               if cfg.Transport == nil {
                 cfg.Transport = elastictrace.NewRoundTripper()
@@ -68,7 +68,7 @@ aspects:
           imports:
             elasticsearch: github.com/elastic/go-elasticsearch/v7
             elastictrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
-          template: |-
+          template: &templateValV7 |-
             func(cfg elasticsearch.Config) elasticsearch.Config {
               if cfg.CACert != nil {
                 // refuse to set transport as it will make the NewClient call fail.
@@ -93,7 +93,7 @@ aspects:
           imports:
             elasticsearch: github.com/elastic/go-elasticsearch/v7
             elastictrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
-          template: |-
+          template: &templatePtrV7 |-
             func(cfg *elasticsearch.Config) *elasticsearch.Config {
               if cfg.CACert != nil {
                 // refuse to set transport as it will make the NewClient call fail.
@@ -118,20 +118,7 @@ aspects:
           imports:
             elasticsearch: github.com/elastic/go-elasticsearch/v8
             elastictrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
-          template: |-
-            func(cfg elasticsearch.Config) elasticsearch.Config {
-              if cfg.CACert != nil {
-                // refuse to set transport as it will make the NewClient call fail.
-                return cfg
-              }
-              if cfg.Transport == nil {
-                cfg.Transport = elastictrace.NewRoundTripper()
-              } else {
-                base := cfg.Transport
-                cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))
-              }
-              return cfg
-            }({{ . }})
+          template: *templateValV7
 
   - id: Wrap elasticsearch.Config pointer (v8)
     join-point:
@@ -143,17 +130,4 @@ aspects:
           imports:
             elasticsearch: github.com/elastic/go-elasticsearch/v8
             elastictrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
-          template: |-
-            func(cfg *elasticsearch.Config) *elasticsearch.Config {
-              if cfg.CACert != nil {
-                // refuse to set transport as it will make the NewClient call fail.
-                return cfg
-              }
-              if cfg.Transport == nil {
-                cfg.Transport = elastictrace.NewRoundTripper()
-              } else {
-                base := cfg.Transport
-                cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))
-              }
-              return cfg
-            }({{ . }})
+          template: *templatePtrV7

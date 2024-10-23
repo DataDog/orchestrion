@@ -53,7 +53,7 @@ func (tc *TestCaseV8) Run(t *testing.T) {
 			Body:       body,
 			Refresh:    "true",
 		}
-		res, err := req.Do(context.Background(), tc.client)
+		res, err := req.Do(context.Background(), client)
 		require.NoError(t, err)
 		defer res.Body.Close()
 	})
