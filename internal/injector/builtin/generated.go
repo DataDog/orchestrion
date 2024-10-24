@@ -283,7 +283,10 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From databases/go-elasticsearch.yml
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchValueOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchValueOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v6")),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
@@ -295,7 +298,10 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchPointerOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchPointerOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v6")),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
@@ -307,7 +313,10 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchValueOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchValueOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v7/esapi")),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
@@ -319,7 +328,10 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchPointerOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchPointerOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v7/esapi")),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
@@ -331,7 +343,13 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchValueOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchValueOnly),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/esapi"),
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/typedapi/types"),
+			)),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
@@ -343,7 +361,13 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchPointerOnly),
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchPointerOnly),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/esapi"),
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/typedapi/types"),
+			)),
+		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
@@ -1303,4 +1327,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:FlZLtHYcTAYElM5CA6//fieAa7EKnLXRJLeZXMjQ2XFXi3qDncmyCnJyBnsGzX4CHhYlBmE8YjBR2BgUotSYDA=="
+const Checksum = "sha512:vEytFEEd//AhFOEpblBhkpLPs67KQv+1bPJuBDUAKGZ4yuJI6sdRTdXOm3EcL10MoJBSNigsYHCEaTf0+F9a7w=="
