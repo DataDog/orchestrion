@@ -728,55 +728,6 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql", "NewSchema"),
 		},
 	},
-	// From grpc.yml
-	{
-		JoinPoint: join.OneOf(
-			join.FunctionCall("google.golang.org/grpc.Dial"),
-			join.FunctionCall("google.golang.org/grpc.DialContext"),
-			join.FunctionCall("google.golang.org/grpc.NewClient"),
-		),
-		Advice: []advice.Advice{
-			advice.AppendArgs(
-				join.MustTypeName("google.golang.org/grpc.DialOption"),
-				code.MustTemplate(
-					"grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-				),
-				code.MustTemplate(
-					"grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-				),
-			),
-		},
-	},
-	{
-		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
-		Advice: []advice.Advice{
-			advice.AppendArgs(
-				join.MustTypeName("google.golang.org/grpc.ServerOption"),
-				code.MustTemplate(
-					"grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-				),
-				code.MustTemplate(
-					"grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-				),
-			),
-		},
-	},
 	// From http/chi.yml
 	{
 		JoinPoint: join.AllOf(
@@ -929,6 +880,68 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"kubernetestrace":     "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 					"kubernetestransport": "k8s.io/client-go/transport",
+				},
+			)),
+		},
+	},
+	// From rpc/grpc.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("google.golang.org/grpc.Dial"),
+			join.FunctionCall("google.golang.org/grpc.DialContext"),
+			join.FunctionCall("google.golang.org/grpc.NewClient"),
+		),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				join.MustTypeName("google.golang.org/grpc.DialOption"),
+				code.MustTemplate(
+					"grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+				),
+				code.MustTemplate(
+					"grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+				),
+			),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				join.MustTypeName("google.golang.org/grpc.ServerOption"),
+				code.MustTemplate(
+					"grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+				),
+				code.MustTemplate(
+					"grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+				),
+			),
+		},
+	},
+	// From rpc/twirp.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/twitchtv/twirp.ServerOptions"), join.StructLiteralMatchAny),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"Hooks\" }}\n  {{- $hasField = true -}}\n  Hooks: twirp.ChainHooks(twirptrace.NewServerHooks(), {{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  Hooks: twirptrace.NewServerHooks(),\n  {{- end }}\n}",
+				map[string]string{
+					"twirp":      "github.com/twitchtv/twirp",
+					"twirptrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 				},
 			)),
 		},
@@ -1205,6 +1218,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
@@ -1229,4 +1243,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:68KkaXv6iXdG71f/NvrUymIMwQJrwrvybHLheC6UCYmdSL2hzU1B41ZG+R2bICQYu7lp5l87TSLlD0xhr5fUlQ=="
+const Checksum = "sha512:7rbaWbqU940xvhNL3EAKPd0ps98Hj4vzRMwx9h2e/u29bODpGs+0FE10qFEk4AVdDKPQyJxMrQ5CVKtL43NkOQ=="

@@ -1,0 +1,49 @@
+//line samples/server/twirp.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"fmt"
+
+	"github.com/twitchtv/twirp"
+//line <generated>
+	__orchestrion_twirptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp"
+)
+
+//line samples/server/twirp.go:14
+func twirpServerSample() {
+	var serverOpts *twirp.ServerOptions
+
+	serverOpts = &
+//line <generated>
+//line samples/server/twirp.go:17
+	twirp.ServerOptions{
+//line <generated>
+		Hooks: __orchestrion_twirptrace.NewServerHooks(),
+	}
+//line samples/server/twirp.go:18
+	serverOpts = &
+//line <generated>
+//line samples/server/twirp.go:18
+	twirp.ServerOptions{
+//line <generated>
+		Hooks: twirp.ChainHooks(__orchestrion_twirptrace.NewServerHooks(),
+//line samples/server/twirp.go:19
+			&twirp.ServerHooks{
+				RequestReceived:  nil,
+				RequestRouted:    nil,
+				ResponsePrepared: nil,
+				ResponseSent:     nil,
+				Error:            nil,
+			}),
+		Interceptors:     nil,
+		JSONSkipDefaults: false,
+	}
+
+	// these options are used in the twirp generated code
+	fmt.Printf("serverOpts: %v\n", serverOpts)
+}
