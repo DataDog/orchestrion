@@ -48,13 +48,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 		gcloud.WithProjectID("pstest-orchestrion"),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
-		testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) error {
-			require.Len(t, req.Cmd, 3)
-			require.Equal(t, "/bin/sh", req.Cmd[0])
-			require.Equal(t, "-c", req.Cmd[1])
-			req.Cmd[2] = "yes | gcloud components install beta pubsub-emulator && " + req.Cmd[2]
-			return nil
-		}),
 	)
 	utils.AssertTestContainersError(t, err)
 
