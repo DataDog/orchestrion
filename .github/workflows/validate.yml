@@ -294,7 +294,7 @@ jobs:
         if: matrix.runs-on == 'ubuntu'
         run: |-
           sudo apt update
-          sudo apt install -y ca-certificates curl
+          sudo apt install -y build-essential ca-certificates curl
           sudo install -m 0755 -d /etc/apt/keyrings
           sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
           sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -307,9 +307,6 @@ jobs:
           sudo chown root:$(groups | cut -d' ' -f1) /var/run/docker.sock
 
           echo "DOCKER_DEFAULT_PLATFORM=linux/arm64" >> "${GITHUB_ENV}"
-
-          sudo apt install -y build-essential
-          echo "CGO_ENABLED=1" >> "${GITHUB_ENV}"
       - name: Checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Setup go

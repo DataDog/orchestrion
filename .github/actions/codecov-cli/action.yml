@@ -20,5 +20,5 @@ runs:
       id: install
       shell: bash
       run: |-
-        pip install codecov-cli==0.8.0
+        pip install codecov-cli~=0.7.6
         echo "codecov=$(which codecovcli)" >> "${GITHUB_OUTPUT}"
