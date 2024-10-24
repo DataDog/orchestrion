@@ -13,9 +13,12 @@ runs:
       with:
         python-version: '3.x'
 
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+
     - name: Install codecov-cli
       id: install
       shell: bash
       run: |-
-        pip install codecov-cli==0.7.4
+        pip install codecov-cli==0.8.0
         echo "codecov=$(which codecovcli)" >> "${GITHUB_OUTPUT}"
