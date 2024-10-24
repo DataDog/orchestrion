@@ -281,6 +281,103 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/go-elasticsearch.yml
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchValueOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v6")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v6",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchPointerOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v6")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v6",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchValueOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v7/esapi")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v7",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchPointerOnly),
+			join.Not(join.ImportPath("github.com/elastic/go-elasticsearch/v7/esapi")),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v7",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchValueOnly),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/esapi"),
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/typedapi/types"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v8",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchPointerOnly),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/esapi"),
+				join.ImportPath("github.com/elastic/go-elasticsearch/v8/typedapi/types"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v8",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -1181,6 +1278,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
@@ -1229,4 +1327,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:68KkaXv6iXdG71f/NvrUymIMwQJrwrvybHLheC6UCYmdSL2hzU1B41ZG+R2bICQYu7lp5l87TSLlD0xhr5fUlQ=="
+const Checksum = "sha512:vEytFEEd//AhFOEpblBhkpLPs67KQv+1bPJuBDUAKGZ4yuJI6sdRTdXOm3EcL10MoJBSNigsYHCEaTf0+F9a7w=="
