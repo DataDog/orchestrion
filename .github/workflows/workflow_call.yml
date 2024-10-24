@@ -56,9 +56,9 @@ jobs:
         with:
           python-version: 3.x
           cache: pip
-          cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements.txt
+          cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements-dev.txt
       - name: Install python dependencies
-        run: pip install -r orchestrion/_integration-tests/utils/agent/requirements.txt
+        run: pip install -r orchestrion/_integration-tests/utils/agent/requirements-dev.txt
       - name: Build orchestrion binary
         run: go -C orchestrion/ build -o="./_integration-tests/orchestrion.exe" .
       - name: Run Integration Tests

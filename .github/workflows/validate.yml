@@ -320,9 +320,9 @@ jobs:
         with:
           python-version: 3.x
           cache: pip
-          cache-dependency-path: _integration-tests/utils/agent/requirements.txt
+          cache-dependency-path: _integration-tests/utils/agent/requirements-dev.txt
       - name: Install python dependencies
-        run: pip install -r _integration-tests/utils/agent/requirements.txt
+        run: pip install -r _integration-tests/utils/agent/requirements-dev.txt
       - name: Build orchestrion binary
         shell: bash
         run: |-
