@@ -18,3 +18,12 @@ updates:
     groups:
       Python Dependencies:
         applies-to: version-updates
+
+  - package-ecosystem: pip
+    directory: /.github/actions/codecov-cli
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      Python Dependencies:
+        applies-to: version-updates
