@@ -90,27 +90,38 @@ type (
 
 var contextPool = sync.Pool{New: func() any { return new(context) }}
 
+type ContextArgs struct {
+	// Cursor denotes the current node and its context in the AST.
+	Cursor *dstutil.Cursor
+	// ImportPath is the fully qualified import path of the package containing the
+	// current AST.
+	ImportPath string
+	// File is the AST of the file which the current node belongs in.
+	File *dst.File
+	// RefMap is the output reference map that will collect all synthetic
+	// references added to the AST.
+	RefMap *typed.ReferenceMap
+	// SourceParser is used to parse generated source files.
+	SourceParser SourceParser
+	// MinGoLang is a pointer to the result value containing the minimum Go
+	// language level required by the compile unit after it has been modified.
+	MinGoLang *GoLang
+}
+
 // Context returns a new [*context] instance that represents the ndoe at the
 // provided cursor. The [context.Release] function should be called on values
 // returned by this function to allow for memory re-use, which can significantly
 // reduce allocations performed during AST traversal.
-func (n *NodeChain) Context(
-	cursor *dstutil.Cursor,
-	importPath string,
-	file *dst.File,
-	refMap *typed.ReferenceMap,
-	sourceParser SourceParser,
-	minGoLang *GoLang,
-) *context {
+func (n *NodeChain) Context(args ContextArgs) *context {
 	c, _ := contextPool.Get().(*context)
 	*c = context{
 		NodeChain:    n,
-		cursor:       cursor,
-		file:         file,
-		refMap:       refMap,
-		minGoLang:    minGoLang,
-		sourceParser: sourceParser,
-		importPath:   importPath,
+		cursor:       args.Cursor,
+		file:         args.File,
+		refMap:       args.RefMap,
+		minGoLang:    args.MinGoLang,
+		sourceParser: args.SourceParser,
+		importPath:   args.ImportPath,
 	}
 
 	return c

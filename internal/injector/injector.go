@@ -199,14 +199,14 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		}()
 
 		var changed bool
-		ctx := chain.Context(
-			csor,
-			decorator.Path,
-			file,
-			&references,
-			decorator,
-			&minGoLang,
-		)
+		ctx := chain.Context(context.ContextArgs{
+			Cursor:       csor,
+			ImportPath:   decorator.Path,
+			File:         file,
+			RefMap:       &references,
+			SourceParser: decorator,
+			MinGoLang:    &minGoLang,
+		})
 		defer ctx.Release()
 		changed, err = i.injectNode(ctx)
 		modified = modified || changed
