@@ -62,7 +62,7 @@ func New(t *testing.T) (*MockAgent, error) {
 		t.Logf("Installing requirements in venv...\n")
 		_, thisFile, _, _ := runtime.Caller(0)
 		thisDir := filepath.Dir(thisFile)
-		if err = exec.Command(filepath.Join(venvBin, "pip"), "install", "-r", filepath.Join(thisDir, "requirements.txt")).Run(); err != nil {
+		if err = exec.Command(filepath.Join(venvBin, "pip"), "install", "-r", filepath.Join(thisDir, "requirements-dev.txt")).Run(); err != nil {
 			return nil, err
 		}
 
