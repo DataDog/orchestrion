@@ -33,6 +33,7 @@ require (
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/jinzhu/gorm v1.9.16
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/redis/go-redis/v9 v9.7.0
@@ -52,7 +53,7 @@ require (
 	google.golang.org/api v0.201.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/grpc/examples v0.0.0-20240816220358-f8d98a477c22
-	gopkg.in/DataDog/dd-trace-go.v1 v1.69.0
+	gopkg.in/DataDog/dd-trace-go.v1 v1.69.1-rc.4
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.12
 	gotest.tools/v3 v3.5.1

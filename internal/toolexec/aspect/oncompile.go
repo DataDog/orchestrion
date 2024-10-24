@@ -7,10 +7,12 @@ package aspect
 
 import (
 	"fmt"
+	"go/version"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -81,6 +83,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	results, err := injector.InjectFiles(goFiles)
 	if err != nil {
 		return err
+	}
+
+	orchestrionLang := version.Lang(runtime.Version())
+	if len(results) > 0 && shouldReplaceLangVersion(cmd.Flags.Lang, orchestrionLang) {
+		log.Debugf("Need to replace -lang version: (prev: %q | new: %q)\n", cmd.Flags.Lang, orchestrionLang)
+		cmd.SetLang(orchestrionLang)
 	}
 
 	references := typed.ReferenceMap{}
@@ -185,6 +193,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	})
 
 	return nil
+}
+
+func shouldReplaceLangVersion(cmdVersion string, orchestrionVersion string) bool {
+	cmdVersion = version.Lang(cmdVersion)
+	return version.Compare(cmdVersion, orchestrionVersion) < 0
 }
 
 func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err error) {
