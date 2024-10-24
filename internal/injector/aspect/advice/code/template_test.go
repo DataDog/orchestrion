@@ -19,7 +19,7 @@ import (
 
 func TestTemplate(t *testing.T) {
 	t.Run("ParseError", func(t *testing.T) {
-		tmpl := code.MustTemplate(`this.IsNotValidGo("because it's missing a closing parenthesis"`, nil)
+		tmpl := code.MustTemplate(`this.IsNotValidGo("because it's missing a closing parenthesis"`, nil, context.GoLang{})
 		stmt, err := tmpl.CompileBlock(mockAdviceContext{t})
 		require.Nil(t, stmt)
 		require.Error(t, err)
@@ -81,4 +81,7 @@ func (m mockAdviceContext) AddImport(string, string) bool {
 func (m mockAdviceContext) AddLink(string) bool {
 	assert.FailNow(m.t, "unexpected method call")
 	return false
+}
+func (m mockAdviceContext) EnsureMinGoLang(context.GoLang) {
+	assert.FailNow(m.t, "unexpected method call")
 }

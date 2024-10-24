@@ -700,7 +700,8 @@
           "assign-value": {
             "title": "Change the initial value of a `var` or `const`",
             "markdownDescription": "The `assign-value` advice changes the initial value of a package-level `var` or `const` declaration matched by `value-declaration`.\n\nIf the value is susceptible to match a `const`, the template must produce only compile-time constant values.",
-            "$ref": "#/$defs/code-template"
+            "$ref": "#/$defs/code-template",
+            "unevaluatedProperties": false
           }
         },
         "examples": [
@@ -712,7 +713,8 @@
           {
             "assign-value": {
               "imports": { "regexp": "regexp" },
-              "template": "regexp.MustCompile(`^.?$|^(..+?)\\1+$ `)"
+              "template": "regexp.MustCompile(`^.?$|^(..+?)\\1+$ `)",
+              "lang": "go1.18"
             }
           }
         ]
@@ -724,7 +726,8 @@
           "prepend-statements": {
             "title": "Add new logic before a node",
             "markdownDescription": "The `prepend-statements` advice inserts new statements rendered by the provided code template before the matched AST node. This is often used to add logic in the preamble of function implementations, and the `defer` keyword can be used to also introduce epilogue logic.",
-            "$ref": "#/$defs/code-template"
+            "$ref": "#/$defs/code-template",
+            "unevaluatedProperties": false
           }
         },
         "examples": [
@@ -763,7 +766,10 @@
               "values": {
                 "description": "The list of argument values to add, in order.",
                 "type": "array",
-                "items": { "$ref": "#/$defs/code-template" },
+                "items": {
+                  "$ref": "#/$defs/code-template",
+                  "unevaluatedProperties": false
+                },
                 "minItems": 1
               }
             }
@@ -829,7 +835,20 @@
           "inject-declarations": {
             "title": "Introduce new declarations in the package",
             "markdownDescription": "The `inject-declarations` advice merges declarations produced by a code template into the matched node's compilation unit.\n\nThis is often used to introduce new type definitions or declare foreign functions linked via `//go:linkname` to avoid creating dependency cycles.",
-            "$ref": "#/$defs/code-template"
+            "unevaluatedProperties": false,
+            "allOf": [
+              { "$ref": "#/$defs/code-template" },
+              {
+                "properties": {
+                  "links": {
+                    "description": "An optional list of packages that need to be linked with the injected code in order to satisfy `//go:linkname` directives.",
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "uniqueItems": true
+                  }
+                }
+              }
+            ]
           }
         },
         "examples": [
@@ -905,7 +924,8 @@
           "wrap-expression": {
             "title": "Add behavior around an expression",
             "markdownDescription": "The `wrap-expression` advice replaces the matched node with the one produced by the provided code template. Care must be taken to not change the type of the expression, as this could result in breaking surrounding code.\n\nIt is commonly used to wrap values in immediately-invoked function expressions (IIFE).",
-            "$ref": "#/$defs/code-template"
+            "$ref": "#/$defs/code-template",
+            "unevaluatedProperties": false
           }
         },
         "examples": [
@@ -934,7 +954,6 @@
     "code-template": {
       "description": "A code template that can be used to generate code in context of an AST node.",
       "type": "object",
-      "unevaluatedProperties": false,
       "required": ["template"],
       "properties": {
         "imports": {
@@ -948,16 +967,15 @@
             }
           }
         },
-        "links": {
-          "description": "An optional list of packages that need to be linked with the injected code in order to satisfy `//go:linkname` directives.",
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "uniqueItems": true
-        },
         "template": {
           "description": "The Go template text to be used to generate code.",
           "type": "string",
           "minLength": 1
+        },
+        "lang": {
+          "description": "The minimum go language version required by the code produced by this template.",
+          "type": "string",
+          "pattern": "^go1[.]\\d+$"
         }
       }
     },

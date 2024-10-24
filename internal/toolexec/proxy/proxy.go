@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type (
@@ -95,6 +96,26 @@ func (cmd *command) Close() error {
 		}
 	}
 	return nil
+}
+
+// SetFlag replaces the value of the specified flag with the provided one.
+// Returns an error if the flag is not present in the current arguments list.
+func (cmd *command) SetFlag(flag string, val string) error {
+	for arg, idx := range cmd.paramPos {
+		if arg == flag || arg == "-"+flag {
+			cmd.args[idx+1] = val
+			return nil
+		}
+
+		f, _, ok := strings.Cut(arg, "=")
+		if !ok || (f != flag && f != "-"+flag) {
+			continue
+		}
+		cmd.args[idx] = f + "=" + val
+		return nil
+	}
+
+	return fmt.Errorf("argument %q not found in %q", flag, cmd.args)
 }
 
 // ReplaceParam will replace any parameter of the command provided it is found
