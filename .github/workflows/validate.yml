@@ -315,6 +315,10 @@ jobs:
       - name: Run Integration Tests
         shell: bash
         run: |-
+          if [ "${RUNNER_OS}" == "windows" ]; then
+              git config --system core.longpaths true
+          fi
+          
           mkdir -p "${GOCOVERDIR}"
           test_args=("-shuffle=on" "-v")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
