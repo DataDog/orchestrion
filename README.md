@@ -182,6 +182,7 @@ Library                               | Since    | Notes
 [go-redis]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v0-client
 [graph-gophers]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graph-gophers/
 [graphql]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graphql-go/
+[pgx]: https://datadoghq.dev/orchestrion/docs/built-in/databases/pgx
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.
