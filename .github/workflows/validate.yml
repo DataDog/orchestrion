@@ -247,6 +247,8 @@ jobs:
         run: |-
           set -euo pipefail
           go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload benchmark report (raw)
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
@@ -285,9 +287,26 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on }}-latest
+    runs-on: ${{ matrix.runs-on == 'ubuntu' && 'arm-4core-linux' || format('{0}-latest', matrix.runs-on) }}
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
+      - name: Start docker daemon (arm-4core-linux only)
+        if: matrix.runs-on == 'ubuntu'
+        run: |-
+          sudo apt update
+          sudo apt install -y build-essential ca-certificates curl
+          sudo install -m 0755 -d /etc/apt/keyrings
+          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt update
+          sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          sudo chown root:$(groups | cut -d' ' -f1) /var/run/docker.sock
+
+          echo "DOCKER_DEFAULT_PLATFORM=linux/arm64" >> "${GITHUB_ENV}"
       - name: Checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Setup go
@@ -301,9 +320,9 @@ jobs:
         with:
           python-version: 3.x
           cache: pip
-          cache-dependency-path: _integration-tests/utils/agent/requirements.txt
+          cache-dependency-path: _integration-tests/utils/agent/requirements-dev.txt
       - name: Install python dependencies
-        run: pip install -r _integration-tests/utils/agent/requirements.txt
+        run: pip install -r _integration-tests/utils/agent/requirements-dev.txt
       - name: Build orchestrion binary
         shell: bash
         run: |-
@@ -316,7 +335,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
-          test_args=("-shuffle=on" "-v")
+          test_args=("-shuffle=on")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi
