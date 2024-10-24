@@ -83,7 +83,9 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return err
 	}
 
-	cmd.SetLang(goLang)
+	if err := cmd.SetLang(goLang); err != nil {
+		return err
+	}
 
 	references := typed.ReferenceMap{}
 	for gofile, modFile := range results {

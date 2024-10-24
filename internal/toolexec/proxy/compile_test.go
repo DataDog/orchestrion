@@ -72,10 +72,10 @@ func TestSetLang(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "go1.13", cmd.Args()[4])
 
-		cmd.SetLang(context.GoLang{})
+		require.NoError(t, cmd.SetLang(context.GoLang{}))
 		require.Equal(t, "go1.13", cmd.Args()[4])
 
-		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.NoError(t, cmd.SetLang(context.MustParseGoLang("go1.18")))
 		require.Equal(t, "go1.18", cmd.Args()[4])
 	})
 
@@ -89,10 +89,10 @@ func TestSetLang(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "go1.23", cmd.Args()[4])
 
-		cmd.SetLang(context.GoLang{})
+		require.NoError(t, cmd.SetLang(context.GoLang{}))
 		require.Equal(t, "go1.23", cmd.Args()[4])
 
-		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.NoError(t, cmd.SetLang(context.MustParseGoLang("go1.18")))
 		require.Equal(t, "go1.23", cmd.Args()[4])
 	})
 
@@ -105,10 +105,10 @@ func TestSetLang(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		cmd.SetLang(context.GoLang{})
+		require.NoError(t, cmd.SetLang(context.GoLang{}))
 		require.Equal(t, "-lang=go1.13", cmd.Args()[3])
 
-		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.NoError(t, cmd.SetLang(context.MustParseGoLang("go1.18")))
 		require.Equal(t, "-lang=go1.18", cmd.Args()[3])
 	})
 
@@ -122,10 +122,10 @@ func TestSetLang(t *testing.T) {
 		cmd, err := parseCompileCommand(args)
 		require.NoError(t, err)
 
-		cmd.SetLang(context.GoLang{})
+		require.NoError(t, cmd.SetLang(context.GoLang{}))
 		require.Equal(t, args, cmd.Args())
 
-		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.NoError(t, cmd.SetLang(context.MustParseGoLang("go1.18")))
 		require.Equal(t, args, cmd.Args())
 	})
 }

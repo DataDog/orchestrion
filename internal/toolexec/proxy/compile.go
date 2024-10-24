@@ -38,24 +38,27 @@ func (c *CompileCommand) ShowVersion() bool {
 	return c.Flags.ShowVersion
 }
 
-func (cmd *CompileCommand) SetLang(to context.GoLang) {
+func (cmd *CompileCommand) SetLang(to context.GoLang) error {
 	if to.IsAny() {
 		// No minimal language requirement change, nothing to do...
-		return
+		return nil
 	}
 
 	if cmd.Flags.Lang == "" {
 		// No language level was specified, so anything the compiler can do is possible...
-		return
+		return nil
 	}
 
 	if curr, _ := context.ParseGoLang(cmd.Flags.Lang); context.Compare(curr, to) >= 0 {
 		// Minimum language requirement from injected code is already met, nothing to do...
-		return
+		return nil
 	}
 
-	cmd.SetFlag("-lang", to.String())
+	if err := cmd.SetFlag("-lang", to.String()); err != nil {
+		return err
+	}
 	cmd.Flags.Lang = to.String()
+	return nil
 }
 
 // GoFiles returns the list of Go files passed as arguments to cmd
