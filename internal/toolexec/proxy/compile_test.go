@@ -8,6 +8,7 @@ package proxy
 import (
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,9 +55,77 @@ func TestParseCompile(t *testing.T) {
 			cmd, err := parseCompileCommand(tc.input)
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeCompile, cmd.Type())
-			c := cmd.(*CompileCommand)
-			require.Equal(t, tc.flags, c.Flags)
-			require.EqualValues(t, tc.goFiles, c.GoFiles())
+			require.Equal(t, tc.flags, cmd.Flags)
+			require.EqualValues(t, tc.goFiles, cmd.GoFiles())
 		})
 	}
+}
+
+func TestSetLang(t *testing.T) {
+	t.Run("-lang go1.13", func(t *testing.T) {
+		cmd, err := parseCompileCommand([]string{
+			"/path/to/compile",
+			"-o", "/buildDir/b002/a.out",
+			"-lang", "go1.13",
+			"source/file.go",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "go1.13", cmd.Args()[4])
+
+		cmd.SetLang(context.GoLang{})
+		require.Equal(t, "go1.13", cmd.Args()[4])
+
+		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.Equal(t, "go1.18", cmd.Args()[4])
+	})
+
+	t.Run("-lang go1.23", func(t *testing.T) {
+		cmd, err := parseCompileCommand([]string{
+			"/path/to/compile",
+			"-o", "/buildDir/b002/a.out",
+			"-lang", "go1.23",
+			"source/file.go",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "go1.23", cmd.Args()[4])
+
+		cmd.SetLang(context.GoLang{})
+		require.Equal(t, "go1.23", cmd.Args()[4])
+
+		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.Equal(t, "go1.23", cmd.Args()[4])
+	})
+
+	t.Run("-lang=go1.13", func(t *testing.T) {
+		cmd, err := parseCompileCommand([]string{
+			"/path/to/compile",
+			"-o", "/buildDir/b002/a.out",
+			"-lang=go1.13",
+			"source/file.go",
+		})
+		require.NoError(t, err)
+
+		cmd.SetLang(context.GoLang{})
+		require.Equal(t, "-lang=go1.13", cmd.Args()[3])
+
+		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.Equal(t, "-lang=go1.18", cmd.Args()[3])
+	})
+
+	t.Run("no -lang flag", func(t *testing.T) {
+		args := []string{
+			"/path/to/compile",
+			"-o", "/buildDir/b002/a.out",
+			"source/file.go",
+		}
+
+		cmd, err := parseCompileCommand(args)
+		require.NoError(t, err)
+
+		cmd.SetLang(context.GoLang{})
+		require.Equal(t, args, cmd.Args())
+
+		cmd.SetLang(context.MustParseGoLang("go1.18"))
+		require.Equal(t, args, cmd.Args())
+	})
 }

@@ -28,6 +28,7 @@ type Template struct {
 	template *template.Template
 	Imports  map[string]string
 	Source   string
+	Lang     context.GoLang
 }
 
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
@@ -51,16 +52,16 @@ package _
 // imports map. The imports map associates names to import paths. The produced
 // AST nodes will feature qualified *dst.Ident nodes in all places where a
 // property of mapped names is selected.
-func NewTemplate(text string, imports map[string]string) (Template, error) {
+func NewTemplate(text string, imports map[string]string, lang context.GoLang) (Template, error) {
 	template := template.Must(wrapper.Clone())
 	template, err := template.Parse(text)
-	return Template{template, imports, text}, err
+	return Template{template, imports, text, lang}, err
 }
 
 // MustTemplate is the same as NewTemplate, but panics if an error occurs.
-func MustTemplate(text string, imports map[string]string) (template Template) {
+func MustTemplate(text string, imports map[string]string, lang context.GoLang) (template Template) {
 	var err error
-	if template, err = NewTemplate(text, imports); err != nil {
+	if template, err = NewTemplate(text, imports, lang); err != nil {
 		panic(err)
 	}
 	return
@@ -192,6 +193,13 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 }
 
 func (t *Template) AsCode() jen.Code {
+	var lang *jen.Statement
+	if langStr := t.Lang.String(); langStr != "" {
+		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "MustParseGoLang").Call(jen.Lit(langStr))
+	} else {
+		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "GoLang").Block()
+	}
+
 	return jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
 		jen.Line().Lit(t.Source),
 		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
@@ -208,6 +216,7 @@ func (t *Template) AsCode() jen.Code {
 			}
 			g.Empty().Line()
 		}),
+		jen.Line().Add(lang),
 		jen.Empty().Line(),
 	)
 }
@@ -225,12 +234,13 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 		Template string
 		Imports  map[string]string
 		Links    []string
+		Lang     context.GoLang
 	}
 	if err = node.Decode(&cfg); err != nil {
 		return
 	}
 
-	*t, err = NewTemplate(cfg.Template, cfg.Imports)
+	*t, err = NewTemplate(cfg.Template, cfg.Imports, cfg.Lang)
 	return err
 }
 

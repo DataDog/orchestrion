@@ -11,6 +11,7 @@ import (
 	aspect "github.com/DataDog/orchestrion/internal/injector/aspect"
 	advice "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	code "github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
+	context "github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	join "github.com/DataDog/orchestrion/internal/injector/aspect/join"
 )
 
@@ -25,6 +26,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"vaulttrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -41,12 +43,14 @@ var Aspects = [...]aspect.Aspect{
 			advice.InjectDeclarations(code.MustTemplate(
 				"//go:linkname __dd_civisibility_instrumentTestingM gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingM\nfunc __dd_civisibility_instrumentTestingM(*M) func(int)",
 				map[string]string{},
+				context.GoLang{},
 			), []string{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
 			}),
 			advice.PrependStmts(code.MustTemplate(
 				"exitFunc := __dd_civisibility_instrumentTestingM({{ .Function.Receiver }})\ndefer exitFunc({{ .Function.Receiver }}.exitCode)",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -62,6 +66,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.InjectDeclarations(code.MustTemplate(
 				"//go:linkname __dd_civisibility_instrumentTestingTFunc gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingTFunc\nfunc __dd_civisibility_instrumentTestingTFunc(func(*T)) func(*T)\n\n//go:linkname __dd_civisibility_instrumentSetErrorInfo gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentSetErrorInfo\nfunc __dd_civisibility_instrumentSetErrorInfo(tb TB, errType string, errMessage string, skip int)\n\n//go:linkname __dd_civisibility_instrumentCloseAndSkip gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentCloseAndSkip\nfunc __dd_civisibility_instrumentCloseAndSkip(tb TB, skipReason string)\n\n//go:linkname __dd_civisibility_instrumentSkipNow gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentSkipNow\nfunc __dd_civisibility_instrumentSkipNow(tb TB)\n\n//go:linkname __dd_civisibility_ExitCiVisibility gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations.ExitCiVisibility\nfunc __dd_civisibility_ExitCiVisibility()",
 				map[string]string{},
+				context.GoLang{},
 			), []string{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations",
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
@@ -69,6 +74,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"{{ .Function.Argument 1 }} = __dd_civisibility_instrumentTestingTFunc({{ .Function.Argument 1 }})",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -84,12 +90,14 @@ var Aspects = [...]aspect.Aspect{
 			advice.InjectDeclarations(code.MustTemplate(
 				"//go:linkname __dd_civisibility_instrumentTestingBFunc gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingBFunc\nfunc __dd_civisibility_instrumentTestingBFunc(*B, string, func(*B)) (string, func(*B))",
 				map[string]string{},
+				context.GoLang{},
 			), []string{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
 			}),
 			advice.PrependStmts(code.MustTemplate(
 				"{{ .Function.Argument 0 }}, {{ .Function.Argument 1 }} = __dd_civisibility_instrumentTestingBFunc({{ .Function.Receiver }}, {{ .Function.Argument 0 }}, {{ .Function.Argument 1 }})",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -105,6 +113,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"Fail\", \"failed test\", 0)",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -120,6 +129,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"__dd_civisibility_instrumentSetErrorInfo({{ .Function.Receiver }}, \"FailNow\", \"failed test\", 0)\n__dd_civisibility_ExitCiVisibility()",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -137,6 +147,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"fmt": "fmt",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -154,6 +165,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"fmt": "fmt",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -171,6 +183,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"fmt": "fmt",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -188,6 +201,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"fmt": "fmt",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -205,6 +219,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"fmt": "fmt",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -222,6 +237,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"fmt": "fmt",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -237,6 +253,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"__dd_civisibility_instrumentSkipNow({{ .Function.Receiver }})",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -250,6 +267,7 @@ var Aspects = [...]aspect.Aspect{
 					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
 					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -265,6 +283,7 @@ var Aspects = [...]aspect.Aspect{
 					"aws":      "github.com/aws/aws-sdk-go-v2/aws",
 					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -278,6 +297,7 @@ var Aspects = [...]aspect.Aspect{
 					"awstrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 					"session":  "github.com/aws/aws-sdk-go/aws/session",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -294,6 +314,7 @@ var Aspects = [...]aspect.Aspect{
 					"redis": "github.com/go-redis/redis",
 					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -309,6 +330,7 @@ var Aspects = [...]aspect.Aspect{
 					"redis": "github.com/go-redis/redis/v7",
 					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -324,6 +346,7 @@ var Aspects = [...]aspect.Aspect{
 					"redis": "github.com/go-redis/redis/v8",
 					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -339,6 +362,7 @@ var Aspects = [...]aspect.Aspect{
 					"redis": "github.com/redis/go-redis/v9",
 					"trace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -358,6 +382,7 @@ var Aspects = [...]aspect.Aspect{
 					"gocql":      "github.com/gocql/gocql",
 					"gocqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -373,6 +398,7 @@ var Aspects = [...]aspect.Aspect{
 					"gocql":      "github.com/gocql/gocql",
 					"gocqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -392,6 +418,7 @@ var Aspects = [...]aspect.Aspect{
 					"gorm":      "github.com/jinzhu/gorm",
 					"gormtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -405,6 +432,7 @@ var Aspects = [...]aspect.Aspect{
 					"mongotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo",
 					"options":    "go.mongodb.org/mongo-driver/mongo/options",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -488,6 +516,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -497,6 +526,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.InjectDeclarations(code.MustTemplate(
 				"type DDCloseSpanFunc = func(serverID string, err error)",
 				map[string]string{},
+				context.GoLang{},
 			), []string{}),
 			advice.AddStructField("DDCloseSpan", join.MustTypeName("DDCloseSpanFunc")),
 		},
@@ -512,6 +542,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -524,6 +555,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"{{- $publishResult := .Function.Receiver -}}\n{{- $serverID := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\ndefer func() {\n  if {{ $publishResult }}.DDCloseSpan != nil {\n    {{ $publishResult }}.DDCloseSpan({{ $serverID }}, {{ $err }})\n  }\n}()",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -540,6 +572,7 @@ var Aspects = [...]aspect.Aspect{
 					"sarama":      "github.com/IBM/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -555,6 +588,7 @@ var Aspects = [...]aspect.Aspect{
 					"sarama":      "github.com/IBM/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -570,6 +604,7 @@ var Aspects = [...]aspect.Aspect{
 					"sarama":      "github.com/IBM/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -586,6 +621,7 @@ var Aspects = [...]aspect.Aspect{
 					"sarama":      "github.com/Shopify/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -601,6 +637,7 @@ var Aspects = [...]aspect.Aspect{
 					"sarama":      "github.com/Shopify/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -616,6 +653,7 @@ var Aspects = [...]aspect.Aspect{
 					"sarama":      "github.com/Shopify/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -629,6 +667,7 @@ var Aspects = [...]aspect.Aspect{
 					"context": "context",
 					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -642,6 +681,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.AssignValue(code.MustTemplate(
 				"true",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 		TracerInternal: true,
@@ -665,6 +705,7 @@ var Aspects = [...]aspect.Aspect{
 					"testing": "testing",
 					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
+				context.GoLang{},
 			), []string{
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
 			}),
@@ -675,6 +716,7 @@ var Aspects = [...]aspect.Aspect{
 					"os":       "os",
 					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
 				},
+				context.GoLang{},
 			), []string{}),
 			advice.PrependStmts(code.MustTemplate(
 				"// Only finalize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n// For a test process the ci visibility instrumentation will finalize the tracer\nif !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n  defer tracer.Stop()\n}\n\ndefer profiler.Stop()",
@@ -683,6 +725,7 @@ var Aspects = [...]aspect.Aspect{
 					"testing":  "testing",
 					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -699,6 +742,7 @@ var Aspects = [...]aspect.Aspect{
 					"gqlgentrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
 					"handler":     "github.com/99designs/gqlgen/graphql/handler",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -717,6 +761,7 @@ var Aspects = [...]aspect.Aspect{
 						"graphql":      "github.com/graph-gophers/graphql-go",
 						"graphqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go",
 					},
+					context.GoLang{},
 				),
 			),
 		},
@@ -744,6 +789,7 @@ var Aspects = [...]aspect.Aspect{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
+					context.GoLang{},
 				),
 				code.MustTemplate(
 					"grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())",
@@ -751,6 +797,7 @@ var Aspects = [...]aspect.Aspect{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
+					context.GoLang{},
 				),
 			),
 		},
@@ -766,6 +813,7 @@ var Aspects = [...]aspect.Aspect{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
+					context.GoLang{},
 				),
 				code.MustTemplate(
 					"grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())",
@@ -773,6 +821,7 @@ var Aspects = [...]aspect.Aspect{
 						"grpc":      "google.golang.org/grpc",
 						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
 					},
+					context.GoLang{},
 				),
 			),
 		},
@@ -796,6 +845,7 @@ var Aspects = [...]aspect.Aspect{
 					"chi":      "github.com/go-chi/chi",
 					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -817,6 +867,7 @@ var Aspects = [...]aspect.Aspect{
 					"chi":      "github.com/go-chi/chi/v5",
 					"chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -830,6 +881,7 @@ var Aspects = [...]aspect.Aspect{
 					"echo":      "github.com/labstack/echo/v4",
 					"echotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -843,6 +895,7 @@ var Aspects = [...]aspect.Aspect{
 					"fiber":      "github.com/gofiber/fiber/v2",
 					"fibertrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -859,6 +912,7 @@ var Aspects = [...]aspect.Aspect{
 					"gin":      "github.com/gin-gonic/gin",
 					"gintrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -875,6 +929,7 @@ var Aspects = [...]aspect.Aspect{
 					"telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
 					"tracer":    "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
+				context.GoLang{},
 			), []string{}),
 			advice.AddStructField("__dd_config", join.MustTypeName("ddRouterConfig")),
 		},
@@ -899,6 +954,7 @@ var Aspects = [...]aspect.Aspect{
 					"namingschema": "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
 					"tracer":       "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -917,6 +973,7 @@ var Aspects = [...]aspect.Aspect{
 					"options":           "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 					"tracer":            "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -930,6 +987,7 @@ var Aspects = [...]aspect.Aspect{
 					"kubernetestrace":     "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 					"kubernetestransport": "k8s.io/client-go/transport",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -974,6 +1032,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.WrapExpression(code.MustTemplate(
 				"{{- .AST.Type -}}{\n  DD__tracer_internal: true,\n  {{ range .AST.Elts }}{{ . }},\n  {{ end }}\n}",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 		TracerInternal: true,
@@ -990,6 +1049,7 @@ var Aspects = [...]aspect.Aspect{
 					"context": "context",
 					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 				},
+				context.GoLang{},
 			), []string{
 				"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
@@ -1008,6 +1068,7 @@ var Aspects = [...]aspect.Aspect{
 					"os":           "os",
 					"strconv":      "strconv",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1027,6 +1088,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"instrument": "github.com/DataDog/orchestrion/instrument/net/http",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1049,6 +1111,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"instrument": "github.com/DataDog/orchestrion/instrument",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1076,6 +1139,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"instrument": "github.com/DataDog/orchestrion/instrument",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1103,6 +1167,7 @@ var Aspects = [...]aspect.Aspect{
 					"event":      "github.com/DataDog/orchestrion/instrument/event",
 					"instrument": "github.com/DataDog/orchestrion/instrument",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1122,6 +1187,7 @@ var Aspects = [...]aspect.Aspect{
 					"events": "gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
 					"ossec":  "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/ossec",
 				},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1134,6 +1200,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.InjectDeclarations(code.MustTemplate(
 				"//go:linkname __dd_orchestrion_gls_get __dd_orchestrion_gls_get\nvar __dd_orchestrion_gls_get = func() any {\n  return getg().m.curg.__dd_gls\n}\n\n//go:linkname __dd_orchestrion_gls_set __dd_orchestrion_gls_set\nvar __dd_orchestrion_gls_set = func(val any) {\n  getg().m.curg.__dd_gls = val\n}",
 				map[string]string{},
+				context.GoLang{},
 			), []string{}),
 		},
 	},
@@ -1148,6 +1215,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"getg().__dd_gls = nil",
 				map[string]string{},
+				context.GoLang{},
 			)),
 		},
 	},
@@ -1160,6 +1228,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"slogtrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 				},
+				context.GoLang{},
 			)),
 		},
 	},

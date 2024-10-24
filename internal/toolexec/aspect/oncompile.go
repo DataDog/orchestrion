@@ -78,10 +78,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	}
 
 	goFiles := cmd.GoFiles()
-	results, err := injector.InjectFiles(goFiles)
+	results, goLang, err := injector.InjectFiles(goFiles)
 	if err != nil {
 		return err
 	}
+
+	cmd.SetLang(goLang)
 
 	references := typed.ReferenceMap{}
 	for gofile, modFile := range results {

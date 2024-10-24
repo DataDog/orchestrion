@@ -64,24 +64,31 @@ type AdviceContext interface {
 
 	// AddLink records a new link-time requirement on this context.
 	AddLink(string) bool
+
+	// EnsureMinGoLang ensures that the current compile unit uses at least the
+	// specified language level when passed to the compiler.
+	EnsureMinGoLang(GoLang)
 }
 
-type context struct {
-	*NodeChain
-	cursor *dstutil.Cursor
+type (
+	context struct {
+		*NodeChain
+		cursor *dstutil.Cursor
 
-	// Common to all contexts in the same hierarchy...
-	file         *dst.File
-	refMap       *typed.ReferenceMap
-	sourceParser SourceParser
-	importPath   string
-}
+		// Common to all contexts in the same hierarchy...
+		file         *dst.File
+		refMap       *typed.ReferenceMap
+		minGoLang    *GoLang
+		sourceParser SourceParser
+		importPath   string
+	}
+
+	SourceParser interface {
+		Parse(any) (*dst.File, error)
+	}
+)
 
 var contextPool = sync.Pool{New: func() any { return new(context) }}
-
-type SourceParser interface {
-	Parse(any) (*dst.File, error)
-}
 
 // Context returns a new [*context] instance that represents the ndoe at the
 // provided cursor. The [context.Release] function should be called on values
@@ -93,6 +100,7 @@ func (n *NodeChain) Context(
 	file *dst.File,
 	refMap *typed.ReferenceMap,
 	sourceParser SourceParser,
+	minGoLang *GoLang,
 ) *context {
 	c, _ := contextPool.Get().(*context)
 	*c = context{
@@ -100,6 +108,7 @@ func (n *NodeChain) Context(
 		cursor:       cursor,
 		file:         file,
 		refMap:       refMap,
+		minGoLang:    minGoLang,
 		sourceParser: sourceParser,
 		importPath:   importPath,
 	}
@@ -132,6 +141,7 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		cursor:       nil,
 		file:         c.file,
 		refMap:       c.refMap,
+		minGoLang:    c.minGoLang,
 		sourceParser: c.sourceParser,
 		importPath:   c.importPath,
 	}
@@ -197,4 +207,8 @@ func (c *context) AddImport(path string, alias string) bool {
 
 func (c *context) AddLink(path string) bool {
 	return c.refMap.AddLink(c.file, path)
+}
+
+func (c *context) EnsureMinGoLang(lang GoLang) {
+	c.minGoLang.SetAtLeast(lang)
 }
