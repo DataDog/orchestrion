@@ -331,14 +331,6 @@ jobs:
             build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
           fi
           go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
-
-      - name: (Testing) Run elasticsearch tests
-        shell: bash
-        run: |-
-          cd _integration-tests
-          go test -v -cover -coverprofile=es8.out github.com/elastic/go-elasticsearch/v8/...
-          go test -v -cover -coverprofile=es7.out github.com/elastic/go-elasticsearch/v7/...
-
       - name: Run Integration Tests
         shell: bash
         run: |-
@@ -367,6 +359,7 @@ jobs:
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+          ORCHESTRION_LOG_LEVEL: debug
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
