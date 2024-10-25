@@ -408,6 +408,55 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/pgx.yml
+	{
+		JoinPoint: join.AllOf(
+			join.FunctionCall("github.com/jackc/pgx/v5.Connect"),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/jackc/pgx/v5"),
+				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5", "Connect"),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.FunctionCall("github.com/jackc/pgx/v5.ConnectConfig"),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/jackc/pgx/v5"),
+				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5", "ConnectConfig"),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.FunctionCall("github.com/jackc/pgx/v5/pgxpool.New"),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/jackc/pgx/v5"),
+				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5", "NewPool"),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.FunctionCall("github.com/jackc/pgx/v5/pgxpool.NewWithConfig"),
+			join.Not(join.OneOf(
+				join.ImportPath("github.com/jackc/pgx/v5"),
+				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5", "NewPoolWithConfig"),
+		},
+	},
 	// From databases/redigo.yml
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
@@ -1167,6 +1216,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
@@ -1197,4 +1247,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:mLiajWwYAXVzMim9glWHMKECx6cj0wTqqovC2c3vOWaV0W2qKn8Ei/5y2+1ReMlFNC2r5pU4Zu8OIhGbQWao7Q=="
+const Checksum = "sha512:68KkaXv6iXdG71f/NvrUymIMwQJrwrvybHLheC6UCYmdSL2hzU1B41ZG+R2bICQYu7lp5l87TSLlD0xhr5fUlQ=="
