@@ -331,6 +331,14 @@ jobs:
             build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
           fi
           go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
+
+      - name: (Testing) Run elasticsearch tests
+        shell: bash
+        run: |-
+          cd _integration-tests
+          go test -v -cover -coverprofile=${{ github.workspace }}/coverage/es.cov github.com/elastic/go-elasticsearch/v8/...
+          go test -v -cover -coverprofile=${{ github.workspace }}/coverage/es.cov github.com/elastic/go-elasticsearch/v7/...
+
       - name: Run Integration Tests
         shell: bash
         run: |-
