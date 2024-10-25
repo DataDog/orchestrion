@@ -334,6 +334,7 @@ jobs:
             build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
           fi
           go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
+          go build ${build_args[@]+"${build_args[@]}"} -o="bin/compile.exe" .
       - name: Run Integration Tests
         shell: bash
         run: |-
@@ -346,8 +347,8 @@ jobs:
           toolexec_bin_path="${{ github.workspace }}/bin/orchestrion.exe"
           if [ "$RUNNER_OS" == "Windows" ]; then
             toolexec_bin_path="${{ github.workspace }}/bin/compile.exe"
-            cp "${{ github.workspace }}/bin/orchestrion.exe" "${toolexec_bin_path}"
           fi
+          echo "toolexec_bin_path: ${toolexec_bin_path}"
           
           case "${{ matrix.build-mode }}" in
           "DRIVER")
