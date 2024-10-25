@@ -461,19 +461,37 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "Dial"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (redis.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.Dial(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				map[string]string{
+					"redigo":      "github.com/gomodule/redigo/redis",
+					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
+				},
+			)),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialContext"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialContext"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (redis.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialContext(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				map[string]string{
+					"redigo":      "github.com/gomodule/redigo/redis",
+					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
+				},
+			)),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialURL"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (redis.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialURL(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				map[string]string{
+					"redigo":      "github.com/gomodule/redigo/redis",
+					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
+				},
+			)),
 		},
 	},
 	// From datastreams/gcp_pubsub.yml
@@ -1229,4 +1247,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:68KkaXv6iXdG71f/NvrUymIMwQJrwrvybHLheC6UCYmdSL2hzU1B41ZG+R2bICQYu7lp5l87TSLlD0xhr5fUlQ=="
+const Checksum = "sha512:rYSrHUgjDPe36VIoWL5y1ugkILMyy6fKtRVHf5CjsvwLFJUiX21O2QNsmMJkI5vyh60IXP5oz3PtPfkCa+YCiw=="
