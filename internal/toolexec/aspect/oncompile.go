@@ -179,6 +179,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		log.Debugf("Adding %s file into %q\n", linkdeps.LinkDepsFilename, cmd.Flags.Output)
 		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
 		if err := child.Run(); err != nil {
+			log.Infof("failed to run command %q: %v\n", child.Args, err)
 			return fmt.Errorf("running %q: %w", child.Args, err)
 		}
 		return nil

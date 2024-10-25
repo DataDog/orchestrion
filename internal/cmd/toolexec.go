@@ -50,7 +50,7 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Tracef("Toolexec original command: %q\n", proxyCmd.Args())
+		log.Infof("Toolexec original command: %q\n", proxyCmd.Args())
 		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
 
 		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompile); err != nil {
@@ -63,7 +63,7 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
+		log.Infof("Toolexec final command:    %q\n", proxyCmd.Args())
 		return proxy.RunCommand(proxyCmd)
 	},
 }

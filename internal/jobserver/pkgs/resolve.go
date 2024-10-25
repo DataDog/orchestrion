@@ -119,22 +119,22 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
 	}
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
-		pkgs, err := packages.Load(
-			&packages.Config{
-				Mode:
-				// We need the export file (the whole point of the resolution)
-				packages.NeedExportFile |
-					// We want to also resolve transitive dependencies, so we need Deps & Imports
-					packages.NeedDeps | packages.NeedImports |
-					// Finally, we need the resolved package import path
-					packages.NeedName,
-				Dir:        req.Dir,
-				Env:        env,
-				BuildFlags: req.BuildFlags,
-				Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
-			},
-			req.Pattern,
-		)
+		cfg := &packages.Config{
+			Mode:
+			// We need the export file (the whole point of the resolution)
+			packages.NeedExportFile |
+				// We want to also resolve transitive dependencies, so we need Deps & Imports
+				packages.NeedDeps | packages.NeedImports |
+				// Finally, we need the resolved package import path
+				packages.NeedName,
+			Dir:        req.Dir,
+			Env:        env,
+			BuildFlags: req.BuildFlags,
+			Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
+		}
+		log.Infof("[JOBSERVER] runnning packages.Load with config: %+v\n", cfg)
+
+		pkgs, err := packages.Load(cfg, req.Pattern)
 		if err != nil {
 			return nil, err
 		}
