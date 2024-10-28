@@ -149,6 +149,7 @@ Library                               | Since    | Notes
 `github.com/redis/go-redis`           | `v0.9.1` | [Aspect][go-redis]
 `github.com/graph-gophers/graphql-go` | `v0.9.1` | [Aspect][graph-gophers]
 `github.com/graphql-go/graphql`       | `v0.9.1` | [Aspect][graphql]
+`github.com/jackc/pgx`                | `v0.9.4` | [Aspect][pgx]
 
 [db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
 [gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
@@ -181,6 +182,7 @@ Library                               | Since    | Notes
 [go-redis]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v0-client
 [graph-gophers]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graph-gophers/
 [graphql]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graphql-go/
+[pgx]: https://datadoghq.dev/orchestrion/docs/built-in/databases/pgx
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.

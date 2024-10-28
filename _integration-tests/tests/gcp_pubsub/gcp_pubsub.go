@@ -44,7 +44,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	)
 
 	tc.container, err = gcloud.RunPubsub(ctx,
-		"gcr.io/google.com/cloudsdktool/cloud-sdk:490.0.0-emulators",
+		"gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators",
 		gcloud.WithProjectID("pstest-orchestrion"),
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
