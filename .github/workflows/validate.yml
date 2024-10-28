@@ -287,9 +287,6 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-          - runs-on: windows
-            go-version: oldstable
-            build-mode: TOOLEXEC
     runs-on: ${{ matrix.runs-on == 'ubuntu' && 'arm-4core-linux' || format('{0}-latest', matrix.runs-on) }}
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
@@ -334,7 +331,6 @@ jobs:
             build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
           fi
           go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
-          go build ${build_args[@]+"${build_args[@]}"} -o="bin/compile.exe" .
       - name: Run Integration Tests
         shell: bash
         run: |-
@@ -343,22 +339,16 @@ jobs:
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi
-          
-          toolexec_bin_path="${{ github.workspace }}/bin/orchestrion.exe"
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            toolexec_bin_path="${{ github.workspace }}/bin/compile.exe"
-          fi
-          echo "toolexec_bin_path: ${toolexec_bin_path}"
-          
+
           case "${{ matrix.build-mode }}" in
           "DRIVER")
             bin/orchestrion.exe go -C=_integration-tests test "${test_args[@]}" -a ./...
             ;;
           "TOOLEXEC")
-            go -C=_integration-tests test "${test_args[@]}" -toolexec="${toolexec_bin_path} toolexec" ./...
+            go -C=_integration-tests test "${test_args[@]}" -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
             ;;
           "GOFLAGS")
-            export GOFLAGS="'-toolexec=${toolexec_bin_path} toolexec' ${GOFLAGS}"
+            export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion.exe toolexec' ${GOFLAGS}"
             go -C=_integration-tests test "${test_args[@]}" ./...
             ;;
           *)
@@ -368,7 +358,7 @@ jobs:
           esac
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
-          GOFLAGS: -tags=integration,buildtag -x -a # Globally set build tags (buildtag is used by the dd-span test)
+          GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out

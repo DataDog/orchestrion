@@ -18,12 +18,9 @@ meta:
 aspects:
   - id: Wrap elasticsearch.Config value (v6)
     join-point:
-      all-of:
-        - struct-literal:
-            type: github.com/elastic/go-elasticsearch/v6.Config
-            match: value-only
-        - not:
-            import-path: github.com/elastic/go-elasticsearch/v6
+      struct-literal:
+        type: github.com/elastic/go-elasticsearch/v6.Config
+        match: value-only
     advice:
       - wrap-expression:
           imports:
@@ -42,12 +39,9 @@ aspects:
 
   - id: Wrap elasticsearch.Config pointer (v6)
     join-point:
-      all-of:
-        - struct-literal:
-            type: github.com/elastic/go-elasticsearch/v6.Config
-            match: pointer-only
-        - not:
-            import-path: github.com/elastic/go-elasticsearch/v6
+      struct-literal:
+        type: github.com/elastic/go-elasticsearch/v6.Config
+        match: pointer-only
     advice:
       - wrap-expression:
           imports:
@@ -66,12 +60,9 @@ aspects:
 
   - id: Wrap elasticsearch.Config value (v7)
     join-point:
-      all-of:
-        - struct-literal:
-            type: github.com/elastic/go-elasticsearch/v7.Config
-            match: value-only
-        - not:
-            import-path: github.com/elastic/go-elasticsearch/v7/esapi
+      struct-literal:
+        type: github.com/elastic/go-elasticsearch/v7.Config
+        match: value-only
     advice:
       - wrap-expression:
           imports:
@@ -94,12 +85,9 @@ aspects:
 
   - id: Wrap elasticsearch.Config pointer (v7)
     join-point:
-      all-of:
-        - struct-literal:
-            type: github.com/elastic/go-elasticsearch/v7.Config
-            match: pointer-only
-        - not:
-            import-path: github.com/elastic/go-elasticsearch/v7/esapi
+      struct-literal:
+        type: github.com/elastic/go-elasticsearch/v7.Config
+        match: pointer-only
     advice:
       - wrap-expression:
           imports:
@@ -122,14 +110,9 @@ aspects:
 
   - id: Wrap elasticsearch.Config value (v8)
     join-point:
-      all-of:
-        - struct-literal:
-            type: github.com/elastic/go-elasticsearch/v8.Config
-            match: value-only
-        - not:
-            one-of:
-              - import-path: github.com/elastic/go-elasticsearch/v8/esapi
-              - import-path: github.com/elastic/go-elasticsearch/v8/typedapi/types
+      struct-literal:
+        type: github.com/elastic/go-elasticsearch/v8.Config
+        match: value-only
     advice:
       - wrap-expression:
           imports:
@@ -139,14 +122,9 @@ aspects:
 
   - id: Wrap elasticsearch.Config pointer (v8)
     join-point:
-      all-of:
-        - struct-literal:
-            type: github.com/elastic/go-elasticsearch/v8.Config
-            match: pointer-only
-        - not:
-            one-of:
-              - import-path: github.com/elastic/go-elasticsearch/v8/esapi
-              - import-path: github.com/elastic/go-elasticsearch/v8/typedapi/types
+      struct-literal:
+        type: github.com/elastic/go-elasticsearch/v8.Config
+        match: pointer-only
     advice:
       - wrap-expression:
           imports:

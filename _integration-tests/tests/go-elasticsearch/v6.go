@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-//go:build integration
+//go:build integration && !windows
 
 package go_elasticsearch
 
@@ -22,6 +22,8 @@ type TestCaseV6 struct {
 }
 
 func (tc *TestCaseV6) Setup(t *testing.T) {
+	t.Skip("Skipping test as the official elasticsearch v6 does not have an ARM build")
+
 	tc.base.Setup(t, "docker.elastic.co/elasticsearch/elasticsearch:6.8.23", func(addr string, _ []byte) (esClient, error) {
 		return elasticsearch.NewClient(elasticsearch.Config{
 			Addresses: []string{addr},
