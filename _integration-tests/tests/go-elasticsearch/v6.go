@@ -10,6 +10,8 @@ package go_elasticsearch
 import (
 	"context"
 	"io"
+	"os"
+	"runtime"
 	"testing"
 
 	"github.com/elastic/go-elasticsearch/v6"
@@ -22,8 +24,10 @@ type TestCaseV6 struct {
 }
 
 func (tc *TestCaseV6) Setup(t *testing.T) {
-	t.Skip("Skipping test as the official elasticsearch v6 does not have an ARM build")
-
+	// skip test if CI runner os arch is not amd64
+	if _, ok := os.LookupEnv("CI"); ok && runtime.GOOS == "linux" && runtime.GOARCH != "amd64" {
+		t.Skip("Skipping test as the official elasticsearch v6 docker image only supports amd64")
+	}
 	tc.base.Setup(t, "docker.elastic.co/elasticsearch/elasticsearch:6.8.23", func(addr string, _ []byte) (esClient, error) {
 		return elasticsearch.NewClient(elasticsearch.Config{
 			Addresses: []string{addr},

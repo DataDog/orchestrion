@@ -16,7 +16,7 @@ import (
 type skip struct{}
 
 func (s skip) Setup(t *testing.T) {
-	t.Skip("skipping test since go-elasticsearch v7 and v8 does not build on Windows: https://github.com/golang/go/issues/70046")
+	t.Skip("skipping test since go-elasticsearch v7 and v8 does not build on Windows with Orchestrion: https://github.com/golang/go/issues/70046")
 }
 
 func (s skip) Run(t *testing.T)             {}
