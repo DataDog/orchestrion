@@ -99,7 +99,7 @@ func testFile(packageName string) *jen.File {
 	return f
 }
 
-func parseCode(testDir string) (string, []string) {
+func parseCode(testDir string) (pkgName string, testCases []string) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, testDir, nil, parser.ParseComments)
 	if err != nil {
@@ -108,8 +108,6 @@ func parseCode(testDir string) (string, []string) {
 	if len(pkgs) != 1 {
 		log.Fatalf("%s: expected exactly 1 package, got %d", testDir, len(pkgs))
 	}
-	var testCases []string
-	var pkgName string
 
 	for name, pkg := range pkgs {
 		pkgName = name
@@ -132,7 +130,8 @@ func parseCode(testDir string) (string, []string) {
 			}
 		}
 	}
-	// ensure order in test cases as well
+	// ensure order in test cases as well and remove repeated elements (e.g. in case of different OS implementations)
 	slices.Sort(testCases)
+	testCases = slices.Compact(testCases)
 	return pkgName, testCases
 }

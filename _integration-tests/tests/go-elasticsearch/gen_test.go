@@ -18,20 +18,8 @@ func TestIntegration_go_elasticsearch_V6(t *testing.T) {
 	utils.RunTest(t, new(TestCaseV6))
 }
 
-func TestIntegration_go_elasticsearch_V6(t *testing.T) {
-	utils.RunTest(t, new(TestCaseV6))
-}
-
 func TestIntegration_go_elasticsearch_V7(t *testing.T) {
 	utils.RunTest(t, new(TestCaseV7))
-}
-
-func TestIntegration_go_elasticsearch_V7(t *testing.T) {
-	utils.RunTest(t, new(TestCaseV7))
-}
-
-func TestIntegration_go_elasticsearch_V8(t *testing.T) {
-	utils.RunTest(t, new(TestCaseV8))
 }
 
 func TestIntegration_go_elasticsearch_V8(t *testing.T) {
