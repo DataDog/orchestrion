@@ -39,7 +39,7 @@ func Test(t *testing.T) {
 	getArgs := []string{"get"}
 	for _, pkg := range builtin.InjectedPaths {
 		// We don't want to try to "go get" standard library packages; these don't contain a ".".
-		if strings.Contains(pkg, ".") {
+		if strings.Contains(pkg, ".") && !strings.Contains(pkg, "github.com/DataDog/orchestrion") {
 			getArgs = append(getArgs, pkg)
 		}
 	}
