@@ -175,7 +175,7 @@ jobs:
     needs: generate
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         go-version: [oldstable, stable]
     name: Unit tests (go ${{ matrix.go-version }})
@@ -274,7 +274,7 @@ jobs:
   integration-tests:
     needs: generate
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         runs-on: [macos, ubuntu, windows]
         go-version: [oldstable, stable]
