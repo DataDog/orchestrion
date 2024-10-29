@@ -535,7 +535,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (redis.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.Dial(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.Dial(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
 				map[string]string{
 					"redigo":      "github.com/gomodule/redigo/redis",
 					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
@@ -547,7 +547,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialContext"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (redis.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialContext(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialContext(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
 				map[string]string{
 					"redigo":      "github.com/gomodule/redigo/redis",
 					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
@@ -559,7 +559,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialURL"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
-				"func() (redis.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialURL(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialURL(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
 				map[string]string{
 					"redigo":      "github.com/gomodule/redigo/redis",
 					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
@@ -1321,4 +1321,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:nZo/jzc10MyCH6GjUsBxWg9EttIf+t+q37i9pbw40RuNJFo/l7iYfZ2sEC9bUR497hMEt2FXzPBXcEytF1Jyvw=="
+const Checksum = "sha512:QKpZ+2KC7FrIK9q175W6B/4qFTtJl3aFqZspjyVh3qwa0DqVYt0qjL+akIBeq6RxPyl4gqN0mGssSgCDcmc1tQ=="
