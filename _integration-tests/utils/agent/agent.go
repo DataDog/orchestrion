@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -209,6 +210,10 @@ var (
 )
 
 func (s *Session) RoundTrip(req *http.Request) (*http.Response, error) {
+	if !s.agent.currentSession.CompareAndSwap(s, s) {
+		fmt.Printf("WARNING: Span transport used after session has been closed!\n%s\n", debug.Stack())
+	}
+
 	req.Header.Set("X-Datadog-Test-Session-Token", s.token.String())
 	return internalTransport.RoundTrip(req)
 }
