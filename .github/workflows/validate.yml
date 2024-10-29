@@ -289,8 +289,8 @@ jobs:
             build-mode: GOFLAGS
     services:
       redis:
-        image: redis:7
-        ports: [6379:6379]
+        image: 'redis:7'
+        ports: ['6379:6379']
     runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || format('{0}-latest', matrix.runs-on) }}
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
