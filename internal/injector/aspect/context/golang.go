@@ -7,30 +7,21 @@ package context
 
 import (
 	"fmt"
-	"strings"
-	"unicode"
+	"go/version"
 
-	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
 // GoLang represents a go language level. It's a string of the form "go1.18".
 type GoLang struct {
-	semver string
+	label string
 }
 
 func ParseGoLang(lang string) (GoLang, error) {
-	// Validate the language level value...
-	if !strings.HasPrefix(lang, "go1.") {
+	if !version.IsValid(lang) {
 		return GoLang{}, fmt.Errorf(`invalid go language level (expected e.g, "go1.18"): %q`, lang)
 	}
-	for _, r := range lang[4:] {
-		if !unicode.IsDigit(r) {
-			return GoLang{}, fmt.Errorf(`invalid go language level (expected e.g, "go1.18"): %q`, lang)
-		}
-	}
-	// The semver package requires version strings have the "v" prefix...
-	return GoLang{"v" + lang[2:]}, nil
+	return GoLang{lang}, nil
 }
 
 func MustParseGoLang(lang string) GoLang {
@@ -42,38 +33,24 @@ func MustParseGoLang(lang string) GoLang {
 }
 
 func (g GoLang) String() string {
-	if g.IsAny() {
-		return ""
-	}
-
-	// We print this out iwth a "go" prefix instead of the semver "v" prefix.
-	return "go" + g.semver[1:]
+	return g.label
 }
 
 // IsAny returns true if the GoLang version selection is blank, meaning no particular constraint is
 // imposed on language level.
 func (g GoLang) IsAny() bool {
-	return g.semver == ""
+	return g.label == ""
 }
 
 func (g *GoLang) SetAtLeast(other GoLang) {
 	if Compare(*g, other) >= 0 {
 		return
 	}
-	g.semver = other.semver
+	g.label = other.label
 }
 
 func Compare(left GoLang, right GoLang) int {
-	if left == right {
-		return 0
-	}
-
-	if left.IsAny() {
-		// Blank is lower than any other version...
-		return -1
-	}
-
-	return semver.Compare(left.semver, right.semver)
+	return version.Compare(version.Lang(left.label), version.Lang(right.label))
 }
 
 var _ yaml.Unmarshaler = (*GoLang)(nil)
