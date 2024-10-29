@@ -40,35 +40,31 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 	tc.key = uuid.String()
 
-	const network = "tcp"
-	addr := "localhost:6379"
-	if !utils.IsGithubActions {
-		var err error
-		tc.server, err = testredis.Run(ctx,
-			"redis:7",
-			testcontainers.WithLogger(testcontainers.TestLogger(t)),
-			utils.WithTestLogConsumer(t),
-			testcontainers.WithWaitStrategy(
-				wait.ForAll(
-					wait.ForLog("* Ready to accept connections"),
-					wait.ForExposedPort(),
-					wait.ForListeningPort("6379/tcp"),
-				),
+	tc.server, err = testredis.Run(ctx,
+		"redis:7",
+		testcontainers.WithLogger(testcontainers.TestLogger(t)),
+		utils.WithTestLogConsumer(t),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForLog("* Ready to accept connections"),
+				wait.ForExposedPort(),
+				wait.ForListeningPort("6379/tcp"),
 			),
-		)
-		utils.AssertTestContainersError(t, err)
+		),
+	)
+	utils.AssertTestContainersError(t, err)
 
-		redisURI, err := tc.server.ConnectionString(ctx)
-		if err != nil {
-			log.Fatalf("Failed to obtain connection string: %v\n", err)
-		}
-		redisURL, err := url.Parse(redisURI)
-		if err != nil {
-			log.Fatalf("Invalid redis connection string: %q\n", redisURI)
-		}
-
-		addr = redisURL.Host
+	redisURI, err := tc.server.ConnectionString(ctx)
+	if err != nil {
+		log.Fatalf("Failed to obtain connection string: %v\n", err)
 	}
+	redisURL, err := url.Parse(redisURI)
+	if err != nil {
+		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
+	}
+
+	const network = "tcp"
+	addr := redisURL.Host
 
 	var dialOptions = []redis.DialOption{
 		redis.DialReadTimeout(10 * time.Second),
