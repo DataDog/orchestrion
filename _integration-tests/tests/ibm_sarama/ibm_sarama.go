@@ -13,9 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -1,4 +1,4 @@
-module orchestrion/integration
+module datadoghq.dev/orchestrion/_integration-tests
 
 go 1.22.8
 

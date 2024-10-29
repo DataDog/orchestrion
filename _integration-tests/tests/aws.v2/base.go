@@ -13,13 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 )
 
 type base struct {

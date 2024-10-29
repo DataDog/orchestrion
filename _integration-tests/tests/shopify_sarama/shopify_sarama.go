@@ -9,12 +9,11 @@ package shopify_sarama
 
 import (
 	"context"
-	"orchestrion/integration/utils"
 	"testing"
 	"time"
 
-	"orchestrion/integration/validator/trace"
-
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

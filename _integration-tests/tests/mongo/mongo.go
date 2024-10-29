@@ -11,20 +11,19 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testmongo "github.com/testcontainers/testcontainers-go/modules/mongodb"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type TestCase struct {

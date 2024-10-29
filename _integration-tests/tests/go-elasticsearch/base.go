@@ -16,14 +16,13 @@ import (
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testelasticsearch "github.com/testcontainers/testcontainers-go/modules/elasticsearch"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 )
 
 type esClient interface {

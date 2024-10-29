@@ -11,9 +11,8 @@ import (
 	"fmt"
 	"testing"
 
-	"orchestrion/integration/tests/99designs.gqlgen/generated/graph"
-	"orchestrion/integration/validator/trace"
-
+	"datadoghq.dev/orchestrion/_integration-tests/tests/99designs.gqlgen/generated/graph"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/99designs/gqlgen/client"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"

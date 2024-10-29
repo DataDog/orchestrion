@@ -11,53 +11,62 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"github.com/go-redis/redis/v8"
 )
 
 type TestCase struct {
 	server *testredis.RedisContainer
 	*redis.Client
+	key string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
 	ctx := context.Background()
 
-	var err error
-	tc.server, err = testredis.Run(ctx,
-		"redis:7",
-		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
-		testcontainers.WithWaitStrategy(
-			wait.ForAll(
-				wait.ForLog("* Ready to accept connections"),
-				wait.ForExposedPort(),
-				wait.ForListeningPort("6379/tcp"),
-			),
-		),
-	)
-	utils.AssertTestContainersError(t, err)
+	uuid, err := uuid.NewRandom()
+	require.NoError(t, err)
+	tc.key = uuid.String()
 
-	redisURI, err := tc.server.ConnectionString(ctx)
-	if err != nil {
-		log.Fatalf("Failed to obtain connection string: %v\n", err)
+	addr := "localhost:6379"
+	if !utils.IsGithubActions {
+		var err error
+		tc.server, err = testredis.Run(ctx,
+			"redis:7",
+			testcontainers.WithLogger(testcontainers.TestLogger(t)),
+			utils.WithTestLogConsumer(t),
+			testcontainers.WithWaitStrategy(
+				wait.ForAll(
+					wait.ForLog("* Ready to accept connections"),
+					wait.ForExposedPort(),
+					wait.ForListeningPort("6379/tcp"),
+				),
+			),
+		)
+		utils.AssertTestContainersError(t, err)
+
+		redisURI, err := tc.server.ConnectionString(ctx)
+		if err != nil {
+			log.Fatalf("Failed to obtain connection string: %v\n", err)
+		}
+		redisURL, err := url.Parse(redisURI)
+		if err != nil {
+			log.Fatalf("Invalid redis connection string: %q\n", redisURI)
+		}
+		addr = redisURL.Host
 	}
-	redisURL, err := url.Parse(redisURI)
-	if err != nil {
-		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
-	}
-	addr := redisURL.Host
+
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
 }
 
