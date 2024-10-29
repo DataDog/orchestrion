@@ -115,7 +115,7 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 	}
 
 	for {
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := internalClient.Do(req)
 		if err != nil {
 			select {
 			case <-ctx.Done():
@@ -132,9 +132,9 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 	}
 
 	t.Logf("Started test session with ID %s\n", session.token.String())
-
 	tracer.Start(
 		tracer.WithAgentAddr(fmt.Sprintf("127.0.0.1:%d", a.port)),
+		tracer.WithHTTPRoundTripper(session),
 		tracer.WithSampler(tracer.NewAllSampler()),
 		tracer.WithLogStartup(false),
 		tracer.WithLogger(testLogger{t}),
@@ -178,7 +178,7 @@ func (s *Session) Close(t *testing.T) ([]byte, error) {
 	tracer.Stop()
 
 	t.Logf("Closing test session with ID %s\n", s.token.String())
-	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/test/session/traces?test_session_token=%s", s.agent.port, s.token.String()))
+	resp, err := internalClient.Get(fmt.Sprintf("http://127.0.0.1:%d/test/session/traces?test_session_token=%s", s.agent.port, s.token.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -190,6 +190,27 @@ func (s *Session) Close(t *testing.T) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+var (
+	defaultTransport, _ = http.DefaultTransport.(*http.Transport)
+	// A copy of the default transport, except it will be marked internal by orchestrion, so it is not traced.
+	internalTransport = &http.Transport{
+		Proxy:                 defaultTransport.Proxy,
+		DialContext:           defaultTransport.DialContext,
+		ForceAttemptHTTP2:     defaultTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          defaultTransport.MaxIdleConns,
+		IdleConnTimeout:       defaultTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+	}
+
+	internalClient = http.Client{Transport: internalTransport}
+)
+
+func (s *Session) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("X-Datadog-Test-Session-Token", s.token.String())
+	return internalTransport.RoundTrip(req)
 }
 
 func getFreePort() (int, error) {
