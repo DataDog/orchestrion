@@ -6,7 +6,6 @@
 package agent
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -81,31 +80,8 @@ func New(t *testing.T) (*MockAgent, error) {
 		ddapmTestAgent,
 		fmt.Sprintf("--port=%d", agent.port),
 	)
-	stdout, err := agent.process.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, err := agent.process.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	forwardOutput := func(t *testing.T, r io.Reader, prefix string) {
-		rd := bufio.NewReader(r)
-		for {
-			line, err := rd.ReadString('\n')
-			if err != nil && !errors.Is(err, io.EOF) {
-				t.Logf("Error reading from %s: %v\n", prefix, err)
-			}
-			t.Logf("[AGENT|%s] %s\n", prefix, string(line))
-			if errors.Is(err, io.EOF) {
-				return
-			}
-		}
-	}
-
-	go forwardOutput(t, stdout, "STDOUT")
-	go forwardOutput(t, stderr, "STDERR")
+	agent.process.Stdout = os.Stdout
+	agent.process.Stderr = os.Stderr
 
 	if err = agent.process.Start(); err != nil {
 		return nil, err
