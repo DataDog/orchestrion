@@ -127,7 +127,7 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 			}
 		}
 		if resp.StatusCode != 200 {
-			return nil, errors.New("test agent returned non-200 status code")
+			return nil, fmt.Errorf("test agent returned non-200 status code: HTTP %s", resp.Status)
 		}
 		break
 	}
