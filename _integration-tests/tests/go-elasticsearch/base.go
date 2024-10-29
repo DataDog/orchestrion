@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testelasticsearch "github.com/testcontainers/testcontainers-go/modules/elasticsearch"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -42,6 +43,7 @@ func (b *base) Setup(t *testing.T, image string, newClient func(addr string, caC
 		image,
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		utils.WithTestLogConsumer(t),
+		testcontainers.WithWaitStrategyAndDeadline(time.Minute, wait.ForLog(`.*("message":\s?"started(\s|")?.*|]\sstarted\n)`).AsRegexp()),
 	)
 	utils.AssertTestContainersError(t, err)
 
