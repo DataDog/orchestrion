@@ -13,7 +13,7 @@ references to the matched node.
 ### Template Syntax
 
 Orchestrion code templates are rendered using the Go standard library
-{{<godoc "text/template">}} module. Refer to the module's documentation to learn
+{{<godoc import-path="text/template">}} module. Refer to the module's documentation to learn
 about the general syntax of these template values.
 
 In addition to the template text, Orchestrion code templates allow for two
@@ -109,9 +109,9 @@ they would be reported as belonging to generated code in the application's stack
 trace.
 
 The complete type hierarchy for these views corresponds to the
-{{<godoc "github.com/dave/dst" "Node">}} implementations, which provide the
+{{<godoc import-path="github.com/dave/dst" package="dst" name="Node">}} implementations, which provide the
 underlying AST model. Node properties can be accessed using their usual name
-from {{<godoc "github.com/dave/dst">}}.
+from {{<godoc import-path="github.com/dave/dst">}}.
 
 #### The `.DirectiveArgs` method
 
