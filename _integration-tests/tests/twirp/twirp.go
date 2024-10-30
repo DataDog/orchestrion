@@ -19,7 +19,7 @@ import (
 	"github.com/twitchtv/twirp"
 	"github.com/twitchtv/twirp/example"
 
-	"orchestrion/integration/validator/trace"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 type TestCase struct {
