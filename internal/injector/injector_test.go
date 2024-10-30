@@ -33,7 +33,7 @@ import (
 type testConfig struct {
 	Aspects             []aspect.Aspect                `yaml:"aspects"`
 	SyntheticReferences map[string]typed.ReferenceKind `yaml:"syntheticReferences"`
-	GoLang              context.GoLang                 `yaml:"required-lang"`
+	GoLang              context.GoLangVersion          `yaml:"required-lang"`
 	Code                string                         `yaml:"code"`
 }
 

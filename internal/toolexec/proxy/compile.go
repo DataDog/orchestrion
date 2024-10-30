@@ -38,7 +38,7 @@ func (c *CompileCommand) ShowVersion() bool {
 	return c.Flags.ShowVersion
 }
 
-func (cmd *CompileCommand) SetLang(to context.GoLang) error {
+func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
 	if to.IsAny() {
 		// No minimal language requirement change, nothing to do...
 		return nil
@@ -49,7 +49,7 @@ func (cmd *CompileCommand) SetLang(to context.GoLang) error {
 		return nil
 	}
 
-	if curr, _ := context.ParseGoLang(cmd.Flags.Lang); context.Compare(curr, to) >= 0 {
+	if curr, _ := context.ParseGoLangVersion(cmd.Flags.Lang); context.Compare(curr, to) >= 0 {
 		// Minimum language requirement from injected code is already met, nothing to do...
 		return nil
 	}

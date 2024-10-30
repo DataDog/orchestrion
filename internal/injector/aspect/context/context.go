@@ -67,7 +67,7 @@ type AdviceContext interface {
 
 	// EnsureMinGoLang ensures that the current compile unit uses at least the
 	// specified language level when passed to the compiler.
-	EnsureMinGoLang(GoLang)
+	EnsureMinGoLang(GoLangVersion)
 }
 
 type (
@@ -78,7 +78,7 @@ type (
 		// Common to all contexts in the same hierarchy...
 		file         *dst.File
 		refMap       *typed.ReferenceMap
-		minGoLang    *GoLang
+		minGoLang    *GoLangVersion
 		sourceParser SourceParser
 		importPath   string
 	}
@@ -105,7 +105,7 @@ type ContextArgs struct {
 	SourceParser SourceParser
 	// MinGoLang is a pointer to the result value containing the minimum Go
 	// language level required by the compile unit after it has been modified.
-	MinGoLang *GoLang
+	MinGoLang *GoLangVersion
 }
 
 // Context returns a new [*context] instance that represents the ndoe at the
@@ -220,6 +220,6 @@ func (c *context) AddLink(path string) bool {
 	return c.refMap.AddLink(c.file, path)
 }
 
-func (c *context) EnsureMinGoLang(lang GoLang) {
+func (c *context) EnsureMinGoLang(lang GoLangVersion) {
 	c.minGoLang.SetAtLeast(lang)
 }

@@ -12,56 +12,56 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// GoLang represents a go language level. It's a string of the form "go1.18".
-type GoLang struct {
+// GoLangVersion represents a go language level. It's a string of the form "go1.18".
+type GoLangVersion struct {
 	label string
 }
 
-func ParseGoLang(lang string) (GoLang, error) {
+func ParseGoLangVersion(lang string) (GoLangVersion, error) {
 	if !version.IsValid(lang) {
-		return GoLang{}, fmt.Errorf(`invalid go language level (expected e.g, "go1.18"): %q`, lang)
+		return GoLangVersion{}, fmt.Errorf(`invalid go language level (expected e.g, "go1.18"): %q`, lang)
 	}
-	return GoLang{lang}, nil
+	return GoLangVersion{lang}, nil
 }
 
-func MustParseGoLang(lang string) GoLang {
-	val, err := ParseGoLang(lang)
+func MustParseGoLangVersion(lang string) GoLangVersion {
+	val, err := ParseGoLangVersion(lang)
 	if err != nil {
 		panic(err)
 	}
 	return val
 }
 
-func (g GoLang) String() string {
+func (g GoLangVersion) String() string {
 	return g.label
 }
 
 // IsAny returns true if the GoLang version selection is blank, meaning no particular constraint is
 // imposed on language level.
-func (g GoLang) IsAny() bool {
+func (g GoLangVersion) IsAny() bool {
 	return g.label == ""
 }
 
-func (g *GoLang) SetAtLeast(other GoLang) {
+func (g *GoLangVersion) SetAtLeast(other GoLangVersion) {
 	if Compare(*g, other) >= 0 {
 		return
 	}
 	g.label = other.label
 }
 
-func Compare(left GoLang, right GoLang) int {
+func Compare(left GoLangVersion, right GoLangVersion) int {
 	return version.Compare(version.Lang(left.label), version.Lang(right.label))
 }
 
-var _ yaml.Unmarshaler = (*GoLang)(nil)
+var _ yaml.Unmarshaler = (*GoLangVersion)(nil)
 
-func (g *GoLang) UnmarshalYAML(node *yaml.Node) error {
+func (g *GoLangVersion) UnmarshalYAML(node *yaml.Node) error {
 	var lang string
 	if err := node.Decode(&lang); err != nil {
 		return err
 	}
 
-	val, err := ParseGoLang(lang)
+	val, err := ParseGoLangVersion(lang)
 	if err != nil {
 		return err
 	}

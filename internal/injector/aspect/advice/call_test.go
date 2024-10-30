@@ -27,18 +27,18 @@ func TestAppendArgs(t *testing.T) {
 		testCases := map[string]testCase{
 			"imports-none": {
 				argType: join.MustTypeName("any"),
-				args:    []code.Template{code.MustTemplate("true", nil, context.GoLang{})},
+				args:    []code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 			},
 			"imports-from-arg-type": {
 				argType:         join.MustTypeName("*net/http.Request"),
-				args:            []code.Template{code.MustTemplate("true", nil, context.GoLang{})},
+				args:            []code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 				expectedImports: []string{"net/http"},
 			},
 			"imports-from-templates": {
 				argType: join.MustTypeName("any"),
 				args: []code.Template{
-					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/foo"}, context.GoLang{}),
-					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/bar"}, context.GoLang{}),
+					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/foo"}, context.GoLangVersion{}),
+					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/bar"}, context.GoLangVersion{}),
 				},
 				expectedImports: []string{
 					"github.com/namespace/foo",

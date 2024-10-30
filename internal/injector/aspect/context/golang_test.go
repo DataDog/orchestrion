@@ -15,13 +15,13 @@ import (
 )
 
 func TestSetAtLeast(t *testing.T) {
-	var subject GoLang
+	var subject GoLangVersion
 
-	require.Equal(t, GoLang{}, subject)
+	require.Equal(t, GoLangVersion{}, subject)
 
-	go1_0 := MustParseGoLang("go1.0")
-	go1_16 := MustParseGoLang("go1.16")
-	go1_18 := MustParseGoLang("go1.18")
+	go1_0 := MustParseGoLangVersion("go1.0")
+	go1_16 := MustParseGoLangVersion("go1.16")
+	go1_18 := MustParseGoLangVersion("go1.18")
 
 	// Upgrading from "anything goes" to "go1.0"...
 	subject.SetAtLeast(go1_0)
@@ -41,22 +41,22 @@ func TestSetAtLeast(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	require.Equal(t, "", GoLang{}.String())
-	require.Equal(t, "go1.18", MustParseGoLang("go1.18").String())
+	require.Equal(t, "", GoLangVersion{}.String())
+	require.Equal(t, "go1.18", MustParseGoLangVersion("go1.18").String())
 }
 
 func TestUnmarshalYAML(t *testing.T) {
-	var parsed GoLang
+	var parsed GoLangVersion
 
 	require.Error(t, yaml.Unmarshal([]byte("{}"), &parsed))
-	require.Equal(t, GoLang{}, parsed)
+	require.Equal(t, GoLangVersion{}, parsed)
 
 	minor := rand.Int()
 	if minor < 0 {
 		minor = -minor
 	}
 	langStr := fmt.Sprintf("go1.%d", minor)
-	lang := MustParseGoLang(langStr)
+	lang := MustParseGoLangVersion(langStr)
 
 	require.NoError(t, yaml.Unmarshal([]byte(langStr), &parsed))
 	require.Equal(t, lang, parsed)

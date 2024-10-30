@@ -64,27 +64,27 @@ type (
 	result struct {
 		InjectedFile
 		Modified bool
-		GoLang   context.GoLang
+		GoLang   context.GoLangVersion
 	}
 )
 
 // InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
-func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context.GoLang, error) {
+func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context.GoLangVersion, error) {
 	if err := i.validate(); err != nil {
-		return nil, context.GoLang{}, err
+		return nil, context.GoLangVersion{}, err
 	}
 
 	fset := token.NewFileSet()
 	astFiles, err := parseFiles(fset, files)
 	if err != nil {
-		return nil, context.GoLang{}, err
+		return nil, context.GoLangVersion{}, err
 	}
 
 	uses, err := i.typeCheck(fset, astFiles)
 	if err != nil {
-		return nil, context.GoLang{}, err
+		return nil, context.GoLangVersion{}, err
 	}
 
 	var (
@@ -92,7 +92,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 		errs         []error
 		errsMu       sync.Mutex
 		result       = make(map[string]InjectedFile, len(astFiles))
-		resultGoLang context.GoLang
+		resultGoLang context.GoLangVersion
 		resultMu     sync.Mutex
 	)
 
@@ -169,7 +169,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (r
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, context.GoLang, error) {
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
@@ -189,7 +189,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		return true
 	}
 
-	var minGoLang context.GoLang
+	var minGoLang context.GoLangVersion
 	post := func(csor *dstutil.Cursor) bool {
 		// Pop the ancestry stack now that we're done with this node.
 		defer func() {
