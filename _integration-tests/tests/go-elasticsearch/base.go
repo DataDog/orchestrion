@@ -36,6 +36,8 @@ type base struct {
 }
 
 func (b *base) Setup(t *testing.T, image string, newClient func(addr string, caCert []byte) (esClient, error)) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
 	var err error

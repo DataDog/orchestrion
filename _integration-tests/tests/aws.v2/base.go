@@ -29,6 +29,8 @@ type base struct {
 }
 
 func (b *base) setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	b.server, b.host, b.port = utils.StartDynamoDBTestContainer(t)
 }
 

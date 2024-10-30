@@ -37,6 +37,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	var (
 		err error
 		ctx = context.Background()

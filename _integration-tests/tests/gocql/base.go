@@ -31,6 +31,8 @@ type base struct {
 }
 
 func (b *base) setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
 	var err error

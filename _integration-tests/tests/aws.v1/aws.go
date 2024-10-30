@@ -29,6 +29,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	server, host, port := utils.StartDynamoDBTestContainer(t)
 	tc.server = server
 

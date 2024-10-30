@@ -32,6 +32,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	tc.cfg = sarama.NewConfig()
 	tc.cfg.Version = sarama.V0_11_0_0
 	tc.cfg.Producer.Return.Successes = true
