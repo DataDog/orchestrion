@@ -9,9 +9,9 @@ package gorm
 
 import (
 	"context"
-	"orchestrion/integration/validator/trace"
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3" // Auto-register sqlite3 driver
 	"github.com/stretchr/testify/assert"

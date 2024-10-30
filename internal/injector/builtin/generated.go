@@ -1059,6 +1059,7 @@ var Aspects = [...]aspect.Aspect{
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/remoteconfig"),
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"),
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/profiler"),
+				join.ImportPath("datadoghq.dev/orchestrion/_integration-tests/utils/agent"),
 			),
 		),
 		Advice: []advice.Advice{
@@ -1321,4 +1322,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:QKpZ+2KC7FrIK9q175W6B/4qFTtJl3aFqZspjyVh3qwa0DqVYt0qjL+akIBeq6RxPyl4gqN0mGssSgCDcmc1tQ=="
+const Checksum = "sha512:0DyJucwMD8W1mLD8dfYMeWBfk/op/4WuFvBuYFiW3f9ycszUCMOb9ht1EXTmr1vqYDwnXMj+JtesXRAM8UE7eA=="

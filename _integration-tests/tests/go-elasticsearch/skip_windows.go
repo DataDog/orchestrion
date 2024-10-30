@@ -10,7 +10,7 @@ package go_elasticsearch
 import (
 	"testing"
 
-	"orchestrion/integration/validator/trace"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 type skip struct{}

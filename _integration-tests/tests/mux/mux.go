@@ -15,12 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 )
 
 type TestCase struct {

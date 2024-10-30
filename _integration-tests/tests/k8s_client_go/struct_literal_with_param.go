@@ -11,12 +11,11 @@ import (
 	"net/http"
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	"orchestrion/integration/validator/trace"
 )
 
 type TestCaseStructLiteralWithParam struct {

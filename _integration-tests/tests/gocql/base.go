@@ -13,15 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testcassandra "github.com/testcontainers/testcontainers-go/modules/cassandra"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 )
 
 type base struct {
@@ -32,6 +31,8 @@ type base struct {
 }
 
 func (b *base) setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
 	var err error

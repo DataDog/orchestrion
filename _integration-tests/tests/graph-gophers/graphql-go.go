@@ -13,9 +13,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"orchestrion/integration/validator/trace"
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/stretchr/testify/require"

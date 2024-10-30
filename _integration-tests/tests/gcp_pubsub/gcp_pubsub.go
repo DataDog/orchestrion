@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -20,9 +22,6 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 )
 
 const (
@@ -38,6 +37,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	var (
 		err error
 		ctx = context.Background()

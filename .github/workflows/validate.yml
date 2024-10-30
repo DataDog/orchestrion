@@ -175,7 +175,7 @@ jobs:
     needs: generate
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         go-version: [oldstable, stable]
     name: Unit tests (go ${{ matrix.go-version }})
@@ -274,7 +274,7 @@ jobs:
   integration-tests:
     needs: generate
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         runs-on: [macos, ubuntu, windows]
         go-version: [oldstable, stable]
@@ -287,26 +287,12 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on == 'ubuntu' && 'arm-4core-linux' || format('{0}-latest', matrix.runs-on) }}
+    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || format('{0}-latest', matrix.runs-on) }}
+    env:
+      # Ryuk is problematic with concurrent executions, and unnecessary in ephemeral environments like GHA.
+      TESTCONTAINERS_RYUK_DISABLED: true
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
-      - name: Start docker daemon (arm-4core-linux only)
-        if: matrix.runs-on == 'ubuntu'
-        run: |-
-          sudo apt update
-          sudo apt install -y build-essential ca-certificates curl
-          sudo install -m 0755 -d /etc/apt/keyrings
-          sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-          sudo chmod a+r /etc/apt/keyrings/docker.asc
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt update
-          sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          sudo chown root:$(groups | cut -d' ' -f1) /var/run/docker.sock
-
-          echo "DOCKER_DEFAULT_PLATFORM=linux/arm64" >> "${GITHUB_ENV}"
       - name: Checkout
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
       - name: Setup go
@@ -358,7 +344,7 @@ jobs:
           esac
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
-          GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+          GOFLAGS: ${{ matrix.runs-on == 'ubuntu' && '-p=4' || ''}} -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
