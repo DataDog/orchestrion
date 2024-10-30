@@ -64,44 +64,64 @@ type AdviceContext interface {
 
 	// AddLink records a new link-time requirement on this context.
 	AddLink(string) bool
+
+	// EnsureMinGoLang ensures that the current compile unit uses at least the
+	// specified language level when passed to the compiler.
+	EnsureMinGoLang(GoLangVersion)
 }
 
-type context struct {
-	*NodeChain
-	cursor *dstutil.Cursor
+type (
+	context struct {
+		*NodeChain
+		cursor *dstutil.Cursor
 
-	// Common to all contexts in the same hierarchy...
-	file         *dst.File
-	refMap       *typed.ReferenceMap
-	sourceParser SourceParser
-	importPath   string
-}
+		// Common to all contexts in the same hierarchy...
+		file         *dst.File
+		refMap       *typed.ReferenceMap
+		minGoLang    *GoLangVersion
+		sourceParser SourceParser
+		importPath   string
+	}
+
+	SourceParser interface {
+		Parse(any) (*dst.File, error)
+	}
+)
 
 var contextPool = sync.Pool{New: func() any { return new(context) }}
 
-type SourceParser interface {
-	Parse(any) (*dst.File, error)
+type ContextArgs struct {
+	// Cursor denotes the current node and its context in the AST.
+	Cursor *dstutil.Cursor
+	// ImportPath is the fully qualified import path of the package containing the
+	// current AST.
+	ImportPath string
+	// File is the AST of the file which the current node belongs in.
+	File *dst.File
+	// RefMap is the output reference map that will collect all synthetic
+	// references added to the AST.
+	RefMap *typed.ReferenceMap
+	// SourceParser is used to parse generated source files.
+	SourceParser SourceParser
+	// MinGoLang is a pointer to the result value containing the minimum Go
+	// language level required by the compile unit after it has been modified.
+	MinGoLang *GoLangVersion
 }
 
 // Context returns a new [*context] instance that represents the ndoe at the
 // provided cursor. The [context.Release] function should be called on values
 // returned by this function to allow for memory re-use, which can significantly
 // reduce allocations performed during AST traversal.
-func (n *NodeChain) Context(
-	cursor *dstutil.Cursor,
-	importPath string,
-	file *dst.File,
-	refMap *typed.ReferenceMap,
-	sourceParser SourceParser,
-) *context {
+func (n *NodeChain) Context(args ContextArgs) *context {
 	c, _ := contextPool.Get().(*context)
 	*c = context{
 		NodeChain:    n,
-		cursor:       cursor,
-		file:         file,
-		refMap:       refMap,
-		sourceParser: sourceParser,
-		importPath:   importPath,
+		cursor:       args.Cursor,
+		file:         args.File,
+		refMap:       args.RefMap,
+		minGoLang:    args.MinGoLang,
+		sourceParser: args.SourceParser,
+		importPath:   args.ImportPath,
 	}
 
 	return c
@@ -132,6 +152,7 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		cursor:       nil,
 		file:         c.file,
 		refMap:       c.refMap,
+		minGoLang:    c.minGoLang,
 		sourceParser: c.sourceParser,
 		importPath:   c.importPath,
 	}
@@ -197,4 +218,8 @@ func (c *context) AddImport(path string, alias string) bool {
 
 func (c *context) AddLink(path string) bool {
 	return c.refMap.AddLink(c.file, path)
+}
+
+func (c *context) EnsureMinGoLang(lang GoLangVersion) {
+	c.minGoLang.SetAtLeast(lang)
 }

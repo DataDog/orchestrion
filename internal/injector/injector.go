@@ -64,34 +64,36 @@ type (
 	result struct {
 		InjectedFile
 		Modified bool
+		GoLang   context.GoLangVersion
 	}
 )
 
 // InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
-func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) {
+func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context.GoLangVersion, error) {
 	if err := i.validate(); err != nil {
-		return nil, err
+		return nil, context.GoLangVersion{}, err
 	}
 
 	fset := token.NewFileSet()
 	astFiles, err := parseFiles(fset, files)
 	if err != nil {
-		return nil, err
+		return nil, context.GoLangVersion{}, err
 	}
 
 	uses, err := i.typeCheck(fset, astFiles)
 	if err != nil {
-		return nil, err
+		return nil, context.GoLangVersion{}, err
 	}
 
 	var (
-		wg       sync.WaitGroup
-		errs     []error
-		errsMu   sync.Mutex
-		result   = make(map[string]InjectedFile, len(astFiles))
-		resultMu sync.Mutex
+		wg           sync.WaitGroup
+		errs         []error
+		errsMu       sync.Mutex
+		result       = make(map[string]InjectedFile, len(astFiles))
+		resultGoLang context.GoLangVersion
+		resultMu     sync.Mutex
 	)
 
 	wg.Add(len(astFiles))
@@ -123,11 +125,12 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, error) 
 			resultMu.Lock()
 			defer resultMu.Unlock()
 			result[files[idx]] = res.InjectedFile
+			resultGoLang.SetAtLeast(res.GoLang)
 		}(idx, astFile)
 	}
 	wg.Wait()
 
-	return result, errors.Join(errs...)
+	return result, resultGoLang, errors.Join(errs...)
 }
 
 func (i *Injector) validate() error {
@@ -151,7 +154,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (r
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
 	var err error
-	result.Modified, result.References, err = i.applyAspects(decorator, file, i.RootConfig)
+	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig)
 	if err != nil {
 		return result, err
 	}
@@ -166,7 +169,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (r
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, error) {
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
@@ -186,6 +189,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		return true
 	}
 
+	var minGoLang context.GoLangVersion
 	post := func(csor *dstutil.Cursor) bool {
 		// Pop the ancestry stack now that we're done with this node.
 		defer func() {
@@ -195,13 +199,14 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		}()
 
 		var changed bool
-		ctx := chain.Context(
-			csor,
-			decorator.Path,
-			file,
-			&references,
-			decorator,
-		)
+		ctx := chain.Context(context.ContextArgs{
+			Cursor:       csor,
+			ImportPath:   decorator.Path,
+			File:         file,
+			RefMap:       &references,
+			SourceParser: decorator,
+			MinGoLang:    &minGoLang,
+		})
 		defer ctx.Release()
 		changed, err = i.injectNode(ctx)
 		modified = modified || changed
@@ -218,7 +223,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		modified = true
 	}
 
-	return modified, references, err
+	return modified, references, minGoLang, err
 }
 
 // injectNode assesses all configured aspects agaisnt the current node, and performs any AST

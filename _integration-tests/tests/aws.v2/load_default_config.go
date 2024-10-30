@@ -12,12 +12,11 @@ import (
 	"fmt"
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/stretchr/testify/require"
-
-	"orchestrion/integration/validator/trace"
 )
 
 type TestCaseLoadDefaultConfig struct {

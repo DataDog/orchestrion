@@ -9,32 +9,39 @@ package goredis
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	"github.com/go-redis/redis/v7"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"github.com/go-redis/redis/v7"
 )
 
 type TestCase struct {
 	server *testredis.RedisContainer
 	*redis.Client
+	key string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
-	var err error
+	uuid, err := uuid.NewRandom()
+	require.NoError(t, err)
+	tc.key = uuid.String()
+
 	tc.server, err = testredis.Run(ctx,
 		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
@@ -58,6 +65,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
 	}
 	addr := redisURL.Host
+
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
 }
 
@@ -65,8 +73,8 @@ func (tc *TestCase) Run(t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
 	defer span.Finish()
 
-	require.NoError(t, tc.Client.WithContext(ctx).Set("test_key", "test_value", 0).Err())
-	require.NoError(t, tc.Client.WithContext(ctx).Get("test_key").Err())
+	require.NoError(t, tc.Client.WithContext(ctx).Set(tc.key, "test_value", 0).Err())
+	require.NoError(t, tc.Client.WithContext(ctx).Get(tc.key).Err())
 }
 
 func (tc *TestCase) Teardown(t *testing.T) {
@@ -74,10 +82,12 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	defer cancel()
 
 	assert.NoError(t, tc.Client.Close())
-	assert.NoError(t, tc.server.Terminate(ctx))
+	if tc.server != nil && assert.NoError(t, tc.server.Terminate(ctx)) {
+		tc.server = nil
+	}
 }
 
-func (*TestCase) ExpectedTraces() trace.Traces {
+func (tc *TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{
 			Tags: map[string]any{
@@ -97,7 +107,7 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 						"out.db":            "0",
 						"span.kind":         "client",
 						"db.system":         "redis",
-						"redis.raw_command": "set test_key test_value: ",
+						"redis.raw_command": fmt.Sprintf("set %s test_value: ", tc.key),
 						"out.host":          "localhost",
 					},
 				},
@@ -114,7 +124,7 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 						"out.db":            "0",
 						"span.kind":         "client",
 						"db.system":         "redis",
-						"redis.raw_command": "get test_key: ",
+						"redis.raw_command": fmt.Sprintf("get %s: ", tc.key),
 						"out.host":          "localhost",
 					},
 				},

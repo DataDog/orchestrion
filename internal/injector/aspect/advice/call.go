@@ -42,6 +42,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+		ctx.EnsureMinGoLang(t.Lang)
 	}
 
 	if !call.Ellipsis {

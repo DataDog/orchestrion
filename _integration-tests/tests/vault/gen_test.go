@@ -10,7 +10,7 @@
 package vault
 
 import (
-	utils "orchestrion/integration/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
 )
 

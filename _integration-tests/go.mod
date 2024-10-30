@@ -1,4 +1,4 @@
-module orchestrion/integration
+module datadoghq.dev/orchestrion/_integration-tests
 
 go 1.22.8
 
@@ -41,15 +41,15 @@ require (
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
-	github.com/testcontainers/testcontainers-go v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/cassandra v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/elasticsearch v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/gcloud v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
+	github.com/testcontainers/testcontainers-go v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/cassandra v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/elasticsearch v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/gcloud v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/mongodb v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/redis v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.34.0
 	github.com/tinylib/msgp v1.2.2
 	github.com/vektah/gqlparser/v2 v2.5.18
 	github.com/xlab/treeprint v1.2.0
