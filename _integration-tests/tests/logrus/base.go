@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
-	"orchestrion/integration/validator/trace"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 func runTest(t *testing.T, out *bytes.Buffer, logFn func(context.Context, logrus.Level, string)) {
