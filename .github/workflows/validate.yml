@@ -288,6 +288,9 @@ jobs:
             go-version: oldstable
             build-mode: GOFLAGS
     runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || format('{0}-latest', matrix.runs-on) }}
+    env:
+      # Ryuk is problematic with concurrent executions, and unnecessary in ephemeral environments like GHA.
+      TESTCONTAINERS_RYUK_DISABLED: true
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
       - name: Checkout
