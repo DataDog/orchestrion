@@ -9,33 +9,39 @@ package redigo
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/url"
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gomodule/redigo/redis"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
-
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 type TestCase struct {
 	server *testredis.RedisContainer
 	*redis.Pool
+	key string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
-	var err error
+	uuid, err := uuid.NewRandom()
+	require.NoError(t, err)
+	tc.key = uuid.String()
+
 	tc.server, err = testredis.Run(ctx,
 		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
@@ -60,16 +66,16 @@ func (tc *TestCase) Setup(t *testing.T) {
 	}
 
 	const network = "tcp"
-	address := redisURL.Host
+	addr := redisURL.Host
 
 	var dialOptions = []redis.DialOption{
 		redis.DialReadTimeout(10 * time.Second),
 	}
 
 	tc.Pool = &redis.Pool{
-		Dial: func() (redis.Conn, error) { return redis.Dial(network, address, dialOptions...) },
+		Dial: func() (redis.Conn, error) { return redis.Dial(network, addr, dialOptions...) },
 		DialContext: func(ctx context.Context) (redis.Conn, error) {
-			return redis.DialContext(ctx, network, address)
+			return redis.DialContext(ctx, network, addr)
 		},
 		TestOnBorrow: func(c redis.Conn, _ time.Time) error {
 			_, err := c.Do("PING")
@@ -79,7 +85,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	client := tc.Pool.Get()
 	defer func() { require.NoError(t, client.Close()) }()
-	_, err = client.Do("SET", "test_key", "test_value")
+	_, err = client.Do("SET", tc.key, "test_value")
 	require.NoError(t, err)
 }
 
@@ -91,7 +97,7 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, client.Close()) }()
 
-	res, err := client.Do("GET", "test_key", ctx)
+	res, err := client.Do("GET", tc.key, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
 }
@@ -101,10 +107,12 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	defer cancel()
 
 	assert.NoError(t, tc.Pool.Close())
-	assert.NoError(t, tc.server.Terminate(ctx))
+	if tc.server != nil && assert.NoError(t, tc.server.Terminate(ctx)) {
+		tc.server = nil
+	}
 }
 
-func (*TestCase) ExpectedTraces() trace.Traces {
+func (tc *TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{
 			Tags: map[string]any{
@@ -119,7 +127,7 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 						"service":  "redis.conn",
 					},
 					Meta: map[string]string{
-						"redis.raw_command": "GET test_key",
+						"redis.raw_command": fmt.Sprintf("GET %s", tc.key),
 						"db.system":         "redis",
 						"component":         "gomodule/redigo",
 						"out.network":       "tcp",

@@ -108,7 +108,7 @@ func redigoClient(ctx context.Context, net, addr string) {
 
 	if conn, err :=
 //line <generated>
-		func() (redis.Conn, error) {
+		func() (redigo.Conn, error) {
 			return __orchestrion_redigotrace.Dial(
 //line samples/client/redis.go:61
 				net, addr)
@@ -122,7 +122,7 @@ func redigoClient(ctx context.Context, net, addr string) {
 
 	if conn, err :=
 //line <generated>
-		func() (redis.Conn, error) {
+		func() (redigo.Conn, error) {
 			return __orchestrion_redigotrace.DialContext(
 //line samples/client/redis.go:67
 				ctx, net, addr, redigo.DialConnectTimeout(5*time.Second))
@@ -136,7 +136,7 @@ func redigoClient(ctx context.Context, net, addr string) {
 
 	if conn, err :=
 //line <generated>
-		func() (redis.Conn, error) {
+		func() (redigo.Conn, error) {
 			opts :=
 //line samples/client/redis.go:73
 				options

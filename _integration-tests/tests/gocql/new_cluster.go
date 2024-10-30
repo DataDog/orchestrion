@@ -10,10 +10,9 @@ package gocql
 import (
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/require"
-
-	"orchestrion/integration/validator/trace"
 )
 
 type TestCaseNewCluster struct {

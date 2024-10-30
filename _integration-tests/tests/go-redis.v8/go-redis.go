@@ -11,30 +11,36 @@ import (
 	"context"
 	"log"
 	"net/url"
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"github.com/go-redis/redis/v8"
 )
 
 type TestCase struct {
 	server *testredis.RedisContainer
 	*redis.Client
+	key string
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
-	var err error
+	uuid, err := uuid.NewRandom()
+	require.NoError(t, err)
+	tc.key = uuid.String()
+
 	tc.server, err = testredis.Run(ctx,
 		"redis:7",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
@@ -58,6 +64,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
 	}
 	addr := redisURL.Host
+
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
 }
 

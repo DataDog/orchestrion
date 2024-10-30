@@ -10,7 +10,7 @@
 package ibm_sarama
 
 import (
-	utils "orchestrion/integration/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
 )
 

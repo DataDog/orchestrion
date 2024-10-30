@@ -8,10 +8,9 @@ package utils
 import (
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils/agent"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/require"
-
-	"orchestrion/integration/utils/agent"
-	"orchestrion/integration/validator/trace"
 )
 
 //dd:orchestrion-enabled
