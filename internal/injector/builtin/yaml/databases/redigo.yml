@@ -21,7 +21,7 @@ aspects:
             redigo: github.com/gomodule/redigo/redis
             redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
           template: |-
-            func() (redis.Conn, error) {
+            func() (redigo.Conn, error) {
               {{ if .AST.Ellipsis }}
                 opts := {{ index .AST.Args 2 }}
                 anyOpts := make([]interface{}, len(opts))
@@ -49,7 +49,7 @@ aspects:
             redigo: github.com/gomodule/redigo/redis
             redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
           template: |-
-            func() (redis.Conn, error) {
+            func() (redigo.Conn, error) {
               {{ if .AST.Ellipsis }}
                 opts := {{ index .AST.Args 3 }}
                 anyOpts := make([]interface{}, len(opts))
@@ -77,7 +77,7 @@ aspects:
             redigo: github.com/gomodule/redigo/redis
             redigotrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
           template: |-
-            func() (redis.Conn, error) {
+            func() (redigo.Conn, error) {
               {{ if .AST.Ellipsis }}
                 opts := {{ index .AST.Args 1 }}
                 anyOpts := make([]interface{}, len(opts))
