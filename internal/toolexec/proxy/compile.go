@@ -9,6 +9,8 @@ import (
 	"errors"
 	"path/filepath"
 	"strings"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 )
 
 //go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile
@@ -36,6 +38,29 @@ func (c *CompileCommand) ShowVersion() bool {
 	return c.Flags.ShowVersion
 }
 
+func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
+	if to.IsAny() {
+		// No minimal language requirement change, nothing to do...
+		return nil
+	}
+
+	if cmd.Flags.Lang == "" {
+		// No language level was specified, so anything the compiler can do is possible...
+		return nil
+	}
+
+	if curr, _ := context.ParseGoLangVersion(cmd.Flags.Lang); context.Compare(curr, to) >= 0 {
+		// Minimum language requirement from injected code is already met, nothing to do...
+		return nil
+	}
+
+	if err := cmd.SetFlag("-lang", to.String()); err != nil {
+		return err
+	}
+	cmd.Flags.Lang = to.String()
+	return nil
+}
+
 // GoFiles returns the list of Go files passed as arguments to cmd
 func (cmd *CompileCommand) GoFiles() []string {
 	files := make([]string, 0, len(cmd.Files))
@@ -60,7 +85,7 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
-func parseCompileCommand(args []string) (Command, error) {
+func parseCompileCommand(args []string) (*CompileCommand, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")
 	}
@@ -78,3 +103,5 @@ func parseCompileCommand(args []string) (Command, error) {
 
 	return &cmd, nil
 }
+
+var _ Command = (*CompileCommand)(nil)

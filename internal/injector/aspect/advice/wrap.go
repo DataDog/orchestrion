@@ -47,6 +47,8 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 		kve.Value = repl
 	}
 
+	ctx.EnsureMinGoLang(a.Template.Lang)
+
 	return true, nil
 }
 

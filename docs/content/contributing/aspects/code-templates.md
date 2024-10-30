@@ -16,8 +16,8 @@ Orchestrion code templates are rendered using the Go standard library
 {{<godoc import-path="text/template">}} module. Refer to the module's documentation to learn
 about the general syntax of these template values.
 
-In addition to the template text, Orchestrion code templates allow for two
-additional configuration objects: `imports` and `links`.
+In addition to the template text, Orchestrion code templates allow for an
+additional `imports` configuration objects as well as an optional `lang` value.
 
 ### Imports
 
@@ -44,15 +44,29 @@ imports:
   tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
 ```
 
-### Links
+### Language level
 
-The `links` list is similar to the `imports` map except it does not bind import
-paths to identifiers. Instead, it contains a list of packages that are required
-to be presented to the _linker_ in order to satisfy dependencies of the code
-rendered by the template.
+The `lang` setting allows a template to declare a minimum require Go language
+level. This is useful when aspects are woven into modules with a `go.mod` file
+declaring an older `go` directive; as the user of newer syntax by the aspects
+will then break the compilation step.
 
-This is typically only necessary when the template produces `//go:linkname`
-directives that are satisfied by foreign compilation units.
+Setting `lang: go1.18` for example allows the use of Go generics even when
+injecting packages that allow for really old Go toolchains to be used
+(orchestrion is more strict, as it only supports recent toolchains).
+
+If unspecified, no particular language requirement is imposed, so the language
+level specified by the currently compiled module's `go.mod` file will be used.
+
+```yaml
+lang: go1.18 # Uses go generics
+template: |-
+  func Clone[E any, S ~[]E](slice S) S {
+    res := make(S, len(slice))
+    copy(res, slice)
+    return res
+  }
+```
 
 ## Template context
 
