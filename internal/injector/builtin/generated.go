@@ -1024,6 +1024,56 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From logs/logrus.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/sirupsen/logrus.Logger")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  telemetry.LoadIntegration(\"sirupsen/logrus\")\n  tracer.MarkIntegrationImported(\"github.com/sirupsen/logrus\")\n}\n\n// DDContextLogHook ensures that any span in the log context is correlated to log output.\ntype DDContextLogHook struct{}\n\n// Levels implements logrus.Hook interface, this hook applies to all defined levels\nfunc (d *DDContextLogHook) Levels() []Level {\n  return []Level{PanicLevel, FatalLevel, ErrorLevel, WarnLevel, InfoLevel, DebugLevel, TraceLevel}\n}\n\n// Fire implements logrus.Hook interface, attaches trace and span details found in entry context\nfunc (d *DDContextLogHook) Fire(e *Entry) error {\n  span, found := tracer.SpanFromContext(e.Context)\n  if !found {\n    return nil\n  }\n  e.Data[ext.LogKeyTraceID] = span.Context().TraceID()\n  e.Data[ext.LogKeySpanID] = span.Context().SpanID()\n  return nil\n}",
+				map[string]string{
+					"ext":       "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+					"telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
+					"tracer":    "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+			), []string{}),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("github.com/sirupsen/logrus"),
+			join.FunctionBody(join.Function(
+				join.Name("New"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $logger := .Function.Result 0 -}}\ndefer func() {\n  {{ $logger }}.AddHook(&DDContextLogHook{})\n}()",
+				map[string]string{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/sirupsen/logrus.Logger"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(logger *logrus.Logger) *logrus.Logger {\n  logger.AddHook(&logrus.DDContextLogHook{})\n  return logger\n}({{ . }})",
+				map[string]string{
+					"logrus": "github.com/sirupsen/logrus",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/sirupsen/logrus.Logger"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(logger logrus.Logger) logrus.Logger {\n  logger.AddHook(&logrus.DDContextLogHook{})\n  return logger\n}({{ . }})",
+				map[string]string{
+					"logrus": "github.com/sirupsen/logrus",
+				},
+			)),
+		},
+	},
 	// From stdlib/database-sql.yml
 	{
 		JoinPoint: join.FunctionCall("database/sql.Register"),
@@ -1321,4 +1371,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:nZo/jzc10MyCH6GjUsBxWg9EttIf+t+q37i9pbw40RuNJFo/l7iYfZ2sEC9bUR497hMEt2FXzPBXcEytF1Jyvw=="
+const Checksum = "sha512:HlWlN6hrJIoQ2REUZE/21xctESvaHCwoYnVP6tFLNl5XohIuNtT7mrHldAa/vbOHu+9EAvQdAcOZ9Hw21qT83A=="
