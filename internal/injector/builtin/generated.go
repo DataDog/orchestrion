@@ -719,6 +719,7 @@ var Aspects = [...]aspect.Aspect{
 					"strings": "strings",
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 				},
+				context.GoLangVersion{},
 			), []string{}),
 			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
 			advice.AddStructField("__dd_prevSpan", join.MustTypeName("__dd_span")),
@@ -735,6 +736,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 				},
+				context.GoLangVersion{},
 			)),
 		},
 	},
@@ -747,6 +749,7 @@ var Aspects = [...]aspect.Aspect{
 			advice.PrependStmts(code.MustTemplate(
 				"{{- $r := .Function.Receiver -}}\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}",
 				map[string]string{},
+				context.GoLangVersion{},
 			)),
 		},
 	},
@@ -758,6 +761,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 				},
+				context.GoLangVersion{},
 			), []string{}),
 			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
 		},
@@ -775,6 +779,7 @@ var Aspects = [...]aspect.Aspect{
 					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 				},
+				context.GoLangVersion{},
 			)),
 		},
 	},
