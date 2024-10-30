@@ -642,7 +642,7 @@ var Aspects = [...]aspect.Aspect{
 					"tracer":    "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 					"tracing":   "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
 				},
-				context.GoLangVersion{},
+				context.MustParseGoLangVersion("go1.18"),
 			), []string{}),
 		},
 	},
@@ -1695,4 +1695,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:1spgI9hJIqs+hCw2i5RmchKeVhDZ72yacn68jkpzWiiEPNJrCkEwc2DJaP+sFXJ5vAStL6X3LYFIFXZnYy0ZjQ=="
+const Checksum = "sha512:4oiY1LFTR9K/1aRoXN8Dpgb4oGt5p/x3BTb8Dg+f6lH1LRtGu6bdJ/t9LmaxCpCK7AKRigoekSZ3Vyn/BU+tbg=="

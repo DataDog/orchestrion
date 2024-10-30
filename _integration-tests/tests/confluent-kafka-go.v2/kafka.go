@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/stretchr/testify/require"
 	kafkatest "github.com/testcontainers/testcontainers-go/modules/kafka"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 var (
