@@ -87,3 +87,30 @@ func AssertTestContainersError(t *testing.T, err error) {
 	}
 	require.NoError(t, err)
 }
+
+// SkipIfProviderIsNotHealthy calls [testcontainers.SkipIfProviderIsNotHealthy] to skip tests of
+// the testcontainers provider is not healthy or running at all; except when the test is running in
+// CI mode (the CI environment variable is defined) and the GOOS is linux.
+func SkipIfProviderIsNotHealthy(t *testing.T) {
+	t.Helper()
+
+	if _, ci := os.LookupEnv("CI"); ci && runtime.GOOS == "linux" {
+		// We never want to skip tests on Linux CI, as this could lead to not noticing the tests are not
+		// running at all, resulting in usurped confidence in the (un)tested code.
+		return
+	}
+
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		// We recovered from a panic (e.g, "rootless Docker not found" on GitHub Actions + macOS), so we
+		// will behave as if the provider was not healthy (because it's not and shouldn't have panic'd
+		// in the first place).
+		t.Log(err)
+		t.SkipNow()
+	}()
+
+	testcontainers.SkipIfProviderIsNotHealthy(t)
+}

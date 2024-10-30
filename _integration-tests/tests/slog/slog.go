@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"orchestrion/integration/validator/trace"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 type TestCase struct {

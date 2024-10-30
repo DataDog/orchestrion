@@ -10,10 +10,10 @@ package grpc
 import (
 	"context"
 	"net"
-	"orchestrion/integration/validator/trace"
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"

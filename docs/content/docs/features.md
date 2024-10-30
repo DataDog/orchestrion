@@ -17,8 +17,8 @@ are available in the [documentation][env-var-doc].
 
 If the `main` function is annotated with the `//dd:ignore` directive, the tracer
 will not be started automatically, and you are responsible for calling
-{{<godoc "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" "Start" >}} with your
-preferred configuration options.
+{{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" package="tracer" name="Start" >}}
+with your preferred configuration options.
 
 [env-var-doc]: https://docs.datadoghq.com/tracing/trace_collection/library_config/go/#unified-service-tagging
 
@@ -31,10 +31,10 @@ to `1` or `true`. If profiling is enabled via the
 set to `auto`.
 
 When enabled, the continuous profiler will activate the following profiles:
-- {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/profiler" "CPUProfile" >}}
-- {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/profiler" "HeapProfile" >}}
-- {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/profiler" "GoroutineProfile" >}}
-- {{<godoc "gopkg.in/DataDog/dd-trace-go.v1/profiler" "MutexProfile" >}}
+- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="CPUProfile" >}}
+- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="HeapProfile" >}}
+- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="GoroutineProfile" >}}
+- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="MutexProfile" >}}
 
 [dd-adm-controller]: https://docs.datadoghq.com/containers/cluster_agent/admission_controller/?tab=datadogoperator
 

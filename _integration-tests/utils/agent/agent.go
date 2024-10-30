@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -80,6 +81,9 @@ func New(t *testing.T) (*MockAgent, error) {
 		ddapmTestAgent,
 		fmt.Sprintf("--port=%d", agent.port),
 	)
+	agent.process.Stdout = os.Stdout
+	agent.process.Stderr = os.Stderr
+
 	if err = agent.process.Start(); err != nil {
 		return nil, err
 	}
@@ -112,7 +116,7 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 	}
 
 	for {
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := internalClient.Do(req)
 		if err != nil {
 			select {
 			case <-ctx.Done():
@@ -123,15 +127,15 @@ func (a *MockAgent) NewSession(t *testing.T) (session *Session, err error) {
 			}
 		}
 		if resp.StatusCode != 200 {
-			return nil, errors.New("test agent returned non-200 status code")
+			return nil, fmt.Errorf("test agent returned non-200 status code: HTTP %s", resp.Status)
 		}
 		break
 	}
 
 	t.Logf("Started test session with ID %s\n", session.token.String())
-
 	tracer.Start(
 		tracer.WithAgentAddr(fmt.Sprintf("127.0.0.1:%d", a.port)),
+		tracer.WithHTTPRoundTripper(session),
 		tracer.WithSampler(tracer.NewAllSampler()),
 		tracer.WithLogStartup(false),
 		tracer.WithLogger(testLogger{t}),
@@ -175,7 +179,7 @@ func (s *Session) Close(t *testing.T) ([]byte, error) {
 	tracer.Stop()
 
 	t.Logf("Closing test session with ID %s\n", s.token.String())
-	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/test/session/traces?test_session_token=%s", s.agent.port, s.token.String()))
+	resp, err := internalClient.Get(fmt.Sprintf("http://127.0.0.1:%d/test/session/traces?test_session_token=%s", s.agent.port, s.token.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -187,6 +191,31 @@ func (s *Session) Close(t *testing.T) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+var (
+	defaultTransport, _ = http.DefaultTransport.(*http.Transport)
+	// A copy of the default transport, except it will be marked internal by orchestrion, so it is not traced.
+	internalTransport = &http.Transport{
+		Proxy:                 defaultTransport.Proxy,
+		DialContext:           defaultTransport.DialContext,
+		ForceAttemptHTTP2:     defaultTransport.ForceAttemptHTTP2,
+		MaxIdleConns:          defaultTransport.MaxIdleConns,
+		IdleConnTimeout:       defaultTransport.IdleConnTimeout,
+		TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+		ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+	}
+
+	internalClient = http.Client{Transport: internalTransport}
+)
+
+func (s *Session) RoundTrip(req *http.Request) (*http.Response, error) {
+	if !s.agent.currentSession.CompareAndSwap(s, s) {
+		_, _ = fmt.Printf("WARNING: Span transport used after session has been closed!\n%s\n", debug.Stack())
+	}
+
+	req.Header.Set("X-Datadog-Test-Session-Token", s.token.String())
+	return internalTransport.RoundTrip(req)
 }
 
 func getFreePort() (int, error) {
