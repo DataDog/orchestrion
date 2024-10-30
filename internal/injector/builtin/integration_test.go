@@ -79,7 +79,7 @@ func Test(t *testing.T) {
 			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
 
-			results, err := inj.InjectFiles(files)
+			results, _, err := inj.InjectFiles(files)
 			require.NoError(t, err)
 
 			for _, filename := range files {

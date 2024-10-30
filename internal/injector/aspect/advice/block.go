@@ -42,6 +42,8 @@ func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
 	copy(list[1:], block.List)
 	block.List = list
 
+	ctx.EnsureMinGoLang(a.Template.Lang)
+
 	return true, nil
 }
 
