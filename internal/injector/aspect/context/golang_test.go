@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestSetSetAtLeast(t *testing.T) {
+func TestSetAtLeast(t *testing.T) {
 	var subject GoLang
 
 	require.Equal(t, GoLang{}, subject)
@@ -61,6 +61,8 @@ func TestUnmarshalYAML(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal([]byte(langStr), &parsed))
 	require.Equal(t, lang, parsed)
 
-	require.Error(t, yaml.Unmarshal([]byte("go0.1337"), &parsed), "invalid go language level")
+	require.NoError(t, yaml.Unmarshal([]byte("go0.1337"), &parsed))
+	require.Equal(t, "go0.1337", parsed.String())
+
 	require.Error(t, yaml.Unmarshal([]byte("go1.invalid"), &parsed), "invalid go language level")
 }
