@@ -5,6 +5,8 @@
 /errors
 *.swp
 orchestrion
+orchestrion.exe
+orchestrion.log
 coverage/
 venv/
 .python-version

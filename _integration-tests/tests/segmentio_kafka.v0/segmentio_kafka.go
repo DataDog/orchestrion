@@ -17,10 +17,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	kafkatest "github.com/testcontainers/testcontainers-go/modules/kafka"
+
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 const (

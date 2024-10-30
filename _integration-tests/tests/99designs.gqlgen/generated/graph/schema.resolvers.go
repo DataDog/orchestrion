@@ -14,7 +14,8 @@ package graph
 import (
 	"context"
 	"fmt"
-	"orchestrion/integration/tests/99designs.gqlgen/generated/graph/model"
+
+	"datadoghq.dev/orchestrion/_integration-tests/tests/99designs.gqlgen/generated/graph/model"
 )
 
 // TopLevel is the resolver for the topLevel field.

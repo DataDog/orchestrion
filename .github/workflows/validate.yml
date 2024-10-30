@@ -175,7 +175,7 @@ jobs:
     needs: generate
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         go-version: [oldstable, stable]
     name: Unit tests (go ${{ matrix.go-version }})
@@ -247,6 +247,8 @@ jobs:
         run: |-
           set -euo pipefail
           go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload benchmark report (raw)
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
@@ -272,7 +274,7 @@ jobs:
   integration-tests:
     needs: generate
     strategy:
-      fail-fast: false
+      fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         runs-on: [macos, ubuntu, windows]
         go-version: [oldstable, stable]
@@ -285,7 +287,10 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on }}-latest
+    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || format('{0}-latest', matrix.runs-on) }}
+    env:
+      # Ryuk is problematic with concurrent executions, and unnecessary in ephemeral environments like GHA.
+      TESTCONTAINERS_RYUK_DISABLED: true
     name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
     steps:
       - name: Checkout
@@ -301,9 +306,9 @@ jobs:
         with:
           python-version: 3.x
           cache: pip
-          cache-dependency-path: _integration-tests/utils/agent/requirements.txt
+          cache-dependency-path: _integration-tests/utils/agent/requirements-dev.txt
       - name: Install python dependencies
-        run: pip install -r _integration-tests/utils/agent/requirements.txt
+        run: pip install -r _integration-tests/utils/agent/requirements-dev.txt
       - name: Build orchestrion binary
         shell: bash
         run: |-
@@ -316,7 +321,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p "${GOCOVERDIR}"
-          test_args=("-shuffle=on" "-v")
+          test_args=("-shuffle=on")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi
@@ -339,7 +344,7 @@ jobs:
           esac
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
-          GOFLAGS: -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+          GOFLAGS: ${{ matrix.runs-on == 'ubuntu' && '-p=4' || ''}} -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out

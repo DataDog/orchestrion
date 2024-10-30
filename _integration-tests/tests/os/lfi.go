@@ -16,12 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )

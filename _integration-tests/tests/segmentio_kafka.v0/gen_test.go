@@ -10,7 +10,7 @@
 package segmentio_kafka_v0
 
 import (
-	utils "orchestrion/integration/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
 )
 

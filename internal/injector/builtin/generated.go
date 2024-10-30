@@ -281,6 +281,79 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From databases/go-elasticsearch.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v6",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v6.Config"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v6",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v7",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v7.Config"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v7",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg elasticsearch.Config) elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v8",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/elastic/go-elasticsearch/v8.Config"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(cfg *elasticsearch.Config) *elasticsearch.Config {\n  if cfg.CACert != nil {\n    // refuse to set transport as it will make the NewClient call fail.\n    return cfg\n  }\n  if cfg.Transport == nil {\n    cfg.Transport = elastictrace.NewRoundTripper()\n  } else {\n    base := cfg.Transport\n    cfg.Transport = elastictrace.NewRoundTripper(elastictrace.WithTransport(base))\n  }\n  return cfg\n}({{ . }})",
+				map[string]string{
+					"elasticsearch": "github.com/elastic/go-elasticsearch/v8",
+					"elastictrace":  "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
+				},
+			)),
+		},
+	},
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
@@ -461,19 +534,37 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "Dial"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.Dial(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				map[string]string{
+					"redigo":      "github.com/gomodule/redigo/redis",
+					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
+				},
+			)),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialContext"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialContext"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialContext(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				map[string]string{
+					"redigo":      "github.com/gomodule/redigo/redis",
+					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
+				},
+			)),
 		},
 	},
 	{
 		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialURL"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo", "DialURL"),
+			advice.WrapExpression(code.MustTemplate(
+				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialURL(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
+				map[string]string{
+					"redigo":      "github.com/gomodule/redigo/redis",
+					"redigotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo",
+				},
+			)),
 		},
 	},
 	// From datastreams/gcp_pubsub.yml
@@ -1038,6 +1129,7 @@ var Aspects = [...]aspect.Aspect{
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/remoteconfig"),
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry"),
 				join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/profiler"),
+				join.ImportPath("datadoghq.dev/orchestrion/_integration-tests/utils/agent"),
 			),
 		),
 		Advice: []advice.Advice{
@@ -1251,6 +1343,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5",
@@ -1301,4 +1394,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:2RB5PBAmGqSq+yJ4CXO/H3DwmpfwjMSsRy+e0zo2vjKyVs+LcvAfsThNyW+MD007omuunaB0g9bkZYCOpT+7LA=="
+const Checksum = "sha512:qz36BTTj+BZpnOZ5N3zQ3EFYVR1q5ezX+yX54DtEh5wvMOb6w3EQZS26/JoswGFeIyek+rAWQxUGgt6t84Yq8w=="
