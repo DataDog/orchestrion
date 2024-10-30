@@ -100,5 +100,17 @@ func SkipIfProviderIsNotHealthy(t *testing.T) {
 		return
 	}
 
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		// We recovered from a panic (e.g, "rootless Docker not found" on GitHub Actions + macOS), so we
+		// will behave as if the provider was not healthy (because it's not and shouldn't have panic'd
+		// in the first place).
+		t.Log(err)
+		t.SkipNow()
+	}()
+
 	testcontainers.SkipIfProviderIsNotHealthy(t)
 }
