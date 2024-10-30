@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	redisv0 "github.com/go-redis/redis"
 	redisv7 "github.com/go-redis/redis/v7"
@@ -53,19 +54,23 @@ func redigoClient(ctx context.Context, net, addr string) {
 		conn.Do("SET", "test_key", "test_value", ctx)
 	}
 
+	options := []redigo.DialOption{
+		redigo.DialConnectTimeout(5 * time.Second),
+	}
+
 	if conn, err := redigo.Dial(net, addr); err != nil {
 		panic(err)
 	} else {
 		use(conn)
 	}
 
-	if conn, err := redigo.DialContext(ctx, net, addr); err != nil {
+	if conn, err := redigo.DialContext(ctx, net, addr, redigo.DialConnectTimeout(5*time.Second)); err != nil {
 		panic(err)
 	} else {
 		use(conn)
 	}
 
-	if conn, err := redigo.DialURL(fmt.Sprintf("%s://%s", net, addr)); err != nil {
+	if conn, err := redigo.DialURL(fmt.Sprintf("%s://%s", net, addr), options...); err != nil {
 		panic(err)
 	} else {
 		use(conn)
