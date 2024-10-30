@@ -6,7 +6,6 @@
 package pin
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,9 +24,8 @@ func TestPin(t *testing.T) {
 
 	require.NoError(t, scaffold(tmp))
 	require.NoError(t, os.Chdir(tmp))
-	requiredVersionError = errors.New("test")
 	AutoPinOrchestrion()
-	require.NoError(t, requiredVersionError)
+	require.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
 	require.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
 	require.FileExists(t, filepath.Join(tmp, "go.sum"))

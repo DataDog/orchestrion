@@ -147,6 +147,10 @@ func goModVersion(dir string) (moduleVersion string, moduleDir string, err error
 		return "", "", errors.Join(errs...)
 	}
 
+	if pkg.Module == nil {
+		return "", "", fmt.Errorf("no module information found for package %q", pkg.PkgPath)
+	}
+
 	if pkg.Module.Replace != nil {
 		// If there's a replace directive, that's what we need to be honoring instead.
 		return pkg.Module.Replace.Version, pkg.Module.Replace.Dir, nil
