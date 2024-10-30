@@ -47,6 +47,8 @@ func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
 		}
 	}
 
+	ctx.EnsureMinGoLang(a.Template.Lang)
+
 	return true, nil
 }
 

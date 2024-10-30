@@ -39,6 +39,8 @@ func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
 		spec.Values[i], _ = dst.Clone(expr).(dst.Expr)
 	}
 
+	ctx.EnsureMinGoLang(a.Template.Lang)
+
 	return true, nil
 }
 

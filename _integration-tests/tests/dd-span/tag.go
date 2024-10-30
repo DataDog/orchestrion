@@ -9,7 +9,8 @@ package ddspan
 
 import (
 	"errors"
-	"orchestrion/integration/validator/trace"
+
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

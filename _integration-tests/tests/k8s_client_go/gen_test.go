@@ -10,7 +10,7 @@
 package k8sclientgo
 
 import (
-	utils "orchestrion/integration/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
 )
 

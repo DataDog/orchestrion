@@ -31,6 +31,7 @@ aspects:
             - import-path: gopkg.in/DataDog/dd-trace-go.v1/internal/remoteconfig
             - import-path: gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry
             - import-path: gopkg.in/DataDog/dd-trace-go.v1/profiler
+            - import-path: datadoghq.dev/orchestrion/_integration-tests/utils/agent # Integration test's custom transport.
     advice:
       - wrap-expression:
           template: |-

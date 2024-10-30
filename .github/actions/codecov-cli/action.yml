@@ -12,10 +12,14 @@ runs:
       uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
       with:
         python-version: '3.x'
+        cache-dependency-path: ${{ github.action_path }}/requirements-dev.txt
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
 
     - name: Install codecov-cli
       id: install
       shell: bash
       run: |-
-        pip install codecov-cli==0.7.4
+        pip install -r "${{ github.action_path }}/requirements-dev.txt"
         echo "codecov=$(which codecovcli)" >> "${GITHUB_OUTPUT}"

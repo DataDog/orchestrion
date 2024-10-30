@@ -17,6 +17,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
@@ -32,6 +33,7 @@ import (
 type testConfig struct {
 	Aspects             []aspect.Aspect                `yaml:"aspects"`
 	SyntheticReferences map[string]typed.ReferenceKind `yaml:"syntheticReferences"`
+	GoLang              context.GoLangVersion          `yaml:"required-lang"`
 	Code                string                         `yaml:"code"`
 }
 
@@ -101,7 +103,7 @@ func Test(t *testing.T) {
 				Lookup:       testLookup,
 			}
 
-			res, err := inj.InjectFiles([]string{inputFile})
+			res, resGoLang, err := inj.InjectFiles([]string{inputFile})
 			require.NoError(t, err, "failed to inject file")
 
 			resFile, modified := res[inputFile]
@@ -112,6 +114,7 @@ func Test(t *testing.T) {
 
 			assert.Equal(t, filepath.Join(tmp, filepath.Base(inputFile)+".edited.go"), resFile.Filename)
 			assert.Equal(t, config.SyntheticReferences, resFile.References.Map())
+			assert.Equal(t, config.GoLang.String(), resGoLang.String())
 
 			modifiedData, err := os.ReadFile(resFile.Filename)
 			require.NoError(t, err, "failed to read modified file")
