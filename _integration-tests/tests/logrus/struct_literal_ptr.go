@@ -41,7 +41,7 @@ func (tc *TestCaseStructLiteralPtr) Run(t *testing.T) {
 	runTest(t, tc.logs, tc.Log)
 }
 
-func (tc *TestCaseStructLiteralPtr) Teardown(*testing.T) {}
+func (*TestCaseStructLiteralPtr) Teardown(*testing.T) {}
 
 func (*TestCaseStructLiteralPtr) ExpectedTraces() trace.Traces {
 	return expectedTraces()

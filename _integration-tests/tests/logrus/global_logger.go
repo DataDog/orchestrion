@@ -31,13 +31,13 @@ func (tc *TestCaseGlobalLogger) Run(t *testing.T) {
 	runTest(t, tc.logs, tc.Log)
 }
 
-func (tc *TestCaseGlobalLogger) Teardown(*testing.T) {}
+func (*TestCaseGlobalLogger) Teardown(*testing.T) {}
 
 func (*TestCaseGlobalLogger) ExpectedTraces() trace.Traces {
 	return expectedTraces()
 }
 
 //dd:span
-func (tc *TestCaseGlobalLogger) Log(ctx context.Context, level logrus.Level, msg string) {
+func (*TestCaseGlobalLogger) Log(ctx context.Context, level logrus.Level, msg string) {
 	logrus.WithContext(ctx).Log(level, msg)
 }

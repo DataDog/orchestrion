@@ -33,7 +33,7 @@ func (tc *TestCaseNewLogger) Run(t *testing.T) {
 	runTest(t, tc.logs, tc.Log)
 }
 
-func (tc *TestCaseNewLogger) Teardown(*testing.T) {}
+func (*TestCaseNewLogger) Teardown(*testing.T) {}
 
 func (*TestCaseNewLogger) ExpectedTraces() trace.Traces {
 	return expectedTraces()
