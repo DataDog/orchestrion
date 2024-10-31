@@ -37,6 +37,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	tc.kafka, tc.addr = utils.StartKafkaTestContainer(t)
 
 	tc.writer = &kafka.Writer{
