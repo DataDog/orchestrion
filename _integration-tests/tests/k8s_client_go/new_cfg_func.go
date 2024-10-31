@@ -10,12 +10,11 @@ package k8sclientgo
 import (
 	"testing"
 
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"orchestrion/integration/validator/trace"
 )
 
 type TestCaseNewCfgFunc struct {

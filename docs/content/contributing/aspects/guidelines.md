@@ -45,7 +45,7 @@ some examples follow:
 - Don't `panic` unless you **absolutely** must, and even then, probably still
   don't `panic`;
 - Don't alter error values unless you are certain customers are not able to
-  check them using {{<godoc "errors" "Is">}} (but it's okay to return other
+  check them using {{<godoc import-path="errors" name="Is">}} (but it's okay to return other
   errors when an instrumentation feature demands it);
 
 ## Reduce, Reuse, Recycle

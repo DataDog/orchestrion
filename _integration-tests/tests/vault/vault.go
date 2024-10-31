@@ -12,9 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
-
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -28,6 +27,8 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	utils.SkipIfProviderIsNotHealthy(t)
+
 	ctx := context.Background()
 
 	var err error

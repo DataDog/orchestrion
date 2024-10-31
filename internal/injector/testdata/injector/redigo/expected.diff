@@ -1,39 +1,73 @@
 --- input.go
 +++ output.go
-@@ -1,13 +1,17 @@
+@@ -1,13 +1,24 @@
 +//line input.go:1:1
  package test
  
  import (
-   "context"
+   "time"
  
    "github.com/gomodule/redigo/redis"
 +//line <generated>
-+  __orchestrion_redigo "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
++  __orchestrion_redigotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
  )
  
 +//line input.go:9
- func dial(net, address string) error {
+ func dial1(net, address string) error {
 -  c, err := redis.Dial(net, address)
-+  c, err := __orchestrion_redigo.Dial(net, address)
++  c, err :=
++//line <generated>
++    func() (redis.Conn, error) {
++      return __orchestrion_redigotrace.Dial(
++//line input.go:10
++        net, address)
++    }()
++//line input.go:11
    if err != nil {
      return err
    }
-@@ -16,7 +11,7 @@
+@@ -16,7 +18,14 @@
  }
  
- func dialContext(ctx context.Context, net, address string) error {
--  c, err := redis.DialContext(ctx, net, address)
-+  c, err := __orchestrion_redigo.DialContext(ctx, net, address)
+ func dial2(net, address string) error {
+-  c, err := redis.Dial(net, address, redis.DialConnectTimeout(5*time.Second), redis.DialConnectTimeout(time.Minute))
++  c, err :=
++//line <generated>
++    func() (redis.Conn, error) {
++      return __orchestrion_redigotrace.Dial(
++//line input.go:19
++        net, address, redis.DialConnectTimeout(5*time.Second), redis.DialConnectTimeout(time.Minute))
++    }()
++//line input.go:20
    if err != nil {
      return err
    }
-@@ -25,7 +20,7 @@
- }
+@@ -26,9 +35,26 @@
  
- func dialURL(url string) error {
--  c, err := redis.DialURL(url)
-+  c, err := __orchestrion_redigo.DialURL(url)
+ func dial3(net, address string) error {
+   options := []redis.DialOption{
+-    redis.DialConnectTimeout(5*time.Second),
++    redis.DialConnectTimeout(5 * time.Second),
+   }
+-  c, err := redis.Dial(net, address, options...)
++  c, err :=
++//line <generated>
++    func() (redis.Conn, error) {
++      opts :=
++//line input.go:31
++        options
++//line <generated>
++      anyOpts := make([]interface{}, len(opts))
++      for i, v := range opts {
++        anyOpts[i] = v
++      }
++      return __orchestrion_redigotrace.Dial(
++//line input.go:31
++        net, address,
++//line <generated>
++        anyOpts...)
++    }()
++//line input.go:32
    if err != nil {
      return err
    }

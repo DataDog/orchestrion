@@ -36,29 +36,29 @@ jobs:
     name: Integration Smoke Tests
     steps:
       - name: Checkout orchestrion
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           path: orchestrion
           repository: DataDog/orchestrion
       - name: Checkout dd-trace-go
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           path: dd-trace-go
           repository: DataDog/dd-trace-go
           ref: ${{ inputs.dd-trace-go-ref }}
       - name: Setup go
-        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+        uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Setup python
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5
         with:
           python-version: 3.x
           cache: pip
-          cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements.txt
+          cache-dependency-path: orchestrion/_integration-tests/utils/agent/requirements-dev.txt
       - name: Install python dependencies
-        run: pip install -r orchestrion/_integration-tests/utils/agent/requirements.txt
+        run: pip install -r orchestrion/_integration-tests/utils/agent/requirements-dev.txt
       - name: Build orchestrion binary
         run: go -C orchestrion/ build -o="./_integration-tests/orchestrion.exe" .
       - name: Run Integration Tests

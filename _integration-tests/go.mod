@@ -1,4 +1,4 @@
-module orchestrion/integration
+module datadoghq.dev/orchestrion/_integration-tests
 
 go 1.22.8
 
@@ -17,6 +17,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.36.2
 	github.com/dave/jennifer v1.7.1
 	github.com/docker/go-connections v0.5.0
+	github.com/elastic/go-elasticsearch/v6 v6.8.5
+	github.com/elastic/go-elasticsearch/v7 v7.17.1
+	github.com/elastic/go-elasticsearch/v8 v8.12.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -38,14 +41,15 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.9.0
-	github.com/testcontainers/testcontainers-go v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/cassandra v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/gcloud v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/mongodb v0.32.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
+	github.com/testcontainers/testcontainers-go v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/cassandra v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/elasticsearch v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/gcloud v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/mongodb v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/redis v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.34.0
 	github.com/tinylib/msgp v1.2.2
 	github.com/vektah/gqlparser/v2 v2.5.18
 	github.com/xlab/treeprint v1.2.0
@@ -171,6 +175,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
 	github.com/ebitengine/purego v0.8.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.4.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.13.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.1.0 // indirect
