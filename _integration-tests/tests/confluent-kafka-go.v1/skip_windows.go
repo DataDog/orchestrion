@@ -5,7 +5,7 @@
 
 //go:build integration && windows
 
-package go_elasticsearch
+package kafka
 
 import (
 	"testing"
@@ -16,13 +16,11 @@ import (
 type skip struct{}
 
 func (skip) Setup(t *testing.T) {
-	t.Skip("skipping test since go-elasticsearch v7 and v8 does not build on Windows with Orchestrion: https://github.com/golang/go/issues/70046")
+	t.Skip("skipping test since confluent-kafka-go requires extra setup to build on Windows: https://github.com/confluentinc/confluent-kafka-go/issues/889")
 }
 
 func (skip) Run(t *testing.T)             {}
 func (skip) Teardown(t *testing.T)        {}
 func (skip) ExpectedTraces() trace.Traces { return nil }
 
-type TestCaseV6 = skip
-type TestCaseV7 = skip
-type TestCaseV8 = skip
+type TestCase = skip
