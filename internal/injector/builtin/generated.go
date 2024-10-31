@@ -1086,7 +1086,7 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
 				},
-				context.GoLangVersion{},
+				context.MustParseGoLangVersion("go1.18"),
 			), []string{}),
 			advice.AddStructField("__dd_config", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing.Config")),
 		},
@@ -1430,4 +1430,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:/HCF4A9rk2z+UMae5N4c/mB9D771TJ7NDrA0nw0cK4/ObwiogX0+ium/nUtprkYb0G19PQ2Wv//1iiBnwnQEqA=="
+const Checksum = "sha512:lVX8YNGPX//68DP3LI5pyoQQPuHTCa/bnlSAp5wrXiIqmeHxcHpysrvHYPQb7ztvwUzNCIjiN6etIApwkqytkg=="

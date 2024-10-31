@@ -17,6 +17,7 @@ aspects:
       - inject-declarations:
           imports:
             tracing: "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing"
+          lang: go1.18
           template: |-
             type __dd_wRouter struct {
               *Router

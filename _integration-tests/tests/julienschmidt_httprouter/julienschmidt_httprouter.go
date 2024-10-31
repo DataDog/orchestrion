@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"orchestrion/integration/utils"
-	"orchestrion/integration/validator/trace"
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 type TestCase struct {
@@ -56,7 +56,7 @@ func (tc *TestCase) Teardown(t *testing.T) {
 	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Traces {
+func (*TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{
 			Tags: map[string]any{
