@@ -57,6 +57,15 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Category: "Advanced",
+				Name:     "C",
+				Usage:    "Change to the specified directory before proceeding with the rest of the command.",
+				Hidden:   true, // Users don't normally need to use this.
+				Action: func(_ *cli.Context, dir string) error {
+					return os.Chdir(dir)
+				},
+			},
+			&cli.StringFlag{
+				Category: "Advanced",
 				Name:     "job-server-url",
 				EnvVars:  []string{client.EnvVarJobserverURL},
 				Usage:    "Set the job server URL",

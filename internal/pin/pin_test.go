@@ -29,7 +29,7 @@ func TestPin(t *testing.T) {
 	AutoPinOrchestrion()
 	require.NoError(t, requiredVersionError)
 
-	require.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
+	require.FileExists(t, filepath.Join(tmp, OrchestrionToolGo))
 	require.FileExists(t, filepath.Join(tmp, "go.sum"))
 
 	data, err := os.ReadFile(filepath.Join(tmp, "go.mod"))
