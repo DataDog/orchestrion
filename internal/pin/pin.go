@@ -106,13 +106,7 @@ func PinOrchestrion(opts Options) error {
 		edits = append(edits, goModVersion("1.22.0"))
 	}
 	if !curMod.requires(orchestrionImportPath) {
-		edit := goModRequire{Path: orchestrionImportPath, Version: version.Tag}
-		if curMod.replaces(orchestrionImportPath) {
-			// We use the zero-version in case the module is replaced... This makes it move obvious that
-			// the real version is coming from a replace directive.
-			edit.Version = "v0.0.0-00010101000000-000000000000"
-		}
-		edits = append(edits, edit)
+		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag})
 	}
 	if err := runGoModEdit(goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)

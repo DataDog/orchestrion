@@ -20,23 +20,12 @@ type (
 		Go        goModVersion
 		Toolchain goModToolchain
 		Require   []goModRequire
-		Replace   []goModReplace
 	}
 
 	goModVersion   string
 	goModToolchain string
 
 	goModRequire struct {
-		Path    string
-		Version string
-	}
-
-	goModReplace struct {
-		Old goModModule
-		New goModModule
-	}
-
-	goModModule struct {
 		Path    string
 		Version string
 	}
@@ -59,15 +48,6 @@ func parse(modfile string) (goMod, error) {
 func (m *goMod) requires(path string) bool {
 	for _, r := range m.Require {
 		if r.Path == path {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *goMod) replaces(path string) bool {
-	for _, r := range m.Replace {
-		if r.Old.Path == path {
 			return true
 		}
 	}
