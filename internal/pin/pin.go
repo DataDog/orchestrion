@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	goVersion "go/version"
+	goversion "go/version"
 	"io"
 	"os"
 	"path/filepath"
@@ -102,7 +102,7 @@ func PinOrchestrion(opts Options) error {
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
-	if goVersion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.22.0") < 0 {
+	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.22.0") < 0 {
 		edits = append(edits, goModVersion("1.22.0"))
 	}
 	if !curMod.requires(orchestrionImportPath) {
