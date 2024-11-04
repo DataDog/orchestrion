@@ -168,7 +168,7 @@ func (opts *Options) updateToolFile(file *dst.File) (*importSet, error) {
 // updateGoGenerateDirective adds, updates, or removes the `//go:generate`
 // directive from the [*dst.File] according to the receiving [*Options].
 func (opts *Options) updateGoGenerateDirective(file *dst.File) {
-	const prefix = "//go:generate orchestrion pin"
+	const prefix = "//go:generate go run github.com/DataDog/orchestrion pin"
 
 	var newDirective string
 	if !opts.NoGenerate {

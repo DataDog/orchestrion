@@ -10,7 +10,7 @@
 
 //go:build tools
 
-//go:generate orchestrion pin
+//go:generate go run github.com/DataDog/orchestrion pin
 
 package tools
 
