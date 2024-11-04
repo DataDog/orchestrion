@@ -36,28 +36,32 @@ type (
 	}
 )
 
-func parse(filename string) (mod goMod, err error) {
+func parse(filename string) (goMod, error) {
 	cmd := exec.Command("go", "mod", "edit", "-json")
 	cmd.Env = append(os.Environ(), "GOMOD="+filename)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return mod, fmt.Errorf("creating json output pipe: %w", err)
+		return goMod{}, fmt.Errorf("creating json output pipe: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		return mod, fmt.Errorf("spawning `go mod edit -json`: %w", err)
+		return goMod{}, fmt.Errorf("spawning `go mod edit -json`: %w", err)
 	}
 	defer cmd.Wait()
 
+	var mod goMod
 	err = json.NewDecoder(stdout).Decode(&mod)
+	if err != nil {
+		return goMod{}, fmt.Errorf("decoding output of `go mode edit -json`: %w", err)
+	}
 
-	if err == nil && mod.Toolchain == "" {
+	if mod.Toolchain == "" {
 		// If there is no `mod.Toolchain`, we'll set it to `"none"` to indicate
 		// explicit absence, as this is what you need to specify to
 		// `go mod edit -toolchain=` in order to get rid of that directive.
 		mod.Toolchain = "none"
 	}
 
-	return
+	return mod, nil
 }
 
 func (m *goMod) requires(path string) bool {
