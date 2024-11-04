@@ -92,15 +92,15 @@ func TestGoModVersion(t *testing.T) {
 		defer os.RemoveAll(tmp)
 
 		os.WriteFile(filepath.Join(tmp, "main.go"), []byte(`
-package main
+		package main
 
-func main() {}
-		`), 0o644)
+		func main() {}
+				`), 0o644)
 
 		require.NotPanics(t, func() {
 			_, _, err = goModVersion(tmp)
 		})
-		require.ErrorContains(t, err, "no module information found for package")
+		require.ErrorContains(t, err, "go.mod file not found in current directory")
 	})
 }
 
