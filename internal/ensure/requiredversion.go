@@ -147,7 +147,9 @@ func goModVersion(dir string) (moduleVersion string, moduleDir string, err error
 		return "", "", errors.Join(errs...)
 	}
 
-	// Shouldn't happen but does: see https://github.com/golang/go/issues/65816
+	// Shouldn't happen but does when the current working directory is not
+	// part of a go module's source tree.
+	// See: https://github.com/golang/go/issues/65816
 	if pkg.Module == nil {
 		return "", "", fmt.Errorf("no module information found for package %q", pkg.PkgPath)
 	}
