@@ -47,6 +47,8 @@ type Options struct {
 	NoPrune bool
 }
 
+// PinOrchestrion applies or update the orchestrion pin file in the current
+// working directory, according to the supplied [Options].
 func PinOrchestrion(opts Options) error {
 	goMod, err := goenv.GOMOD()
 	if err != nil {
@@ -132,6 +134,9 @@ func PinOrchestrion(opts Options) error {
 	return nil
 }
 
+// updateToolFile updates the provided [*dst.File] according to the receiving
+// [*Options], adding any new imports necessary. It returns the up-to-date
+// [*importSet] for the file.
 func (opts *Options) updateToolFile(file *dst.File) (*importSet, error) {
 	opts.updateGoGenerateDirective(file)
 
@@ -160,6 +165,8 @@ func (opts *Options) updateToolFile(file *dst.File) (*importSet, error) {
 	return importSet, nil
 }
 
+// updateGoGenerateDirective adds, updates, or removes the `//go:generate`
+// directive from the [*dst.File] according to the receiving [*Options].
 func (opts *Options) updateGoGenerateDirective(file *dst.File) {
 	const prefix = "//go:generate orchestrion pin"
 
@@ -204,6 +211,9 @@ func (opts *Options) updateGoGenerateDirective(file *dst.File) {
 	file.Decs.Start.Append("\n", newDirective, "\n")
 }
 
+// pruneImports removes unnecessary or invalid imports from the provided
+// [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
+// only outputs a message informing the user about uncalled for imports.
 func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -244,6 +254,9 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 	return pruned, nil
 }
 
+// pruneImport prunes a single import from the supplied [*importSet], unless
+// [*Options.NoPrune] is set, in which case it prints a warning using the
+// provided `reason` message.
 func (opts *Options) pruneImport(importSet *importSet, path string, reason string) bool {
 	if opts.NoPrune {
 		spec := importSet.Find(path)

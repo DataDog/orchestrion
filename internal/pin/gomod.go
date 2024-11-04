@@ -16,21 +16,30 @@ import (
 )
 
 type (
+	// goMod represents some selected entries from the content of a `go.mod` file.
 	goMod struct {
-		Go        goModVersion
+		// Go is the value of the `go` directive.
+		Go goModVersion
+		// Toolchain is the value of the `toolchain` directive, if present.
 		Toolchain goModToolchain
-		Require   []goModRequire
+		// Require is a list of all `require` directives' contents.
+		Require []goModRequire
 	}
 
 	goModVersion   string
 	goModToolchain string
 
+	// goModRequire represents the target of a `require` directive entry.
 	goModRequire struct {
-		Path    string
+		// Path is the path of the required module.
+		Path string
+		// Version is the required module's version.
 		Version string
 	}
 )
 
+// parse processes the contents of the designated `go.mod` file using
+// `go mod edit -json` and returns the corresponding parsed [goMod].
 func parse(modfile string) (goMod, error) {
 	var stdout bytes.Buffer
 	if err := runGoMod("edit", modfile, &stdout, "-json"); err != nil {
@@ -45,6 +54,8 @@ func parse(modfile string) (goMod, error) {
 	return mod, nil
 }
 
+// requires returns true if the `go.mod` file contains a require directive for
+// the designated module path.
 func (m *goMod) requires(path string) bool {
 	for _, r := range m.Require {
 		if r.Path == path {
@@ -54,6 +65,9 @@ func (m *goMod) requires(path string) bool {
 	return false
 }
 
+// runGoMod executes the `go mod <command> <args...>` subcommand with the
+// provided arguments on the designated `go.mod` file, sending standard output
+// to the provided writer.
 func runGoMod(command string, modfile string, stdout io.Writer, args ...string) error {
 	cmd := exec.Command("go", "mod", command, "-modfile", modfile)
 	cmd.Args = append(cmd.Args, args...)
@@ -64,6 +78,8 @@ func runGoMod(command string, modfile string, stdout io.Writer, args ...string) 
 	return cmd.Run()
 }
 
+// goModEdit represents an edition that can be made to a `go.mod` file via
+// `go mod edit`.
 type goModEdit interface {
 	goModEditFlag() string
 }

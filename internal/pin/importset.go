@@ -16,12 +16,16 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
+// importSet is a set of impored packages from a given Go source file. It can be
+// used to inspect whether a particular import path is imported or not, and to
+// add new imports to the file.
 type importSet struct {
 	file     *dst.File
 	imports  *dst.GenDecl
 	imported map[string]*dst.ImportSpec
 }
 
+// importSetFrom creates a new [importSet] from the provided [*dst.File].
 func importSetFrom(file *dst.File) *importSet {
 	imported := make(map[string]*dst.ImportSpec, len(file.Imports))
 	for _, spec := range file.Imports {
@@ -45,6 +49,9 @@ func importSetFrom(file *dst.File) *importSet {
 	return &importSet{file: file, imports: imports, imported: imported}
 }
 
+// Add registers a new import into the receiver, and returns the resulting
+// import spec AST node. If the import was already present, the function returns
+// the currently registered import spec and false.
 func (s *importSet) Add(path string) (*dst.ImportSpec, bool) {
 	if spec, found := s.imported[path]; found {
 		return spec, false
@@ -62,6 +69,8 @@ func (s *importSet) Add(path string) (*dst.ImportSpec, bool) {
 	return newSpec, true
 }
 
+// Except returns the list of all import paths present in the receiver, except
+// those present in the `omit` list.
 func (s *importSet) Except(omit ...string) []string {
 	list := make([]string, 0, len(s.imported))
 	for path := range s.imported {
@@ -73,10 +82,14 @@ func (s *importSet) Except(omit ...string) []string {
 	return list
 }
 
+// Find returns the import spec for the provided import path if it's present in
+// the receiver. If the import path is not imported, `nil` is returned instead.
 func (s *importSet) Find(path string) *dst.ImportSpec {
 	return s.imported[path]
 }
 
+// Remove removes the provided import path from the receiver, and returns true
+// if any change to the AST was made.
 func (s *importSet) Remove(toRemove string) bool {
 	removed := false
 
@@ -132,6 +145,8 @@ func (s *importSet) Remove(toRemove string) bool {
 	return removed
 }
 
+// firstImportIn returns the first import delcartion found in the provided
+// [*dst.File]. If no import declaration is present, returns `nil`.
 func firstImportIn(file *dst.File) *dst.GenDecl {
 	if len(file.Decls) == 0 {
 		return nil
@@ -145,6 +160,8 @@ func firstImportIn(file *dst.File) *dst.GenDecl {
 	return genDecl
 }
 
+// newImportDeclIn introduces a new import declaration at the top of the
+// provided [*dst.File], and returns the newly created declaration.
 func newImportDeclIn(file *dst.File) *dst.GenDecl {
 	const defaultSpecCap = 128
 
