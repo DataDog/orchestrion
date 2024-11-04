@@ -6,19 +6,25 @@
 package pin
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type (
 	goMod struct {
-		Go        string
-		Toolchain string
+		Go        goModVersion
+		Toolchain goModToolchain
 		Require   []goModRequire
 		Replace   []goModReplace
 	}
+
+	goModVersion   string
+	goModToolchain string
 
 	goModRequire struct {
 		Path    string
@@ -36,29 +42,15 @@ type (
 	}
 )
 
-func parse(filename string) (goMod, error) {
-	cmd := exec.Command("go", "mod", "edit", "-json")
-	cmd.Env = append(os.Environ(), "GOMOD="+filename)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return goMod{}, fmt.Errorf("creating json output pipe: %w", err)
+func parse(modfile string) (goMod, error) {
+	var stdout bytes.Buffer
+	if err := runGoMod("edit", modfile, &stdout, "-json"); err != nil {
+		return goMod{}, fmt.Errorf("running `go mod edit -json`: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
-		return goMod{}, fmt.Errorf("spawning `go mod edit -json`: %w", err)
-	}
-	defer cmd.Wait()
 
 	var mod goMod
-	err = json.NewDecoder(stdout).Decode(&mod)
-	if err != nil {
+	if err := json.NewDecoder(&stdout).Decode(&mod); err != nil {
 		return goMod{}, fmt.Errorf("decoding output of `go mode edit -json`: %w", err)
-	}
-
-	if mod.Toolchain == "" {
-		// If there is no `mod.Toolchain`, we'll set it to `"none"` to indicate
-		// explicit absence, as this is what you need to specify to
-		// `go mod edit -toolchain=` in order to get rid of that directive.
-		mod.Toolchain = "none"
 	}
 
 	return mod, nil
@@ -80,4 +72,70 @@ func (m *goMod) replaces(path string) bool {
 		}
 	}
 	return false
+}
+
+func runGoMod(command string, modfile string, stdout io.Writer, args ...string) error {
+	cmd := exec.Command("go", "mod", command, "-modfile", modfile)
+	cmd.Args = append(cmd.Args, args...)
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+type goModEdit interface {
+	goModEditFlag() string
+}
+
+// runGoModEdit makes the specified changes to the `go.mod` file, then runs `go mod tidy` if needed.
+// If there is a `vendor` directory, it also runs `go mod vendor` before returning.
+func runGoModEdit(modfile string, edits ...goModEdit) error {
+	if len(edits) == 0 {
+		// Nothing to do.
+		return nil
+	}
+
+	editFlags := make([]string, len(edits))
+	for i, edit := range edits {
+		editFlags[i] = edit.goModEditFlag()
+	}
+	if err := runGoMod("edit", modfile, os.Stdout, editFlags...); err != nil {
+		return fmt.Errorf("running `go mod edit %s`: %w", editFlags, err)
+	}
+
+	if err := runGoMod("tidy", modfile, os.Stdout); err != nil {
+		return fmt.Errorf("running `go mod tidy`: %w", err)
+	}
+
+	vendorDir := filepath.Join(modfile, "..", "vendor")
+	stat, err := os.Stat(vendorDir)
+	if os.IsNotExist(err) || (err == nil && !stat.IsDir()) {
+		//  No `vendor` directory, nothing to do...
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("checking for vendor directory %q: %w", vendorDir, err)
+	}
+
+	if err := runGoMod("vendor", modfile, os.Stdout); err != nil {
+		return fmt.Errorf("running `go mod vendor`: %w", err)
+	}
+
+	return nil
+}
+
+func (v goModVersion) goModEditFlag() string {
+	return fmt.Sprintf("-go=%s", string(v))
+}
+
+func (t goModToolchain) goModEditFlag() string {
+	if t == "" {
+		return "-toolchain=none"
+	}
+	return fmt.Sprintf("-toolchain=%s", string(t))
+}
+
+func (r goModRequire) goModEditFlag() string {
+	return fmt.Sprintf("-require=%s@%s", r.Path, r.Version)
 }

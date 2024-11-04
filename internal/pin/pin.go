@@ -7,13 +7,13 @@ package pin
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
 	goVersion "go/version"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -87,71 +87,58 @@ func PinOrchestrion(opts Options) error {
 		}
 	}
 
-	if err := opts.updateToolFile(dstFile); err != nil {
+	importSet, err := opts.updateToolFile(dstFile)
+	if err != nil {
 		return fmt.Errorf("updating %s file AST: %w", OrchestrionToolGo, err)
 	}
 
-	var buf bytes.Buffer
-	if err := decorator.Fprint(&buf, dstFile); err != nil {
-		return fmt.Errorf("formatting %q: %w", toolFile, err)
-	}
-
-	// We write into a temporary file, and then rename it in place. This reduces the risk of
-	// concurrent calls resulting in partial writes, etc...
-	tmpFile, err := os.CreateTemp(filepath.Dir(toolFile), "orchestrion.tool.go.*")
-	if err != nil {
-		return fmt.Errorf("creating temporary %q: %w", tmpFile.Name(), err)
-	}
-	if _, err := io.Copy(tmpFile, &buf); err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("writing to %q: %w", tmpFile.Name(), err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("closing %q: %w", tmpFile.Name(), err)
-	}
-	if err := os.Rename(tmpFile.Name(), toolFile); err != nil {
-		return fmt.Errorf("renaming %q to %q: %w", tmpFile.Name(), toolFile, err)
+	if err := writeUpdated(toolFile, dstFile); err != nil {
+		return fmt.Errorf("updating %q: %w", toolFile, err)
 	}
 
 	// Add the current version of orchestrion to the `go.mod` file.
-	var edits []string
+	var edits []goModEdit
 	curMod, err := parse(goMod)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
-	if goVersion.Compare("go"+curMod.Go, "go1.22.0") < 0 {
-		edits = append(edits, "-go=1.22.0")
+	if goVersion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.22.0") < 0 {
+		edits = append(edits, goModVersion("1.22.0"))
 	}
-	if !curMod.requires(orchestrionImportPath) && !curMod.replaces(orchestrionImportPath) {
-		edits = append(edits, "-require="+orchestrionImportPath+"@"+version.Tag)
+	if !curMod.requires(orchestrionImportPath) {
+		edit := goModRequire{Path: orchestrionImportPath, Version: version.Tag}
+		if curMod.replaces(orchestrionImportPath) {
+			// We use the zero-version in case the module is replaced... This makes it move obvious that
+			// the real version is coming from a replace directive.
+			edit.Version = "v0.0.0-00010101000000-000000000000"
+		}
+		edits = append(edits, edit)
 	}
-	if len(edits) > 0 {
-		cmd := exec.Command("go", "mod", "edit")
-		cmd.Args = append(cmd.Args, edits...)
-		cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOMOD="+goMod)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("running `go mod edit` to require %s@%s: %w", orchestrionImportPath, version.Tag, err)
+	if err := runGoModEdit(goMod, edits...); err != nil {
+		return fmt.Errorf("editing %q: %w", goMod, err)
+	}
+
+	pruned, err := opts.pruneImports(importSet)
+	if err != nil {
+		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
+	}
+
+	if pruned {
+		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
+		if err := runGoMod("tidy", goMod, nil); err != nil {
+			return fmt.Errorf("running `go mod tidy`: %w", err)
 		}
 	}
 
-	// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOMOD="+goMod)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("running `go mod tidy`: %w", err)
-	}
-
 	// Restore the previous toolchain directive if `go mod tidy` had the nerve to touch it...
-	cmd = exec.Command("go", "mod", "edit", "-toolchain="+curMod.Toolchain)
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOMOD="+goMod)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("running `go mod edit` to reset toolchain: %w", err)
+	if err := runGoModEdit(goMod, curMod.Toolchain); err != nil {
+		return fmt.Errorf("restoring toolchain directive: %w", err)
 	}
 
 	return nil
 }
 
-func (opts *Options) updateToolFile(file *dst.File) error {
+func (opts *Options) updateToolFile(file *dst.File) (*importSet, error) {
 	opts.updateGoGenerateDirective(file)
 
 	importSet := importSetFrom(file)
@@ -176,7 +163,7 @@ func (opts *Options) updateToolFile(file *dst.File) error {
 	}
 	spec.Decs.End.Replace("// integration")
 
-	return opts.pruneImports(importSet)
+	return importSet, nil
 }
 
 func (opts *Options) updateGoGenerateDirective(file *dst.File) {
@@ -223,7 +210,7 @@ func (opts *Options) updateGoGenerateDirective(file *dst.File) {
 	file.Decs.Start.Append("\n", newDirective, "\n")
 }
 
-func (opts *Options) pruneImports(importSet *importSet) error {
+func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			BuildFlags: []string{"-toolexec="},
@@ -233,9 +220,10 @@ func (opts *Options) pruneImports(importSet *importSet) error {
 		importSet.Except(orchestrionImportPath, orchestrionInstrumentPath)...,
 	)
 	if err != nil {
-		return fmt.Errorf("pruneImports: %w", err)
+		return false, fmt.Errorf("pruneImports: %w", err)
 	}
 
+	var pruned bool
 	for _, pkg := range pkgs {
 		var someFile string
 		for _, set := range [][]string{pkg.GoFiles, pkg.IgnoredFiles, pkg.OtherFiles} {
@@ -246,39 +234,69 @@ func (opts *Options) pruneImports(importSet *importSet) error {
 		}
 		// There is no compilation unit in this package, so it cannot have integrations.
 		if someFile == "" {
-			opts.pruneImport(importSet, pkg.PkgPath, "the package contains no Go source files")
+			pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "the package contains no Go source files")
 			continue
 		}
 		integrationsFile := filepath.Join(someFile, "..", orchestrionDotYML)
 		if _, err := os.Stat(integrationsFile); err != nil {
 			if os.IsNotExist(err) {
-				opts.pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package")
+				pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package")
 				continue
 			}
 		}
 		importSet.Find(pkg.PkgPath).Decs.End.Replace("// integration")
 	}
 
-	return nil
+	return pruned, nil
 }
 
-func (opts *Options) pruneImport(importSet *importSet, path string, reason string) {
+func (opts *Options) pruneImport(importSet *importSet, path string, reason string) bool {
 	if opts.NoPrune {
 		spec := importSet.Find(path)
 		if spec == nil {
 			// Nothing to do... already removed!
-			return
+			return false
 		}
 
 		_, _ = fmt.Fprintf(opts.Writer, "unnecessary import of %q: %v\n", path, reason)
 		spec.Decs.End.Clear() // Remove the // integration comment.
 
-		return
+		return false
 	}
 
 	if importSet.Remove(path) {
 		_, _ = fmt.Fprintf(opts.Writer, "removing unnecessary import of %q: %v\n", path, reason)
 	}
+	return true
+}
+
+// writeUpdated writes the updated AST to the given file, using a temporary file
+// to write the content before renaming it, to maximize atomicity of the update.
+func writeUpdated(filename string, file *dst.File) error {
+	var src bytes.Buffer
+	if err := decorator.Fprint(&src, file); err != nil {
+		return fmt.Errorf("formatting source code for %q: %w", filename, err)
+	}
+
+	tmpFile, err := os.CreateTemp(filepath.Dir(filename), filepath.Base(filename)+".*")
+	if err != nil {
+		return fmt.Errorf("creating temporary file for %q: %w", filename, err)
+	}
+
+	tmpFilename := tmpFile.Name()
+	if _, err := io.Copy(tmpFile, &src); err != nil {
+		return errors.Join(fmt.Errorf("writing to temporary file %q: %w", tmpFilename, err), tmpFile.Close())
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("closing %q: %w", tmpFilename, err)
+	}
+
+	if err := os.Rename(tmpFilename, filename); err != nil {
+		return fmt.Errorf("renaming %q => %q: %w", tmpFilename, filename, err)
+	}
+
+	return nil
 }
 
 type dstNodeVisitor func(dst.Node) bool
