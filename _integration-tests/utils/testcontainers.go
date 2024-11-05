@@ -8,14 +8,17 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"runtime"
 	"testing"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -55,6 +58,7 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 	return server, host, mappedPort.Port()
 }
 
+// StartKafkaTestContainer starts a new Kafka test container and returns the connection string.
 func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 	ctx := context.Background()
 	exposedPort := "9093/tcp"
@@ -74,6 +78,40 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 
 	addr := fmt.Sprintf("%s:%s", host, mappedPort.Port())
 	return container, addr
+}
+
+// StartRedisTestContainer starts a new Redis test container and returns the connection string.
+func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
+	ctx := context.Background()
+	exposedPort := "6379/tcp"
+
+	container, err := redis.Run(ctx,
+		"redis:7",
+		testcontainers.WithLogger(testcontainers.TestLogger(t)),
+		WithTestLogConsumer(t),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForLog("* Ready to accept connections"),
+				wait.ForExposedPort(),
+				wait.ForListeningPort(nat.Port(exposedPort)),
+			),
+		),
+		testcontainers.WithHostConfigModifier(func(hostConfig *container.HostConfig) {
+			if hostConfig.Sysctls == nil {
+				hostConfig.Sysctls = make(map[string]string)
+			}
+			hostConfig.Sysctls["vm.overcommit_memory"] = "1"
+		}),
+	)
+	AssertTestContainersError(t, err)
+
+	connStr, err := container.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	redisURL, err := url.Parse(connStr)
+	require.NoError(t, err)
+
+	return container, redisURL.Host
 }
 
 // AssertTestContainersError decides whether the provided testcontainers error should make the test fail or mark it as
