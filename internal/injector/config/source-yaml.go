@@ -38,7 +38,7 @@ func (l *loader) loadYAML(filename string) (*yamlSource, error) {
 		return nil, nil
 	}
 
-	decoded, err := parseYAML(filename)
+	decoded, err := l.parseYAML(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -101,20 +101,42 @@ func (s *yamlSource) Empty() bool {
 	return len(s.aspects) == 0 && len(s.extends) == 0
 }
 
-type yamlSchema struct {
+type parsedYAML struct {
 	Extends []string        `yaml:"extends"`
 	Aspects []aspect.Aspect `yaml:"aspects"`
 }
 
-func parseYAML(filename string) (yamlSchema, error) {
-	var decoded yamlSchema
+func (l *loader) parseYAML(filename string) (parsedYAML, error) {
+	var decoded parsedYAML
 
 	file, err := os.Open(filename)
 	if err != nil {
 		return decoded, fmt.Errorf("opening %q: %w", filename, err)
 	}
 
-	decoder := yaml.NewDecoder(file)
+	type yamlDecoder interface {
+		Decode(any) error
+	}
+	var decoder yamlDecoder = yaml.NewDecoder(file)
+	if l.validate {
+		// Start by parsing to [yaml.Node] so we don't do full-blown parsing again later.
+		var node yaml.Node
+		if err := decoder.Decode(&node); err != nil {
+			return decoded, fmt.Errorf("decoding %q: %w", filename, err)
+		}
+
+		var obj map[string]any
+		if err := node.Decode(&obj); err != nil {
+			return decoded, fmt.Errorf("decoding %q: %w", filename, err)
+		}
+
+		if err := ValidateObject(obj); err != nil {
+			return decoded, fmt.Errorf("validating %q: %w", filename, err)
+		}
+
+		decoder = &node
+	}
+
 	if err := decoder.Decode(&decoded); err != nil {
 		return decoded, fmt.Errorf("decoding %q: %w", filename, err)
 	}

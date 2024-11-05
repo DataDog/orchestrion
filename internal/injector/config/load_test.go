@@ -25,7 +25,7 @@ func TestLoad(t *testing.T) {
 	t.Run("samples", func(t *testing.T) {
 		samples := filepath.Join(rootDir, "samples")
 
-		cfg, err := Load(samples)
+		cfg, err := Load(samples, true)
 		require.NoError(t, err)
 		require.NotNil(t, cfg)
 
@@ -48,7 +48,7 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, "internal", pin.OrchestrionToolGo), []byte("//go:build tools\npackage tools\nimport (\n\t_ \"github.com/DataDog/orchestrion/test.circular\"\n\t_ \"net/http\"\n)"), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, "internal", pin.OrchestrionDotYML), []byte(fmt.Sprintf("extends: [%q]", filepath.Join(rootDir, "internal", "injector", "builtin"))), 0o644))
 
-		cfg, err := Load(tmp)
+		cfg, err := Load(tmp, false) // No validation, we've been lazy with the schema...
 		require.NoError(t, err)
 		require.NotNil(t, cfg)
 
@@ -63,7 +63,7 @@ func TestLoad(t *testing.T) {
 
 	t.Run("blank", func(t *testing.T) {
 		tmp := t.TempDir()
-		cfg, err := Load(tmp)
+		cfg, err := Load(tmp, true)
 		require.NoError(t, err)
 		require.NotNil(t, cfg)
 		require.True(t, cfg.Empty())
@@ -74,7 +74,7 @@ func TestLoad(t *testing.T) {
 
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, pin.OrchestrionDotYML), []byte(fmt.Sprintf("extends: [%q, %q]", t.TempDir(), filepath.Join(tmp, "nonexistent"))), 0o644))
 
-		cfg, err := Load(tmp)
+		cfg, err := Load(tmp, false) // No validation, we've been lazy with the schema...
 		require.ErrorContains(t, err, "no such file or directory")
 		require.Nil(t, cfg)
 	})

@@ -8,13 +8,14 @@ package config
 // Load reads all configuration found in the provided directory. This will
 // attempt to read [pin.OrchestrionToolGo] and [pin.OrchestrionDotYML] files,
 // and register any found entity as a source of configuration.
-func Load(dir string) (Config, error) {
-	var loader loader
+func Load(dir string, validate bool) (Config, error) {
+	loader := loader{validate: validate}
 	return loader.loadPackage(".", dir)
 }
 
 type loader struct {
-	dedup map[string]struct{}
+	dedup    map[string]struct{}
+	validate bool
 }
 
 // markLoaded returns true if the filename was already loaded; and marks it as
