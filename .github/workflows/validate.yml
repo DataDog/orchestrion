@@ -319,7 +319,7 @@ jobs:
           go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
         shell: bash
-        run: |-          
+        run: |-
           mkdir -p "${GOCOVERDIR}"
           test_args=("-shuffle=on")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
