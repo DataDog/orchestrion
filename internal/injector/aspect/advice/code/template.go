@@ -195,7 +195,7 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 func (t *Template) AsCode() jen.Code {
 	var lang *jen.Statement
 	if langStr := t.Lang.String(); langStr != "" {
-		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "MustParseGoLang").Call(jen.Lit(langStr))
+		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "MustParseGoLangVersion").Call(jen.Lit(langStr))
 	} else {
 		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "GoLangVersion").Block()
 	}
