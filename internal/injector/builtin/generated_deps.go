@@ -22,6 +22,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
@@ -49,6 +50,8 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -69,5 +72,6 @@ import (
 	_ "net/http"
 	_ "os"
 	_ "strconv"
+	_ "strings"
 	_ "testing"
 )
