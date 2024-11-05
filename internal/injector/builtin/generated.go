@@ -1002,6 +1002,81 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From datastreams/segmentio_kafka_v0.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/segmentio/kafka-go.Reader")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type __dd_wMessage struct {\n  *Message\n}\n  \nfunc __dd_wrapMessage(msg *Message) tracing.Message {\n  if msg == nil {\n    return nil\n  }\n  return &__dd_wMessage{msg}\n}\n  \nfunc (w *__dd_wMessage) GetValue() []byte {\n  return w.Value\n}\n  \nfunc (w *__dd_wMessage) GetKey() []byte {\n  return w.Key\n}\n  \nfunc (w *__dd_wMessage) GetHeaders() []tracing.Header {\n  hs := make([]tracing.Header, 0, len(w.Headers))\n  for _, h := range w.Headers {\n    hs = append(hs, __dd_wrapHeader(h))\n  }\n  return hs\n}\n  \nfunc (w *__dd_wMessage) SetHeaders(headers []tracing.Header) {\n  hs := make([]Header, 0, len(headers))\n  for _, h := range headers {\n    hs = append(hs, Header{\n      Key:   h.GetKey(),\n      Value: h.GetValue(),\n    })\n  }\n  w.Message.Headers = hs\n}\n  \nfunc (w *__dd_wMessage) GetTopic() string {\n  return w.Topic\n}\n  \nfunc (w *__dd_wMessage) GetPartition() int {\n  return w.Partition\n}\n  \nfunc (w *__dd_wMessage) GetOffset() int64 {\n  return w.Offset\n}\n  \ntype __dd_wHeader struct {\n  Header\n}\n  \nfunc __dd_wrapHeader(h Header) tracing.Header {\n  return &__dd_wHeader{h}\n}\n  \nfunc (w __dd_wHeader) GetKey() string {\n  return w.Key\n}\n  \nfunc (w __dd_wHeader) GetValue() []byte {\n  return w.Value\n}\n  \ntype __dd_wWriter struct {\n  *Writer\n}\n  \nfunc (w *__dd_wWriter) GetTopic() string {\n  return w.Topic\n}\n  \nfunc __dd_wrapTracingWriter(w *Writer) tracing.Writer {\n  return &__dd_wWriter{w}\n}\n\nfunc __dd_initReader(r *Reader) {\n  if r.__dd_tracer != nil {\n    return\n  }\n  kafkaCfg := tracing.KafkaConfig{}\n  if r.Config().Brokers != nil {\n    kafkaCfg.BootstrapServers = strings.Join(r.Config().Brokers, \",\")\n  }\n  if r.Config().GroupID != \"\" {\n    kafkaCfg.ConsumerGroupID = r.Config().GroupID\n  }\n  r.__dd_tracer = tracing.NewTracer(kafkaCfg)\n}\n\ntype __dd_span = ddtrace.Span",
+				map[string]string{
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"strings": "strings",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
+			advice.AddStructField("__dd_prevSpan", join.MustTypeName("__dd_span")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Reader")),
+			join.Name("FetchMessage"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initReader(r)\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}\ndefer func() {\n  if {{ $err }} != nil {\n    return\n  }\n  tMsg := __dd_wrapMessage(&{{ $msg }})\n  {{ $r }}.__dd_prevSpan = {{ $r }}.__dd_tracer.StartConsumeSpan({{ $ctx }}, tMsg)\n  {{ $r }}.__dd_tracer.SetConsumeDSMCheckpoint(tMsg)\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Reader")),
+			join.Name("Close"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/segmentio/kafka-go.Writer")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"func __dd_initWriter(w *Writer) {\n  if w.__dd_tracer != nil {\n    return\n  }\n  kafkaCfg := tracing.KafkaConfig{\n    BootstrapServers: w.Addr.String(),\n  }\n  w.__dd_tracer = tracing.NewTracer(kafkaCfg)\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Writer")),
+			join.Name("WriteMessages"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $w := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msgs := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\nspans := make([]ddtrace.Span, len({{ $msgs }}))\n__dd_initWriter(w)\n\nvar spanOpts []tracer.StartSpanOption\nprevSpan, ok := tracer.SpanFromContext({{ $ctx }})\nif ok {\n  spanOpts = append(spanOpts, tracer.ChildOf(prevSpan.Context()))\n}\n\nfor i := range {{ $msgs }} {\n  tMsg := __dd_wrapMessage(&{{ $msgs }}[i])\n  tWriter := __dd_wrapTracingWriter({{ $w }})\n  spans[i] = {{ $w }}.__dd_tracer.StartProduceSpan(nil, tWriter, tMsg, spanOpts...)\n  {{ $w }}.__dd_tracer.SetProduceDSMCheckpoint(tMsg, tWriter)\n}\n\ndefer func() {\n  for i, span := range spans {\n    {{ $w }}.__dd_tracer.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})\n  }\n}()",
+				map[string]string{
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
 	// From datastreams/shopify_sarama.yml
 	{
 		JoinPoint: join.OneOf(
@@ -1167,59 +1242,6 @@ var Aspects = [...]aspect.Aspect{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql", "NewSchema"),
 		},
 	},
-	// From grpc.yml
-	{
-		JoinPoint: join.OneOf(
-			join.FunctionCall("google.golang.org/grpc.Dial"),
-			join.FunctionCall("google.golang.org/grpc.DialContext"),
-			join.FunctionCall("google.golang.org/grpc.NewClient"),
-		),
-		Advice: []advice.Advice{
-			advice.AppendArgs(
-				join.MustTypeName("google.golang.org/grpc.DialOption"),
-				code.MustTemplate(
-					"grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-					context.GoLangVersion{},
-				),
-				code.MustTemplate(
-					"grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-					context.GoLangVersion{},
-				),
-			),
-		},
-	},
-	{
-		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
-		Advice: []advice.Advice{
-			advice.AppendArgs(
-				join.MustTypeName("google.golang.org/grpc.ServerOption"),
-				code.MustTemplate(
-					"grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-					context.GoLangVersion{},
-				),
-				code.MustTemplate(
-					"grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())",
-					map[string]string{
-						"grpc":      "google.golang.org/grpc",
-						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
-					},
-					context.GoLangVersion{},
-				),
-			),
-		},
-	},
 	// From http/chi.yml
 	{
 		JoinPoint: join.AllOf(
@@ -1380,6 +1402,73 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"kubernetestrace":     "gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 					"kubernetestransport": "k8s.io/client-go/transport",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	// From rpc/grpc.yml
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionCall("google.golang.org/grpc.Dial"),
+			join.FunctionCall("google.golang.org/grpc.DialContext"),
+			join.FunctionCall("google.golang.org/grpc.NewClient"),
+		),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				join.MustTypeName("google.golang.org/grpc.DialOption"),
+				code.MustTemplate(
+					"grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+					context.GoLangVersion{},
+				),
+				code.MustTemplate(
+					"grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+					context.GoLangVersion{},
+				),
+			),
+		},
+	},
+	{
+		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
+		Advice: []advice.Advice{
+			advice.AppendArgs(
+				join.MustTypeName("google.golang.org/grpc.ServerOption"),
+				code.MustTemplate(
+					"grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+					context.GoLangVersion{},
+				),
+				code.MustTemplate(
+					"grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())",
+					map[string]string{
+						"grpc":      "google.golang.org/grpc",
+						"grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc",
+					},
+					context.GoLangVersion{},
+				),
+			),
+		},
+	},
+	// From rpc/twirp.yml
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/twitchtv/twirp.ServerOptions"), join.StructLiteralMatchAny),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"{{- .AST.Type -}}{\n  {{- $hasField := false -}}\n  {{ range .AST.Elts }}\n  {{- if eq .Key.Name \"Hooks\" }}\n  {{- $hasField = true -}}\n  Hooks: twirp.ChainHooks(twirptrace.NewServerHooks(), {{ .Value }}),\n  {{- else -}}\n  {{ . }},\n  {{ end -}}\n  {{ end }}\n  {{- if not $hasField -}}\n  Hooks: twirptrace.NewServerHooks(),\n  {{- end }}\n}",
+				map[string]string{
+					"twirp":      "github.com/twitchtv/twirp",
+					"twirptrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 				},
 				context.GoLangVersion{},
 			)),
@@ -1671,6 +1760,8 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
@@ -1691,8 +1782,9 @@ var InjectedPaths = [...]string{
 	"net/http",
 	"os",
 	"strconv",
+	"strings",
 	"testing",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:4oiY1LFTR9K/1aRoXN8Dpgb4oGt5p/x3BTb8Dg+f6lH1LRtGu6bdJ/t9LmaxCpCK7AKRigoekSZ3Vyn/BU+tbg=="
+const Checksum = "sha512:uo9+ze9MqHZ08tykYfvuTtZcs5wqwAMfiSs5I/8dwzXmo7ErxTJClJQz2rElyKCyiffUxjrQrrK+bJSqQlc+Gw=="
