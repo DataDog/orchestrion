@@ -49,6 +49,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
