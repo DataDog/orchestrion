@@ -8,8 +8,6 @@ package segmentio_kafka_v0
 import (
 	"context"
 	"errors"
-	"net"
-	"strconv"
 	"testing"
 	"time"
 
@@ -57,36 +55,7 @@ func (tc *TestCase) newReader(topic string) *kafka.Reader {
 	})
 }
 
-func (tc *TestCase) createTopic(t *testing.T) {
-	conn, err := kafka.Dial("tcp", tc.addr)
-	require.NoError(t, err)
-	defer conn.Close()
-
-	controller, err := conn.Controller()
-	require.NoError(t, err)
-
-	controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
-	require.NoError(t, err)
-	defer controllerConn.Close()
-
-	topicConfigs := []kafka.TopicConfig{
-		{
-			Topic:             topicA,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		},
-		{
-			Topic:             topicB,
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		},
-	}
-	err = controllerConn.CreateTopics(topicConfigs...)
-	require.NoError(t, err)
-}
-
 func (tc *TestCase) Run(t *testing.T) {
-	// tc.createTopic(t)
 	tc.produce(t)
 	tc.consume(t)
 }
