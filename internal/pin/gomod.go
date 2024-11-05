@@ -8,8 +8,10 @@ package pin
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,7 +108,7 @@ func runGoModEdit(modfile string, edits ...goModEdit) error {
 
 	vendorDir := filepath.Join(modfile, "..", "vendor")
 	stat, err := os.Stat(vendorDir)
-	if os.IsNotExist(err) || (err == nil && !stat.IsDir()) {
+	if errors.Is(err, fs.ErrNotExist) || (err == nil && !stat.IsDir()) {
 		//  No `vendor` directory, nothing to do...
 		return nil
 	}

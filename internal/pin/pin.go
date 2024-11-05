@@ -13,6 +13,7 @@ import (
 	"go/token"
 	goversion "go/version"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ func PinOrchestrion(opts Options) error {
 	toolFile := filepath.Join(goMod, "..", OrchestrionToolGo)
 	var dstFile *dst.File
 	if src, err := os.ReadFile(toolFile); err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("reading %q: %w", toolFile, err)
 		}
 		dstFile = &dst.File{
@@ -243,7 +244,7 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 		}
 		integrationsFile := filepath.Join(someFile, "..", orchestrionDotYML)
 		if _, err := os.Stat(integrationsFile); err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package")
 				continue
 			}
