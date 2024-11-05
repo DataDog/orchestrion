@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -96,12 +95,6 @@ func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
 				wait.ForListeningPort(nat.Port(exposedPort)),
 			),
 		),
-		testcontainers.WithHostConfigModifier(func(hostConfig *container.HostConfig) {
-			if hostConfig.Sysctls == nil {
-				hostConfig.Sysctls = make(map[string]string)
-			}
-			hostConfig.Sysctls["vm.overcommit_memory"] = "1"
-		}),
 	)
 	AssertTestContainersError(t, err)
 
