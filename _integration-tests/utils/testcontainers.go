@@ -62,6 +62,7 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 	container, err := kafka.Run(ctx,
 		"confluentinc/confluent-local:7.5.0",
 		kafka.WithClusterID("test-cluster"),
+		WithTestLogConsumer(t),
 	)
 	AssertTestContainersError(t, err)
 
