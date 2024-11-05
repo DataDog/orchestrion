@@ -45,7 +45,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 		Addr:     kafka.TCP(tc.addr),
 		Balancer: &kafka.LeastBytes{},
 	}
-	tc.createTopic(t)
 }
 
 func (tc *TestCase) newReader(topic string) *kafka.Reader {
@@ -87,6 +86,7 @@ func (tc *TestCase) createTopic(t *testing.T) {
 }
 
 func (tc *TestCase) Run(t *testing.T) {
+	tc.createTopic(t)
 	tc.produce(t)
 	tc.consume(t)
 }

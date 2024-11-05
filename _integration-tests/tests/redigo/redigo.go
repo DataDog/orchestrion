@@ -55,11 +55,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 			return err
 		},
 	}
-
-	client := tc.Pool.Get()
-	defer func() { require.NoError(t, client.Close()) }()
-	_, err = client.Do("SET", tc.key, "test_value")
-	require.NoError(t, err)
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -68,7 +63,10 @@ func (tc *TestCase) Run(t *testing.T) {
 
 	client, err := tc.Pool.GetContext(ctx)
 	require.NoError(t, err)
-	defer func() { require.NoError(t, client.Close()) }()
+	defer func() { assert.NoError(t, client.Close()) }()
+
+	_, err = client.Do("SET", tc.key, "test_value")
+	require.NoError(t, err)
 
 	res, err := client.Do("GET", tc.key, ctx)
 	require.NoError(t, err)
@@ -92,6 +90,23 @@ func (tc *TestCase) ExpectedTraces() trace.Traces {
 				"name": "test.root",
 			},
 			Children: trace.Traces{
+				{
+					Tags: map[string]any{
+						"resource": "SET",
+						"type":     "redis",
+						"name":     "redis.command",
+						"service":  "redis.conn",
+					},
+					Meta: map[string]string{
+						"redis.raw_command": fmt.Sprintf("SET %s test_value", tc.key),
+						"db.system":         "redis",
+						"component":         "gomodule/redigo",
+						"out.network":       "tcp",
+						"out.host":          "localhost",
+						"redis.args_length": "2",
+						"span.kind":         "client",
+					},
+				},
 				{
 					Tags: map[string]any{
 						"resource": "GET",
