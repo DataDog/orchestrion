@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/injector"
-	"github.com/DataDog/orchestrion/internal/injector/builtin"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,7 +66,7 @@ func Test(t *testing.T) {
 
 			tmp := t.TempDir()
 			inj := injector.Injector{
-				Aspects: builtin.Aspects[:],
+				Aspects: nil,
 				ModifiedFile: func(filename string) string {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},

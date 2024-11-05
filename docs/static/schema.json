@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://datadoghq.dev/orchestrion/schema.json",
+  "description": "The schema for an orchestrion configuration file.",
   "type": "object",
-  "required": ["aspects", "meta"],
+  "required": ["meta"],
   "properties": {
     "meta": {
       "description": "Metadata about this configuration file.",
@@ -309,6 +310,15 @@
         ]
       },
       "minItems": 1
+    },
+    "extends": {
+      "description": "A list of file or directory names of other configuration to extend, specified as relative paths from the current file's directory.",
+      "type": "array",
+      "items": {
+        "markdownDescription": "A relative path (starting with `./` or `.\\`) to a valid YAML document or directory containing a valid Go package.",
+        "type": "string",
+        "pattern": "^\\.[/\\\\].*$"
+      }
     }
   },
   "additionalProperties": false,

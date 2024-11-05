@@ -1,0 +1,47 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+---
+# yaml-language-server: $schema=../../../docs/static/schema.json
+meta:
+  name: github.com/DataDog/orchestrion/internal/injector/builtin
+  description: |-
+    Orchestrion is a tool that allows you to inject code into your Go source code.
+  icon: code
+
+extends:
+  - ./yaml/civisibility/testing.yml
+  - ./yaml/databases/go-redis.yml
+  - ./yaml/databases/pgx.yml
+  - ./yaml/databases/go-elasticsearch.yml
+  - ./yaml/databases/gorm.yml
+  - ./yaml/databases/mongo.yml
+  - ./yaml/databases/gocql.yml
+  - ./yaml/databases/redigo.yml
+  - ./yaml/dd-span.yml
+  - ./yaml/k8s-client.yml
+  - ./yaml/directive/orchestrion-enabled.yml
+  - ./yaml/go-main.yml
+  - ./yaml/http/gin.yml
+  - ./yaml/http/chi.yml
+  - ./yaml/http/fiber.yml
+  - ./yaml/http/gorilla.yml
+  - ./yaml/http/echo.yml
+  - ./yaml/graphql/gqlgen.yml
+  - ./yaml/graphql/graphql-go.yml
+  - ./yaml/graphql/graph-gophers.yml
+  - ./yaml/cloud/aws-sdk-v2.yml
+  - ./yaml/cloud/aws-sdk.yml
+  - ./yaml/api/vault.yml
+  - ./yaml/stdlib/database-sql.yml
+  - ./yaml/stdlib/net-http.server.yml
+  - ./yaml/stdlib/net-http.client.yml
+  - ./yaml/stdlib/slog.yml
+  - ./yaml/stdlib/ossec.yml
+  - ./yaml/stdlib/runtime.yml
+  - ./yaml/rpc/grpc.yml
+  - ./yaml/rpc/twirp.yml
+  - ./yaml/datastreams/gcp_pubsub.yml
+  - ./yaml/datastreams/shopify_sarama.yml
+  - ./yaml/datastreams/ibm_sarama.yml

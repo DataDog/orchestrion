@@ -21,6 +21,8 @@ type Aspect struct {
 	JoinPoint join.Point
 	// Advice is the set of actions to use for performing the actual injection.
 	Advice []advice.Advice
+	// ID uniquely identifies this aspect within a given configuration scope.
+	ID string
 	// TracerInternal determines whether the aspect can be woven into the tracer's internal code.
 	TracerInternal bool
 }
@@ -58,6 +60,7 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
 		JoinPoint      yaml.Node `yaml:"join-point"`
 		Advice         yaml.Node `yaml:"advice"`
+		ID             string    `yaml:"id"`
 		TracerInternal bool      `yaml:"tracer-internal"`
 	}
 	if err := node.Decode(&ti); err != nil {
@@ -71,6 +74,7 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 		return errors.New("missing required key 'advice'")
 	}
 
+	a.ID = ti.ID
 	a.TracerInternal = ti.TracerInternal
 
 	var err error

@@ -30,7 +30,7 @@ const (
 	orchestrionImportPath     = "github.com/DataDog/orchestrion"
 	orchestrionInstrumentPath = orchestrionImportPath + "/instrument"
 	OrchestrionToolGo         = "orchestrion.tool.go"
-	orchestrionDotYML         = "orchestrion.yml"
+	OrchestrionDotYML         = "orchestrion.yml"
 )
 
 type Options struct {
@@ -222,7 +222,7 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 			Mode:       packages.NeedName | packages.NeedFiles,
 		},
-		importSet.Except(orchestrionImportPath, orchestrionInstrumentPath)...,
+		importSet.Except(orchestrionImportPath)...,
 	)
 	if err != nil {
 		return false, fmt.Errorf("pruneImports: %w", err)
@@ -242,10 +242,10 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 			pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "the package contains no Go source files")
 			continue
 		}
-		integrationsFile := filepath.Join(someFile, "..", orchestrionDotYML)
+		integrationsFile := filepath.Join(someFile, "..", OrchestrionDotYML)
 		if _, err := os.Stat(integrationsFile); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package")
+				pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "there is no "+OrchestrionDotYML+" file in this package")
 				continue
 			}
 		}
