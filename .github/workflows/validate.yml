@@ -319,13 +319,9 @@ jobs:
           go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
       - name: Run Integration Tests
         shell: bash
-        run: |-
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo sysctl -w vm.overcommit_memory=1
-          fi
-          
+        run: |-          
           mkdir -p "${GOCOVERDIR}"
-          test_args=("-shuffle=on" "-v")
+          test_args=("-shuffle=on")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi

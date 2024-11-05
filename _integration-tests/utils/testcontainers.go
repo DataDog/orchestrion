@@ -66,6 +66,15 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 		"confluentinc/confluent-local:7.5.0",
 		kafka.WithClusterID("test-cluster"),
 		WithTestLogConsumer(t),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForListeningPort(nat.Port(exposedPort)),
+				wait.ForExec(createTopicCmd("topic-A")),
+				wait.ForExec(createTopicCmd("topic-B")),
+				wait.ForExec(checkTopicExistsCmd("topic-A")),
+				wait.ForExec(checkTopicExistsCmd("topic-B")),
+			),
+		),
 	)
 	AssertTestContainersError(t, err)
 
@@ -83,6 +92,10 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
 	ctx := context.Background()
 	exposedPort := "6379/tcp"
+	waitReadyCmd := []string{
+		"redis-cli",
+		"ping",
+	}
 
 	container, err := redis.Run(ctx,
 		"redis:7",
@@ -93,6 +106,7 @@ func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
 				wait.ForLog("* Ready to accept connections"),
 				wait.ForExposedPort(),
 				wait.ForListeningPort(nat.Port(exposedPort)),
+				wait.ForExec(waitReadyCmd),
 			),
 		),
 	)
@@ -145,4 +159,27 @@ func SkipIfProviderIsNotHealthy(t *testing.T) {
 	}()
 
 	testcontainers.SkipIfProviderIsNotHealthy(t)
+}
+
+func createTopicCmd(topic string) []string {
+	return []string{
+		"kafka-topics",
+		"--bootstrap-server", "localhost:9092",
+		"--topic", topic,
+		"--create",
+		"--if-not-exists",
+		"--partitions", "1",
+		"--replication-factor", "1",
+	}
+}
+
+func checkTopicExistsCmd(topic string) []string {
+	return []string{
+		"kafka-topics",
+		"--bootstrap-server",
+		"localhost:9092",
+		"--list",
+		"|",
+		"grep", topic,
+	}
 }

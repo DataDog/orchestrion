@@ -86,7 +86,7 @@ func (tc *TestCase) createTopic(t *testing.T) {
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	tc.createTopic(t)
+	// tc.createTopic(t)
 	tc.produce(t)
 	tc.consume(t)
 }
