@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
@@ -122,7 +123,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			if err := os.MkdirAll(profilePath, 0775); err != nil && !os.IsExist(err) {
+			if err := os.MkdirAll(profilePath, 0775); err != nil && !errors.Is(err, fs.ErrExist) {
 				return err
 			}
 			if err := os.Setenv(envVarOrchestrionProfilePath, profilePath); err != nil {

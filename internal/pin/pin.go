@@ -13,6 +13,7 @@ import (
 	"go/token"
 	goversion "go/version"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -256,7 +257,7 @@ func pruneImports(importSet *importSet, opts Options) (bool, error) {
 		}
 		integrationsFile := filepath.Join(someFile, "..", orchestrionDotYML)
 		if _, err := os.Stat(integrationsFile); err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package", opts) || pruned
 				continue
 			}
