@@ -1393,6 +1393,35 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From http/julienschmidt_httprouter.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/julienschmidt/httprouter.Router")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type __dd_wRouter struct {\n  *Router\n}\n  \nfunc __dd_wrapRouter(r *Router) tracing.Router {\n  return &__dd_wRouter{r}\n}\n  \nfunc (w __dd_wRouter) Lookup(method string, path string) (any, []tracing.Param, bool) {\n  h, params, ok := w.Router.Lookup(method, path)\n  return h, __dd_wrapParams(params), ok\n}\n  \ntype __dd_wParam struct {\n  Param\n}\n  \nfunc __dd_wrapParams(params Params) []tracing.Param {\n  wParams := make([]tracing.Param, len(params))\n  for i, p := range params {\n    wParams[i] = __dd_wParam{p}\n  }\n  return wParams\n}\n  \nfunc (w __dd_wParam) GetKey() string {\n  return w.Key\n}\n  \nfunc (w __dd_wParam) GetValue() string {\n  return w.Value\n}\n  \nfunc __dd_init(r *Router) {\n  if r.__dd_config != nil {\n    return\n  }\n  r.__dd_config = tracing.NewConfig()\n  return\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
+				},
+				context.MustParseGoLangVersion("go1.18"),
+			), []string{}),
+			advice.AddStructField("__dd_config", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing.Config")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/julienschmidt/httprouter.Router")),
+			join.Name("ServeHTTP"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\n{{- $w := .Function.Argument 0 -}}\n{{- $req := .Function.Argument 1 -}}\n__dd_init({{ $r }})\n\ntw, treq, afterHandle, handled := tracing.BeforeHandle({{ $r }}.__dd_config, {{ $r }}, __dd_wrapRouter, {{ $w }}, {{ $req }})\n{{ $w }} = tw\n{{ $req }} = treq\ndefer afterHandle()\nif handled {\n  return\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
 	// From k8s-client.yml
 	{
 		JoinPoint: join.StructLiteral(join.MustTypeName("k8s.io/client-go/rest.Config"), join.StructLiteralMatchAny),
@@ -1755,6 +1784,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
@@ -1787,4 +1817,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:uo9+ze9MqHZ08tykYfvuTtZcs5wqwAMfiSs5I/8dwzXmo7ErxTJClJQz2rElyKCyiffUxjrQrrK+bJSqQlc+Gw=="
+const Checksum = "sha512:0a9VzE3sHAumP+FA5PA0CD2CWU4DRXFDGMDmQ6E5cR5U4GHfhkVODFxkX/BUvWqdJb0rYMsAI256lJl2pDikEA=="
