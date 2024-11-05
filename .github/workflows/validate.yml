@@ -323,7 +323,7 @@ jobs:
           mkdir -p "${GOCOVERDIR}"
           test_args=("-shuffle=on")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-p=10" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
+            test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
           fi
 
           case "${{ matrix.build-mode }}" in
