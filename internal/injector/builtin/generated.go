@@ -708,6 +708,81 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From datastreams/segmentio_kafka_v0.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/segmentio/kafka-go.Reader")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type __dd_wMessage struct {\n  *Message\n}\n  \nfunc __dd_wrapMessage(msg *Message) tracing.Message {\n  if msg == nil {\n    return nil\n  }\n  return &__dd_wMessage{msg}\n}\n  \nfunc (w *__dd_wMessage) GetValue() []byte {\n  return w.Value\n}\n  \nfunc (w *__dd_wMessage) GetKey() []byte {\n  return w.Key\n}\n  \nfunc (w *__dd_wMessage) GetHeaders() []tracing.Header {\n  hs := make([]tracing.Header, 0, len(w.Headers))\n  for _, h := range w.Headers {\n    hs = append(hs, __dd_wrapHeader(h))\n  }\n  return hs\n}\n  \nfunc (w *__dd_wMessage) SetHeaders(headers []tracing.Header) {\n  hs := make([]Header, 0, len(headers))\n  for _, h := range headers {\n    hs = append(hs, Header{\n      Key:   h.GetKey(),\n      Value: h.GetValue(),\n    })\n  }\n  w.Message.Headers = hs\n}\n  \nfunc (w *__dd_wMessage) GetTopic() string {\n  return w.Topic\n}\n  \nfunc (w *__dd_wMessage) GetPartition() int {\n  return w.Partition\n}\n  \nfunc (w *__dd_wMessage) GetOffset() int64 {\n  return w.Offset\n}\n  \ntype __dd_wHeader struct {\n  Header\n}\n  \nfunc __dd_wrapHeader(h Header) tracing.Header {\n  return &__dd_wHeader{h}\n}\n  \nfunc (w __dd_wHeader) GetKey() string {\n  return w.Key\n}\n  \nfunc (w __dd_wHeader) GetValue() []byte {\n  return w.Value\n}\n  \ntype __dd_wWriter struct {\n  *Writer\n}\n  \nfunc (w *__dd_wWriter) GetTopic() string {\n  return w.Topic\n}\n  \nfunc __dd_wrapTracingWriter(w *Writer) tracing.Writer {\n  return &__dd_wWriter{w}\n}\n\nfunc __dd_initReader(r *Reader) {\n  if r.__dd_tracer != nil {\n    return\n  }\n  kafkaCfg := tracing.KafkaConfig{}\n  if r.Config().Brokers != nil {\n    kafkaCfg.BootstrapServers = strings.Join(r.Config().Brokers, \",\")\n  }\n  if r.Config().GroupID != \"\" {\n    kafkaCfg.ConsumerGroupID = r.Config().GroupID\n  }\n  r.__dd_tracer = tracing.NewTracer(kafkaCfg)\n}\n\ntype __dd_span = ddtrace.Span",
+				map[string]string{
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"strings": "strings",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
+			advice.AddStructField("__dd_prevSpan", join.MustTypeName("__dd_span")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Reader")),
+			join.Name("FetchMessage"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initReader(r)\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}\ndefer func() {\n  if {{ $err }} != nil {\n    return\n  }\n  tMsg := __dd_wrapMessage(&{{ $msg }})\n  {{ $r }}.__dd_prevSpan = {{ $r }}.__dd_tracer.StartConsumeSpan({{ $ctx }}, tMsg)\n  {{ $r }}.__dd_tracer.SetConsumeDSMCheckpoint(tMsg)\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Reader")),
+			join.Name("Close"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/segmentio/kafka-go.Writer")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"func __dd_initWriter(w *Writer) {\n  if w.__dd_tracer != nil {\n    return\n  }\n  kafkaCfg := tracing.KafkaConfig{\n    BootstrapServers: w.Addr.String(),\n  }\n  w.__dd_tracer = tracing.NewTracer(kafkaCfg)\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Writer")),
+			join.Name("WriteMessages"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $w := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msgs := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\nspans := make([]ddtrace.Span, len({{ $msgs }}))\n__dd_initWriter(w)\n\nvar spanOpts []tracer.StartSpanOption\nprevSpan, ok := tracer.SpanFromContext({{ $ctx }})\nif ok {\n  spanOpts = append(spanOpts, tracer.ChildOf(prevSpan.Context()))\n}\n\nfor i := range {{ $msgs }} {\n  tMsg := __dd_wrapMessage(&{{ $msgs }}[i])\n  tWriter := __dd_wrapTracingWriter({{ $w }})\n  spans[i] = {{ $w }}.__dd_tracer.StartProduceSpan(nil, tWriter, tMsg, spanOpts...)\n  {{ $w }}.__dd_tracer.SetProduceDSMCheckpoint(tMsg, tWriter)\n}\n\ndefer func() {\n  for i, span := range spans {\n    {{ $w }}.__dd_tracer.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})\n  }\n}()",
+				map[string]string{
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
 	// From datastreams/shopify_sarama.yml
 	{
 		JoinPoint: join.OneOf(
@@ -1390,6 +1465,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
@@ -1411,8 +1487,9 @@ var InjectedPaths = [...]string{
 	"net/http",
 	"os",
 	"strconv",
+	"strings",
 	"testing",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:WJ6cUkZYX1c1gLi4hqYmuW7WV6w9sQPxW+OdiS1liKFzjvzj8wXQ+1qmdmbxI+//S++ReqWp9ayuu3LLIECoyg=="
+const Checksum = "sha512:PWroVJ3UroS2uea+T7JL0bxViL8t/b02MjCMX9wOSbZa4+Yl42h2KUb+GqyOfUhxYNXzMbR+6shPVksDNKWiWw=="
