@@ -604,6 +604,300 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From datastreams/confluentinc_kafka.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"const __dd_ckgoVersion = tracing.CKGoVersion1",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+		},
+	},
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"const __dd_ckgoVersion = tracing.CKGoVersion2",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+			join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+		),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type __dd_wMessage struct {\n  *Message\n}\n  \nfunc __dd_wrapMessage(msg *Message) tracing.Message {\n  if msg == nil {\n    return nil\n  }\n  return &__dd_wMessage{msg}\n}\n  \nfunc (w *__dd_wMessage) Unwrap() any {\n  return w.Message\n}\n  \nfunc (w *__dd_wMessage) GetValue() []byte {\n  return w.Message.Value\n}\n  \nfunc (w *__dd_wMessage) GetKey() []byte {\n  return w.Message.Key\n}\n  \nfunc (w *__dd_wMessage) GetHeaders() []tracing.Header {\n  hs := make([]tracing.Header, 0, len(w.Headers))\n  for _, h := range w.Headers {\n    hs = append(hs, __dd_wrapHeader(h))\n  }\n  return hs\n}\n  \nfunc (w *__dd_wMessage) SetHeaders(headers []tracing.Header) {\n  hs := make([]Header, 0, len(headers))\n  for _, h := range headers {\n    hs = append(hs, Header{\n      Key:   h.GetKey(),\n      Value: h.GetValue(),\n    })\n  }\n  w.Message.Headers = hs\n}\n  \nfunc (w *__dd_wMessage) GetTopicPartition() tracing.TopicPartition {\n  return __dd_wrapTopicPartition(w.Message.TopicPartition)\n}\n  \ntype __dd_wHeader struct {\n  Header\n}\n  \nfunc __dd_wrapHeader(h Header) tracing.Header {\n  return &__dd_wHeader{h}\n}\n  \nfunc (w __dd_wHeader) GetKey() string {\n  return w.Header.Key\n}\n  \nfunc (w __dd_wHeader) GetValue() []byte {\n  return w.Header.Value\n}\n  \ntype __dd_wTopicPartition struct {\n  TopicPartition\n}\n  \nfunc __dd_wrapTopicPartition(tp TopicPartition) tracing.TopicPartition {\n  return __dd_wTopicPartition{tp}\n}\n  \nfunc __dd_wrapTopicPartitions(tps []TopicPartition) []tracing.TopicPartition {\n  wtps := make([]tracing.TopicPartition, 0, len(tps))\n  for _, tp := range tps {\n    wtps = append(wtps, __dd_wTopicPartition{tp})\n  }\n  return wtps\n}\n  \nfunc (w __dd_wTopicPartition) GetTopic() string {\n  if w.Topic == nil {\n    return \"\"\n  }\n  return *w.Topic\n}\n  \nfunc (w __dd_wTopicPartition) GetPartition() int32 {\n  return w.Partition\n}\n  \nfunc (w __dd_wTopicPartition) GetOffset() int64 {\n  return int64(w.Offset)\n}\n  \nfunc (w __dd_wTopicPartition) GetError() error {\n  return w.Error\n}\n  \ntype __dd_wEvent struct {\n  Event\n}\n  \nfunc __dd_wrapEvent(event Event) tracing.Event {\n  return __dd_wEvent{event}\n}\n  \nfunc (w __dd_wEvent) KafkaMessage() (tracing.Message, bool) {\n  if m, ok := w.Event.(*Message); ok {\n    return __dd_wrapMessage(m), true\n  }\n  return nil, false\n}\n  \nfunc (w __dd_wEvent) KafkaOffsetsCommitted() (tracing.OffsetsCommitted, bool) {\n  if oc, ok := w.Event.(OffsetsCommitted); ok {\n    return __dd_wrapOffsetsCommitted(oc), true\n  }\n  return nil, false\n}\n  \ntype __dd_wOffsetsCommitted struct {\n  OffsetsCommitted\n}\n  \nfunc __dd_wrapOffsetsCommitted(oc OffsetsCommitted) tracing.OffsetsCommitted {\n  return __dd_wOffsetsCommitted{oc}\n}\n  \nfunc (w __dd_wOffsetsCommitted) GetError() error {\n  return w.Error\n}\n  \nfunc (w __dd_wOffsetsCommitted) GetOffsets() []tracing.TopicPartition {\n  ttps := make([]tracing.TopicPartition, 0, len(w.Offsets))\n  for _, tp := range w.Offsets {\n    ttps = append(ttps, __dd_wrapTopicPartition(tp))\n  }\n  return ttps\n}\n\ntype __dd_wConfigMap struct {\n  cfg *ConfigMap\n}\n  \nfunc __dd_wrapConfigMap(cm *ConfigMap) tracing.ConfigMap {\n  return &__dd_wConfigMap{cm}\n}\n  \nfunc (w *__dd_wConfigMap) Get(key string, defVal any) (any, error) {\n  return w.cfg.Get(key, defVal)\n}\n\nfunc init() {\n  telemetry.LoadIntegration(tracing.ComponentName(__dd_ckgoVersion))\n  tracer.MarkIntegrationImported(tracing.IntegrationName(__dd_ckgoVersion))\n}\n\nfunc __dd_newKafkaTracer(opts ...tracing.Option) *tracing.KafkaTracer {\n  v, _ := LibraryVersion()\n  return tracing.NewKafkaTracer(__dd_ckgoVersion, v, opts...)\n}\n\nfunc __dd_initConsumer(c *Consumer) {\n  if c.__dd_tracer != nil {\n    return\n  }\n  var opts []tracing.Option\n  if c.__dd_confmap != nil {\n    opts = append(opts, tracing.WithConfig(__dd_wrapConfigMap(c.__dd_confmap)))\n  }\n  c.__dd_tracer = __dd_newKafkaTracer(opts...)\n  // TODO: accessing c.events here might break if the library renames this variable...\n  c.__dd_events = tracing.WrapConsumeEventsChannel(c.__dd_tracer, c.events, c, __dd_wrapEvent)\n}\n\nfunc __dd_initProducer(p *Producer) {\n  if p.__dd_tracer != nil {\n    return\n  }\n  p.__dd_tracer = __dd_newKafkaTracer()\n  // TODO: accessing p.events and p.produceChannel here might break if the library renames this variable...\n  p.__dd_events = p.events\n  p.__dd_produceChannel = tracing.WrapProduceChannel(p.__dd_tracer, p.produceChannel, __dd_wrapMessage)\n  if p.__dd_tracer.DSMEnabled() {\n    p.__dd_events = tracing.WrapProduceEventsChannel(p.__dd_tracer, p.events, __dd_wrapEvent)\n  }\n}\n\ntype __dd_eventChan = chan Event\ntype __dd_messageChan = chan *Message\ntype __dd_kafkaTracer = tracing.KafkaTracer",
+				map[string]string{
+					"telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
+					"tracer":    "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"tracing":   "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.MustParseGoLangVersion("go1.18"),
+			), []string{}),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+			join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+		),
+		Advice: []advice.Advice{
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*__dd_kafkaTracer")),
+			advice.AddStructField("__dd_events", join.MustTypeName("__dd_eventChan")),
+			advice.AddStructField("__dd_confmap", join.MustTypeName("*ConfigMap")),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.AllOf(
+				join.ImportPath("github.com/confluentinc/confluent-kafka-go/kafka"),
+				join.FunctionBody(join.Function(
+					join.Name("NewConsumer"),
+				)),
+			),
+			join.AllOf(
+				join.ImportPath("github.com/confluentinc/confluent-kafka-go/v2/kafka"),
+				join.FunctionBody(join.Function(
+					join.Name("NewConsumer"),
+				)),
+			),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $conf := .Function.Argument 0 -}}\n{{- $c := .Function.Result 0 -}}\ndefer func() {\n  if {{ $c }} == nil {\n    return\n  }\n  {{ $c }}.__dd_confmap = {{ $conf }}\n  __dd_initConsumer({{ $c }})\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+				join.Name("Close"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+				join.Name("Close"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $c := .Function.Receiver -}}\n__dd_initConsumer({{ $c }})\ndefer func() {\n  if {{ $c }}.__dd_events == nil && {{ $c }}.__dd_tracer.PrevSpan != nil {\n    {{ $c }}.__dd_tracer.PrevSpan.Finish()\n    {{ $c }}.__dd_tracer.PrevSpan = nil\n  }\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+				join.Name("Events"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+				join.Name("Events"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $c := .Function.Receiver -}}\n{{- $events := .Function.Result 0 -}}\n__dd_initConsumer({{ $c }})\ndefer func() {\n  {{ $events }} = {{ $c }}.__dd_events\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+				join.Name("Poll"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+				join.Name("Poll"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $c := .Function.Receiver -}}\n{{- $event := .Function.Result 0 -}}\n__dd_initConsumer({{ $c }})\nif {{ $c }}.__dd_tracer.PrevSpan != nil {\n  {{ $c }}.__dd_tracer.PrevSpan.Finish()\n  {{ $c }}.__dd_tracer.PrevSpan = nil\n}\ndefer func() {\n    if msg, ok := {{ $event }}.(*Message); ok {\n      tMsg := __dd_wrapMessage(msg)\n      {{ $c }}.__dd_tracer.SetConsumeCheckpoint(tMsg)\n      {{ $c }}.__dd_tracer.PrevSpan = {{ $c }}.__dd_tracer.StartConsumeSpan(tMsg)\n    } else if offset, ok := {{ $event }}.(OffsetsCommitted); ok {\n      tOffsets := __dd_wrapTopicPartitions(offset.Offsets)\n      {{ $c }}.__dd_tracer.TrackCommitOffsets(tOffsets, offset.Error)\n      {{ $c }}.__dd_tracer.TrackHighWatermarkOffset(tOffsets, {{ $c }})\n    }\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+				join.Name("Commit"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+				join.Name("Commit"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $c := .Function.Receiver -}}\n{{- $tps := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initConsumer({{ $c }})\ndefer func() {\n  tOffsets := __dd_wrapTopicPartitions({{ $tps }})\n  {{ $c }}.__dd_tracer.TrackCommitOffsets(tOffsets, {{ $err }})\n  {{ $c }}.__dd_tracer.TrackHighWatermarkOffset(tOffsets, {{ $c }})\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+				join.Name("CommitMessage"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+				join.Name("CommitMessage"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $c := .Function.Receiver -}}\n{{- $tps := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initConsumer({{ $c }})\ndefer func() {\n  tOffsets := __dd_wrapTopicPartitions({{ $tps }})\n  {{ $c }}.__dd_tracer.TrackCommitOffsets(tOffsets, {{ $err }})\n  {{ $c }}.__dd_tracer.TrackHighWatermarkOffset(tOffsets, {{ $c }})\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Consumer")),
+				join.Name("CommitOffsets"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Consumer")),
+				join.Name("CommitOffsets"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $c := .Function.Receiver -}}\n{{- $tps := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initConsumer({{ $c }})\ndefer func() {\n  tOffsets := __dd_wrapTopicPartitions({{ $tps }})\n  {{ $c }}.__dd_tracer.TrackCommitOffsets(tOffsets, {{ $err }})\n  {{ $c }}.__dd_tracer.TrackHighWatermarkOffset(tOffsets, {{ $c }})\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+			join.StructDefinition(join.MustTypeName("github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer")),
+		),
+		Advice: []advice.Advice{
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*__dd_kafkaTracer")),
+			advice.AddStructField("__dd_events", join.MustTypeName("__dd_eventChan")),
+			advice.AddStructField("__dd_produceChannel", join.MustTypeName("__dd_messageChan")),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+				join.Name("Events"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer")),
+				join.Name("Events"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $p := .Function.Receiver -}}\n{{- $events := .Function.Result 0 -}}\n__dd_initProducer({{ $p }})\ndefer func() {\n  {{ $events }} = {{ $p }}.__dd_events\n}()",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+				join.Name("ProduceChannel"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer")),
+				join.Name("ProduceChannel"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $p := .Function.Receiver -}}\n{{- $produceChannel := .Function.Result 0 -}}\n__dd_initProducer({{ $p }})\ndefer func() {\n  {{ $produceChannel }} = {{ $p }}.__dd_produceChannel\n}()",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+				join.Name("Close"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer")),
+				join.Name("Close"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $p := .Function.Receiver -}}\n__dd_initProducer({{ $p }})\nclose({{ $p }}.__dd_produceChannel)",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.OneOf(
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/kafka.Producer")),
+				join.Name("Produce"),
+			)),
+			join.FunctionBody(join.Function(
+				join.Receiver(join.MustTypeName("*github.com/confluentinc/confluent-kafka-go/v2/kafka.Producer")),
+				join.Name("Produce"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $p := .Function.Receiver -}}\n{{- $msg := .Function.Argument 0 -}}\n{{- $deliveryChan := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\n__dd_initProducer({{ $p }})\ntMsg := __dd_wrapMessage({{ $msg }})\nspan := p.__dd_tracer.StartProduceSpan(tMsg)\n\nvar errChan chan error\n{{ $deliveryChan }}, errChan = tracing.WrapDeliveryChannel({{ $p }}.__dd_tracer, {{ $deliveryChan }}, span, __dd_wrapEvent)\n\n{{ $p }}.__dd_tracer.SetProduceCheckpoint(tMsg)\ndefer func() {\n  if {{ $err }} != nil {\n    if errChan != nil {\n      errChan <- {{ $err }}\n    } else {\n      span.Finish(tracer.WithError({{ $err }}))\n    }\n  }\n}()",
+				map[string]string{
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
 	// From datastreams/gcp_pubsub.yml
 	{
 		JoinPoint: join.FunctionBody(join.Function(
@@ -703,6 +997,81 @@ var Aspects = [...]aspect.Aspect{
 				map[string]string{
 					"sarama":      "github.com/IBM/sarama",
 					"saramatrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	// From datastreams/segmentio_kafka_v0.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/segmentio/kafka-go.Reader")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type __dd_wMessage struct {\n  *Message\n}\n  \nfunc __dd_wrapMessage(msg *Message) tracing.Message {\n  if msg == nil {\n    return nil\n  }\n  return &__dd_wMessage{msg}\n}\n  \nfunc (w *__dd_wMessage) GetValue() []byte {\n  return w.Value\n}\n  \nfunc (w *__dd_wMessage) GetKey() []byte {\n  return w.Key\n}\n  \nfunc (w *__dd_wMessage) GetHeaders() []tracing.Header {\n  hs := make([]tracing.Header, 0, len(w.Headers))\n  for _, h := range w.Headers {\n    hs = append(hs, __dd_wrapHeader(h))\n  }\n  return hs\n}\n  \nfunc (w *__dd_wMessage) SetHeaders(headers []tracing.Header) {\n  hs := make([]Header, 0, len(headers))\n  for _, h := range headers {\n    hs = append(hs, Header{\n      Key:   h.GetKey(),\n      Value: h.GetValue(),\n    })\n  }\n  w.Message.Headers = hs\n}\n  \nfunc (w *__dd_wMessage) GetTopic() string {\n  return w.Topic\n}\n  \nfunc (w *__dd_wMessage) GetPartition() int {\n  return w.Partition\n}\n  \nfunc (w *__dd_wMessage) GetOffset() int64 {\n  return w.Offset\n}\n  \ntype __dd_wHeader struct {\n  Header\n}\n  \nfunc __dd_wrapHeader(h Header) tracing.Header {\n  return &__dd_wHeader{h}\n}\n  \nfunc (w __dd_wHeader) GetKey() string {\n  return w.Key\n}\n  \nfunc (w __dd_wHeader) GetValue() []byte {\n  return w.Value\n}\n  \ntype __dd_wWriter struct {\n  *Writer\n}\n  \nfunc (w *__dd_wWriter) GetTopic() string {\n  return w.Topic\n}\n  \nfunc __dd_wrapTracingWriter(w *Writer) tracing.Writer {\n  return &__dd_wWriter{w}\n}\n\nfunc __dd_initReader(r *Reader) {\n  if r.__dd_tracer != nil {\n    return\n  }\n  kafkaCfg := tracing.KafkaConfig{}\n  if r.Config().Brokers != nil {\n    kafkaCfg.BootstrapServers = strings.Join(r.Config().Brokers, \",\")\n  }\n  if r.Config().GroupID != \"\" {\n    kafkaCfg.ConsumerGroupID = r.Config().GroupID\n  }\n  r.__dd_tracer = tracing.NewTracer(kafkaCfg)\n}\n\ntype __dd_span = ddtrace.Span",
+				map[string]string{
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"strings": "strings",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
+			advice.AddStructField("__dd_prevSpan", join.MustTypeName("__dd_span")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Reader")),
+			join.Name("FetchMessage"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msg := .Function.Result 0 -}}\n{{- $err := .Function.Result 1 -}}\n__dd_initReader(r)\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}\ndefer func() {\n  if {{ $err }} != nil {\n    return\n  }\n  tMsg := __dd_wrapMessage(&{{ $msg }})\n  {{ $r }}.__dd_prevSpan = {{ $r }}.__dd_tracer.StartConsumeSpan({{ $ctx }}, tMsg)\n  {{ $r }}.__dd_tracer.SetConsumeDSMCheckpoint(tMsg)\n}()",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Reader")),
+			join.Name("Close"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\nif {{ $r }}.__dd_prevSpan != nil {\n  {{ $r }}.__dd_prevSpan.Finish()\n  {{ $r }}.__dd_prevSpan = nil\n}",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/segmentio/kafka-go.Writer")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"func __dd_initWriter(w *Writer) {\n  if w.__dd_tracer != nil {\n    return\n  }\n  kafkaCfg := tracing.KafkaConfig{\n    BootstrapServers: w.Addr.String(),\n  }\n  w.__dd_tracer = tracing.NewTracer(kafkaCfg)\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+			advice.AddStructField("__dd_tracer", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing.Tracer")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/segmentio/kafka-go.Writer")),
+			join.Name("WriteMessages"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $w := .Function.Receiver -}}\n{{- $ctx := .Function.Argument 0 -}}\n{{- $msgs := .Function.Argument 1 -}}\n{{- $err := .Function.Result 0 -}}\nspans := make([]ddtrace.Span, len({{ $msgs }}))\n__dd_initWriter(w)\n\nvar spanOpts []tracer.StartSpanOption\nprevSpan, ok := tracer.SpanFromContext({{ $ctx }})\nif ok {\n  spanOpts = append(spanOpts, tracer.ChildOf(prevSpan.Context()))\n}\n\nfor i := range {{ $msgs }} {\n  tMsg := __dd_wrapMessage(&{{ $msgs }}[i])\n  tWriter := __dd_wrapTracingWriter({{ $w }})\n  spans[i] = {{ $w }}.__dd_tracer.StartProduceSpan(nil, tWriter, tMsg, spanOpts...)\n  {{ $w }}.__dd_tracer.SetProduceDSMCheckpoint(tMsg, tWriter)\n}\n\ndefer func() {\n  for i, span := range spans {\n    {{ $w }}.__dd_tracer.FinishProduceSpan(span, {{ $msgs }}[i].Partition, {{ $msgs }}[i].Offset, {{ $err }})\n  }\n}()",
+				map[string]string{
+					"ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 				},
 				context.GoLangVersion{},
 			)),
@@ -1019,6 +1388,35 @@ var Aspects = [...]aspect.Aspect{
 					"httptraceinternal": "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/httptrace",
 					"options":           "gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 					"tracer":            "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	// From http/julienschmidt_httprouter.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/julienschmidt/httprouter.Router")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"type __dd_wRouter struct {\n  *Router\n}\n  \nfunc __dd_wrapRouter(r *Router) tracing.Router {\n  return &__dd_wRouter{r}\n}\n  \nfunc (w __dd_wRouter) Lookup(method string, path string) (any, []tracing.Param, bool) {\n  h, params, ok := w.Router.Lookup(method, path)\n  return h, __dd_wrapParams(params), ok\n}\n  \ntype __dd_wParam struct {\n  Param\n}\n  \nfunc __dd_wrapParams(params Params) []tracing.Param {\n  wParams := make([]tracing.Param, len(params))\n  for i, p := range params {\n    wParams[i] = __dd_wParam{p}\n  }\n  return wParams\n}\n  \nfunc (w __dd_wParam) GetKey() string {\n  return w.Key\n}\n  \nfunc (w __dd_wParam) GetValue() string {\n  return w.Value\n}\n  \nfunc __dd_init(r *Router) {\n  if r.__dd_config != nil {\n    return\n  }\n  r.__dd_config = tracing.NewConfig()\n  return\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
+				},
+				context.MustParseGoLangVersion("go1.18"),
+			), []string{}),
+			advice.AddStructField("__dd_config", join.MustTypeName("*gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing.Config")),
+		},
+	},
+	{
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*github.com/julienschmidt/httprouter.Router")),
+			join.Name("ServeHTTP"),
+		)),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $r := .Function.Receiver -}}\n{{- $w := .Function.Argument 0 -}}\n{{- $req := .Function.Argument 1 -}}\n__dd_init({{ $r }})\n\ntw, treq, afterHandle, handled := tracing.BeforeHandle({{ $r }}.__dd_config, {{ $r }}, __dd_wrapRouter, {{ $w }}, {{ $req }})\n{{ $w }} = tw\n{{ $req }} = treq\ndefer afterHandle()\nif handled {\n  return\n}",
+				map[string]string{
+					"tracing": "gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
 				},
 				context.GoLangVersion{},
 			)),
@@ -1364,6 +1762,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1/internal/tracing",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin",
@@ -1385,11 +1784,13 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/internal/options",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9",
+	"gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0/internal/tracing",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
@@ -1411,8 +1812,9 @@ var InjectedPaths = [...]string{
 	"net/http",
 	"os",
 	"strconv",
+	"strings",
 	"testing",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:WJ6cUkZYX1c1gLi4hqYmuW7WV6w9sQPxW+OdiS1liKFzjvzj8wXQ+1qmdmbxI+//S++ReqWp9ayuu3LLIECoyg=="
+const Checksum = "sha512:0a9VzE3sHAumP+FA5PA0CD2CWU4DRXFDGMDmQ6E5cR5U4GHfhkVODFxkX/BUvWqdJb0rYMsAI256lJl2pDikEA=="

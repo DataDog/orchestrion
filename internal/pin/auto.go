@@ -22,18 +22,27 @@ const (
 	envValTrue         = "true"
 )
 
-var (
-	requiredVersionError error // Whether the go.mod version check succeeded
-)
-
 // AutoPinOrchestrion automatically runs `pinOrchestrion` if the necessary
 // requirements are not already met. It prints messages to `os.Stderr` to inform
 // the user about what is going on.
 func AutoPinOrchestrion() {
-	if requiredVersionError == nil {
-		// Nothing to do!
+	if os.Getenv(envVarCheckedGoMod) == envValTrue {
+		// A parent process (or ourselves earlier) has already done the check
 		return
 	}
+
+	requiredVersionError := ensure.RequiredVersion()
+	if requiredVersionError == nil {
+		// We're good to go, just make sure we don't do this again
+		_ = os.Setenv(envVarCheckedGoMod, envValTrue)
+		return
+	}
+
+	log.Tracef("Failed to detect required version of orchestrion from go.mod: %v\n", requiredVersionError)
+	if wd, err := os.Getwd(); err == nil {
+		log.Tracef("Working directory: %q\n", wd)
+	}
+	log.Tracef("GOMOD=%s\n", os.Getenv("GOMOD"))
 
 	var (
 		box       = lipgloss.NewStyle()
@@ -81,22 +90,5 @@ func AutoPinOrchestrion() {
 		os.Exit(1)
 	}
 
-	requiredVersionError = nil
-}
-
-func init() {
-	if os.Getenv(envVarCheckedGoMod) == envValTrue {
-		// A parent process has already done the check for us!!
-		return
-	}
-
-	if requiredVersionError = ensure.RequiredVersion(); requiredVersionError != nil {
-		log.Tracef("Failed to detect required version of orchestrion from go.mod: %v\n", requiredVersionError)
-		if wd, err := os.Getwd(); err == nil {
-			log.Tracef("Working directory: %q\n", wd)
-		}
-		log.Tracef("GOMOD=%s\n", os.Getenv("GOMOD"))
-	} else {
-		_ = os.Setenv(envVarCheckedGoMod, envValTrue)
-	}
+	_ = os.Setenv(envVarCheckedGoMod, envValTrue)
 }
