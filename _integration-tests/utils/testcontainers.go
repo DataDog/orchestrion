@@ -8,7 +8,6 @@ package utils
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"runtime"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"

@@ -9,6 +9,8 @@ package vault
 
 import (
 	"context"
+	"testing"
+
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/hashicorp/vault/api"
@@ -16,7 +18,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testvault "github.com/testcontainers/testcontainers-go/modules/vault"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	"testing"
 )
 
 type TestCase struct {
