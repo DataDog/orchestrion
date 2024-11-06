@@ -8,6 +8,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"runtime"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -55,6 +57,7 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 	return server, host, mappedPort.Port()
 }
 
+// StartKafkaTestContainer starts a new Kafka test container and returns the connection string.
 func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 	ctx := context.Background()
 	exposedPort := "9093/tcp"
@@ -62,6 +65,16 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 	container, err := kafka.Run(ctx,
 		"confluentinc/confluent-local:7.5.0",
 		kafka.WithClusterID("test-cluster"),
+		WithTestLogConsumer(t),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForListeningPort(nat.Port(exposedPort)),
+				wait.ForExec(createTopicCmd("topic-A")),
+				wait.ForExec(createTopicCmd("topic-B")),
+				wait.ForExec(checkTopicExistsCmd("topic-A")),
+				wait.ForExec(checkTopicExistsCmd("topic-B")),
+			),
+		),
 	)
 	AssertTestContainersError(t, err)
 
@@ -73,6 +86,39 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 
 	addr := fmt.Sprintf("%s:%s", host, mappedPort.Port())
 	return container, addr
+}
+
+// StartRedisTestContainer starts a new Redis test container and returns the connection string.
+func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
+	ctx := context.Background()
+	exposedPort := "6379/tcp"
+	waitReadyCmd := []string{
+		"redis-cli",
+		"ping",
+	}
+
+	container, err := redis.Run(ctx,
+		"redis:7",
+		testcontainers.WithLogger(testcontainers.TestLogger(t)),
+		WithTestLogConsumer(t),
+		testcontainers.WithWaitStrategy(
+			wait.ForAll(
+				wait.ForLog("* Ready to accept connections"),
+				wait.ForExposedPort(),
+				wait.ForListeningPort(nat.Port(exposedPort)),
+				wait.ForExec(waitReadyCmd),
+			),
+		),
+	)
+	AssertTestContainersError(t, err)
+
+	connStr, err := container.ConnectionString(ctx)
+	require.NoError(t, err)
+
+	redisURL, err := url.Parse(connStr)
+	require.NoError(t, err)
+
+	return container, redisURL.Host
 }
 
 // AssertTestContainersError decides whether the provided testcontainers error should make the test fail or mark it as
@@ -113,4 +159,27 @@ func SkipIfProviderIsNotHealthy(t *testing.T) {
 	}()
 
 	testcontainers.SkipIfProviderIsNotHealthy(t)
+}
+
+func createTopicCmd(topic string) []string {
+	return []string{
+		"kafka-topics",
+		"--bootstrap-server", "localhost:9092",
+		"--topic", topic,
+		"--create",
+		"--if-not-exists",
+		"--partitions", "1",
+		"--replication-factor", "1",
+	}
+}
+
+func checkTopicExistsCmd(topic string) []string {
+	return []string{
+		"kafka-topics",
+		"--bootstrap-server",
+		"localhost:9092",
+		"--list",
+		"|",
+		"grep", topic,
+	}
 }
