@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -40,6 +39,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server = container
 
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
+	t.Cleanup(func() {
+		assert.NoError(t, tc.Client.Close())
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -48,16 +50,6 @@ func (tc *TestCase) Run(t *testing.T) {
 
 	require.NoError(t, tc.Client.WithContext(ctx).Set(tc.key, "test_value", 0).Err())
 	require.NoError(t, tc.Client.WithContext(ctx).Get(tc.key).Err())
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	assert.NoError(t, tc.Client.Close())
-	if tc.server != nil && assert.NoError(t, tc.server.Terminate(ctx)) {
-		tc.server = nil
-	}
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

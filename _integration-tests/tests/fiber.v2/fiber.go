@@ -30,16 +30,15 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.addr = "127.0.0.1:" + utils.GetFreePort(t)
 
 	go func() { assert.NoError(t, tc.App.Listen(tc.addr)) }()
+	t.Cleanup(func() {
+		assert.NoError(t, tc.App.ShutdownWithTimeout(time.Second))
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
 	resp, err := http.Get("http://" + tc.addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	require.NoError(t, tc.App.ShutdownWithTimeout(time.Second))
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

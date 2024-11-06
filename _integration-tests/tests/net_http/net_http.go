@@ -36,19 +36,17 @@ func (tc *TestCase) Setup(t *testing.T) {
 	mux.HandleFunc("/", tc.handleRoot)
 
 	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		assert.NoError(t, tc.Server.Shutdown(ctx))
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/", tc.Server.Addr))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.Server.Shutdown(ctx))
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

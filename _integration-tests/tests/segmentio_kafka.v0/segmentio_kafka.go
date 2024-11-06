@@ -130,12 +130,6 @@ func (tc *TestCase) consume(t *testing.T) {
 	require.NoError(t, readerB.Close())
 }
 
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	require.NoError(t, tc.kafka.Terminate(ctx))
-}
-
 func (*TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{

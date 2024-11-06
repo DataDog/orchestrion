@@ -39,10 +39,6 @@ func (tc *TestCaseNewCfgFunc) Run(t *testing.T) {
 	tc.base.run(t)
 }
 
-func (tc *TestCaseNewCfgFunc) Teardown(t *testing.T) {
-	tc.base.teardown(t)
-}
-
 func (tc *TestCaseNewCfgFunc) ExpectedTraces() trace.Traces {
 	return tc.base.expectedTraces()
 }

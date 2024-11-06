@@ -31,8 +31,6 @@ func (tc *TestCaseGlobalLogger) Run(t *testing.T) {
 	runTest(t, tc.logs, tc.Log)
 }
 
-func (*TestCaseGlobalLogger) Teardown(*testing.T) {}
-
 func (*TestCaseGlobalLogger) ExpectedTraces() trace.Traces {
 	return expectedTraces()
 }

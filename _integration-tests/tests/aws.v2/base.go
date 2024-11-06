@@ -34,12 +34,6 @@ func (b *base) setup(t *testing.T) {
 	b.server, b.host, b.port = utils.StartDynamoDBTestContainer(t)
 }
 
-func (b *base) teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	require.NoError(t, b.server.Terminate(ctx))
-}
-
 func (b *base) run(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()

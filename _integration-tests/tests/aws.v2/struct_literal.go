@@ -34,10 +34,6 @@ func (tc *TestCaseStructLiteral) Run(t *testing.T) {
 	tc.base.run(t)
 }
 
-func (tc *TestCaseStructLiteral) Teardown(t *testing.T) {
-	tc.base.teardown(t)
-}
-
 func (tc *TestCaseStructLiteral) ExpectedTraces() trace.Traces {
 	return tc.base.expectedTraces()
 }

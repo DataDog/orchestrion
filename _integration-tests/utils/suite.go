@@ -37,12 +37,6 @@ type TestCase interface {
 	// outstanding spans are flushed to the agent.
 	Run(*testing.T)
 
-	// Teardown runs if [TestCase.Setup] was executed successfully and did not
-	// call [testing.T.SkipNow]. This can be used to clean up any resources
-	// created during [TestCase.Setup], such as stopping services or deleting test
-	// data.
-	Teardown(*testing.T)
-
 	// ExpectedTraces returns a trace.Traces object describing all traces expected
 	// to be produced by the [TestCase.Run] function. There should be one entry
 	// per trace root span expected to be produced. Every item in the returned
@@ -61,11 +55,6 @@ func RunTest(t *testing.T, tc TestCase) {
 
 	t.Log("Running setup")
 	tc.Setup(t)
-
-	defer func() {
-		t.Log("Running teardown")
-		tc.Teardown(t)
-	}()
 
 	sess, err := mockAgent.NewSession(t)
 	require.NoError(t, err)

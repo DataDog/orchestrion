@@ -44,6 +44,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 
 	tc.server = httptest.NewServer(handler.New(&handler.Config{Schema: &schema}))
+	t.Cleanup(func() {
+		tc.server.Close()
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -64,10 +67,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(body, &res))
 	require.Equal(t, "Hello, world!", res.Data.Hello)
-}
-
-func (tc *TestCase) Teardown(*testing.T) {
-	tc.server.Close()
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {
