@@ -1436,6 +1436,60 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	// From logs/logrus.yml
+	{
+		JoinPoint: join.StructDefinition(join.MustTypeName("github.com/sirupsen/logrus.Logger")),
+		Advice: []advice.Advice{
+			advice.InjectDeclarations(code.MustTemplate(
+				"func init() {\n  telemetry.LoadIntegration(\"sirupsen/logrus\")\n  tracer.MarkIntegrationImported(\"github.com/sirupsen/logrus\")\n}\n\n// DDContextLogHook ensures that any span in the log context is correlated to log output.\ntype DDContextLogHook struct{}\n\n// Levels implements logrus.Hook interface, this hook applies to all defined levels\nfunc (d *DDContextLogHook) Levels() []Level {\n  return []Level{PanicLevel, FatalLevel, ErrorLevel, WarnLevel, InfoLevel, DebugLevel, TraceLevel}\n}\n\n// Fire implements logrus.Hook interface, attaches trace and span details found in entry context\nfunc (d *DDContextLogHook) Fire(e *Entry) error {\n  span, found := tracer.SpanFromContext(e.Context)\n  if !found {\n    return nil\n  }\n  e.Data[ext.LogKeyTraceID] = span.Context().TraceID()\n  e.Data[ext.LogKeySpanID] = span.Context().SpanID()\n  return nil\n}",
+				map[string]string{
+					"ext":       "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+					"telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
+					"tracer":    "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+				},
+				context.GoLangVersion{},
+			), []string{}),
+		},
+	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("github.com/sirupsen/logrus"),
+			join.FunctionBody(join.Function(
+				join.Name("New"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $logger := .Function.Result 0 -}}\ndefer func() {\n  {{ $logger }}.AddHook(&DDContextLogHook{})\n}()",
+				map[string]string{},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/sirupsen/logrus.Logger"), join.StructLiteralMatchPointerOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(logger *logrus.Logger) *logrus.Logger {\n  logger.AddHook(&logrus.DDContextLogHook{})\n  return logger\n}({{ . }})",
+				map[string]string{
+					"logrus": "github.com/sirupsen/logrus",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
+	{
+		JoinPoint: join.StructLiteral(join.MustTypeName("github.com/sirupsen/logrus.Logger"), join.StructLiteralMatchValueOnly),
+		Advice: []advice.Advice{
+			advice.WrapExpression(code.MustTemplate(
+				"func(logger logrus.Logger) logrus.Logger {\n  logger.AddHook(&logrus.DDContextLogHook{})\n  return logger\n}({{ . }})",
+				map[string]string{
+					"logrus": "github.com/sirupsen/logrus",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+	},
 	// From rpc/grpc.yml
 	{
 		JoinPoint: join.OneOf(
@@ -1817,4 +1871,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:0a9VzE3sHAumP+FA5PA0CD2CWU4DRXFDGMDmQ6E5cR5U4GHfhkVODFxkX/BUvWqdJb0rYMsAI256lJl2pDikEA=="
+const Checksum = "sha512:18LhJK8kEdZGZRQXSNrCpsJk2MyOmGXrh5ZecXnkL3OBj3j22UR+wUOvlCR8NUQ67Is7puc28WlhWOQN8f1WUQ=="
