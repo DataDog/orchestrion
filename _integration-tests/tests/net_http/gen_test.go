@@ -17,3 +17,7 @@ import (
 func TestIntegration_nethttp(t *testing.T) {
 	utils.RunTest(t, new(TestCase))
 }
+
+func TestIntegration_nethttp_ReverseProxy(t *testing.T) {
+	utils.RunTest(t, new(TestCaseReverseProxy))
+}
