@@ -93,7 +93,7 @@ func TestPin(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", "v0.9.3"})
-		assert.Contains(t, runtime.Version()[2:6], data.Go)
+		assert.Contains(t, runtime.Version(), data.Go)
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
