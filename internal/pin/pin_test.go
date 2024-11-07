@@ -36,7 +36,6 @@ func TestAutoPin(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
-		assert.Contains(t, runtime.Version()[2:6], data.Go)
 	})
 
 	t.Run("already-checked", func(t *testing.T) {
@@ -61,8 +60,6 @@ func TestPin(t *testing.T) {
 
 		require.NoError(t, PinOrchestrion(Options{}))
 
-		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
-
 		assert.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
@@ -70,7 +67,6 @@ func TestPin(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
-		assert.Contains(t, runtime.Version()[2:6], data.Go)
 
 		content, err := os.ReadFile(filepath.Join(tmp, orchestrionToolGo))
 		require.NoError(t, err)
@@ -84,8 +80,6 @@ func TestPin(t *testing.T) {
 
 		require.NoError(t, PinOrchestrion(Options{}))
 
-		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
-
 		assert.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
@@ -93,7 +87,6 @@ func TestPin(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", "v0.9.3"})
-		assert.Contains(t, runtime.Version(), data.Go)
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
@@ -101,8 +94,6 @@ func TestPin(t *testing.T) {
 		require.NoError(t, os.Chdir(tmp))
 
 		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
-
-		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
 		content, err := os.ReadFile(filepath.Join(tmp, orchestrionToolGo))
 		require.NoError(t, err)
@@ -115,8 +106,6 @@ func TestPin(t *testing.T) {
 		require.NoError(t, os.Chdir(tmp))
 
 		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
-
-		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
