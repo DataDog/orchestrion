@@ -11,23 +11,23 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"text/template"
 
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPin(t *testing.T) {
-	tmp := t.TempDir()
 	if cwd, err := os.Getwd(); err == nil {
 		defer require.NoError(t, os.Chdir(cwd))
 	}
 
-	require.NoError(t, scaffold(tmp))
+	tmp := scaffold(t, make(map[string]string))
 	require.NoError(t, os.Chdir(tmp))
 	AutoPinOrchestrion()
 	require.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
-	require.FileExists(t, filepath.Join(tmp, OrchestrionToolGo))
+	require.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
 	require.FileExists(t, filepath.Join(tmp, "go.sum"))
 
 	data, err := os.ReadFile(filepath.Join(tmp, "go.mod"))
@@ -35,31 +35,42 @@ func TestPin(t *testing.T) {
 	require.Contains(t, string(data), fmt.Sprintf(`github.com/DataDog/orchestrion %s`, version.Tag))
 }
 
-func scaffold(dir string) error {
+var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test
+
+go {{ .GoVersion }}
+
+replace github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
+
+require (
+{{ range $path, $version := .Require }}
+	{{ $path }} {{ $version }}
+{{ end }}
+)
+`))
+
+func scaffold(t *testing.T, requires map[string]string) string {
+	t.Helper()
+	tmp := t.TempDir()
+
 	_, thisFile, _, _ := runtime.Caller(0)
 	rootDir := filepath.Join(thisFile, "..", "..", "..")
 
-	goMod, err := os.Create(filepath.Join(dir, "go.mod"))
-	if err != nil {
-		return err
-	}
+	goMod, err := os.Create(filepath.Join(tmp, "go.mod"))
+	require.NoError(t, err)
+
 	defer goMod.Close()
 
-	if _, err := fmt.Fprintln(goMod, "module github.com/DataDog/orchestrion/pin-test"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(goMod); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(goMod, "go %s\n", runtime.Version()[2:6]); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(goMod); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(goMod, "replace github.com/DataDog/orchestrion %s => %s\n", version.Tag, rootDir); err != nil {
-		return err
-	}
+	require.NoError(t, goModTemplate.Execute(goMod, struct {
+		GoVersion          string
+		OrchestrionVersion string
+		OrchestrionPath    string
+		Require            map[string]string
+	}{
+		GoVersion:          runtime.Version()[2:6],
+		OrchestrionVersion: version.Tag,
+		OrchestrionPath:    rootDir,
+		Require:            requires,
+	}))
 
-	return nil
+	return tmp
 }
