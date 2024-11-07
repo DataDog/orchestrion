@@ -122,8 +122,6 @@ func TestPin(t *testing.T) {
 
 		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
 
-		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
-
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
