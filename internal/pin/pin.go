@@ -129,7 +129,7 @@ func PinOrchestrion(opts Options) error {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
-	pruned, err := opts.pruneImports(importSet)
+	pruned, err := pruneImports(importSet, opts)
 	if err != nil {
 		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
 	}
@@ -227,7 +227,7 @@ func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
 // pruneImports removes unnecessary or invalid imports from the provided
 // [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
 // only outputs a message informing the user about uncalled-for imports.
-func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
+func pruneImports(importSet *importSet, opts Options) (bool, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			BuildFlags: []string{"-toolexec="},
@@ -251,13 +251,13 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 		}
 		// There is no compilation unit in this package, so it cannot have integrations.
 		if someFile == "" {
-			pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "the package contains no source files")
+			pruned = pruneImport(importSet, pkg.PkgPath, "the package contains no source files", opts) || pruned
 			continue
 		}
 		integrationsFile := filepath.Join(someFile, "..", orchestrionDotYML)
 		if _, err := os.Stat(integrationsFile); err != nil {
 			if os.IsNotExist(err) {
-				pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package")
+				pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package", opts) || pruned
 				continue
 			}
 		}
@@ -270,7 +270,7 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 // pruneImport prunes a single import from the supplied [*importSet], unless
 // [*Options.NoPrune] is set, in which case it prints a warning using the
 // provided `reason` message.
-func (opts *Options) pruneImport(importSet *importSet, path string, reason string) bool {
+func pruneImport(importSet *importSet, path string, reason string, opts Options) bool {
 	if opts.NoPrune {
 		spec := importSet.Find(path)
 		if spec == nil {

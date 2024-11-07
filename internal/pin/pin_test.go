@@ -123,13 +123,33 @@ func TestPin(t *testing.T) {
 
 		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
 	})
+
+	t.Run("prune-multiple", func(t *testing.T) {
+		tmp := scaffold(t, map[string]string{
+			"github.com/digitalocean/sample-golang":  "v0.0.0-20240904143939-1e058723dcf4",
+			"github.com/skyrocknroll/go-mod-example": "v0.0.0-20190130140558-29b3c92445e5",
+		})
+		require.NoError(t, os.Chdir(tmp))
+
+		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
+
+		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
+
+		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+
+		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
+		assert.NotContains(t, data.Require, goModRequire{"github.com/skyrocknroll/go-mod-example", "v0.0.0-20190130140558-29b3c92445e5"})
+	})
 }
 
 var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test
 
 go {{ .GoVersion }}
 
+{{ if .OrchestrionRequired }}
 replace github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
+{{ end }}
 
 {{ range $path, $version := .Require }}
 require	{{ $path }} {{ $version }}
@@ -149,16 +169,20 @@ func scaffold(t *testing.T, requires map[string]string) string {
 
 	defer goMod.Close()
 
+	_, orchestrionRequired := requires["github.com/DataDog/orchestrion"]
+
 	require.NoError(t, goModTemplate.Execute(goMod, struct {
-		GoVersion          string
-		OrchestrionVersion string
-		OrchestrionPath    string
-		Require            map[string]string
+		GoVersion           string
+		OrchestrionVersion  string
+		OrchestrionPath     string
+		OrchestrionRequired bool
+		Require             map[string]string
 	}{
-		GoVersion:          runtime.Version()[2:6],
-		OrchestrionVersion: version.Tag,
-		OrchestrionPath:    rootDir,
-		Require:            requires,
+		GoVersion:           runtime.Version()[2:6],
+		OrchestrionVersion:  version.Tag,
+		OrchestrionPath:     rootDir,
+		OrchestrionRequired: orchestrionRequired,
+		Require:             requires,
 	}))
 
 	return tmp
