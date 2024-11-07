@@ -41,8 +41,6 @@ func (tc *TestCaseStructLiteralVal) Run(t *testing.T) {
 	runTest(t, tc.logs, tc.Log)
 }
 
-func (*TestCaseStructLiteralVal) Teardown(*testing.T) {}
-
 func (*TestCaseStructLiteralVal) ExpectedTraces() trace.Traces {
 	return expectedTraces()
 }

@@ -37,10 +37,6 @@ func (tc *TestCaseStructLiteralWithoutParam) Run(t *testing.T) {
 	tc.base.run(t)
 }
 
-func (tc *TestCaseStructLiteralWithoutParam) Teardown(t *testing.T) {
-	tc.base.teardown(t)
-}
-
 func (tc *TestCaseStructLiteralWithoutParam) ExpectedTraces() trace.Traces {
 	return tc.base.expectedTraces()
 }

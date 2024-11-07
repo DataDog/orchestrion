@@ -70,6 +70,4 @@ func (tc *TestCase) Run(t *testing.T) {
 	}
 }
 
-func (*TestCase) Teardown(*testing.T) {}
-
 func (*TestCase) ExpectedTraces() trace.Traces { return trace.Traces{} }

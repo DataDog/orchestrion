@@ -48,8 +48,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.NoError(t, tc.DB.WithContext(ctx).Where("user_id = ?", 2).First(&note).Error)
 }
 
-func (*TestCase) Teardown(*testing.T) {}
-
 func (*TestCase) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{

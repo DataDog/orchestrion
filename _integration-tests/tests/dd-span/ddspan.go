@@ -30,8 +30,6 @@ func (*TestCase) Run(t *testing.T) {
 	_, _ = spanFromHTTPRequest(req)
 }
 
-func (*TestCase) Teardown(*testing.T) {}
-
 //dd:span foo:bar
 func spanFromHTTPRequest(*http.Request) (string, error) {
 	return tagSpecificSpan()

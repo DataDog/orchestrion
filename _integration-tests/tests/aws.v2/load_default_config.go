@@ -39,10 +39,6 @@ func (tc *TestCaseLoadDefaultConfig) Run(t *testing.T) {
 	tc.base.run(t)
 }
 
-func (tc *TestCaseLoadDefaultConfig) Teardown(t *testing.T) {
-	tc.base.teardown(t)
-}
-
 func (tc *TestCaseLoadDefaultConfig) ExpectedTraces() trace.Traces {
 	return tc.base.expectedTraces()
 }

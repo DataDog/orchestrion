@@ -43,14 +43,13 @@ func (tc *TestCaseStructLiteral) Setup(t *testing.T) {
 	}
 	tc.session, err = cluster.CreateSession()
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		tc.session.Close()
+	})
 }
 
 func (tc *TestCaseStructLiteral) Run(t *testing.T) {
 	tc.base.run(t)
-}
-
-func (tc *TestCaseStructLiteral) Teardown(t *testing.T) {
-	tc.base.teardown(t)
 }
 
 func (tc *TestCaseStructLiteral) ExpectedTraces() trace.Traces {

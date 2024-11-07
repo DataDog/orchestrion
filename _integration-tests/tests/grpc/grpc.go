@@ -35,6 +35,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	helloworld.RegisterGreeterServer(tc.Server, &server{})
 
 	go func() { assert.NoError(t, tc.Server.Serve(lis)) }()
+	t.Cleanup(func() {
+		tc.Server.GracefulStop()
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -49,10 +52,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	resp, err := client.SayHello(ctx, &helloworld.HelloRequest{Name: "rob"})
 	require.NoError(t, err)
 	require.Equal(t, "Hello rob", resp.GetMessage())
-}
-
-func (tc *TestCase) Teardown(*testing.T) {
-	tc.Server.GracefulStop()
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

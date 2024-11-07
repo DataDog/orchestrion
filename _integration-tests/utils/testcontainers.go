@@ -12,8 +12,10 @@ import (
 	"os"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
@@ -45,16 +47,17 @@ func StartDynamoDBTestContainer(t *testing.T) (testcontainers.Container, string,
 	}
 
 	ctx := context.Background()
-	server, err := testcontainers.GenericContainer(ctx, req)
+	container, err := testcontainers.GenericContainer(ctx, req)
 	AssertTestContainersError(t, err)
+	RegisterContainerCleanup(t, container)
 
-	mappedPort, err := server.MappedPort(ctx, nat.Port(exposedPort))
+	mappedPort, err := container.MappedPort(ctx, nat.Port(exposedPort))
 	require.NoError(t, err)
 
-	host, err := server.Host(ctx)
+	host, err := container.Host(ctx)
 	require.NoError(t, err)
 
-	return server, host, mappedPort.Port()
+	return container, host, mappedPort.Port()
 }
 
 // StartKafkaTestContainer starts a new Kafka test container and returns the connection string.
@@ -77,6 +80,7 @@ func StartKafkaTestContainer(t *testing.T) (*kafka.KafkaContainer, string) {
 		),
 	)
 	AssertTestContainersError(t, err)
+	RegisterContainerCleanup(t, container)
 
 	mappedPort, err := container.MappedPort(ctx, nat.Port(exposedPort))
 	require.NoError(t, err)
@@ -111,6 +115,7 @@ func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
 		),
 	)
 	AssertTestContainersError(t, err)
+	RegisterContainerCleanup(t, container)
 
 	connStr, err := container.ConnectionString(ctx)
 	require.NoError(t, err)
@@ -132,6 +137,15 @@ func AssertTestContainersError(t *testing.T, err error) {
 		return
 	}
 	require.NoError(t, err)
+}
+
+// RegisterContainerCleanup registers a function to terminate the provided container to be executed after the test finishes.
+func RegisterContainerCleanup(t *testing.T, container testcontainers.Container) {
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		assert.NoError(t, container.Terminate(ctx))
+	})
 }
 
 // SkipIfProviderIsNotHealthy calls [testcontainers.SkipIfProviderIsNotHealthy] to skip tests of

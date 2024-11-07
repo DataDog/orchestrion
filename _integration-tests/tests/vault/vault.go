@@ -10,7 +10,6 @@ package vault
 import (
 	"context"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -39,6 +38,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		testvault.WithToken("root"),
 	)
 	utils.AssertTestContainersError(t, err)
+	utils.RegisterContainerCleanup(t, tc.server)
 
 	addr, err := tc.server.HttpHostAddress(ctx)
 	if err != nil {
@@ -62,13 +62,6 @@ func (tc *TestCase) Run(t *testing.T) {
 
 	_, err := tc.Logical().ReadWithContext(ctx, "secret/key")
 	require.NoError(t, err)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.server.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

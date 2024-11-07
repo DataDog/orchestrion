@@ -8,10 +8,8 @@
 package awsv1
 
 import (
-	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -45,12 +43,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	ddb := dynamodb.New(session.Must(session.NewSession(tc.cfg)))
 	_, err := ddb.ListTables(nil)
 	require.NoError(t, err)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	require.NoError(t, tc.server.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

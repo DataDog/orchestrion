@@ -10,7 +10,6 @@ package goredis
 import (
 	"context"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -39,6 +38,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server = container
 
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
+	t.Cleanup(func() {
+		assert.NoError(t, tc.Client.Close())
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -47,14 +49,6 @@ func (tc *TestCase) Run(t *testing.T) {
 
 	require.NoError(t, tc.Client.Set(ctx, "test_key", "test_value", 0).Err())
 	require.NoError(t, tc.Client.Get(ctx, "test_key").Err())
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	assert.NoError(t, tc.Client.Close())
-	assert.NoError(t, tc.server.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

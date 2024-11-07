@@ -55,6 +55,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 			return err
 		},
 	}
+	t.Cleanup(func() {
+		assert.NoError(t, tc.Pool.Close())
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -71,16 +74,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	res, err := client.Do("GET", tc.key, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, res)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	assert.NoError(t, tc.Pool.Close())
-	if tc.server != nil && assert.NoError(t, tc.server.Terminate(ctx)) {
-		tc.server = nil
-	}
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

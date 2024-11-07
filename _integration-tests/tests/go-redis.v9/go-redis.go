@@ -40,6 +40,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server = container
 
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
+	t.Cleanup(func() {
+		assert.NoError(t, tc.Client.Close())
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
