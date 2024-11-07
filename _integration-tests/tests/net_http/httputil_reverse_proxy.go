@@ -1,16 +1,24 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+//go:build integration
+
 package nethttp
 
 import (
 	"context"
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
-	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"testing"
 	"time"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestCaseReverseProxy struct {
@@ -21,7 +29,7 @@ type TestCaseReverseProxy struct {
 func (tc *TestCaseReverseProxy) Setup(t *testing.T) {
 	tc.upstream = &http.Server{
 		Addr: "127.0.0.1:" + utils.GetFreePort(t),
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		}),
 	}
@@ -47,7 +55,6 @@ func (tc *TestCaseReverseProxy) Setup(t *testing.T) {
 		defer cancel()
 		assert.NoError(t, tc.server.Shutdown(ctx))
 	})
-
 }
 
 func (tc *TestCaseReverseProxy) Run(t *testing.T) {
