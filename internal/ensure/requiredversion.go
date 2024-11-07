@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
 	"golang.org/x/tools/go/packages"
@@ -128,10 +129,16 @@ func requiredVersion(
 // working directory is used. The version may be blank if a replace directive is in effect; in which
 // case the path value may indicate the location of the source code that is being used instead.
 func goModVersion(dir string) (moduleVersion string, moduleDir string, err error) {
+	gomod, err := goenv.GOMOD(dir)
+	if err != nil {
+		return "", "", err
+	}
+
 	cfg := &packages.Config{
-		Dir:  dir,
-		Mode: packages.NeedModule,
-		Logf: func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+		BuildFlags: []string{"-modfile", gomod},
+		Dir:        dir,
+		Mode:       packages.NeedModule,
+		Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 	}
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {

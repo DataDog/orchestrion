@@ -16,15 +16,13 @@ import (
 
 var (
 	// ErrNoGoMod is returned when no GOMOD value could be identified.
-	ErrNoGoMod = errors.New("`go mod GOMOD` returned a blank string")
+	ErrNoGoMod = errors.New("`go env GOMOD` returned a blank string")
 )
 
-// GOMOD returns the current GOMOD environment variable (possibly from running `go env GOMOD`).
-func GOMOD() (string, error) {
-	if goMod := os.Getenv("GOMOD"); goMod != "" {
-		return goMod, nil
-	}
+// GOMOD returns the current GOMOD environment variable (from running `go env GOMOD`).
+func GOMOD(dir string) (string, error) {
 	cmd := exec.Command("go", "env", "GOMOD")
+	cmd.Dir = dir
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
