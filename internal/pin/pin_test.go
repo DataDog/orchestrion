@@ -6,7 +6,6 @@
 package pin
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,25 +13,116 @@ import (
 	"text/template"
 
 	"github.com/DataDog/orchestrion/internal/version"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func TestAutoPin(t *testing.T) {
+	t.Run("simple", func(t *testing.T) {
+		if cwd, err := os.Getwd(); err == nil {
+			defer require.NoError(t, os.Chdir(cwd))
+		}
+
+		tmp := scaffold(t, make(map[string]string))
+		require.NoError(t, os.Chdir(tmp))
+		AutoPinOrchestrion()
+
+		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
+
+		assert.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
+		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
+
+		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
+		assert.Contains(t, runtime.Version()[2:6], data.Go)
+	})
+
+	t.Run("already-checked", func(t *testing.T) {
+		tmp := scaffold(t, make(map[string]string))
+		require.NoError(t, os.Chdir(tmp))
+
+		require.NoError(t, os.Remove("go.mod"))
+
+		t.Setenv(envVarCheckedGoMod, "true")
+
+		AutoPinOrchestrion()
+
+		assert.NoFileExists(t, filepath.Join(tmp, orchestrionToolGo))
+		assert.NoFileExists(t, filepath.Join(tmp, "go.sum"))
+	})
+}
+
 func TestPin(t *testing.T) {
-	if cwd, err := os.Getwd(); err == nil {
-		defer require.NoError(t, os.Chdir(cwd))
-	}
+	t.Run("simple", func(t *testing.T) {
+		tmp := scaffold(t, make(map[string]string))
+		require.NoError(t, os.Chdir(tmp))
 
-	tmp := scaffold(t, make(map[string]string))
-	require.NoError(t, os.Chdir(tmp))
-	AutoPinOrchestrion()
-	require.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
+		require.NoError(t, PinOrchestrion(Options{}))
 
-	require.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
-	require.FileExists(t, filepath.Join(tmp, "go.sum"))
+		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
-	data, err := os.ReadFile(filepath.Join(tmp, "go.mod"))
-	require.NoError(t, err)
-	require.Contains(t, string(data), fmt.Sprintf(`github.com/DataDog/orchestrion %s`, version.Tag))
+		assert.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
+		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
+
+		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
+		assert.Contains(t, runtime.Version()[2:6], data.Go)
+
+		content, err := os.ReadFile(filepath.Join(tmp, orchestrionToolGo))
+		require.NoError(t, err)
+
+		assert.Contains(t, string(content), "//go:generate")
+	})
+
+	t.Run("another-version", func(t *testing.T) {
+		tmp := scaffold(t, map[string]string{"github.com/DataDog/orchestrion": "v0.9.3"})
+		require.NoError(t, os.Chdir(tmp))
+
+		require.NoError(t, PinOrchestrion(Options{}))
+
+		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
+
+		assert.FileExists(t, filepath.Join(tmp, orchestrionToolGo))
+		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
+
+		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", "v0.9.3"})
+		assert.Contains(t, runtime.Version()[2:6], data.Go)
+	})
+
+	t.Run("no-generate", func(t *testing.T) {
+		tmp := scaffold(t, make(map[string]string))
+		require.NoError(t, os.Chdir(tmp))
+
+		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
+
+		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
+
+		content, err := os.ReadFile(filepath.Join(tmp, orchestrionToolGo))
+		require.NoError(t, err)
+
+		assert.NotContains(t, string(content), "//go:generate")
+	})
+
+	t.Run("prune", func(t *testing.T) {
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.Chdir(tmp))
+
+		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
+
+		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
+
+		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+
+		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
+	})
 }
 
 var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test
@@ -41,11 +131,10 @@ go {{ .GoVersion }}
 
 replace github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
 
-require (
 {{ range $path, $version := .Require }}
-	{{ $path }} {{ $version }}
+require	{{ $path }} {{ $version }}
 {{ end }}
-)
+
 `))
 
 func scaffold(t *testing.T, requires map[string]string) string {

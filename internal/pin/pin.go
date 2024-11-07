@@ -97,7 +97,8 @@ func PinOrchestrion(opts Options) error {
 
 	toolFile := filepath.Join(goMod, "..", orchestrionToolGo)
 	dstFile, err := parseOrchestrionToolGo(toolFile)
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
+		log.Debugf("no %q file found, creating a new one", orchestrionToolGo)
 		dstFile = defaultOrchestrionToolGo()
 	}
 
