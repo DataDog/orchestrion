@@ -22,7 +22,7 @@ import (
 )
 
 type TestCaseReverseProxy struct {
-	server   *http.Server
+	proxy    *http.Server
 	upstream *http.Server
 }
 
@@ -44,21 +44,21 @@ func (tc *TestCaseReverseProxy) Setup(t *testing.T) {
 	})
 
 	proxy := httputil.NewSingleHostReverseProxy(target)
-	tc.server = &http.Server{
+	tc.proxy = &http.Server{
 		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: proxy,
 	}
 
-	go func() { assert.ErrorIs(t, tc.server.ListenAndServe(), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, tc.proxy.ListenAndServe(), http.ErrServerClosed) }()
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		assert.NoError(t, tc.server.Shutdown(ctx))
+		assert.NoError(t, tc.proxy.Shutdown(ctx))
 	})
 }
 
 func (tc *TestCaseReverseProxy) Run(t *testing.T) {
-	resp, err := http.Get(rootUrl(tc.server))
+	resp, err := http.Get(rootUrl(tc.proxy))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -74,7 +74,7 @@ func (tc *TestCaseReverseProxy) ExpectedTraces() trace.Traces {
 			Meta: map[string]string{
 				"component": "net/http",
 				"span.kind": "client",
-				"http.url":  rootUrl(tc.server),
+				"http.url":  rootUrl(tc.proxy),
 			},
 			Children: trace.Traces{
 				{
@@ -86,7 +86,7 @@ func (tc *TestCaseReverseProxy) ExpectedTraces() trace.Traces {
 					Meta: map[string]string{
 						"component": "net/http",
 						"span.kind": "server",
-						"http.url":  rootUrl(tc.server),
+						"http.url":  rootUrl(tc.proxy),
 					},
 					Children: trace.Traces{
 						{
