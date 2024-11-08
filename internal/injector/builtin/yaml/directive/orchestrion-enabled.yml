@@ -5,13 +5,14 @@
 ---
 # yaml-language-server: $schema=../../../../../docs/static/schema.json
 meta:
-  name: //dd:orchestrion-enabled
+  name: built.WithOrchestrion & //dd:orchestrion-enabled
   description: Flip a boolean to true if Orchestrion is enabled.
   icon: cog
   caveats: |-
     This aspect allows introducing conditional logic based on whether
     Orchestrion has been used to instrument an application or not. This should
-    generally be avoided.
+    generally be avoided, but can be useful to ensure the application (or tests)
+    is running with instrumentation.
 aspects:
   - id: Initialize to true
     tracer-internal: true # This is safe to apply in the tracer itself.
