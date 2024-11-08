@@ -7,11 +7,11 @@ package join
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
-	"github.com/dlclark/regexp2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -98,7 +98,7 @@ func (i *valueDeclaration) AsCode() jen.Code {
 }
 
 // See: https://regex101.com/r/OXDfJ1/1
-var symbolNamePattern = regexp2.MustCompile(`\A(.+)\.([\p{L}_][\p{L}_\p{Nd}]*)\z`, regexp2.ECMAScript)
+var symbolNamePattern = regexp.MustCompile(`\A(.+)\.([\p{L}_][\p{L}_\p{Nd}]*)\z`)
 
 func init() {
 	unmarshalers["declaration-of"] = func(node *yaml.Node) (Point, error) {
@@ -107,15 +107,12 @@ func init() {
 			return nil, err
 		}
 
-		matches, err := symbolNamePattern.FindStringMatch(symbol)
-		if err != nil {
-			return nil, fmt.Errorf("invalid symbol name %q: %w", symbol, err)
+		matches := symbolNamePattern.FindStringSubmatch(symbol)
+		if matches == nil {
+			return nil, fmt.Errorf("invalid symbol name %q", symbol)
 		}
 
-		importPath := matches.GroupByNumber(1).String()
-		name := matches.GroupByNumber(2).String()
-
-		return DeclarationOf(importPath, name), nil
+		return DeclarationOf(matches[1], matches[2]), nil
 	}
 
 	unmarshalers["value-declaration"] = func(node *yaml.Node) (Point, error) {

@@ -10,7 +10,7 @@ import (
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils/agent"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
-	"github.com/DataDog/orchestrion/built"
+	"github.com/DataDog/orchestrion/runtime/built"
 	"github.com/stretchr/testify/require"
 )
 

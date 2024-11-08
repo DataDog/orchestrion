@@ -20,7 +20,7 @@ aspects:
       all-of:
         - value-declaration: bool
         - one-of:
-            - declaration-of: github.com/DataDog/orchestrion/built.WithOrchestrion
+            - declaration-of: github.com/DataDog/orchestrion/runtime/built.WithOrchestrion
             - directive: dd:orchestrion-enabled
     advice:
       - assign-value:

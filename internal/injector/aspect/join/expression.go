@@ -7,11 +7,11 @@ package join
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
-	"github.com/dlclark/regexp2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,7 +58,7 @@ func (i *functionCall) AsCode() jen.Code {
 }
 
 // See: https://regex101.com/r/fjLo1l/1
-var funcNamePattern = regexp2.MustCompile(`\A(?:(.+)\.)?([\p{L}_][\p{L}_\p{Nd}]*)\z`, regexp2.ECMAScript)
+var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([\p{L}_][\p{L}_\p{Nd}]*)\z`)
 
 func init() {
 	unmarshalers["function-call"] = func(node *yaml.Node) (Point, error) {
@@ -67,14 +67,11 @@ func init() {
 			return nil, err
 		}
 
-		matches, err := funcNamePattern.FindStringMatch(symbol)
-		if err != nil {
-			return nil, fmt.Errorf("invalid function name %q: %w", symbol, err)
+		matches := funcNamePattern.FindStringSubmatch(symbol)
+		if matches == nil {
+			return nil, fmt.Errorf("invalid function name %q", symbol)
 		}
 
-		importPath := matches.GroupByNumber(1).String()
-		name := matches.GroupByNumber(2).String()
-
-		return FunctionCall(importPath, name), nil
+		return FunctionCall(matches[1], matches[2]), nil
 	}
 }

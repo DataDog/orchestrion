@@ -31,9 +31,13 @@ const (
 
 var (
 	weavingSpecialCase = map[*regexp.Regexp]specialCaseBehavior{
-		regexp.MustCompile(`^github\.com/[Dd]ata[Dd]og/orchestrion(?:/.+)?$`): neverWeave,
-		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`):      weaveTracerInternal,
-		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):             neverWeave,
+		// Carefully allow injection under the `github.com/DataDog/orchestrion/runtime` package, but
+		// nowhere else in the github.com/DataDog/orchestrion modules. The regex could be smaller if the
+		// [regexp.Regexp] supported negative lookahead... But there we are emulating it instead.
+		// See: https://regex101.com/r/kexx3q/1 (NB)
+		regexp.MustCompile(`^github\.com/[Dd]ata[Dd]og/orchestrion(?:/(?:[^r].*|r[^u].*|ru[^n].*|run[^t].*|runt[^i].*|runti[^m].*|runtim[^e].*|runtime[^/].*))?$`): neverWeave,
+		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`):                                                                                           weaveTracerInternal,
+		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):                                                                                                  neverWeave,
 	}
 )
 
@@ -46,7 +50,6 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		if pattern.MatchString(w.ImportPath) {
 			if override == neverWeave {
 				log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
-				// No weaving in those packages!
 				return nil
 			}
 			log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
@@ -57,6 +60,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				}
 			}
 			aspects = shortList
+			break
 		}
 	}
 

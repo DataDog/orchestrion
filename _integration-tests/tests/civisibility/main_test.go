@@ -18,7 +18,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/DataDog/orchestrion/built"
+	"github.com/DataDog/orchestrion/runtime/built"
 	"github.com/tinylib/msgp/msgp"
 )
 

@@ -1145,7 +1145,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.AllOf(
 			join.ValueDeclaration(join.MustTypeName("bool")),
 			join.OneOf(
-				join.DeclarationOf("github.com/DataDog/orchestrion/built", "WithOrchestrion"),
+				join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrion"),
 				join.Directive("dd:orchestrion-enabled"),
 			),
 		),
@@ -1874,4 +1874,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:9uF0uODqM5/JvH3gaLv6nOxvkazNH56LUyh/HHeOV9G9XSMnVJcmJxXK7B9wMRWozMr7Exazrjhta2O0c5zphQ=="
+const Checksum = "sha512:xmZzyYLOd/Rd6xiw6DaourRfLxpq0vKm9vnwvz8ENJhfN/wlYdnLA0ninNmp6UO8i8pbjrPV/l/mc2ZoZaYXpQ=="
