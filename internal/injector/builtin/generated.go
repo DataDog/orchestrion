@@ -274,7 +274,7 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.OneOf(
 			join.StructLiteral(join.MustTypeName("github.com/aws/aws-sdk-go-v2/aws.Config"), join.StructLiteralMatchPointerOnly),
-			join.FunctionCall("github.com/aws/aws-sdk-go-v2/aws.NewConfig"),
+			join.FunctionCall("github.com/aws/aws-sdk-go-v2/aws", "NewConfig"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -289,7 +289,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From cloud/aws-sdk.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/aws/aws-sdk-go/aws/session.NewSession"),
+		JoinPoint: join.FunctionCall("github.com/aws/aws-sdk-go/aws/session", "NewSession"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func(sess *session.Session, err error) (*session.Session, error) {\n  if sess != nil {\n    sess = awstrace.WrapSession(sess)\n  }\n  return sess, err\n}({{ . }})",
@@ -383,8 +383,8 @@ var Aspects = [...]aspect.Aspect{
 	// From databases/go-redis.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/go-redis/redis.NewClient"),
-			join.FunctionCall("github.com/go-redis/redis.NewFailoverClient"),
+			join.FunctionCall("github.com/go-redis/redis", "NewClient"),
+			join.FunctionCall("github.com/go-redis/redis", "NewFailoverClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -399,8 +399,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/go-redis/redis/v7.NewClient"),
-			join.FunctionCall("github.com/go-redis/redis/v7.NewFailoverClient"),
+			join.FunctionCall("github.com/go-redis/redis/v7", "NewClient"),
+			join.FunctionCall("github.com/go-redis/redis/v7", "NewFailoverClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -415,8 +415,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/go-redis/redis/v8.NewClient"),
-			join.FunctionCall("github.com/go-redis/redis/v8.NewFailoverClient"),
+			join.FunctionCall("github.com/go-redis/redis/v8", "NewClient"),
+			join.FunctionCall("github.com/go-redis/redis/v8", "NewFailoverClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -431,8 +431,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/redis/go-redis/v9.NewClient"),
-			join.FunctionCall("github.com/redis/go-redis/v9.NewFailoverClient"),
+			join.FunctionCall("github.com/redis/go-redis/v9", "NewClient"),
+			join.FunctionCall("github.com/redis/go-redis/v9", "NewFailoverClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -450,7 +450,7 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.AllOf(
 			join.OneOf(
 				join.StructLiteral(join.MustTypeName("github.com/gocql/gocql.ClusterConfig"), join.StructLiteralMatchPointerOnly),
-				join.FunctionCall("github.com/gocql/gocql.NewCluster"),
+				join.FunctionCall("github.com/gocql/gocql", "NewCluster"),
 			),
 			join.Not(join.ImportPath("github.com/gocql/gocql")),
 		),
@@ -483,13 +483,13 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From databases/gorm.yml
 	{
-		JoinPoint: join.FunctionCall("gorm.io/gorm.Open"),
+		JoinPoint: join.FunctionCall("gorm.io/gorm", "Open"),
 		Advice: []advice.Advice{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1", "Open"),
 		},
 	},
 	{
-		JoinPoint: join.FunctionCall("github.com/jinzhu/gorm.Open"),
+		JoinPoint: join.FunctionCall("github.com/jinzhu/gorm", "Open"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func() (*gorm.DB, error) {\n  db, err := {{ . }}\n  if err != nil {\n    return nil, err\n  }\n  return gormtrace.WithCallbacks(db), err\n}()",
@@ -503,7 +503,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From databases/mongo.yml
 	{
-		JoinPoint: join.FunctionCall("go.mongodb.org/mongo-driver/mongo/options.Client"),
+		JoinPoint: join.FunctionCall("go.mongodb.org/mongo-driver/mongo/options", "Client"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"{{ . }}.SetMonitor(mongotrace.NewMonitor())",
@@ -518,7 +518,7 @@ var Aspects = [...]aspect.Aspect{
 	// From databases/pgx.yml
 	{
 		JoinPoint: join.AllOf(
-			join.FunctionCall("github.com/jackc/pgx/v5.Connect"),
+			join.FunctionCall("github.com/jackc/pgx/v5", "Connect"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/jackc/pgx/v5"),
 				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
@@ -530,7 +530,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.FunctionCall("github.com/jackc/pgx/v5.ConnectConfig"),
+			join.FunctionCall("github.com/jackc/pgx/v5", "ConnectConfig"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/jackc/pgx/v5"),
 				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
@@ -542,7 +542,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.FunctionCall("github.com/jackc/pgx/v5/pgxpool.New"),
+			join.FunctionCall("github.com/jackc/pgx/v5/pgxpool", "New"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/jackc/pgx/v5"),
 				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
@@ -554,7 +554,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.AllOf(
-			join.FunctionCall("github.com/jackc/pgx/v5/pgxpool.NewWithConfig"),
+			join.FunctionCall("github.com/jackc/pgx/v5/pgxpool", "NewWithConfig"),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/jackc/pgx/v5"),
 				join.ImportPath("github.com/jackc/pgx/v5/pgxpool"),
@@ -566,7 +566,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From databases/redigo.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.Dial"),
+		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis", "Dial"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 2 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.Dial({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.Dial(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
@@ -579,7 +579,7 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialContext"),
+		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis", "DialContext"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 3 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialContext({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialContext(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
@@ -592,7 +592,7 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis.DialURL"),
+		JoinPoint: join.FunctionCall("github.com/gomodule/redigo/redis", "DialURL"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func() (redigo.Conn, error) {\n  {{ if .AST.Ellipsis }}\n    opts := {{ index .AST.Args 1 }}\n    anyOpts := make([]interface{}, len(opts))\n    for i, v := range opts {\n      anyOpts[i] = v\n    }\n    return redigotrace.DialURL({{ index .AST.Args 0 }}, anyOpts...)\n  {{ else }}\n    return redigotrace.DialURL(\n      {{- range .AST.Args -}}\n        {{ . }},\n      {{- end -}}\n    )\n  {{ end }}\n}()",
@@ -956,8 +956,8 @@ var Aspects = [...]aspect.Aspect{
 	// From datastreams/ibm_sarama.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/IBM/sarama.NewConsumer"),
-			join.FunctionCall("github.com/IBM/sarama.NewConsumerClient"),
+			join.FunctionCall("github.com/IBM/sarama", "NewConsumer"),
+			join.FunctionCall("github.com/IBM/sarama", "NewConsumerClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -972,8 +972,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/IBM/sarama.NewSyncProducer"),
-			join.FunctionCall("github.com/IBM/sarama.NewSyncProducerFromClient"),
+			join.FunctionCall("github.com/IBM/sarama", "NewSyncProducer"),
+			join.FunctionCall("github.com/IBM/sarama", "NewSyncProducerFromClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -988,8 +988,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/IBM/sarama.NewAsyncProducer"),
-			join.FunctionCall("github.com/IBM/sarama.NewAsyncProducerFromClient"),
+			join.FunctionCall("github.com/IBM/sarama", "NewAsyncProducer"),
+			join.FunctionCall("github.com/IBM/sarama", "NewAsyncProducerFromClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -1080,8 +1080,8 @@ var Aspects = [...]aspect.Aspect{
 	// From datastreams/shopify_sarama.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/Shopify/sarama.NewConsumer"),
-			join.FunctionCall("github.com/Shopify/sarama.NewConsumerClient"),
+			join.FunctionCall("github.com/Shopify/sarama", "NewConsumer"),
+			join.FunctionCall("github.com/Shopify/sarama", "NewConsumerClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -1096,8 +1096,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/Shopify/sarama.NewSyncProducer"),
-			join.FunctionCall("github.com/Shopify/sarama.NewSyncProducerFromClient"),
+			join.FunctionCall("github.com/Shopify/sarama", "NewSyncProducer"),
+			join.FunctionCall("github.com/Shopify/sarama", "NewSyncProducerFromClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -1112,8 +1112,8 @@ var Aspects = [...]aspect.Aspect{
 	},
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/Shopify/sarama.NewAsyncProducer"),
-			join.FunctionCall("github.com/Shopify/sarama.NewAsyncProducerFromClient"),
+			join.FunctionCall("github.com/Shopify/sarama", "NewAsyncProducer"),
+			join.FunctionCall("github.com/Shopify/sarama", "NewAsyncProducerFromClient"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -1143,8 +1143,11 @@ var Aspects = [...]aspect.Aspect{
 	// From directive/orchestrion-enabled.yml
 	{
 		JoinPoint: join.AllOf(
-			join.Directive("dd:orchestrion-enabled"),
 			join.ValueDeclaration(join.MustTypeName("bool")),
+			join.OneOf(
+				join.DeclarationOf("github.com/DataDog/orchestrion/built", "WithOrchestrion"),
+				join.Directive("dd:orchestrion-enabled"),
+			),
 		),
 		Advice: []advice.Advice{
 			advice.AssignValue(code.MustTemplate(
@@ -1201,8 +1204,8 @@ var Aspects = [...]aspect.Aspect{
 	// From graphql/gqlgen.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler.New"),
-			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler.NewDefaultServer"),
+			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler", "New"),
+			join.FunctionCall("github.com/99designs/gqlgen/graphql/handler", "NewDefaultServer"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -1218,8 +1221,8 @@ var Aspects = [...]aspect.Aspect{
 	// From graphql/graph-gophers.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/graph-gophers/graphql-go.MustParseSchema"),
-			join.FunctionCall("github.com/graph-gophers/graphql-go.ParseSchema"),
+			join.FunctionCall("github.com/graph-gophers/graphql-go", "MustParseSchema"),
+			join.FunctionCall("github.com/graph-gophers/graphql-go", "ParseSchema"),
 		),
 		Advice: []advice.Advice{
 			advice.AppendArgs(
@@ -1237,7 +1240,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From graphql/graphql-go.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/graphql-go/graphql.NewSchema"),
+		JoinPoint: join.FunctionCall("github.com/graphql-go/graphql", "NewSchema"),
 		Advice: []advice.Advice{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql", "NewSchema"),
 		},
@@ -1246,8 +1249,8 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.AllOf(
 			join.OneOf(
-				join.FunctionCall("github.com/go-chi/chi.NewMux"),
-				join.FunctionCall("github.com/go-chi/chi.NewRouter"),
+				join.FunctionCall("github.com/go-chi/chi", "NewMux"),
+				join.FunctionCall("github.com/go-chi/chi", "NewRouter"),
 			),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/go-chi/chi"),
@@ -1268,8 +1271,8 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.AllOf(
 			join.OneOf(
-				join.FunctionCall("github.com/go-chi/chi/v5.NewMux"),
-				join.FunctionCall("github.com/go-chi/chi/v5.NewRouter"),
+				join.FunctionCall("github.com/go-chi/chi/v5", "NewMux"),
+				join.FunctionCall("github.com/go-chi/chi/v5", "NewRouter"),
 			),
 			join.Not(join.OneOf(
 				join.ImportPath("github.com/go-chi/chi/v5"),
@@ -1289,7 +1292,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From http/echo.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/labstack/echo/v4.New"),
+		JoinPoint: join.FunctionCall("github.com/labstack/echo/v4", "New"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func() *echo.Echo {\n  e := {{ . }}\n  e.Use(echotrace.Middleware())\n  return e\n}()",
@@ -1303,7 +1306,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From http/fiber.yml
 	{
-		JoinPoint: join.FunctionCall("github.com/gofiber/fiber/v2.New"),
+		JoinPoint: join.FunctionCall("github.com/gofiber/fiber/v2", "New"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"func() *fiber.App {\n  app := {{ . }}\n  app.Use(fibertrace.Middleware())\n  return app\n}()",
@@ -1318,8 +1321,8 @@ var Aspects = [...]aspect.Aspect{
 	// From http/gin.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("github.com/gin-gonic/gin.Default"),
-			join.FunctionCall("github.com/gin-gonic/gin.New"),
+			join.FunctionCall("github.com/gin-gonic/gin", "Default"),
+			join.FunctionCall("github.com/gin-gonic/gin", "New"),
 		),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
@@ -1493,9 +1496,9 @@ var Aspects = [...]aspect.Aspect{
 	// From rpc/grpc.yml
 	{
 		JoinPoint: join.OneOf(
-			join.FunctionCall("google.golang.org/grpc.Dial"),
-			join.FunctionCall("google.golang.org/grpc.DialContext"),
-			join.FunctionCall("google.golang.org/grpc.NewClient"),
+			join.FunctionCall("google.golang.org/grpc", "Dial"),
+			join.FunctionCall("google.golang.org/grpc", "DialContext"),
+			join.FunctionCall("google.golang.org/grpc", "NewClient"),
 		),
 		Advice: []advice.Advice{
 			advice.AppendArgs(
@@ -1520,7 +1523,7 @@ var Aspects = [...]aspect.Aspect{
 		},
 	},
 	{
-		JoinPoint: join.FunctionCall("google.golang.org/grpc.NewServer"),
+		JoinPoint: join.FunctionCall("google.golang.org/grpc", "NewServer"),
 		Advice: []advice.Advice{
 			advice.AppendArgs(
 				join.MustTypeName("google.golang.org/grpc.ServerOption"),
@@ -1559,19 +1562,19 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From stdlib/database-sql.yml
 	{
-		JoinPoint: join.FunctionCall("database/sql.Register"),
+		JoinPoint: join.FunctionCall("database/sql", "Register"),
 		Advice: []advice.Advice{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Register"),
 		},
 	},
 	{
-		JoinPoint: join.FunctionCall("database/sql.Open"),
+		JoinPoint: join.FunctionCall("database/sql", "Open"),
 		Advice: []advice.Advice{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Open"),
 		},
 	},
 	{
-		JoinPoint: join.FunctionCall("database/sql.OpenDB"),
+		JoinPoint: join.FunctionCall("database/sql", "OpenDB"),
 		Advice: []advice.Advice{
 			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "OpenDB"),
 		},
@@ -1643,10 +1646,10 @@ var Aspects = [...]aspect.Aspect{
 		JoinPoint: join.AllOf(
 			join.Not(join.ImportPath("net/http")),
 			join.OneOf(
-				join.FunctionCall("net/http.Get"),
-				join.FunctionCall("net/http.Head"),
-				join.FunctionCall("net/http.Post"),
-				join.FunctionCall("net/http.PostForm"),
+				join.FunctionCall("net/http", "Get"),
+				join.FunctionCall("net/http", "Head"),
+				join.FunctionCall("net/http", "Post"),
+				join.FunctionCall("net/http", "PostForm"),
 			),
 		),
 		Advice: []advice.Advice{
@@ -1788,7 +1791,7 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From stdlib/slog.yml
 	{
-		JoinPoint: join.FunctionCall("log/slog.New"),
+		JoinPoint: join.FunctionCall("log/slog", "New"),
 		Advice: []advice.Advice{
 			advice.WrapExpression(code.MustTemplate(
 				"{{ .AST.Fun }}(slogtrace.WrapHandler({{ index .AST.Args 0 }}))",
@@ -1871,4 +1874,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:18LhJK8kEdZGZRQXSNrCpsJk2MyOmGXrh5ZecXnkL3OBj3j22UR+wUOvlCR8NUQ67Is7puc28WlhWOQN8f1WUQ=="
+const Checksum = "sha512:Szf0KuMtTD1OeRDZJHZagUhtfRl3BKtcXti0RxnEfZrjsb78zQCQ1vVoGR7TnnbIllBJNGdHavAvoSv7dNvm7g=="

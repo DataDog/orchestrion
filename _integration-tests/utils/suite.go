@@ -10,11 +10,9 @@ import (
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils/agent"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	"github.com/DataDog/orchestrion/built"
 	"github.com/stretchr/testify/require"
 )
-
-//dd:orchestrion-enabled
-const orchestrionEnabled = false
 
 // TestCase describes the general contract for tests. Each package in this
 // directory is expected to export a [TestCase] structure implementing this
@@ -47,7 +45,7 @@ type TestCase interface {
 
 func RunTest(t *testing.T, tc TestCase) {
 	t.Helper()
-	require.True(t, orchestrionEnabled, "this test suite must be run with orchestrion enabled")
+	require.True(t, built.WithOrchestrion, "this test suite must be run with orchestrion enabled")
 
 	mockAgent, err := agent.New(t)
 	require.NoError(t, err)

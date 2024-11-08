@@ -10,12 +10,17 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/DataDog/orchestrion/built"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 //dd:orchestrion-enabled
 const orchestrionEnabled = false
+
+func TestBuiltWithOrchestrion(t *testing.T) {
+	require.Equal(t, built.WithOrchestrion, orchestrionEnabled)
+}
 
 func TestSimple(t *testing.T) {
 	expected := "Hello, World!"

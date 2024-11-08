@@ -17,8 +17,10 @@ aspects:
     tracer-internal: true # This is safe to apply in the tracer itself.
     join-point:
       all-of:
-        - directive: dd:orchestrion-enabled
         - value-declaration: bool
+        - one-of:
+            - declaration-of: github.com/DataDog/orchestrion/built.WithOrchestrion
+            - directive: dd:orchestrion-enabled
     advice:
       - assign-value:
           template: 'true'
