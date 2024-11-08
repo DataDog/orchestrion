@@ -97,6 +97,7 @@ func (i *valueDeclaration) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ValueDeclaration").Call(i.TypeName.AsCode())
 }
 
+// See: https://regex101.com/r/OXDfJ1/1
 var symbolNamePattern = regexp2.MustCompile(`\A(.+)\.([\p{L}_][\p{L}_\p{Nd}]*)\z`, regexp2.ECMAScript)
 
 func init() {

@@ -57,6 +57,7 @@ func (i *functionCall) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.ImportPath), jen.Lit(i.Name))
 }
 
+// See: https://regex101.com/r/fjLo1l/1
 var funcNamePattern = regexp2.MustCompile(`\A(?:(.+)\.)?([\p{L}_][\p{L}_\p{Nd}]*)\z`, regexp2.ECMAScript)
 
 func init() {
