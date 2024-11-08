@@ -18,7 +18,6 @@ orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracele
 orchestrion,github.com/cpuguy83/go-md2man/v2/md2man,MIT,Copyright (c) 2014 Brian Goff
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
-orchestrion,github.com/dlclark/regexp2,MIT,unknown
 orchestrion,github.com/dustin/go-humanize,MIT,Copyright (c) 2005-2008  Dustin Sallings <dustin@spy.net>
 orchestrion,github.com/eapache/queue/v2,MIT,Copyright (c) 2014 Evan Huus
 orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
