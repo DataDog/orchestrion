@@ -20,13 +20,8 @@ type functionCall struct {
 	Name       string
 }
 
-func FunctionCall(pattern string) *functionCall {
-	matches := funcNamePattern.FindStringSubmatch(pattern)
-	if matches == nil {
-		panic(fmt.Errorf("invalid function name pattern: %q", pattern))
-	}
-
-	return &functionCall{ImportPath: matches[1], Name: matches[2]}
+func FunctionCall(importPath string, name string) *functionCall {
+	return &functionCall{ImportPath: importPath, Name: name}
 }
 
 func (i *functionCall) ImpliesImported() []string {
@@ -59,17 +54,24 @@ func (i *functionCall) Matches(ctx context.AspectContext) bool {
 }
 
 func (i *functionCall) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.ImportPath + "." + i.Name))
+	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.ImportPath), jen.Lit(i.Name))
 }
 
-var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([^.]+)\z`)
+// See: https://regex101.com/r/fjLo1l/1
+var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([\p{L}_][\p{L}_\p{Nd}]*)\z`)
 
 func init() {
 	unmarshalers["function-call"] = func(node *yaml.Node) (Point, error) {
-		var pattern string
-		if err := node.Decode(&pattern); err != nil {
+		var symbol string
+		if err := node.Decode(&symbol); err != nil {
 			return nil, err
 		}
-		return FunctionCall(pattern), nil
+
+		matches := funcNamePattern.FindStringSubmatch(symbol)
+		if matches == nil {
+			return nil, fmt.Errorf("invalid function name %q", symbol)
+		}
+
+		return FunctionCall(matches[1], matches[2]), nil
 	}
 }

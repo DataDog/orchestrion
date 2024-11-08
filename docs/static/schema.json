@@ -352,6 +352,7 @@
       "oneOf": [
         { "$ref": "#/$defs/join-point/all-of" },
         { "$ref": "#/$defs/join-point/configuration" },
+        { "$ref": "#/$defs/join-point/declaration-of" },
         { "$ref": "#/$defs/join-point/directive" },
         { "$ref": "#/$defs/join-point/function-body" },
         { "$ref": "#/$defs/join-point/function" },
@@ -407,6 +408,17 @@
           { "configuration": { "httpmode": "report" } },
           { "configuration": { "httpmode": "wrap" } }
         ]
+      },
+      "declaration-of": {
+        "required": ["declaration-of"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "declaration-of": {
+            "markdownDescription": "The `declaration-of` join point matches top-level declarations. It matches only `ValueSpec` and `FuncDecl` nodes.",
+            "type": "string",
+            "pattern": "^.+\\.[\\p{L}_][\\p{L}_\\p{Nd}]*$"
+          }
+        }
       },
       "directive": {
         "required": ["directive"],
