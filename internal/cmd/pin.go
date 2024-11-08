@@ -13,7 +13,24 @@ import (
 var Pin = &cli.Command{
 	Name:  "pin",
 	Usage: "Registers orchestrion in your project's `go.mod` file",
-	Action: func(*cli.Context) error {
-		return pin.PinOrchestrion()
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "generate",
+			Usage: "Add a //go:generate directive to `orchestrion.tool.go` to facilitate automated upkeep of its contents.",
+			Value: true,
+		},
+		&cli.BoolFlag{
+			Name:  "prune",
+			Usage: "Remove imports from `orchestrion.tool.go` that do not contain a valid `orchestrion.yml` file declaring integrations.",
+			Value: true,
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		return pin.PinOrchestrion(pin.Options{
+			Writer:     ctx.App.Writer,
+			ErrWriter:  ctx.App.ErrWriter,
+			NoGenerate: !ctx.Bool("generate"),
+			NoPrune:    !ctx.Bool("prune"),
+		})
 	},
 }

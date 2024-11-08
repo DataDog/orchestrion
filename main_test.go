@@ -70,8 +70,11 @@ func benchmarkGithub(owner string, repo string, build string) func(b *testing.B)
 		tc.gitCloneGithub(owner, repo, tag)
 		tc.exec("go", "mod", "download")
 		tc.exec("go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+		if stat, err := os.Stat(filepath.Join(tc.dir, "vendor")); err == nil && stat.IsDir() {
+			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
+			tc.exec("go", "mod", "vendor")
+		}
 		tc.exec(buildOrchestrion(b), "pin")
-		tc.exec("go", "mod", "vendor")
 
 		return tc
 	}
