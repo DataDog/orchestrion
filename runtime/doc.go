@@ -4,7 +4,7 @@
 // Copyright 2023-present Datadog, Inc.
 
 // Package runtime provides the run-time API of orchestrion packages. It
-// includes features such as some run-time healpers used by injected
+// includes features such as some run-time helpers used by injected
 // instrumentation code, as well as some facilities to perform telemetry or
 // ensure an application was indeed built with orchestrion.
 package runtime
