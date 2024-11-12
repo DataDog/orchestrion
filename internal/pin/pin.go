@@ -29,23 +29,63 @@ import (
 const (
 	orchestrionImportPath     = "github.com/DataDog/orchestrion"
 	orchestrionInstrumentPath = orchestrionImportPath + "/instrument"
-	OrchestrionToolGo         = "orchestrion.tool.go"
+	orchestrionToolGo         = "orchestrion.tool.go"
 	orchestrionDotYML         = "orchestrion.yml"
 )
 
 type Options struct {
-	// Writer is the write to send output of the command to.
+	// Writer is the writer to send output of the command to.
 	Writer io.Writer
 	// ErrWriter is the writer to send error messages to.
 	ErrWriter io.Writer
 
 	// NoGenerate disables emitting a `//go:generate` directive (which is
 	// otherwise emitted to facilitate automated upkeep of the contents of the
-	// [OrchestrionToolGo] file).
+	// [orchestrionToolGo] file).
 	NoGenerate bool
-	// NoPrune disables removing unnecessary imports from the [OrchestrionToolGo]
+	// NoPrune disables removing unnecessary imports from the [orchestrionToolGo]
 	// file. It will instead only print warnings about these.
 	NoPrune bool
+}
+
+// parseOrchestrionToolGo reads the contents of the orchestrion tool file at the given path
+// and returns the corresponding [*dst.File]
+func parseOrchestrionToolGo(path string) (*dst.File, error) {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading %q: %w", path, err)
+	}
+
+	fset := token.NewFileSet()
+	astFile, err := parser.ParseFile(fset, path, src, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %q: %w", path, err)
+	}
+	dstFile, err := decorator.DecorateFile(fset, astFile)
+	if err != nil {
+		return nil, fmt.Errorf("decorating %q: %w", path, err)
+	}
+
+	return dstFile, nil
+}
+
+// defaultOrchestrionToolGo returns the default content of the orchestrion tool file when none is found.
+func defaultOrchestrionToolGo() *dst.File {
+	return &dst.File{
+		Decs: dst.FileDecorations{
+			NodeDecs: dst.NodeDecs{
+				Start: dst.Decorations{
+					"// This file was created by `orchestrion pin`, and is used to ensure the",
+					"// `go.mod` file contains the necessary entries to ensure repeatable builds when",
+					"// using `orchestrion`. It is also used to set up which integrations are enabled.",
+					"\n",
+					"//go:build tools",
+					"\n",
+				},
+			},
+		},
+		Name: &dst.Ident{Name: "tools"},
+	}
 }
 
 // PinOrchestrion applies or update the orchestrion pin file in the current
@@ -56,43 +96,18 @@ func PinOrchestrion(opts Options) error {
 		return fmt.Errorf("getting GOMOD: %w", err)
 	}
 
-	toolFile := filepath.Join(goMod, "..", OrchestrionToolGo)
-	var dstFile *dst.File
-	if src, err := os.ReadFile(toolFile); err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("reading %q: %w", toolFile, err)
-		}
-		dstFile = &dst.File{
-			Decs: dst.FileDecorations{
-				NodeDecs: dst.NodeDecs{
-					Start: dst.Decorations{
-						"// This file was created by `orchestrion pin`, and is used to ensure the",
-						"// `go.mod` file contains the necessary entries to ensure repeatable builds when",
-						"// using `orchestrion`. It is also used to set up which tracer integrations are",
-						"// enabled.",
-						"\n",
-						"//go:build tools",
-						"\n",
-					},
-				},
-			},
-			Name: &dst.Ident{Name: "tools"},
-		}
-	} else {
-		fset := token.NewFileSet()
-		astFile, err := parser.ParseFile(fset, toolFile, src, parser.ParseComments)
-		if err != nil {
-			return fmt.Errorf("parsing %q: %w", toolFile, err)
-		}
-		dstFile, err = decorator.DecorateFile(fset, astFile)
-		if err != nil {
-			return fmt.Errorf("decorating %q: %w", toolFile, err)
-		}
+	toolFile := filepath.Join(goMod, "..", orchestrionToolGo)
+	dstFile, err := parseOrchestrionToolGo(toolFile)
+	if errors.Is(err, os.ErrNotExist) {
+		log.Debugf("no %q file found, creating a new one", orchestrionToolGo)
+		dstFile = defaultOrchestrionToolGo()
 	}
 
-	importSet, err := opts.updateToolFile(dstFile)
+	updateGoGenerateDirective(opts.NoGenerate, dstFile)
+
+	importSet, err := updateToolFile(dstFile)
 	if err != nil {
-		return fmt.Errorf("updating %s file AST: %w", OrchestrionToolGo, err)
+		return fmt.Errorf("updating %s file AST: %w", orchestrionToolGo, err)
 	}
 
 	if err := writeUpdated(toolFile, dstFile); err != nil {
@@ -101,7 +116,7 @@ func PinOrchestrion(opts Options) error {
 
 	// Add the current version of orchestrion to the `go.mod` file.
 	var edits []goModEdit
-	curMod, err := parse(goMod)
+	curMod, err := parseGoMod(goMod)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
@@ -115,7 +130,7 @@ func PinOrchestrion(opts Options) error {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
-	pruned, err := opts.pruneImports(importSet)
+	pruned, err := pruneImports(importSet, opts)
 	if err != nil {
 		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
 	}
@@ -138,9 +153,7 @@ func PinOrchestrion(opts Options) error {
 // updateToolFile updates the provided [*dst.File] according to the receiving
 // [*Options], adding any new imports necessary. It returns the up-to-date
 // [*importSet] for the file.
-func (opts *Options) updateToolFile(file *dst.File) (*importSet, error) {
-	opts.updateGoGenerateDirective(file)
-
+func updateToolFile(file *dst.File) (*importSet, error) {
 	importSet := importSetFrom(file)
 
 	if spec, isNew := importSet.Add(orchestrionImportPath); isNew {
@@ -168,11 +181,11 @@ func (opts *Options) updateToolFile(file *dst.File) (*importSet, error) {
 
 // updateGoGenerateDirective adds, updates, or removes the `//go:generate`
 // directive from the [*dst.File] according to the receiving [*Options].
-func (opts *Options) updateGoGenerateDirective(file *dst.File) {
+func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
 	const prefix = "//go:generate go run github.com/DataDog/orchestrion pin"
 
-	var newDirective string
-	if !opts.NoGenerate {
+	newDirective := ""
+	if !noGenerate {
 		newDirective = prefix
 		// TODO: Add additional CLI arguments here
 	}
@@ -187,8 +200,8 @@ func (opts *Options) updateGoGenerateDirective(file *dst.File) {
 					if dec != prefix && !strings.HasPrefix(dec, prefix+" ") {
 						continue
 					}
-					decs.Start[i] = newDirective
 					found = true
+					decs.Start[i] = newDirective
 				}
 				for i, dec := range decs.End {
 					if dec != prefix && !strings.HasPrefix(dec, prefix+" ") {
@@ -214,8 +227,8 @@ func (opts *Options) updateGoGenerateDirective(file *dst.File) {
 
 // pruneImports removes unnecessary or invalid imports from the provided
 // [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
-// only outputs a message informing the user about uncalled for imports.
-func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
+// only outputs a message informing the user about uncalled-for imports.
+func pruneImports(importSet *importSet, opts Options) (bool, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			BuildFlags: []string{"-toolexec="},
@@ -239,13 +252,13 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 		}
 		// There is no compilation unit in this package, so it cannot have integrations.
 		if someFile == "" {
-			pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "the package contains no Go source files")
+			pruned = pruneImport(importSet, pkg.PkgPath, "the package contains no source files", opts) || pruned
 			continue
 		}
 		integrationsFile := filepath.Join(someFile, "..", orchestrionDotYML)
 		if _, err := os.Stat(integrationsFile); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				pruned = pruned || opts.pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package")
+				pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+orchestrionDotYML+" file in this package", opts) || pruned
 				continue
 			}
 		}
@@ -258,11 +271,11 @@ func (opts *Options) pruneImports(importSet *importSet) (bool, error) {
 // pruneImport prunes a single import from the supplied [*importSet], unless
 // [*Options.NoPrune] is set, in which case it prints a warning using the
 // provided `reason` message.
-func (opts *Options) pruneImport(importSet *importSet, path string, reason string) bool {
+func pruneImport(importSet *importSet, path string, reason string, opts Options) bool {
 	if opts.NoPrune {
 		spec := importSet.Find(path)
 		if spec == nil {
-			// Nothing to do... already removed!
+			// Nothing to do... already removed!²
 			return false
 		}
 

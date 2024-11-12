@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"github.com/dlclark/regexp2"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 )
@@ -149,25 +148,6 @@ func validateSchema(data []byte) error {
 	return configSchema.Validate(obj)
 }
 
-type re2 regexp2.Regexp
-
-func (re *re2) MatchString(s string) bool {
-	matched, err := (*regexp2.Regexp)(re).MatchString(s)
-	return err == nil && matched
-}
-
-func (re *re2) String() string {
-	return (*regexp2.Regexp)(re).String()
-}
-
-func regexpEngine(s string) (jsonschema.Regexp, error) {
-	re, err := regexp2.Compile(s, regexp2.ECMAScript)
-	if err != nil {
-		return nil, err
-	}
-	return (*re2)(re), nil
-}
-
 func init() {
 	_, thisFile, _, _ := runtime.Caller(0)
 	schemaFile := filepath.Join(thisFile, "..", "..", "..", "..", "..", "docs", "static", "schema.json")
@@ -187,7 +167,6 @@ func init() {
 
 	schemaUrl := "https://datadoghq.dev/orchestrion/schema.json"
 	compiler := jsonschema.NewCompiler()
-	compiler.UseRegexpEngine(regexpEngine) // Use a regex engine that supports unicode categories
 
 	if err := compiler.AddResource(schemaUrl, json); err != nil {
 		log.Fatalln(err)

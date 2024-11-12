@@ -17,24 +17,25 @@ import (
 	"golang.org/x/term"
 )
 
-const (
-	envVarCheckedGoMod = "DD_ORCHESTRION_IS_GOMOD_VERSION"
-	envValTrue         = "true"
-)
+const envVarCheckedGoMod = "DD_ORCHESTRION_IS_GOMOD_VERSION"
 
 // AutoPinOrchestrion automatically runs `pinOrchestrion` if the necessary
 // requirements are not already met. It prints messages to `os.Stderr` to inform
 // the user about what is going on.
 func AutoPinOrchestrion() {
-	if os.Getenv(envVarCheckedGoMod) == envValTrue {
+	if os.Getenv(envVarCheckedGoMod) == "true" {
 		// A parent process (or ourselves earlier) has already done the check
 		return
 	}
 
+	// Make sure we don't do this again
+	defer func() {
+		_ = os.Setenv(envVarCheckedGoMod, "true")
+	}()
+
 	requiredVersionError := ensure.RequiredVersion()
 	if requiredVersionError == nil {
-		// We're good to go, just make sure we don't do this again
-		_ = os.Setenv(envVarCheckedGoMod, envValTrue)
+		// We're good to go
 		return
 	}
 
@@ -75,7 +76,7 @@ func AutoPinOrchestrion() {
 	_, _ = builder.WriteString(" will now add itself in your ")
 	_, _ = builder.WriteString(styleFile.Render("go.mod"))
 	_, _ = builder.WriteString(" file by:\n\n\t1. creating a new file named ")
-	_, _ = builder.WriteString(styleFile.Render(OrchestrionToolGo))
+	_, _ = builder.WriteString(styleFile.Render(orchestrionToolGo))
 	_, _ = builder.WriteString("\n\t2. running ")
 	_, _ = builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
 	_, _ = builder.WriteString("\n\t3. running ")
@@ -89,6 +90,4 @@ func AutoPinOrchestrion() {
 		_, _ = fmt.Fprintf(os.Stderr, "Failed to pin orchestrion in go.mod: %v\n", err)
 		os.Exit(1)
 	}
-
-	_ = os.Setenv(envVarCheckedGoMod, envValTrue)
 }

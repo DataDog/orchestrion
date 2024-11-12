@@ -45,12 +45,18 @@ func (tc *TestCase) Setup(t *testing.T) {
 		),
 	)
 	utils.AssertTestContainersError(t, err)
+	utils.RegisterContainerCleanup(t, tc.container)
 
 	dbURL, err := tc.container.ConnectionString(ctx, "sslmode=disable")
 	require.NoError(t, err)
 
 	tc.conn, err = pgx.Connect(ctx, dbURL)
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		assert.NoError(t, tc.conn.Close(ctx))
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -62,14 +68,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	err := tc.conn.QueryRow(ctx, "SELECT 1").Scan(&x)
 	require.NoError(t, err)
 	require.Equal(t, 1, x)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	assert.NoError(t, tc.conn.Close(ctx))
-	assert.NoError(t, tc.container.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

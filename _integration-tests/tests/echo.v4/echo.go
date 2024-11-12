@@ -36,19 +36,17 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.addr = "127.0.0.1:" + utils.GetFreePort(t)
 
 	go func() { assert.ErrorIs(t, tc.Echo.Start(tc.addr), http.ErrServerClosed) }()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		require.NoError(t, tc.Echo.Shutdown(ctx))
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
 	resp, err := http.Get("http://" + tc.addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.Echo.Shutdown(ctx))
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

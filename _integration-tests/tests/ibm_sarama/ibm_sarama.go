@@ -8,7 +8,6 @@
 package ibm_sarama
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -113,13 +112,6 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 func (tc *TestCase) Run(t *testing.T) {
 	produceMessage(t, tc.addrs, tc.cfg)
 	consumeMessage(t, tc.addrs, tc.cfg)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.server.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

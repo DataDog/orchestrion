@@ -33,13 +33,12 @@ func (b *base) setup(t *testing.T) {
 	b.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("Hello World"))
 	}))
+	t.Cleanup(func() {
+		b.server.Close()
+	})
 	tsURL, err := url.Parse(b.server.URL)
 	require.NoError(t, err)
 	b.serverURL = tsURL
-}
-
-func (b *base) teardown(*testing.T) {
-	b.server.Close()
 }
 
 func (b *base) run(t *testing.T) {

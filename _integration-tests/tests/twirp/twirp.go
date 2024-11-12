@@ -39,6 +39,12 @@ func (tc *TestCase) Setup(t *testing.T) {
 	go func() {
 		assert.ErrorIs(t, tc.srv.Serve(lis), http.ErrServerClosed)
 	}()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		assert.NoError(t, tc.srv.Shutdown(ctx))
+	})
+
 	tc.client = example.NewHaberdasherJSONClient(tc.addr, http.DefaultClient)
 }
 
@@ -46,13 +52,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	ctx := context.Background()
 	_, err := tc.client.MakeHat(ctx, &example.Size{Inches: 6})
 	require.NoError(t, err)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.srv.Shutdown(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

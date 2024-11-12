@@ -42,6 +42,7 @@ func (b *base) setup(t *testing.T) {
 		utils.WithTestLogConsumer(t),
 	)
 	utils.AssertTestContainersError(t, err)
+	utils.RegisterContainerCleanup(t, b.container)
 
 	b.hostPort, err = b.container.ConnectionHost(ctx)
 	require.NoError(t, err)

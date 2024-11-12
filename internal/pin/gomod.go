@@ -28,6 +28,11 @@ type (
 		Require []goModRequire
 	}
 
+	// goModEdit represents an edition that can be made to a `go.mod` file via `go mod edit`.
+	goModEdit interface {
+		goModEditFlag() string
+	}
+
 	goModVersion   string
 	goModToolchain string
 
@@ -40,9 +45,9 @@ type (
 	}
 )
 
-// parse processes the contents of the designated `go.mod` file using
+// parseGoMod processes the contents of the designated `go.mod` file using
 // `go mod edit -json` and returns the corresponding parsed [goMod].
-func parse(modfile string) (goMod, error) {
+func parseGoMod(modfile string) (goMod, error) {
 	var stdout bytes.Buffer
 	if err := runGoMod("edit", modfile, &stdout, "-json"); err != nil {
 		return goMod{}, fmt.Errorf("running `go mod edit -json`: %w", err)
@@ -78,12 +83,6 @@ func runGoMod(command string, modfile string, stdout io.Writer, args ...string) 
 	cmd.Stdout = stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-// goModEdit represents an edition that can be made to a `go.mod` file via
-// `go mod edit`.
-type goModEdit interface {
-	goModEditFlag() string
 }
 
 // runGoModEdit makes the specified changes to the `go.mod` file, then runs `go mod tidy` if needed.

@@ -9,7 +9,6 @@ package mongo
 
 import (
 	"context"
-	"log"
 	"net/url"
 	"testing"
 	"time"
@@ -43,22 +42,23 @@ func (tc *TestCase) Setup(t *testing.T) {
 		utils.WithTestLogConsumer(t),
 	)
 	utils.AssertTestContainersError(t, err)
+	utils.RegisterContainerCleanup(t, tc.server)
 
 	mongoURI, err := tc.server.ConnectionString(ctx)
-	if err != nil {
-		log.Fatalf("Failed to obtain connection string: %v\n", err)
-	}
+	require.NoError(t, err)
 	_, err = url.Parse(mongoURI)
-	if err != nil {
-		log.Fatalf("Invalid mongo connection string: %q\n", mongoURI)
-	}
+	require.NoError(t, err)
+
 	opts := options.Client()
 	opts.ApplyURI(mongoURI)
 	client, err := mongo.Connect(context.Background(), opts)
-	if err != nil {
-		log.Fatalf("Failed to connect to mongo: %v\n", err)
-	}
+	require.NoError(t, err)
 	tc.Client = client
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		assert.NoError(t, tc.Client.Disconnect(ctx))
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
@@ -73,14 +73,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	require.NoError(t, err)
 	r := c.FindOne(ctx, bson.M{"test_key": "test_value"})
 	require.NoError(t, r.Err())
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	assert.NoError(t, tc.Client.Disconnect(ctx))
-	assert.NoError(t, tc.server.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

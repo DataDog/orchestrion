@@ -20,7 +20,6 @@ func (skip) Setup(t *testing.T) {
 }
 
 func (skip) Run(t *testing.T)             {}
-func (skip) Teardown(t *testing.T)        {}
 func (skip) ExpectedTraces() trace.Traces { return nil }
 
 type TestCase = skip

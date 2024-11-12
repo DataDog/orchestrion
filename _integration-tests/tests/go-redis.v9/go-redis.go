@@ -10,8 +10,6 @@ package goredis
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/url"
 	"testing"
 	"time"
 
@@ -21,9 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	testredis "github.com/testcontainers/testcontainers-go/modules/redis"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -36,39 +32,17 @@ type TestCase struct {
 func (tc *TestCase) Setup(t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
-	ctx := context.Background()
-
 	uuid, err := uuid.NewRandom()
 	require.NoError(t, err)
 	tc.key = uuid.String()
 
-	tc.server, err = testredis.Run(ctx,
-		"redis:7",
-		testcontainers.WithLogger(testcontainers.TestLogger(t)),
-		utils.WithTestLogConsumer(t),
-		testcontainers.WithWaitStrategy(
-			wait.ForAll(
-				wait.ForLog("* Ready to accept connections"),
-				wait.ForExposedPort(),
-				wait.ForListeningPort("6379/tcp"),
-			),
-		),
-	)
-	if err != nil {
-		t.Skipf("Failed to start redis test container: %v\n", err)
-	}
-
-	redisURI, err := tc.server.ConnectionString(ctx)
-	if err != nil {
-		log.Fatalf("Failed to obtain connection string: %v\n", err)
-	}
-	redisURL, err := url.Parse(redisURI)
-	if err != nil {
-		log.Fatalf("Invalid redis connection string: %q\n", redisURI)
-	}
-	addr := redisURL.Host
+	container, addr := utils.StartRedisTestContainer(t)
+	tc.server = container
 
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
+	t.Cleanup(func() {
+		assert.NoError(t, tc.Client.Close())
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {

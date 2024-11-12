@@ -10,11 +10,9 @@ import (
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils/agent"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	"github.com/DataDog/orchestrion/runtime/built"
 	"github.com/stretchr/testify/require"
 )
-
-//dd:orchestrion-enabled
-const orchestrionEnabled = false
 
 // TestCase describes the general contract for tests. Each package in this
 // directory is expected to export a [TestCase] structure implementing this
@@ -37,12 +35,6 @@ type TestCase interface {
 	// outstanding spans are flushed to the agent.
 	Run(*testing.T)
 
-	// Teardown runs if [TestCase.Setup] was executed successfully and did not
-	// call [testing.T.SkipNow]. This can be used to clean up any resources
-	// created during [TestCase.Setup], such as stopping services or deleting test
-	// data.
-	Teardown(*testing.T)
-
 	// ExpectedTraces returns a trace.Traces object describing all traces expected
 	// to be produced by the [TestCase.Run] function. There should be one entry
 	// per trace root span expected to be produced. Every item in the returned
@@ -53,7 +45,7 @@ type TestCase interface {
 
 func RunTest(t *testing.T, tc TestCase) {
 	t.Helper()
-	require.True(t, orchestrionEnabled, "this test suite must be run with orchestrion enabled")
+	require.True(t, built.WithOrchestrion, "this test suite must be run with orchestrion enabled")
 
 	mockAgent, err := agent.New(t)
 	require.NoError(t, err)
@@ -61,11 +53,6 @@ func RunTest(t *testing.T, tc TestCase) {
 
 	t.Log("Running setup")
 	tc.Setup(t)
-
-	defer func() {
-		t.Log("Running teardown")
-		tc.Teardown(t)
-	}()
 
 	sess, err := mockAgent.NewSession(t)
 	require.NoError(t, err)

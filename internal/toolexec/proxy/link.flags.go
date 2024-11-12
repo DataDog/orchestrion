@@ -11,7 +11,7 @@ import "flag"
 
 func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet := flag.NewFlagSet("link version go1.23", flag.ContinueOnError)
-	flagSet.String("B", "", "add an ELF NT_GNU_BUILD_ID note when using ELF; use \"gobuildid\" to generate it from the Go build ID")
+	flagSet.String("B", "", "set ELF NT_GNU_BUILD_ID note or Mach-O UUID; use \"gobuildid\" to generate it from the Go build ID")
 	flagSet.String("E", "", "set entry symbol name")
 	flagSet.String("H", "", "set header type")
 	flagSet.String("I", "", "use linker as ELF dynamic linker")

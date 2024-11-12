@@ -44,10 +44,6 @@ func (tc *TestCaseStructLiteralWithParam) Run(t *testing.T) {
 	assert.True(t, tc.wtCalled, "the original WrapTransport function was not called")
 }
 
-func (tc *TestCaseStructLiteralWithParam) Teardown(t *testing.T) {
-	tc.base.teardown(t)
-}
-
 func (tc *TestCaseStructLiteralWithParam) ExpectedTraces() trace.Traces {
 	return tc.base.expectedTraces()
 }

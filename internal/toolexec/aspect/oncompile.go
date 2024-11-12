@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
+	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -22,33 +22,62 @@ import (
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 )
 
-type specialCaseBehavior int
+type (
+	specialCase struct {
+		path     string
+		prefix   bool
+		behavior behaviorOverride
+	}
+
+	behaviorOverride int
+)
 
 const (
-	neverWeave specialCaseBehavior = iota
+	// noOverride does not change the injector behavior, but prevents further
+	// rules from being applied.
+	noOverride behaviorOverride = iota
+	// neverWeave completely disables injecting into the designated package
+	// path(s).
+	neverWeave
+	// weaveTracerInternal limits weaving to only aspects that have the
+	// `tracer-internal` flag set.
 	weaveTracerInternal
 )
 
-var (
-	weavingSpecialCase = map[*regexp.Regexp]specialCaseBehavior{
-		regexp.MustCompile(`^github\.com/[Dd]ata[Dd]og/orchestrion(?:/.+)?$`): neverWeave,
-		regexp.MustCompile(`^gopkg\.in/DataDog/dd-trace-go.v1(?:/.+)?$`):      weaveTracerInternal,
-		regexp.MustCompile(`^github\.com/DataDog/go-tuf/client$`):             neverWeave,
+// matches returns true if the importPath is matched by this special case.
+func (sc *specialCase) matches(importPath string) bool {
+	if importPath == sc.path {
+		return true
 	}
-)
+	return sc.prefix && strings.HasPrefix(importPath, sc.path+"/")
+}
+
+// weavingSpecialCase defines special behavior to be applied to certain package
+// paths. They are evaluated in order, and the first matching override is
+// applied, stopping evaluation of any further overrides.
+var weavingSpecialCase = []specialCase{
+	{path: "github.com/DataDog/orchestrion/runtime", prefix: true, behavior: noOverride},
+	{path: "github.com/DataDog/orchestrion", prefix: true, behavior: neverWeave},
+	{path: "gopkg.in/DataDog/dd-trace-go.v1", prefix: true, behavior: weaveTracerInternal},
+	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
+}
 
 func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	log.SetContext("PHASE", "compile")
 	defer log.SetContext("PHASE", "")
 
 	aspects := builtin.Aspects[:]
-	for pattern, override := range weavingSpecialCase {
-		if pattern.MatchString(w.ImportPath) {
-			if override == neverWeave {
-				log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
-				// No weaving in those packages!
-				return nil
-			}
+	for _, sc := range weavingSpecialCase {
+		if !sc.matches(w.ImportPath) {
+			continue
+		}
+
+		switch sc.behavior {
+		case neverWeave:
+			log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
+			return nil
+
+		case weaveTracerInternal:
 			log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
 			shortList := make([]aspect.Aspect, 0, len(aspects))
 			for _, aspect := range aspects {
@@ -57,7 +86,17 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 				}
 			}
 			aspects = shortList
+
+		case noOverride:
+			// No-op
+
+		default:
+			// Unreachable
+			panic(fmt.Sprintf("un-handled behavior override: %d", sc.behavior))
 		}
+
+		// We matched an override; so we'll not evaluate any other.
+		break
 	}
 
 	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)

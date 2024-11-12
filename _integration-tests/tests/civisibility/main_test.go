@@ -18,17 +18,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/DataDog/orchestrion/runtime/built"
 	"github.com/tinylib/msgp/msgp"
 )
-
-//dd:orchestrion-enabled
-const isOrchestrionEnabled = false
 
 var ciVisibilityPayloads mockPayloads
 
 func TestMain(m *testing.M) {
 	// check if orchestrion is enabled
-	if !isOrchestrionEnabled {
+	if !built.WithOrchestrion {
 		panic("Orchestrion is not enabled, please run this test with orchestrion")
 	}
 

@@ -51,6 +51,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 		utils.WithTestLogConsumer(t),
 	)
 	utils.AssertTestContainersError(t, err)
+	utils.RegisterContainerCleanup(t, tc.container)
 
 	projectID := tc.container.Settings.ProjectID
 
@@ -60,6 +61,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	tc.client, err = pubsub.NewClient(ctx, projectID, option.WithGRPCConn(conn))
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, tc.client.Close())
+	})
 
 	topic, err := tc.client.CreateTopic(ctx, testTopic)
 	require.NoError(t, err)
@@ -109,14 +113,6 @@ func (tc *TestCase) receiveMessage(t *testing.T) {
 func (tc *TestCase) Run(t *testing.T) {
 	tc.publishMessage(t)
 	tc.receiveMessage(t)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.client.Close())
-	require.NoError(t, tc.container.Terminate(ctx))
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

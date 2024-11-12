@@ -8,7 +8,6 @@
 package kafka
 
 import (
-	"context"
 	"strings"
 	"testing"
 	"time"
@@ -102,13 +101,6 @@ func (tc *TestCase) consumeMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "key2", string(m.Key))
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	require.NoError(t, tc.container.Terminate(ctx))
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

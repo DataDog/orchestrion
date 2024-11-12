@@ -28,6 +28,9 @@ func (tc *TestCase) Setup(t *testing.T) {
 	var err error
 	tc.DB, err = gorm.Open("sqlite3", "file::memory:")
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, tc.DB.Close())
+	})
 
 	require.NoError(t, tc.DB.AutoMigrate(&Note{}).Error)
 	for _, note := range []*Note{
@@ -48,10 +51,6 @@ func (tc *TestCase) Run(t *testing.T) {
 
 	var note Note
 	require.NoError(t, gormtrace.WithContext(ctx, tc.DB).Where("user_id = ?", 2).First(&note).Error)
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	assert.NoError(t, tc.DB.Close())
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {
