@@ -134,9 +134,7 @@ var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.co
 
 go {{ .GoVersion }}
 
-{{ if .OrchestrionRequired }}
 replace github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
-{{ end }}
 
 {{ range $path, $version := .Require }}
 require	{{ $path }} {{ $version }}
@@ -156,20 +154,16 @@ func scaffold(t *testing.T, requires map[string]string) string {
 
 	defer goMod.Close()
 
-	_, orchestrionRequired := requires["github.com/DataDog/orchestrion"]
-
 	require.NoError(t, goModTemplate.Execute(goMod, struct {
-		GoVersion           string
-		OrchestrionVersion  string
-		OrchestrionPath     string
-		OrchestrionRequired bool
-		Require             map[string]string
+		GoVersion          string
+		OrchestrionVersion string
+		OrchestrionPath    string
+		Require            map[string]string
 	}{
-		GoVersion:           runtime.Version()[2:6],
-		OrchestrionVersion:  version.Tag,
-		OrchestrionPath:     rootDir,
-		OrchestrionRequired: orchestrionRequired,
-		Require:             requires,
+		GoVersion:          runtime.Version()[2:6],
+		OrchestrionVersion: version.Tag,
+		OrchestrionPath:    rootDir,
+		Require:            requires,
 	}))
 
 	return tmp
