@@ -87,9 +87,7 @@ func TestGoModVersion(t *testing.T) {
 	}
 
 	t.Run("no-go-mod", func(t *testing.T) {
-		tmp, err := os.MkdirTemp("", "ensure-*")
-		require.NoError(t, err, "failed to create temporary directory")
-		defer os.RemoveAll(tmp)
+		tmp := t.TempDir()
 
 		os.WriteFile(filepath.Join(tmp, "main.go"), []byte(`
 		package main
@@ -98,9 +96,9 @@ func TestGoModVersion(t *testing.T) {
 				`), 0o644)
 
 		require.NotPanics(t, func() {
-			_, _, err = goModVersion(tmp)
+			_, _, err := goModVersion(tmp)
+			require.ErrorIs(t, err, goenv.ErrNoGoMod)
 		})
-		require.ErrorContains(t, err, "go.mod file not found in current directory")
 	})
 }
 

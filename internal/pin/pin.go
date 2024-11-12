@@ -91,7 +91,7 @@ func defaultOrchestrionToolGo() *dst.File {
 // PinOrchestrion applies or update the orchestrion pin file in the current
 // working directory, according to the supplied [Options].
 func PinOrchestrion(opts Options) error {
-	goMod, err := goenv.GOMOD()
+	goMod, err := goenv.GOMOD("")
 	if err != nil {
 		return fmt.Errorf("getting GOMOD: %w", err)
 	}
