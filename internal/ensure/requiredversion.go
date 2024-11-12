@@ -135,10 +135,9 @@ func goModVersion(dir string) (moduleVersion string, moduleDir string, err error
 	}
 
 	cfg := &packages.Config{
-		BuildFlags: []string{"-modfile", gomod},
-		Dir:        dir,
-		Mode:       packages.NeedModule,
-		Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+		Dir:  filepath.Dir(gomod),
+		Mode: packages.NeedModule,
+		Logf: func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 	}
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {
