@@ -172,8 +172,8 @@ Library                                               | Since    | Notes
 [echo]: https://datadoghq.dev/orchestrion/docs/built-in/http/echo/
 [grpc]: https://datadoghq.dev/orchestrion/docs/built-in/grpc/
 [gorm]: https://datadoghq.dev/orchestrion/docs/built-in/databases/gorm/#gormiogorm
-[net-http.Client]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/net-http.client/
-[net-http.Server]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/net-http.server/
+[net-http.client]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/net-http.client/
+[net-http.server]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/net-http.server/
 [mongo]: https://datadoghq.dev/orchestrion/docs/built-in/databases/mongo/
 [k8s-client]: https://datadoghq.dev/orchestrion/docs/built-in/k8s-client/
 [hashicorp-vault]: https://datadoghq.dev/orchestrion/docs/built-in/api/vault/
