@@ -23,6 +23,8 @@ type Aspect struct {
 	Advice []advice.Advice
 	// TracerInternal determines whether the aspect can be woven into the tracer's internal code.
 	TracerInternal bool
+	// ID is the identifier of the aspect within its configuration file.
+	ID string
 }
 
 func (a *Aspect) AsCode() (jp jen.Code, adv jen.Code) {
@@ -58,6 +60,7 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	var ti struct {
 		JoinPoint      yaml.Node `yaml:"join-point"`
 		Advice         yaml.Node `yaml:"advice"`
+		ID             string    `yaml:"id"`
 		TracerInternal bool      `yaml:"tracer-internal"`
 	}
 	if err := node.Decode(&ti); err != nil {
@@ -71,6 +74,7 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 		return errors.New("missing required key 'advice'")
 	}
 
+	a.ID = ti.ID
 	a.TracerInternal = ti.TracerInternal
 
 	var err error

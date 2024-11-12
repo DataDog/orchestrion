@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/ensure"
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/charmbracelet/lipgloss"
@@ -76,7 +77,7 @@ func AutoPinOrchestrion() {
 	_, _ = builder.WriteString(" will now add itself in your ")
 	_, _ = builder.WriteString(styleFile.Render("go.mod"))
 	_, _ = builder.WriteString(" file by:\n\n\t1. creating a new file named ")
-	_, _ = builder.WriteString(styleFile.Render(orchestrionToolGo))
+	_, _ = builder.WriteString(styleFile.Render(config.OrchestrionToolGo))
 	_, _ = builder.WriteString("\n\t2. running ")
 	_, _ = builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
 	_, _ = builder.WriteString("\n\t3. running ")

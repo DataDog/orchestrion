@@ -1,0 +1,196 @@
+pkgpath: github.com/DataDog/orchestrion/instrument
+imports:
+- pkgpath: github.com/DataDog/orchestrion/internal/injector/builtin
+  yaml:
+    name: orchestrion.yml
+    extends:
+    - name: ./yaml/stdlib/runtime.yml
+      aspects:
+      - GLS Access
+      - Clear GLS slot on goroutine exit
+yaml:
+  name: orchestrion.yml
+  extends:
+  - name: ../internal/injector/builtin/all.yml
+    extends:
+    - name: ./yaml/api/vault.yml
+      aspects:
+      - Wrap HTTP client
+    - name: ./yaml/civisibility/testing.yml
+      aspects:
+      - Instrument testing.M.Run
+      - Instrument testing.T.Run
+      - Instrument testing.B.Run
+      - Instrument testing.common.Fail
+      - Instrument testing.common.FailNow
+      - Instrument testing.common.Error
+      - Instrument testing.common.Errorf
+      - Instrument testing.common.Fatal
+      - Instrument testing.common.Fatalf
+      - Instrument testing.common.Skip
+      - Instrument testing.common.Skipf
+      - Instrument testing.common.SkipNow
+    - name: ./yaml/cloud/aws-sdk-v2.yml
+      aspects:
+      - Append tracing middleware to the aws.Config struct literal (value)
+      - Append tracing middleware to the aws.Config struct literal (pointer) or initialized
+        through aws.NewConfig
+    - name: ./yaml/cloud/aws-sdk.yml
+      aspects:
+      - Wrap session.NewSession
+    - name: ./yaml/databases/go-elasticsearch.yml
+      aspects:
+      - Wrap elasticsearch.Config value (v6)
+      - Wrap elasticsearch.Config pointer (v6)
+      - Wrap elasticsearch.Config value (v7)
+      - Wrap elasticsearch.Config pointer (v7)
+      - Wrap elasticsearch.Config value (v8)
+      - Wrap elasticsearch.Config pointer (v8)
+    - name: ./yaml/databases/go-redis.yml
+      aspects:
+      - Wrap V0 client
+      - Wrap V7 client
+      - Wrap V8 client
+      - Wrap V9 client
+    - name: ./yaml/databases/gocql.yml
+      aspects:
+      - Wrap gocql.NewCluster function call or gocql.ClusterConfig struct literal
+        (pointer)
+      - Wrap gocql.ClusterConfig struct literal (value)
+    - name: ./yaml/databases/gorm.yml
+      aspects:
+      - gorm.io/gorm
+      - jinzhu/gorm
+    - name: ./yaml/databases/mongo.yml
+      aspects:
+      - Inject mongotrace.NewMonitor
+    - name: ./yaml/databases/pgx.yml
+      aspects:
+      - Replace pgx/v5.Connect
+      - Replace pgx/v5.ConnectConfig
+      - Replace pgx/v5/pgxpool.New
+      - Replace pgx/v5/pgxpool.NewWithConfig
+    - name: ./yaml/databases/redigo.yml
+      aspects:
+      - Dial
+      - DialContext
+      - DialURL
+    - name: ./yaml/datastreams/confluentinc_kafka.yml
+      aspects:
+      - Inject kafka library version (v1)
+      - Inject kafka library version (v2)
+      - Inject wrapped types to the kafka package
+      - Add struct fields to kafka.Consumer
+      - Trace kafka.NewConsumer
+      - Trace kafka.Consumer#Close
+      - Trace kafka.Consumer#Events
+      - Trace kafka.Consumer#Poll
+      - Trace kafka.Consumer#Commit
+      - Trace kafka.Consumer#CommitMessage
+      - Trace kafka.Consumer#CommitOffsets
+      - Add struct fields to kafka.Producer
+      - Trace kafka.Producer#Events
+      - Trace kafka.Producer#ProduceChannel
+      - Trace kafka.Producer#Close
+      - Trace kafka.Producer#Produce
+    - name: ./yaml/datastreams/gcp_pubsub.yml
+      aspects:
+      - Modify pubsub.Subscription.Receive to call tracing functions
+      - Add struct fields to pubsub.PublishResult
+      - Modify pubsub.Topic.Publish to call tracing functions
+      - Modify pubsub.PublishResult.Get to call tracing functions
+    - name: ./yaml/datastreams/ibm_sarama.yml
+      aspects:
+      - Wrap NewConsumer and NewConsumerClient
+      - Wrap NewSyncProducer and NewSyncProducerFromClient
+      - Wrap NewAsyncProducer and NewAsyncProducerFromClient
+    - name: ./yaml/datastreams/segmentio_kafka_v0.yml
+      aspects:
+      - Add struct fields to kafka.Reader
+      - Trace kafka.Reader#FetchMessage
+      - Trace kafka.Reader#Close
+      - Add struct fields to kafka.Writer
+      - Trace kafka.Writer#WriteMessages
+    - name: ./yaml/datastreams/shopify_sarama.yml
+      aspects:
+      - Wrap NewConsumer and NewConsumerClient
+      - Wrap NewSyncProducer and NewSyncProducerFromClient
+      - Wrap NewAsyncProducer and NewAsyncProducerFromClient
+    - name: ./yaml/dd-span.yml
+      aspects:
+      - Annotated with `dd:span`
+    - name: ./yaml/directive/orchestrion-enabled.yml
+      aspects:
+      - Initialize to true
+    - name: ./yaml/go-main.yml
+      aspects:
+      - Start Datadog Tracer and Profiler
+    - name: ./yaml/graphql/gqlgen.yml
+      aspects:
+      - Register tracer middleware
+    - name: ./yaml/graphql/graph-gophers.yml
+      aspects:
+      - Register tracer middleware
+    - name: ./yaml/graphql/graphql-go.yml
+      aspects:
+      - Replace graphql.NewSchema
+    - name: ./yaml/http/chi.yml
+      aspects:
+      - Use V1 tracer middleware
+      - Use V5 tracer middleware
+    - name: ./yaml/http/echo.yml
+      aspects:
+      - Use tracer middleware
+    - name: ./yaml/http/fiber.yml
+      aspects:
+      - Use tracer middleware
+    - name: ./yaml/http/gin.yml
+      aspects:
+      - Use tracer middleware
+    - name: ./yaml/http/gorilla.yml
+      aspects:
+      - Add fields to Router
+      - Setup in NewRouter
+      - Instrument Router.ServeHTTP
+    - name: ./yaml/http/julienschmidt_httprouter.yml
+      aspects:
+      - Add fields to httprouter.Router
+      - Trace httprouter.Router#ServeHTTP
+    - name: ./yaml/k8s-client.yml
+      aspects:
+      - Add tracer middleware to Config literals
+    - name: ./yaml/logs/logrus.yml
+      aspects:
+      - Inject DDContextLogHook
+      - Trace logrus.New
+      - Wrap logrus.Logger (pointer)
+      - Wrap logrus.Logger (value)
+    - name: ./yaml/rpc/grpc.yml
+      aspects:
+      - Add gRPC client interceptors
+      - Add gRPC server interceptors
+    - name: ./yaml/rpc/twirp.yml
+      aspects:
+      - Add twirp server hooks
+    - name: ./yaml/stdlib/database-sql.yml
+      aspects:
+      - Register
+      - Open
+      - OpenDB
+    - name: ./yaml/stdlib/net-http.client.yml
+      aspects:
+      - Add field to Transport
+      - Flag tracer internal Transport instances
+      - Instrument Transport.RoundTrip
+      - Wire context through http.Get/Head/Post/PostForm
+    - name: ./yaml/stdlib/net-http.server.yml
+      aspects:
+      - Wrap http.Server.Handler
+      - Wrap http.HandlerFunc
+      - Report http.HandlerFunc calls
+    - name: ./yaml/stdlib/ossec.yml
+      aspects:
+      - OpenFile
+    - name: ./yaml/stdlib/slog.yml
+      aspects:
+      - Wrap slog Handlers

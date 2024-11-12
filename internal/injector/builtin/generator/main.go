@@ -7,6 +7,7 @@ package main
 
 import (
 	"crypto/sha512"
+	_ "embed" // For go:embed
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -18,6 +19,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
 
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -25,11 +27,15 @@ import (
 
 type globs []string
 
+//go:embed "config.yml.tmpl"
+var yamlTemplate string
+
 func main() {
 	var (
 		pkg           string
 		glob          globs
 		output        string
+		yamlFile      string
 		deps          string
 		docsDir       string
 		schemadocsDir string
@@ -39,6 +45,7 @@ func main() {
 	flag.StringVar(&pkg, "p", "", "package name")
 	flag.Var(&glob, "i", "input files (glob syntax, can be set multiple times)")
 	flag.StringVar(&output, "o", "", "output file")
+	flag.StringVar(&yamlFile, "y", "", "output YAML file")
 	flag.StringVar(&deps, "d", "", "dependencies file")
 	flag.StringVar(&docsDir, "docs", "", "directory to write documentation files to")
 	flag.StringVar(&schemadocsDir, "schemadocs", "", "directory to write schema documentation files to")
@@ -65,6 +72,20 @@ func main() {
 	}
 	// Ensure the files are sorted for determinism.
 	sort.Strings(matches)
+
+	if yamlFile != "" {
+		file, err := os.Create(yamlFile)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		defer file.Close()
+
+		tmpl, err := template.New("").Parse(yamlTemplate)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		tmpl.Execute(file, matches)
+	}
 
 	docsToDelete := make(map[string]struct{})
 	if docsDir != "" {

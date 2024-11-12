@@ -114,7 +114,7 @@ func collectModules(pkg *packages.Package, modules map[string]*moduleInfo, known
 			modules[pkg.Module.Path] = info
 		}
 
-		for _, files := range [...][]string{pkg.GoFiles, pkg.EmbedFiles, pkg.OtherFiles} {
+		for _, files := range [...][]string{pkg.GoFiles, pkg.EmbedFiles} {
 			for _, file := range files {
 				info.Files[file] = struct{}{}
 			}
