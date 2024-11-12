@@ -107,6 +107,12 @@ func (l *Loader) parseYMLFile(filename string) (*ymlFile, error) {
 	}
 	defer file.Close()
 
+	// In validation mode, we will pre-parse the YAML into a [yaml.Node] tree,
+	// which can then be cheaply decoded into a value type that validation
+	// supports; and then re-decoded into the actual data structure.
+	// This dance is significantly cheaper (both in time & allocations) than doing
+	// a full blown [yaml.Decoder.Decode] twice (as it internally transits through
+	// the [yaml.Node] representation anyway).
 	var dec interface{ Decode(any) error } = yaml.NewDecoder(file)
 	if l.validate {
 		var node yaml.Node
