@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5
         with:
-          go-version: stable # Minimum supported go release
+          go-version: oldstable # Minimum supported go release
           cache-dependency-path: '**/go.mod'
 
       # Select the latest available version of gopkg.in/DataDog/dd-trace-go.v1, while ignoring all

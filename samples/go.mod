@@ -2,8 +2,6 @@ module github.com/DataDog/orchestrion/samples
 
 go 1.22.9
 
-toolchain go1.23.3
-
 replace github.com/DataDog/orchestrion => ../
 
 require (

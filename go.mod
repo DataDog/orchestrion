@@ -2,8 +2,6 @@ module github.com/DataDog/orchestrion
 
 go 1.22.9
 
-toolchain go1.23.3
-
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/charmbracelet/lipgloss v1.0.0
