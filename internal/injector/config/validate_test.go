@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -54,7 +53,7 @@ func TestBuiltinYAML(t *testing.T) {
 			return nil
 		}
 
-		count += 1
+		count++
 		rel, err := filepath.Rel(rootDir, path)
 		require.NoError(t, err)
 		t.Run(rel, func(t *testing.T) {
@@ -70,7 +69,7 @@ func TestBuiltinYAML(t *testing.T) {
 		return nil
 	})
 
-	require.Greater(t, count, 0)
+	require.Positive(t, count)
 }
 
 func TestSchemaValidity(t *testing.T) {
@@ -93,7 +92,7 @@ func validateExamples(t *testing.T, schema *jsonschema.Schema, path string, visi
 	visited[schema] = struct{}{}
 
 	for idx, example := range schema.Examples {
-		assert.NoError(t, schema.Validate(example), fmt.Sprintf("invalid example at %s.Examples[%d]", path, idx))
+		require.NoError(t, schema.Validate(example), "invalid example at %s.Examples[%d]", path, idx)
 	}
 	count := len(schema.Examples)
 

@@ -183,7 +183,7 @@ func TestLoad(t *testing.T) {
 		var buf bytes.Buffer
 		require.NoError(t, yaml.NewEncoder(&buf).Encode(cfg))
 
-		assert.Equal(t, 2, len(cfg.Aspects()))
+		assert.Len(t, cfg.Aspects(), 2)
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
@@ -195,7 +195,7 @@ func TestLoad(t *testing.T) {
 		var buf bytes.Buffer
 		require.NoError(t, yaml.NewEncoder(&buf).Encode(cfg))
 
-		assert.Equal(t, 107, len(cfg.Aspects()))
+		assert.Len(t, cfg.Aspects(), 107)
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 
@@ -226,7 +226,7 @@ func TestLoad(t *testing.T) {
 		loader := NewLoader(tmp, false)
 		cfg, err := loader.Load()
 		require.NoError(t, err)
-		require.Equal(t, 3, len(cfg.Aspects()))
+		require.Len(t, cfg.Aspects(), 3)
 	})
 }
 

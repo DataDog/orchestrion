@@ -138,5 +138,4 @@ func packageRoot(pkg *packages.Package) string {
 		return filepath.Dir(pkg.IgnoredFiles[0])
 	}
 	return ""
-
 }
