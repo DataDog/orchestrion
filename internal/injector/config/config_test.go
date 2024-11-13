@@ -181,7 +181,10 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
-		require.NoError(t, yaml.NewEncoder(&buf).Encode(cfg))
+		enc := yaml.NewEncoder(&buf)
+		defer func() { require.NoError(t, enc.Close()) }()
+		enc.SetIndent(2)
+		require.NoError(t, enc.Encode(cfg))
 
 		assert.Len(t, cfg.Aspects(), 2)
 		golden.Assert(t, buf.String(), "required.snap.yml")
@@ -193,7 +196,10 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
-		require.NoError(t, yaml.NewEncoder(&buf).Encode(cfg))
+		enc := yaml.NewEncoder(&buf)
+		defer func() { require.NoError(t, enc.Close()) }()
+		enc.SetIndent(2)
+		require.NoError(t, enc.Encode(cfg))
 
 		assert.Len(t, cfg.Aspects(), 107)
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
