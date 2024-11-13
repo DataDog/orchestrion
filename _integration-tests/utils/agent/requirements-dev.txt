@@ -1,4 +1,4 @@
-ddapm-test-agent==1.19.0
+ddapm-test-agent==1.20.0
 ## The following requirements were added by pip freeze:
 aiohappyeyeballs==2.4.3
 aiohttp==3.10.10
