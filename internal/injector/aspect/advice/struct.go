@@ -8,6 +8,7 @@ package advice
 import (
 	"fmt"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
@@ -50,6 +51,10 @@ func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 
 func (a *addStructField) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "AddStructField").Call(jen.Lit(a.Name), a.TypeName.AsCode())
+}
+
+func (a *addStructField) Hash(h *fingerprint.Hasher) error {
+	return h.Named("add-struct-field", fingerprint.String(a.Name), a.TypeName)
 }
 
 func (a *addStructField) AddedImports() []string {

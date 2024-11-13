@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/token"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -53,6 +54,10 @@ func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 
 func (s *structDefinition) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructDefinition").Call(s.TypeName.AsCode())
+}
+
+func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
+	return h.Named("struct-definition", s.TypeName)
 }
 
 type (
@@ -156,6 +161,10 @@ func (s *structLiteral) AsCode() jen.Code {
 		return jen.Qual(pkgPath, "StructLiteralField").Call(s.TypeName.AsCode(), jen.Lit(s.Field))
 	}
 	return jen.Qual(pkgPath, "StructLiteral").Call(s.TypeName.AsCode(), s.Match.asCode())
+}
+
+func (s *structLiteral) Hash(h *fingerprint.Hasher) error {
+	return h.Named("struct-literal", s.TypeName, fingerprint.String(s.Field), fingerprint.Int(s.Match))
 }
 
 func init() {

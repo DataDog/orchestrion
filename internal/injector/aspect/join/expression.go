@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -55,6 +56,10 @@ func (i *functionCall) Matches(ctx context.AspectContext) bool {
 
 func (i *functionCall) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.ImportPath), jen.Lit(i.Name))
+}
+
+func (i *functionCall) Hash(h *fingerprint.Hasher) error {
+	return h.Named("function-call", fingerprint.String(i.ImportPath), fingerprint.String(i.Name))
 }
 
 // See: https://regex101.com/r/fjLo1l/1

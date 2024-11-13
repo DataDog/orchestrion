@@ -6,6 +6,7 @@
 package join
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -29,6 +30,10 @@ func (n not) Matches(ctx context.AspectContext) bool {
 
 func (n not) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Not").Call(n.JoinPoint.AsCode())
+}
+
+func (n not) Hash(h *fingerprint.Hasher) error {
+	return h.Named("not", n.JoinPoint)
 }
 
 func init() {
