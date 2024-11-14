@@ -8,3 +8,7 @@
 package builtin
 
 //go:generate go run ./generator -i=yaml/*.yml -i=yaml/*/*.yml -p=builtin -y=./all.yml -d=./generated_deps.go -C=1 -docs=../../../docs/content/docs/built-in/ -schemadocs=../../../docs/content/contributing/aspects/
+
+import (
+	_ "github.com/DataDog/orchestrion/internal/injector/builtin/yaml"
+)
