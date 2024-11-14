@@ -14,7 +14,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
@@ -66,7 +66,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 	log.SetContext("PHASE", "compile")
 	defer log.SetContext("PHASE", "")
 
-	aspects := builtin.Aspects[:]
+	cfg, err := config.NewLoader(".", false).Load()
+	if err != nil {
+		return fmt.Errorf("loading injector configuration: %w", err)
+	}
+
+	aspects := cfg.Aspects()
 	for _, sc := range weavingSpecialCase {
 		if !sc.matches(w.ImportPath) {
 			continue
@@ -79,7 +84,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 
 		case weaveTracerInternal:
 			log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
-			shortList := make([]aspect.Aspect, 0, len(aspects))
+			shortList := make([]*aspect.Aspect, 0, len(aspects))
 			for _, aspect := range aspects {
 				if aspect.TracerInternal {
 					shortList = append(shortList, aspect)

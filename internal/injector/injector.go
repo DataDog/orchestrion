@@ -30,7 +30,7 @@ type (
 	// Injector injects go code into a specific Go package.
 	Injector struct {
 		// Aspects is the set of configured aspects to use.
-		Aspects []aspect.Aspect
+		Aspects []*aspect.Aspect
 
 		// ImportPath is the import path of the package that will be injected.
 		ImportPath string

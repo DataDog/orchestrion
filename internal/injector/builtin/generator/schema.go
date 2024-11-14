@@ -37,7 +37,6 @@ type IdentifiedAspect struct {
 }
 
 var (
-	configSchema    *jsonschema.Schema
 	joinPointSchema *jsonschema.Schema
 	adviceSchema    *jsonschema.Schema
 )
@@ -139,18 +138,9 @@ func documentSchemaInstance(schema *jsonschema.Schema, path string) error {
 	return nil
 }
 
-// validateSchema verifies the YAML data matches the expected JSON Schema definition.
-func validateSchema(data []byte) error {
-	var obj any
-	if err := yaml.Unmarshal(data, &obj); err != nil {
-		return err
-	}
-	return configSchema.Validate(obj)
-}
-
 func init() {
 	_, thisFile, _, _ := runtime.Caller(0)
-	schemaFile := filepath.Join(thisFile, "..", "..", "..", "..", "..", "docs", "static", "schema.json")
+	schemaFile := filepath.Join(thisFile, "..", "..", "..", "config", "schema.json")
 
 	file, err := os.Open(schemaFile)
 	if err != nil {
@@ -171,7 +161,6 @@ func init() {
 	if err := compiler.AddResource(schemaUrl, json); err != nil {
 		log.Fatalln(err)
 	}
-	configSchema = compiler.MustCompile(schemaUrl)
 	joinPointSchema = compiler.MustCompile(schemaUrl + "#/$defs/JoinPoint")
 	adviceSchema = compiler.MustCompile(schemaUrl + "#/$defs/Advice")
 }
