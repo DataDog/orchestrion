@@ -1786,6 +1786,24 @@ var Aspects = [...]aspect.Aspect{
 			)),
 		},
 	},
+	{
+		JoinPoint: join.AllOf(
+			join.ImportPath("gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"),
+			join.FunctionBody(join.Function(
+				join.Name("SpanFromContext"),
+			)),
+		),
+		Advice: []advice.Advice{
+			advice.PrependStmts(code.MustTemplate(
+				"{{- $span := .Function.Result 0 -}}\n{{- $ok := .Function.Result 1 -}}\ndefer func(){\n  if !{{ $ok }} {\n    return\n  }\n  switch {{ $span }}.(type) {\n  case traceinternal.NoopSpan, *traceinternal.NoopSpan:\n    {{ $ok }} = false\n  }\n}()",
+				map[string]string{
+					"traceinternal": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/internal",
+				},
+				context.GoLangVersion{},
+			)),
+		},
+		TracerInternal: true,
+	},
 	// From stdlib/slog.yml
 	{
 		JoinPoint: join.FunctionCall("log/slog", "New"),
@@ -1848,6 +1866,7 @@ var InjectedPaths = [...]string{
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/internal",
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal",
 	"gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
@@ -1870,4 +1889,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:rP9frBFczPJ7nxdudx0R+Ss3qG12XNXLcOA1zIq22gaFKT8ndeAfRjm9POaq+iaiJdDP3hpHHOvVXGazmxMtxg=="
+const Checksum = "sha512:b0sx64/k4DjF78rJf6iOrCDwLN2VsbQ+jMx2E39NbC1k+OKcr7+/0PPMaGyXKDKYKZaCQnZB5vrZMEcCkirHkg=="

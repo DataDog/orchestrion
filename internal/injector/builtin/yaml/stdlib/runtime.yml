@@ -46,3 +46,30 @@ aspects:
     advice:
       - prepend-statements:
           template: getg().__dd_gls = nil
+
+  # Temporarily hack tracer.SpanFromContext so that it no longer returns true if
+  # the Span found from GLS is actully a noop span.
+  - id: Hack tracer.SpanFromContext
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+        - function-body:
+            function:
+              - name: SpanFromContext
+    advice:
+      - prepend-statements:
+          imports:
+            traceinternal: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/internal
+          template: |-
+            {{- $span := .Function.Result 0 -}}
+            {{- $ok := .Function.Result 1 -}}
+            defer func(){
+              if !{{ $ok }} {
+                return
+              }
+              switch {{ $span }}.(type) {
+              case traceinternal.NoopSpan, *traceinternal.NoopSpan:
+                {{ $ok }} = false
+              }
+            }()

@@ -54,6 +54,7 @@ import (
 	_ "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
+	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/internal"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal"
 	_ "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec"
