@@ -110,6 +110,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
+		TestMain:   cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test"),
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))

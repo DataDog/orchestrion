@@ -1162,6 +1162,7 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.AllOf(
 			join.PackageName("main"),
+			join.TestMain(false),
 			join.FunctionBody(join.Function(
 				join.Name("main"),
 				join.Signature(
@@ -1172,15 +1173,12 @@ var Aspects = [...]aspect.Aspect{
 		),
 		Advice: []advice.Advice{
 			advice.InjectDeclarations(code.MustTemplate(
-				"//go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled\nfunc __dd_civisibility_isCiVisibilityEnabled() bool\n\nfunc init() {\n  // Only initialize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n  // For a test process the ci visibility instrumentation will initialize the tracer\n  if !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n    tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n  }\n}",
+				"func init() {\n  tracer.Start(tracer.WithOrchestrion(map[string]string{\"version\": {{printf \"%q\" Version}}}))\n}",
 				map[string]string{
-					"testing": "testing",
-					"tracer":  "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
+					"tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 				context.GoLangVersion{},
-			), []string{
-				"gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting",
-			}),
+			), []string{}),
 			advice.InjectDeclarations(code.MustTemplate(
 				"func init() {\n  switch os.Getenv(\"DD_PROFILING_ENABLED\") {\n  case \"1\", \"true\", \"auto\":\n    // The \"auto\" value can be set if profiling is enabled via the\n    // Datadog Admission Controller. We always turn on the profiler in\n    // the \"auto\" case since we only send profiles after at least a\n    // minute, and we assume anything running that long is worth\n    // profiling.\n    err := profiler.Start(\n      profiler.WithProfileTypes(\n        profiler.CPUProfile,\n        profiler.HeapProfile,\n        // Non-default profiles which are highly likely to be useful:\n        profiler.GoroutineProfile,\n        profiler.MutexProfile,\n      ),\n      profiler.WithTags(\"orchestrion:true\"),\n    )\n    if err != nil {\n      // TODO: is there a better reporting mechanism?\n      // The tracer and profiler already use the stdlib logger, so\n      // we're not adding anything new. But users might be using a\n      // different logger.\n      log.Printf(\"failed to start profiling: %s\", err)\n    }\n  }\n}",
 				map[string]string{
@@ -1191,10 +1189,9 @@ var Aspects = [...]aspect.Aspect{
 				context.GoLangVersion{},
 			), []string{}),
 			advice.PrependStmts(code.MustTemplate(
-				"// Only finalize if is not a test process and if CI Visibility has not been disabled (by the kill switch).\n// For a test process the ci visibility instrumentation will finalize the tracer\nif !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {\n  defer tracer.Stop()\n}\n\ndefer profiler.Stop()",
+				"defer tracer.Stop()\ndefer profiler.Stop()",
 				map[string]string{
 					"profiler": "gopkg.in/DataDog/dd-trace-go.v1/profiler",
-					"testing":  "testing",
 					"tracer":   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer",
 				},
 				context.GoLangVersion{},
@@ -1870,8 +1867,7 @@ var InjectedPaths = [...]string{
 	"os",
 	"strconv",
 	"strings",
-	"testing",
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:xmZzyYLOd/Rd6xiw6DaourRfLxpq0vKm9vnwvz8ENJhfN/wlYdnLA0ninNmp6UO8i8pbjrPV/l/mc2ZoZaYXpQ=="
+const Checksum = "sha512:rP9frBFczPJ7nxdudx0R+Ss3qG12XNXLcOA1zIq22gaFKT8ndeAfRjm9POaq+iaiJdDP3hpHHOvVXGazmxMtxg=="

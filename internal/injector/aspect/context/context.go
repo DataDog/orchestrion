@@ -40,6 +40,9 @@ type AspectContext interface {
 	// Package returns the name of the package containing this node.
 	Package() string
 
+	// TestMain returns true if the current node is in a synthetic main package.
+	TestMain() bool
+
 	// Release returns this context to the memory pool so that it can be reused
 	// later.
 	Release()
@@ -81,6 +84,7 @@ type (
 		minGoLang    *GoLangVersion
 		sourceParser SourceParser
 		importPath   string
+		testMain     bool
 	}
 
 	SourceParser interface {
@@ -106,6 +110,8 @@ type ContextArgs struct {
 	// MinGoLang is a pointer to the result value containing the minimum Go
 	// language level required by the compile unit after it has been modified.
 	MinGoLang *GoLangVersion
+	// TestMain is true when injecting into a synthetic main package.
+	TestMain bool
 }
 
 // Context returns a new [*context] instance that represents the ndoe at the
@@ -122,6 +128,7 @@ func (n *NodeChain) Context(args ContextArgs) *context {
 		minGoLang:    args.MinGoLang,
 		sourceParser: args.SourceParser,
 		importPath:   args.ImportPath,
+		testMain:     args.TestMain,
 	}
 
 	return c
@@ -155,6 +162,7 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		minGoLang:    c.minGoLang,
 		sourceParser: c.sourceParser,
 		importPath:   c.importPath,
+		testMain:     c.testMain,
 	}
 
 	return r
@@ -206,6 +214,10 @@ func (c *context) ImportPath() string {
 
 func (c *context) Package() string {
 	return c.file.Name.Name
+}
+
+func (c *context) TestMain() bool {
+	return c.testMain
 }
 
 func (c *context) ParseSource(bytes []byte) (*dst.File, error) {

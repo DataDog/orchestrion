@@ -45,16 +45,16 @@ aspects:
           template: |-
             //go:linkname __dd_civisibility_instrumentTestingTFunc gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentTestingTFunc
             func __dd_civisibility_instrumentTestingTFunc(func(*T)) func(*T)
-            
+
             //go:linkname __dd_civisibility_instrumentSetErrorInfo gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentSetErrorInfo
             func __dd_civisibility_instrumentSetErrorInfo(tb TB, errType string, errMessage string, skip int)
-            
+
             //go:linkname __dd_civisibility_instrumentCloseAndSkip gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentCloseAndSkip
             func __dd_civisibility_instrumentCloseAndSkip(tb TB, skipReason string)
-            
+
             //go:linkname __dd_civisibility_instrumentSkipNow gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.instrumentSkipNow
             func __dd_civisibility_instrumentSkipNow(tb TB)
-            
+
             //go:linkname __dd_civisibility_ExitCiVisibility gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations.ExitCiVisibility
             func __dd_civisibility_ExitCiVisibility()
 

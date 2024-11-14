@@ -9,7 +9,7 @@
         {{ .Title }}
       </span>
       <div class="hextra-card-subtitle hx-line-clamp-3 hx-text-sm hx-font-normal hx-text-gray-500 dark:hx-text-gray-400 hx-px-4 hx-mb-4 hx-mt-2">
-        {{ or .Params.subtitle .Summary }}
+        {{ or .Params.subtitle .Summary | plainify }}
       </div>
     </a>
   {{ end }}

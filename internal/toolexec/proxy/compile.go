@@ -38,6 +38,26 @@ func (c *CompileCommand) ShowVersion() bool {
 	return c.Flags.ShowVersion
 }
 
+// TestMain returns true if the compiled package name is "main" and all source
+// Go files are rooted in the same directory as the importcfg file. This
+// indicates the package being compiled is a synthetic "main" package generated
+// by `go test`. For more accurate readings, users should also validate the
+// declared package import path ends in `.test`.
+func (c *CompileCommand) TestMain() bool {
+	if c.Flags.Package != "main" {
+		return false
+	}
+
+	stageDir := filepath.Dir(c.Flags.ImportCfg)
+	for _, f := range c.GoFiles() {
+		if filepath.Dir(f) != stageDir {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
 	if to.IsAny() {
 		// No minimal language requirement change, nothing to do...
