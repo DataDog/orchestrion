@@ -53,11 +53,11 @@ func TestFingerprint(t *testing.T) {
 		},
 		"list.empty": {
 			hashable: fingerprint.List[fingerprint.Hashable]{},
-			hash:     "t73cX9aZGc2y4Ofhd5w7m6czkOCqC7PYzMqxQIO9ZlVZCkbLEfnOFkJhitFdYdt7kmuggBZO2hECT92dJPtxcQ==",
+			hash:     "694_EPPzcQS8IJWmv4sxWZrSlHzcKAJoolH265TUzk5OE1HPYVrIkRPsOHTn3ZIgYz8wuIqBln5yfhTio_MFqg==",
 		},
 		"list.items": {
 			hashable: fingerprint.List[fingerprint.Hashable]{fingerprint.Bool(true), fingerprint.Int(0), fingerprint.String("test")},
-			hash:     "xhHdbmBljPK815Zc1NwNxLY2XMeZW_Qw60mpuAN61wVkZGKm7BruVWq30tQrVdO1oFaf3LpDx0Ge2lsuDZog_w==",
+			hash:     "RhBvcI5pNAl8TwC67UQypsmZTcj-Hbc9Zh2rAkTklU_rb4G8cORxp2dJHc1cPXq218SkkCCqPM4lU0te3a4Ufg==",
 		},
 		"map": {
 			hashable: fingerprint.Map(
@@ -66,7 +66,7 @@ func TestFingerprint(t *testing.T) {
 					return fmt.Sprintf("key-%d", k), fingerprint.Bool(v)
 				},
 			),
-			hash: "pBhVPXumhjSRbrnfSKW56cAesx676vMwcqOLcSjl_jpPUXSdBbMagdVQFfIc13k3rkbk-4WPlcsAh_f-8_87Hw==",
+			hash: "X27oOwHUqLYTjDj82abW23Q5n1zyH2LnrHtzFE0vQfMUZcq5u-rUOuMKvrNxWd8GnvcJVLHc-lc8OJZhw07nFA==",
 		},
 	}
 
