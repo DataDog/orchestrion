@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const OrchestrionYML = "orchestrion.yml"
+const FilenameOrchestrionYML = "orchestrion.yml"
 
 // loadYMLFile loads configuration from the specified directory.
 func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {

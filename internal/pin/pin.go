@@ -58,10 +58,10 @@ func PinOrchestrion(opts Options) error {
 		return fmt.Errorf("getting GOMOD: %w", err)
 	}
 
-	toolFile := filepath.Join(goMod, "..", config.OrchestrionToolGo)
+	toolFile := filepath.Join(goMod, "..", config.FilenameOrchestrionToolGo)
 	dstFile, err := parseOrchestrionToolGo(toolFile)
 	if errors.Is(err, os.ErrNotExist) {
-		log.Debugf("no %q file found, creating a new one", config.OrchestrionToolGo)
+		log.Debugf("no %q file found, creating a new one", config.FilenameOrchestrionToolGo)
 		dstFile = defaultOrchestrionToolGo()
 	}
 
@@ -69,7 +69,7 @@ func PinOrchestrion(opts Options) error {
 
 	importSet, err := updateToolFile(dstFile)
 	if err != nil {
-		return fmt.Errorf("updating %s file AST: %w", config.OrchestrionToolGo, err)
+		return fmt.Errorf("updating %s file AST: %w", config.FilenameOrchestrionToolGo, err)
 	}
 
 	if err := writeUpdated(toolFile, dstFile); err != nil {
@@ -256,7 +256,7 @@ func pruneImports(importSet *importSet, opts Options) (bool, error) {
 			continue
 		}
 		if !hasConfig {
-			pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+config.OrchestrionYML+" nor "+config.OrchestrionToolGo+" file in this package", opts) || pruned
+			pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+config.FilenameOrchestrionYML+" nor "+config.FilenameOrchestrionToolGo+" file in this package", opts) || pruned
 			continue
 		}
 		decl := importSet.Find(pkg.PkgPath)

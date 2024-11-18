@@ -25,7 +25,7 @@ func TestPin(t *testing.T) {
 
 		require.NoError(t, PinOrchestrion(Options{}))
 
-		assert.FileExists(t, filepath.Join(tmp, config.OrchestrionToolGo))
+		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
@@ -33,7 +33,7 @@ func TestPin(t *testing.T) {
 
 		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
 
-		content, err := os.ReadFile(filepath.Join(tmp, config.OrchestrionToolGo))
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
 
 		assert.Contains(t, string(content), "//go:generate")
@@ -45,7 +45,7 @@ func TestPin(t *testing.T) {
 
 		require.NoError(t, PinOrchestrion(Options{}))
 
-		assert.FileExists(t, filepath.Join(tmp, config.OrchestrionToolGo))
+		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
@@ -60,7 +60,7 @@ func TestPin(t *testing.T) {
 
 		require.NoError(t, PinOrchestrion(Options{NoGenerate: true}))
 
-		content, err := os.ReadFile(filepath.Join(tmp, config.OrchestrionToolGo))
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
 
 		assert.NotContains(t, string(content), "//go:generate")

@@ -47,7 +47,7 @@ func TestBuiltinYAML(t *testing.T) {
 			return nil
 		}
 
-		if d.Name() != OrchestrionYML && !strings.Contains(path, yamlSegment) {
+		if d.Name() != FilenameOrchestrionYML && !strings.Contains(path, yamlSegment) {
 			// Only look at `.yml` files that aren't `orchestrion.yml` if they're
 			// under a `yaml` directory...
 			return nil

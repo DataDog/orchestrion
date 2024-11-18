@@ -28,7 +28,7 @@ func TestAutoPin(t *testing.T) {
 
 		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
-		assert.FileExists(t, filepath.Join(tmp, config.OrchestrionToolGo))
+		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
@@ -47,7 +47,7 @@ func TestAutoPin(t *testing.T) {
 
 		AutoPinOrchestrion()
 
-		assert.NoFileExists(t, filepath.Join(tmp, config.OrchestrionToolGo))
+		assert.NoFileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.NoFileExists(t, filepath.Join(tmp, "go.sum"))
 	})
 }

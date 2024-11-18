@@ -58,12 +58,12 @@ func TestHasConfig(t *testing.T) {
 		_, thisFile, _, _ := runtime.Caller(0)
 		repoRoot := filepath.Join(thisFile, "..", "..", "..", "..")
 
-		t.Run("only "+OrchestrionToolGo, func(t *testing.T) {
+		t.Run("only "+FilenameOrchestrionToolGo, func(t *testing.T) {
 			t.Parallel()
 
 			pkgRoot := t.TempDir()
 			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionToolGo), []byte(`
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionToolGo), []byte(`
 				//go:build tools
 				package tools
 				import _ "github.com/DataDog/orchestrion"
@@ -73,19 +73,19 @@ func TestHasConfig(t *testing.T) {
 
 			pkg := &packages.Package{
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
-				GoFiles: []string{filepath.Join(pkgRoot, OrchestrionToolGo)},
+				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
 			hasCfg, err := HasConfig(pkg, true)
 			require.NoError(t, err)
 			require.True(t, hasCfg)
 		})
 
-		t.Run("only "+OrchestrionYML, func(t *testing.T) {
+		t.Run("only "+FilenameOrchestrionYML, func(t *testing.T) {
 			t.Parallel()
 
 			pkgRoot := t.TempDir()
 			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
 
 			pkg := &packages.Package{
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
@@ -101,19 +101,19 @@ func TestHasConfig(t *testing.T) {
 
 			pkgRoot := t.TempDir()
 			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionToolGo), []byte(`
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionToolGo), []byte(`
 				//go:build tools
 				package tools
 				import _ "github.com/DataDog/orchestrion/config_test/inner"
 			`), 0o644))
 			require.NoError(t, os.Mkdir(filepath.Join(pkgRoot, "inner"), 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", "inner.go"), []byte(`package inner`), 0o644))
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", OrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID2, join-point: { package-name: inner }, advice: [add-blank-import: unsafe] }]"), 0o644))
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID2, join-point: { package-name: inner }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
 
 			pkg := &packages.Package{
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
-				GoFiles: []string{filepath.Join(pkgRoot, OrchestrionToolGo)},
+				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
 			hasCfg, err := HasConfig(pkg, true)
 			require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestHasConfig(t *testing.T) {
 
 			pkgRoot := t.TempDir()
 			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionToolGo), []byte(`
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionToolGo), []byte(`
 				//go:build tools
 				package tools
 				import _ "github.com/DataDog/orchestrion/config_test/inner"
@@ -133,12 +133,12 @@ func TestHasConfig(t *testing.T) {
 			require.NoError(t, os.Mkdir(filepath.Join(pkgRoot, "inner"), 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", "inner.go"), []byte(`package inner`), 0o644))
 			// Invalid -- there is no "meta" block in there...
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", OrchestrionYML), []byte("aspects: [{ id: ID2, join-point: { package-name: inner }, advice: [add-blank-import: unsafe] }]"), 0o644))
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", FilenameOrchestrionYML), []byte("aspects: [{ id: ID2, join-point: { package-name: inner }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
 
 			pkg := &packages.Package{
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
-				GoFiles: []string{filepath.Join(pkgRoot, OrchestrionToolGo)},
+				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
 			hasCfg, err := HasConfig(pkg, false)
 			require.NoError(t, err)
@@ -150,7 +150,7 @@ func TestHasConfig(t *testing.T) {
 
 			pkgRoot := t.TempDir()
 			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionToolGo), []byte(`
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionToolGo), []byte(`
 				//go:build tools
 				package tools
 				import _ "github.com/DataDog/orchestrion/config_test/inner"
@@ -158,12 +158,12 @@ func TestHasConfig(t *testing.T) {
 			require.NoError(t, os.Mkdir(filepath.Join(pkgRoot, "inner"), 0o755))
 			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", "inner.go"), []byte(`package inner`), 0o644))
 			// Invalid -- there is no "meta" block in there...
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", OrchestrionYML), []byte("aspects: [{ id: ID2, join-point: { package-name: inner }, advice: [add-blank-import: unsafe] }]"), 0o644))
-			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, OrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "inner", FilenameOrchestrionYML), []byte("aspects: [{ id: ID2, join-point: { package-name: inner }, advice: [add-blank-import: unsafe] }]"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: main }, advice: [add-blank-import: unsafe] }]"), 0o644))
 
 			pkg := &packages.Package{
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
-				GoFiles: []string{filepath.Join(pkgRoot, OrchestrionToolGo)},
+				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
 			_, err := HasConfig(pkg, true)
 			require.ErrorContains(t, err, "missing property 'meta'")
@@ -209,17 +209,17 @@ func TestLoad(t *testing.T) {
 		tmp := t.TempDir()
 		runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test")
 		runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", repoRoot))
-		require.NoError(t, os.WriteFile(filepath.Join(tmp, OrchestrionToolGo), []byte(`
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, FilenameOrchestrionToolGo), []byte(`
 			//go:build tools
 			package tools
 			import _ "github.com/DataDog/orchestrion/config_test/nested"
 		`), 0o644))
 		require.NoError(t, os.Mkdir(filepath.Join(tmp, "nested"), 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, "nested", "nested.go"), []byte(`package nested`), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(tmp, "nested", OrchestrionYML), []byte(`extends: [../sibling]`), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "nested", FilenameOrchestrionYML), []byte(`extends: [../sibling]`), 0o644))
 		require.NoError(t, os.Mkdir(filepath.Join(tmp, "sibling"), 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(tmp, "sibling", OrchestrionYML), []byte(`aspects: [{ id: "ID", join-point: { package-name: main }, advice: [{ add-blank-import: unsafe }] }]`), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(tmp, "sibling", OrchestrionToolGo), []byte(`
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "sibling", FilenameOrchestrionYML), []byte(`aspects: [{ id: "ID", join-point: { package-name: main }, advice: [{ add-blank-import: unsafe }] }]`), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "sibling", FilenameOrchestrionToolGo), []byte(`
 			//go:build tools
 			package tools
 			import (

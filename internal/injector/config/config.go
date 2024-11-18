@@ -4,7 +4,7 @@
 // Copyright 2023-present Datadog, Inc.
 
 // Package config contains APIs used to work with injector configuration files,
-// which are formed by [OrchestrionToolGo] and [OrchestrionYML] files.
+// which are formed by [FilenameOrchestrionToolGo] and [FilenameOrchestrionYML] files.
 package config
 
 import (

@@ -17,17 +17,17 @@ var Pin = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "generate",
-			Usage: "Add a //go:generate directive to " + config.OrchestrionToolGo + " to facilitate automated upkeep of its contents.",
+			Usage: "Add a //go:generate directive to " + config.FilenameOrchestrionToolGo + " to facilitate automated upkeep of its contents.",
 			Value: true,
 		},
 		&cli.BoolFlag{
 			Name:  "prune",
-			Usage: "Remove imports from " + config.OrchestrionToolGo + " that do not contain a valid " + config.OrchestrionYML + " file declaring integrations.",
+			Usage: "Remove imports from " + config.FilenameOrchestrionToolGo + " that do not contain a valid " + config.FilenameOrchestrionYML + " file declaring integrations.",
 			Value: true,
 		},
 		&cli.BoolFlag{
 			Name:  "validate",
-			Usage: "Validate all " + config.OrchestrionYML + " files in the project.",
+			Usage: "Validate all " + config.FilenameOrchestrionYML + " files in the project.",
 			Value: false,
 		},
 	},

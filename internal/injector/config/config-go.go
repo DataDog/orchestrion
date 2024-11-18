@@ -19,7 +19,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const OrchestrionToolGo = "orchestrion.tool.go"
+const FilenameOrchestrionToolGo = "orchestrion.tool.go"
 
 var ErrInvalidGoPackage = errors.New("no .go files in package")
 
@@ -41,13 +41,13 @@ func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
 		return nil, fmt.Errorf("%q: %w", pkg.PkgPath, ErrInvalidGoPackage)
 	}
 
-	toolFile := filepath.Join(root, OrchestrionToolGo)
+	toolFile := filepath.Join(root, FilenameOrchestrionToolGo)
 	imports, err := l.loadGoFile(toolFile)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
 
-	ymlCfg, err := l.loadYMLFile(root, OrchestrionYML)
+	ymlCfg, err := l.loadYMLFile(root, FilenameOrchestrionYML)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
