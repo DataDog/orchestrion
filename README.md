@@ -149,6 +149,7 @@ Library                                               | Since    | Notes
 `github.com/redis/go-redis`                           | `v0.9.1` | [Aspect][go-redis]
 `github.com/graph-gophers/graphql-go`                 | `v0.9.1` | [Aspect][graph-gophers]
 `github.com/graphql-go/graphql`                       | `v0.9.1` | [Aspect][graphql]
+`testing`                                             | `v0.9.3` | [Aspect][testing] with [Test Optimization][test-optimization]
 `github.com/jackc/pgx`                                | `v0.9.4` | [Aspect][pgx]
 `github.com/elastic/go-elasticsearch`                 | `v0.9.4` | [Aspect][elasticsearch]
 `github.com/twitchtv/twirp`                           | `v0.9.4` | [Aspect][twirp]
@@ -189,6 +190,7 @@ Library                                               | Since    | Notes
 [go-redis]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-redis/#wrap-v0-client
 [graph-gophers]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graph-gophers/
 [graphql]: https://datadoghq.dev/orchestrion/docs/built-in/graphql/graphql-go/
+[testing]: https://datadoghq.dev/orchestrion/docs/built-in/civisibility/testing/
 [pgx]: https://datadoghq.dev/orchestrion/docs/built-in/databases/pgx
 [elasticsearch]: https://datadoghq.dev/orchestrion/docs/built-in/databases/go-elasticsearch/
 [twirp]: https://datadoghq.dev/orchestrion/docs/built-in/rpc/twirp/
@@ -197,6 +199,8 @@ Library                                               | Since    | Notes
 [confluent-kafka-go-v2]: https://datadoghq.dev/orchestrion/docs/built-in/datastreams/confluentinc_kafka/#inject-kafka-library-version-v2
 [httprouter]: https://datadoghq.dev/orchestrion/docs/built-in/http/julienschmidt_httprouter/
 [logrus]: https://datadoghq.dev/orchestrion/docs/built-in/logs/logrus/
+
+[test-optimization]: https://docs.datadoghq.com/tests/
 
 Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
 distributed traces.
