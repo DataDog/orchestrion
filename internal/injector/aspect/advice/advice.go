@@ -8,6 +8,7 @@
 package advice
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 )
@@ -29,4 +30,6 @@ type Advice interface {
 	// short-circuit and not do anything; e.g. import injection may be skipped if
 	// the import already exists).
 	Apply(context.AdviceContext) (bool, error)
+
+	fingerprint.Hashable
 }

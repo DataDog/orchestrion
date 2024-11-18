@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/version"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,6 +52,12 @@ func (g *GoLangVersion) SetAtLeast(other GoLangVersion) {
 
 func Compare(left GoLangVersion, right GoLangVersion) int {
 	return version.Compare(version.Lang(left.label), version.Lang(right.label))
+}
+
+var _ fingerprint.Hashable = (*GoLangVersion)(nil)
+
+func (g GoLangVersion) Hash(h *fingerprint.Hasher) error {
+	return h.Named("GoLangVersion", fingerprint.String(g.label))
 }
 
 var _ yaml.Unmarshaler = (*GoLangVersion)(nil)
