@@ -11,4 +11,5 @@ meta:
     enabled when Orchestrion is being used.
 
 extends:
+  - ./yaml/directive/orchestrion-enabled.yml
   - ./yaml/stdlib/runtime.yml
