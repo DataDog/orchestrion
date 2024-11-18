@@ -48,7 +48,8 @@ aspects:
           template: getg().__dd_gls = nil
 
   # Temporarily hack tracer.SpanFromContext so that it no longer returns true if
-  # the Span found from GLS is actully a noop span.
+  # the Span found from GLS is actually a noop span.
+  # This might happen when a library creates spans using the OTel SDK.  
   - id: Hack tracer.SpanFromContext
     tracer-internal: true
     join-point:
