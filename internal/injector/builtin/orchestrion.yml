@@ -1,0 +1,15 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+---
+# yaml-language-server: $schema=../../../docs/static/schema.json
+meta:
+  name: Built-in Orchestrion Integrations
+  description: |-
+    This package provides Orchestrion's built-in integrations, which are always
+    enabled when Orchestrion is being used.
+
+extends:
+  - ./yaml/directive/orchestrion-enabled.yml
+  - ./yaml/stdlib/runtime.yml

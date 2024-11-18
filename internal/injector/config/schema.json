@@ -1,0 +1,1034 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datadoghq.dev/orchestrion/schema.json",
+  "type": "object",
+  "required": [ "meta"],
+  "oneOf": [
+    {"required": ["aspects"]},
+    {"required": ["extends"]}
+  ],
+  "properties": {
+    "meta": {
+      "description": "Metadata about this configuration file.",
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "description": "A user-fiendly name for this configuration file.",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "description": "A user-friendly description of this configuration's purpose.",
+          "type": "string",
+          "minLength": 1
+        },
+        "icon": {
+          "description": "An icon to render for this configuration in the documentation site.",
+          "type": "string",
+          "enum": [
+            "github",
+            "codeberg",
+            "gitlab",
+            "bitbucket",
+            "hextra",
+            "hugo",
+            "hugo-full",
+            "warning",
+            "one",
+            "cards",
+            "copy",
+            "hamburger-menu",
+            "markdown",
+            "folder-tree",
+            "card",
+            "academic-cap",
+            "adjustments",
+            "annotation",
+            "archive",
+            "arrow-circle-down",
+            "arrow-circle-left",
+            "arrow-circle-right",
+            "arrow-circle-up",
+            "arrow-down",
+            "arrow-left",
+            "arrow-narrow-down",
+            "arrow-narrow-left",
+            "arrow-narrow-right",
+            "arrow-narrow-up",
+            "arrow-right",
+            "arrow-sm-down",
+            "arrow-sm-left",
+            "arrow-sm-right",
+            "arrow-sm-up",
+            "arrow-up",
+            "arrows-expand",
+            "at-symbol",
+            "backspace",
+            "badge-check",
+            "ban",
+            "beaker",
+            "bell",
+            "book-open",
+            "bookmark",
+            "bookmark-alt",
+            "briefcase",
+            "cake",
+            "calculator",
+            "calendar",
+            "camera",
+            "cash",
+            "chart-bar",
+            "chart-pie",
+            "chart-square-bar",
+            "chat",
+            "chat-alt",
+            "chat-alt-2",
+            "check",
+            "check-circle",
+            "chevron-double-down",
+            "chevron-double-left",
+            "chevron-double-right",
+            "chevron-double-up",
+            "chevron-down",
+            "chevron-left",
+            "chevron-right",
+            "chevron-up",
+            "chip",
+            "clipboard",
+            "clipboard-check",
+            "clipboard-copy",
+            "clipboard-list",
+            "clock",
+            "cloud",
+            "cloud-download",
+            "cloud-upload",
+            "code",
+            "cog",
+            "collection",
+            "color-swatch",
+            "credit-card",
+            "cube",
+            "cube-transparent",
+            "currency-bangladeshi",
+            "currency-dollar",
+            "currency-euro",
+            "currency-pound",
+            "currency-rupee",
+            "currency-yen",
+            "cursor-click",
+            "database",
+            "desktop-computer",
+            "device-mobile",
+            "device-tablet",
+            "document",
+            "document-add",
+            "document-download",
+            "document-duplicate",
+            "document-remove",
+            "document-report",
+            "document-search",
+            "document-text",
+            "dots-circle-horizontal",
+            "dots-horizontal",
+            "dots-vertical",
+            "download",
+            "duplicate",
+            "emoji-happy",
+            "emoji-sad",
+            "exclamation",
+            "exclamation-circle",
+            "external-link",
+            "eye",
+            "eye-off",
+            "fast-forward",
+            "film",
+            "filter",
+            "finger-print",
+            "fire",
+            "flag",
+            "folder",
+            "folder-add",
+            "folder-download",
+            "folder-open",
+            "folder-remove",
+            "gift",
+            "globe",
+            "globe-alt",
+            "hand",
+            "hashtag",
+            "heart",
+            "home",
+            "identification",
+            "inbox",
+            "inbox-in",
+            "information-circle",
+            "key",
+            "library",
+            "light-bulb",
+            "lightning-bolt",
+            "link",
+            "location-marker",
+            "lock-closed",
+            "lock-open",
+            "login",
+            "logout",
+            "mail",
+            "mail-open",
+            "map",
+            "menu",
+            "menu-alt-1",
+            "menu-alt-2",
+            "menu-alt-3",
+            "menu-alt-4",
+            "microphone",
+            "minus",
+            "minus-circle",
+            "minus-sm",
+            "moon",
+            "music-note",
+            "newspaper",
+            "office-building",
+            "paper-airplane",
+            "paper-clip",
+            "pause",
+            "pencil",
+            "pencil-alt",
+            "phone",
+            "phone-incoming",
+            "phone-missed-call",
+            "phone-outgoing",
+            "photograph",
+            "play",
+            "plus",
+            "plus-circle",
+            "plus-sm",
+            "presentation-chart-bar",
+            "presentation-chart-line",
+            "printer",
+            "puzzle",
+            "qrcode",
+            "question-mark-circle",
+            "receipt-refund",
+            "receipt-tax",
+            "refresh",
+            "reply",
+            "rewind",
+            "rss",
+            "save",
+            "save-as",
+            "scale",
+            "scissors",
+            "search",
+            "search-circle",
+            "selector",
+            "server",
+            "share",
+            "shield-check",
+            "shield-exclamation",
+            "shopping-bag",
+            "shopping-cart",
+            "sort-ascending",
+            "sort-descending",
+            "sparkles",
+            "speakerphone",
+            "star",
+            "status-offline",
+            "status-online",
+            "stop",
+            "sun",
+            "support",
+            "switch-horizontal",
+            "switch-vertical",
+            "table",
+            "tag",
+            "template",
+            "terminal",
+            "thumb-down",
+            "thumb-up",
+            "ticket",
+            "translate",
+            "trash",
+            "trending-down",
+            "trending-up",
+            "truck",
+            "upload",
+            "user",
+            "user-add",
+            "user-circle",
+            "user-group",
+            "user-remove",
+            "users",
+            "variable",
+            "video-camera",
+            "view-boards",
+            "view-grid",
+            "view-grid-add",
+            "view-list",
+            "volume-off",
+            "volume-up",
+            "wifi",
+            "x",
+            "x-circle",
+            "zoom-in",
+            "zoom-out",
+            "instagram",
+            "facebook",
+            "discord",
+            "twitter",
+            "mastodon",
+            "youtube",
+            "x-twitter",
+            "linkedin",
+            "slack"
+          ]
+        },
+        "caveats": {
+          "description": "When necessary, document known issues or limitations with this configuration.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "extends": {
+      "description": "A list of paths relative to the current file's directory, that will be loaded as part of this configuration. Specified paths must either be valid YAML configuratoon files, or valid Go package directories.",
+      "type": "array",
+      "items": {
+        "description": "A relative path to a file or directory.",
+        "type":"string",
+        "pattern": "\\A[.]{1,2}[/\\\\].+(?:\\.yml)?\\z"
+      },
+      "minItems": 1
+    },
+    "aspects": {
+      "description": "The aspects that are part of this configuration file.",
+      "type": "array",
+      "items": {
+        "description": "A single, uniquely identified aspect.",
+        "type": "object",
+        "unevaluatedProperties": false,
+        "allOf": [
+          {
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "description": "An identifier for this aspect. Must be unique withing the configuration file.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          { "$ref": "#/$defs/Aspect" }
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "Aspect": {
+      "description": "An aspect is the combination of a join point and one or more advice.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "join-point", "advice"],
+      "properties": {
+        "id": {
+          "description": "A identifier that is unique to this configuration file.",
+          "type": "string",
+          "minLength": 1
+        },
+        "join-point": {
+          "description": "The join point that this aspect will macth with.",
+          "$ref": "#/$defs/JoinPoint"
+        },
+        "advice": {
+          "description": "All the advice that will be applied to any matched AST node.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Advice"
+          },
+          "minItems": 1
+        },
+        "tracer-internal": {
+          "description": "Allows this aspect to match nodes in the Datadog Tracer library.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+
+    "JoinPoint": {
+      "description": "A join point determines whether advice should be applied to a given AST node or not.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "oneOf": [
+        { "$ref": "#/$defs/join-point/all-of" },
+        { "$ref": "#/$defs/join-point/configuration" },
+        { "$ref": "#/$defs/join-point/declaration-of" },
+        { "$ref": "#/$defs/join-point/directive" },
+        { "$ref": "#/$defs/join-point/function-body" },
+        { "$ref": "#/$defs/join-point/function" },
+        { "$ref": "#/$defs/join-point/function-call" },
+        { "$ref": "#/$defs/join-point/import-path" },
+        { "$ref": "#/$defs/join-point/not" },
+        { "$ref": "#/$defs/join-point/one-of" },
+        { "$ref": "#/$defs/join-point/package-name" },
+        { "$ref": "#/$defs/join-point/struct-definition" },
+        { "$ref": "#/$defs/join-point/struct-literal" },
+        { "$ref": "#/$defs/join-point/value-declaration" }
+      ]
+    },
+    "join-point": {
+      "all-of": {
+        "required": ["all-of"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "all-of": {
+            "title": "Intersection of multiple join points",
+            "markdownDescription": "The `all-of` join point matches any AST node that maches **all** of the children join points. This is typically useful to combine node-agnostic join points (`import-path`, `package`, `directive`, ...) with another join point.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/JoinPoint" },
+            "minItems": 2
+          }
+        },
+        "examples": [
+          {
+            "all-of": [
+              { "directive": "dd:span" },
+              { "function": [{ "receiver": "*net/http.RoundTripper" }] }
+            ]
+          }
+        ]
+      },
+      "configuration": {
+        "required": ["configuration"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "configuration": {
+            "deprecated": true,
+            "title": "Allows external configuration",
+            "markdownDescription": "The `configuration` join point is node-agnostic. It matches all AST nodes if the associated configuration object includes all the specified key-value pairs.",
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+              "^.*$": { "type": "string" }
+            },
+            "minProperties": 1
+          }
+        },
+        "examples": [
+          { "configuration": { "httpmode": "report" } },
+          { "configuration": { "httpmode": "wrap" } }
+        ]
+      },
+      "declaration-of": {
+        "required": ["declaration-of"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "declaration-of": {
+            "markdownDescription": "The `declaration-of` join point matches top-level declarations. It matches only `ValueSpec` and `FuncDecl` nodes.",
+            "type": "string",
+            "pattern": "^.+\\.[\\p{L}_][\\p{L}_\\p{Nd}]*$"
+          }
+        }
+      },
+      "directive": {
+        "required": ["directive"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "directive": {
+            "title": "Declarative join points",
+            "markdownDescription": "The `directive` join point is node-agnostic. It matches any AST node that is annotated with the specified directive.\n\nA directive is a special single-line comment such as `//go:linkname`. In order for a comment to be considered a directive, there must be no white space between the `//` and the directive name.",
+            "type": "string",
+            "pattern": "[\\w:]+"
+          }
+        },
+        "examples": [{ "directive": "dd:span" }]
+      },
+      "function-body": {
+        "required": ["function-body"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "function-body": {
+            "title": "Targets a function's body",
+            "markdownDescription": "The `function-body` join point matches the block of code that constitutes the body of a function declaration, or a function literal expression. It only matches `Block` nodes.",
+            "$ref": "#/$defs/JoinPoint"
+          }
+        },
+        "examples": [
+          {
+            "function-body": {
+              "all-of": [
+                { "directive": "annotation" },
+                { "function": [{ "name": "ServeHTTP" }] }
+              ]
+            }
+          }
+        ]
+      },
+      "function": {
+        "required": ["function"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "function": {
+            "title": "Select function and method signatures",
+            "markdownDescription": "The `function` join point selects function and method declarations or function literal expressions that match the provided criteria.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/join-point/function/$defs/option" },
+            "minItems": 1
+          }
+        },
+        "examples": [{ "function": [{ "name": "main" }, { "signature": {} }] }],
+        "$defs": {
+          "option": {
+            "type": "object",
+            "unevaluatedProperties": false,
+            "oneOf": [
+              {
+                "required": ["name"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "name": {
+                    "description": "Matches only functions with the provided name. A blank name matches only function literal expressions.",
+                    "oneOf": [
+                      { "$ref": "#/$defs/go/identifier" },
+                      { "const": "" }
+                    ]
+                  }
+                }
+              },
+              {
+                "required": ["receiver"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "receiver": {
+                    "description": "Matches only method declarations for the provided receiver type.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  }
+                }
+              },
+              {
+                "required": ["signature"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "signature": {
+                    "description": "Matches only functions with the specified signature.",
+                    "type": "object",
+                    "properties": {
+                      "args": {
+                        "description": "The types of arguments accepted by the function.",
+                        "type": "array",
+                        "items": { "$ref": "#/$defs/go/qualified-identifier" }
+                      },
+                      "returns": {
+                        "description": "The types of values returned by the function.",
+                        "type": "array",
+                        "items": { "$ref": "#/$defs/go/qualified-identifier" }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "function-call": {
+        "required": ["function-call"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "function-call": {
+            "title": "Target function calls",
+            "markdownDescription": "The `function-call` join point matches function call nodes that represent a call to the specified function. It only mathces `Call` nodes.",
+            "$ref": "#/$defs/go/qualified-identifier"
+          }
+        },
+        "examples": [
+          { "function-call": "net/http.Get" },
+          { "function-call": "net/http.Post" }
+        ]
+      },
+      "import-path": {
+        "required": ["import-path"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "import-path": {
+            "title": "Limit to certain packages",
+            "markdownDescription": "The `import-path` join point is node-agnostic. It matches any node within an AST that belongs to the specified import path. This is often used together with `not` to avoid creating infinitely recursive instrumentation.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "examples": [
+          { "import-path": "net/http" },
+          { "import-path": "github.com/gorilla/mux" }
+        ]
+      },
+      "not": {
+        "required": ["not"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "not": {
+            "title": "Negation of a join point",
+            "markdownDescription": "The `not` join point is node-agnostic. It matches any node **not** matched by the specified join point.",
+            "$ref": "#/$defs/JoinPoint"
+          }
+        },
+        "examples": [
+          { "not": { "directive": "dd:span" } },
+          { "not": { "function": [{ "receiver": "net/http.Server" }] } }
+        ]
+      },
+      "one-of": {
+        "required": ["one-of"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "one-of": {
+            "title": "Union of join points",
+            "markdownDescription": "The `one-of` join point is node-agnostic. It matches any node that is matched by **at least one** of the children join points. This is typically used with multiple instances of the same join point, to match multiple alternative conditions.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/JoinPoint" },
+            "minItems": 2
+          }
+        },
+        "examples": [
+          {
+            "one-of": [
+              { "function-call": "google.golang.org/grpc.Dial" },
+              { "function-call": "google.golang.org/grpc.DialContext" },
+              { "function-call": "google.golang.org/grpc.NewClientConn" }
+            ]
+          }
+        ]
+      },
+      "package-name": {
+        "required": ["package-name"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "package-name": {
+            "title": "Limit to certain package names",
+            "markdownDescription": "The `package-name` join point is node-agnostic. It matches any node that is within a package of the given name. This is typically used to instrument things in the `main` package.",
+            "$ref": "#/$defs/go/identifier"
+          }
+        },
+        "examples": [{ "package-name": "main" }]
+      },
+      "struct-definition": {
+        "required": ["struct-definition"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "struct-definition": {
+            "title": "Match struct type definitions",
+            "markdownDescription": "The `struct-definition` join point matches the struct type definition that declares the designated type. It only matches `TypeSpec` nodes.",
+            "$ref": "#/$defs/go/qualified-identifier"
+          }
+        },
+        "examples": [{ "struct-definition": "github.com/gorilla/mux.Router" }]
+      },
+      "struct-literal": {
+        "required": ["struct-literal"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "struct-literal": {
+            "title": "Match struct literal expressions",
+            "markdownDescription": "The `struct-literal` join point matches struct literal expressions that create an instance of the named struct. In case of `match` being equal to `value-only` or `any`, the matched node will be of type `CompositeLit`, and in case of being `pointer-only`, it will be of type `UnaryExpr` (the node itself will be available in the `{{ .X }}` field). If `field` is specified, it only matches the value explicitly associated to the named field.\n\nWhen using `match: any`, the struct literal may have its address immediately taken (`&SomeType{/*...*/}`), and associated advice must be carefully designed to avoid breaking this (for example, wrapping it in an immediately-invoked function expression makes it impossible to take the value's address without first assigning it to a variable).",
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["type", "field"],
+                "properties": {
+                  "type": {
+                    "description": "The fully qualified type name of the struct to match.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  },
+                  "field": {
+                    "description": "Only match struct literal expressions that include the specified field name.",
+                    "$ref": "#/$defs/go/identifier"
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "description": "The fully qualified type name of the struct to match.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  },
+                  "match": {
+                    "description": "The struct literal expression style to match (value-only, pointer-only or any)",
+                    "type": "string",
+                    "enum": ["value-only", "pointer-only", "any"],
+                    "default": "any"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "examples": [
+          {
+            "struct-literal": {
+              "type": "net/http.Server",
+              "field": "Handler"
+            }
+          },
+          {
+            "struct-literal": {
+              "type": "net/http.Transport",
+              "match": "pointer-only"
+            }
+          }
+        ]
+      },
+      "value-declaration": {
+        "required": ["value-declaration"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "value-declaration": {
+            "title": "Package-level `var` and `const` declarations",
+            "markdownDescription": "The `value-declaration` join point matches package-level `var` and `const` declarations of the specifid type. It is often used in combination with `directive`, to replace the initial value of these declarations. This join point only matches `GenDecl` nodes.",
+            "$ref": "#/$defs/go/type-ref"
+          }
+        },
+        "examples": [
+          { "value-declaration": "int" },
+          { "value-declaration": "*regexp.Regexp" }
+        ]
+      }
+    },
+
+    "Advice": {
+      "description": "An Advice describes an AST node transformation.",
+      "type": "object",
+      "unevaluatedProperties": false,
+      "oneOf": [
+        { "$ref": "#/$defs/advice/assign-value" },
+        { "$ref": "#/$defs/advice/prepend-statements" },
+        { "$ref": "#/$defs/advice/append-args" },
+        { "$ref": "#/$defs/advice/replace-function" },
+        { "$ref": "#/$defs/advice/add-blank-import" },
+        { "$ref": "#/$defs/advice/inject-declarations" },
+        { "$ref": "#/$defs/advice/add-struct-field" },
+        { "$ref": "#/$defs/advice/wrap-expression" }
+      ]
+    },
+    "advice": {
+      "assign-value": {
+        "required": ["assign-value"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "assign-value": {
+            "title": "Change the initial value of a `var` or `const`",
+            "markdownDescription": "The `assign-value` advice changes the initial value of a package-level `var` or `const` declaration matched by `value-declaration`.\n\nIf the value is susceptible to match a `const`, the template must produce only compile-time constant values.",
+            "$ref": "#/$defs/code-template",
+            "unevaluatedProperties": false
+          }
+        },
+        "examples": [
+          {
+            "assign-value": {
+              "template": "true"
+            }
+          },
+          {
+            "assign-value": {
+              "imports": { "regexp": "regexp" },
+              "template": "regexp.MustCompile(`^.?$|^(..+?)\\1+$ `)",
+              "lang": "go1.18"
+            }
+          }
+        ]
+      },
+      "prepend-statements": {
+        "required": ["prepend-statements"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "prepend-statements": {
+            "title": "Add new logic before a node",
+            "markdownDescription": "The `prepend-statements` advice inserts new statements rendered by the provided code template before the matched AST node. This is often used to add logic in the preamble of function implementations, and the `defer` keyword can be used to also introduce epilogue logic.",
+            "$ref": "#/$defs/code-template",
+            "unevaluatedProperties": false
+          }
+        },
+        "examples": [
+          {
+            "prepend-statements": {
+              "imports": {
+                "ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+                "ext": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
+                "globalconfig": "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
+                "http": "net/http",
+                "internal": "gopkg.in/DataDog/dd-trace-go.v1/internal",
+                "math": "math",
+                "namingschema": "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
+                "tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+              },
+              "template": "{{- $res := .Function.Result 0 -}}\ndefer func() {\n  var analyticsRate float64\n  if internal.BoolEnv(\"DD_TRACE_MUX_ANALYTICS_ENABLED\", false) {\n    analyticsRate = 1.0\n  } else {\n    analyticsRate = globalconfig.AnalyticsRate()\n  }\n\n  {{ $res }}.__dd_config.headerTags = globalconfig.HeaderTagMap()\n  {{ $res }}.__dd_config.ignoreRequest = func(*http.Request) bool { return false }\n  {{ $res }}.__dd_config.resourceNamer = ddDefaultResourceNamer\n  {{ $res }}.__dd_config.serviceName = namingschema.ServiceName(\"mux.router\")\n  {{ $res }}.__dd_config.spanOpts = []ddtrace.StartSpanOption{\n    tracer.Tag(ext.Component, \"gorilla/mux\"),\n    tracer.Tag(ext.SpanKind, ext.SpanKindServer),\n  }\n  if !math.IsNaN(analyticsRate) {\n    {{ $res }}.__dd_config.spanOpts = append(\n      {{ $res }}.__dd_config.spanOpts,\n      tracer.Tag(ext.EventSampleRate, analyticsRate),\n    )\n  }\n}()"
+            }
+          }
+        ]
+      },
+      "append-args": {
+        "required": ["append-args"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "append-args": {
+            "title": "Append new arguments to a variadic call",
+            "markdownDescription": "The `append-args` advice adds new arguments at the tail of a function call. This can only be used on `Call` nodes (typically matched by `function-call`), and usually requires the called function to have a variadic signature.\n\nThe `type` attribute must match the function's signature, and is used to compose the complete viardic arguments slice in cases where the original argument list includes a splat expression (`slice...`).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "values"],
+            "properties": {
+              "type": {
+                "description": "The type of the function's variadic argument. This is used in cases when arguments need to be appended through a slice.",
+                "$ref": "#/$defs/go/type-ref"
+              },
+              "values": {
+                "description": "The list of argument values to add, in order.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/code-template",
+                  "unevaluatedProperties": false
+                },
+                "minItems": 1
+              }
+            }
+          }
+        },
+        "examples": [
+          {
+            "append-args": {
+              "type": "google.golang.org/grpc.DialOption",
+              "values": [
+                {
+                  "imports": {
+                    "grpc": "google.golang.org/grpc",
+                    "grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+                  },
+                  "template": "grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())"
+                },
+                {
+                  "imports": {
+                    "grpc": "google.golang.org/grpc",
+                    "grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+                  },
+                  "template": "grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "replace-function": {
+        "required": ["replace-function"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "replace-function": {
+            "title": "Drop-in replace a called function",
+            "markdownDescription": "The `replace-function` advice replaces the callee of a `Call` node (typically matched by `function-call`) with the designated function. The current & replacement functions must have compatible signatures.",
+            "$ref": "#/$defs/go/qualified-identifier"
+          }
+        },
+        "examples": [
+          {
+            "replace-function": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1.Open"
+          }
+        ]
+      },
+      "add-blank-import": {
+        "required": ["add-blank-import"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "add-blank-import": {
+            "title": "Import packages for side-effects",
+            "markdownDescription": "The `add-blank-import` advice inserts a new blank (`_`) import in the matched node's parent `File` node. This does nothing if the target package is already imported in the file.\n\nThis can be used to ensure `unsafe` is imported when using `//go:linkname` directives.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "examples": [{ "add-blank-import": "unsafe" }]
+      },
+      "inject-declarations": {
+        "required": ["inject-declarations"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "inject-declarations": {
+            "title": "Introduce new declarations in the package",
+            "markdownDescription": "The `inject-declarations` advice merges declarations produced by a code template into the matched node's compilation unit.\n\nThis is often used to introduce new type definitions or declare foreign functions linked via `//go:linkname` to avoid creating dependency cycles.",
+            "unevaluatedProperties": false,
+            "allOf": [
+              { "$ref": "#/$defs/code-template" },
+              {
+                "properties": {
+                  "links": {
+                    "description": "An optional list of packages that need to be linked with the injected code in order to satisfy `//go:linkname` directives.",
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "uniqueItems": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "examples": [
+          {
+            "inject-declarations": {
+              "imports": {
+                "context": "context",
+                "ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
+              },
+              "links": [
+                "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
+                "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
+                "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+              ],
+              "template": "//go:linkname __dd_appsec_RASPEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/appsec.RASPEnabled\nfunc __dd_appsec_RASPEnabled() bool\n\n//go:linkname __dd_httpsec_ProtectRoundTrip gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec.ProtectRoundTrip\nfunc __dd_httpsec_ProtectRoundTrip(context.Context, string) error\n\n//go:linkname __dd_tracer_SpanType gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.SpanType\nfunc __dd_tracer_SpanType(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_ResourceName gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.ResourceName\nfunc __dd_tracer_ResourceName(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_Tag gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Tag\nfunc __dd_tracer_Tag(string, any) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_StartSpanFromContext gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.StartSpanFromContext\nfunc __dd_tracer_StartSpanFromContext(context.Context, string, ...ddtrace.StartSpanOption) (ddtrace.Span, context.Context)\n\n//go:linkname __dd_tracer_WithError gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.WithError\nfunc __dd_tracer_WithError(error) ddtrace.FinishOption\n\n//go:linkname __dd_tracer_Inject gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Inject\nfunc __dd_tracer_Inject(ddtrace.SpanContext, any) error\n\ntype __dd_tracer_HTTPHeadersCarrier Header\nfunc (c __dd_tracer_HTTPHeadersCarrier) Set(key, val string) {\n  Header(c).Set(key, val)\n}\n"
+            }
+          },
+          {
+            "inject-declarations": {
+              "imports": {
+                "ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+                "http": "net/http",
+                "internal": "gopkg.in/DataDog/dd-trace-go.v1/internal",
+                "telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
+                "tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+              },
+              "template": "type ddRouterConfig struct {\n  ignoreRequest func(*http.Request) bool\n  headerTags    *internal.LockMap\n  resourceNamer func(*Router, *http.Request) string\n  serviceName   string\n  spanOpts      []ddtrace.StartSpanOption\n}\n\nfunc ddDefaultResourceNamer(router *Router, req *http.Request) string {\n  var (\n    match RouteMatch\n    route = \"unknown\"\n  )\n  if router.Match(req, &match) && match.Route != nil {\n    if r, err := match.Route.GetPathTemplate(); err == nil {\n      route = r\n    }\n  }\n  return fmt.Sprintf(\"%s %s\", req.Method, route)\n}\n\nfunc init() {\n  telemetry.LoadIntegration(\"gorilla/mux\")\n  tracer.MarkIntegrationImported(\"github.com/gorilla/mux\")\n}"
+            }
+          }
+        ]
+      },
+      "add-struct-field": {
+        "required": ["add-struct-field"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "add-struct-field": {
+            "title": "Add new fields to struct types",
+            "markdownDescription": "The `add-struct-field` advice inserts a new field in a `struct` type declaration (typically matched by `struct-definition`).\n\nThis is typically used to insert new state to `struct`s when instrumenting libraries that return `struct` pointers (as opposed to interface values).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type"],
+            "properties": {
+              "name": {
+                "description": "The name of the field to add.",
+                "$ref": "#/$defs/go/identifier"
+              },
+              "type": {
+                "description": "The type of the field to add.",
+                "$ref": "#/$defs/go/type-ref"
+              }
+            }
+          }
+        },
+        "examples": [
+          {
+            "add-struct-field": {
+              "name": "__dd_configuration",
+              "type": "any"
+            }
+          },
+          {
+            "add-struct-field": {
+              "name": "clientOptions",
+              "type": "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6.ClientOption"
+            }
+          }
+        ]
+      },
+      "wrap-expression": {
+        "required": ["wrap-expression"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "wrap-expression": {
+            "title": "Add behavior around an expression",
+            "markdownDescription": "The `wrap-expression` advice replaces the matched node with the one produced by the provided code template. Care must be taken to not change the type of the expression, as this could result in breaking surrounding code.\n\nIt is commonly used to wrap values in immediately-invoked function expressions (IIFE).",
+            "$ref": "#/$defs/code-template",
+            "unevaluatedProperties": false
+          }
+        },
+        "examples": [
+          {
+            "wrap-expression": {
+              "imports": {
+                "options": "go.mongodb.org/mongo-driver/mongo/options",
+                "mongotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo"
+              },
+              "template": "{{ . }}.SetMonitor(mongotrace.NewMonitor())"
+            }
+          },
+          {
+            "wrap-expression": {
+              "imports": {
+                "chi": "github.com/go-chi/chi",
+                "chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi"
+              },
+              "template": "func() *chi.Mux {\n\tmux := {{ . }}\n\tmux.Use(chitrace.Middleware())\n\treturn mux\n}()"
+            }
+          }
+        ]
+      }
+    },
+
+    "code-template": {
+      "description": "A code template that can be used to generate code in context of an AST node.",
+      "type": "object",
+      "required": ["template"],
+      "properties": {
+        "imports": {
+          "description": "A map binding identifiers used in the template text to the import path they represent.",
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[\\p{L}_][\\p{L}_\\p{Nd}]*$": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "template": {
+          "description": "The Go template text to be used to generate code.",
+          "type": "string",
+          "minLength": 1
+        },
+        "lang": {
+          "description": "The minimum go language version required by the code produced by this template.",
+          "type": "string",
+          "pattern": "^go1[.]\\d+$"
+        }
+      }
+    },
+
+    "go": {
+      "identifier": {
+        "description": "A valid identifier in the Go language (see: https://go.dev/ref/spec#Identifiers)",
+        "examples": ["bool", "Server", "true"],
+        "type": "string",
+        "pattern": "^[\\p{L}_][\\p{L}_\\p{Nd}]*$"
+      },
+      "qualified-identifier": {
+        "description": "An import-path-qualified identifier.",
+        "examples": ["bool", "true", "net/http.Server", "net/http.Get"],
+        "type": "string",
+        "pattern": "^(.+\\.)?[\\p{L}_][\\p{L}_\\p{Nd}]*$"
+      },
+      "type-ref": {
+        "description": "A reference to a go type.",
+        "examples": ["bool", "*net/http.Request", "interface{}"],
+        "type": "string",
+        "$comment": "This only allows a subset of Go types today... And could be expanded as/if necessary...",
+        "oneOf": [
+          { "pattern": "^[*]?(.+\\.)?[\\p{L}_][\\p{L}_\\p{Nd}]*$" },
+          { "pattern": "^interface\\{\\}$" }
+        ]
+      }
+    }
+  }
+}

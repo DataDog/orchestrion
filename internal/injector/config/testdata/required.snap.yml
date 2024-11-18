@@ -1,0 +1,14 @@
+pkgpath: github.com/DataDog/orchestrion
+imports:
+  - pkgpath: github.com/DataDog/orchestrion/internal/injector/builtin
+    yaml:
+      name: orchestrion.yml
+      extends:
+        - name: ./yaml/directive/orchestrion-enabled.yml
+          aspects:
+            - Initialize to true
+        - name: ./yaml/stdlib/runtime.yml
+          aspects:
+            - GLS Access
+            - Clear GLS slot on goroutine exit
+yaml: null
