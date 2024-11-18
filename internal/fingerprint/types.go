@@ -6,22 +6,23 @@
 package fingerprint
 
 import (
-	"fmt"
+	"io"
 	"slices"
+	"strconv"
 	"strings"
 )
 
 type Bool bool
 
 func (b Bool) Hash(h *Hasher) error {
-	_, err := fmt.Fprintf(h.hash, "%v", b)
+	_, err := io.WriteString(h.hash, strconv.FormatBool(bool(b)))
 	return err
 }
 
 type Int int
 
 func (i Int) Hash(h *Hasher) error {
-	_, err := fmt.Fprintf(h.hash, "%d", i)
+	_, err := io.WriteString(h.hash, strconv.Itoa(int(i)))
 	return err
 }
 
@@ -40,7 +41,7 @@ func (l List[T]) Hash(h *Hasher) error {
 type String string
 
 func (s String) Hash(h *Hasher) error {
-	_, err := fmt.Fprint(h.hash, s)
+	_, err := io.WriteString(h.hash, string(s))
 	return err
 }
 
@@ -60,7 +61,7 @@ type (
 	}
 )
 
-func Map[K comparable, V any, H Hashable](m map[K]V, fn func(K, V) (string, H)) mapped[H] {
+func Map[K comparable, V any, H Hashable](m map[K]V, fn func(K, V) (string, H)) Hashable {
 	res := make(mapped[H], 0, len(m))
 
 	for key, val := range m {

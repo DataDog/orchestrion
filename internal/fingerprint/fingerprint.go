@@ -8,8 +8,9 @@ package fingerprint
 import (
 	"crypto/sha512"
 	"encoding/base64"
-	"fmt"
 	"hash"
+	"io"
+	"strconv"
 	"sync"
 )
 
@@ -43,32 +44,50 @@ func (h *Hasher) Finish() string {
 }
 
 // Named hashes a named list of values. This creates explicit grouping of the
-// values, avoiding that the concatenation of two things has a different hasn
+// values, avoiding that the concatenation of two things has a different hash
 // than those same two things one after the other.
 func (h *Hasher) Named(name string, vals ...Hashable) error {
-	const (
-		SOH = "\x01" // Start of header
-		SOT = "\x02" // Start of text
-		ETX = "\x03" // End of header
+	var (
+		soh = []byte{1} // Start of key-value-pair beacon
+		sot = []byte{2} // Start of value & end of key beacon
+		etx = []byte{3} // End of key-value-pair beacon
 	)
 
-	if _, err := fmt.Fprintf(h.hash, SOH+"%s"+SOT, name); err != nil {
+	if _, err := h.hash.Write(soh); err != nil {
+		return err
+	}
+
+	if _, err := io.WriteString(h.hash, name); err != nil {
+		return err
+	}
+
+	if _, err := h.hash.Write(sot); err != nil {
 		return err
 	}
 
 	for idx, val := range vals {
-		if _, err := fmt.Fprintf(h.hash, SOH+"%d"+SOT, idx); err != nil {
+		if _, err := h.hash.Write(soh); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(h.hash, strconv.Itoa(idx)); err != nil {
+			return err
+		}
+		if _, err := h.hash.Write(sot); err != nil {
 			return err
 		}
 		if err := val.Hash(h); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprint(h.hash, ETX); err != nil {
+		if _, err := h.hash.Write(etx); err != nil {
 			return err
 		}
 	}
 
-	_, err := fmt.Fprint(h.hash, ETX, name)
+	if _, err := h.hash.Write(etx); err != nil {
+		return err
+	}
+
+	_, err := io.WriteString(h.hash, name)
 	return err
 }
 
