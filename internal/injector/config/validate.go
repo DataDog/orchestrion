@@ -14,8 +14,8 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-// Validate checks the provided object for conformance to the embedded JSON
-// schema. Returns an error if the object does not conform to the schema.
+// ValidateObject checks the provided object for conformance to the embedded
+// JSON schema. Returns an error if the object does not conform to the schema.
 func ValidateObject(obj map[string]any) error {
 	return getSchema().Validate(obj)
 }
