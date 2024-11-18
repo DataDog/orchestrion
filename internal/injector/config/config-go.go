@@ -97,7 +97,7 @@ func (l *Loader) loadGoFile(filename string) ([]Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("in %q imported from %q: %w", pkg.PkgPath, filename, err)
 		}
-		if cfg == nil {
+		if cfg.empty() {
 			// Already loaded or empty
 			continue
 		}
@@ -114,17 +114,23 @@ type configGo struct {
 }
 
 func (c *configGo) Aspects() []*aspect.Aspect {
-	var res []*aspect.Aspect
+	if c == nil {
+		return nil
+	}
 
+	var res []*aspect.Aspect
 	for _, imp := range c.imports {
 		res = append(res, imp.Aspects()...)
 	}
-
 	if c.yaml != nil {
 		res = append(res, c.yaml.Aspects()...)
 	}
 
 	return res
+}
+
+func (c *configGo) empty() bool {
+	return c == nil || (len(c.imports) == 0 && c.yaml.empty())
 }
 
 // packageRoot returns the root directory of the provided package. It must have

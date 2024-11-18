@@ -55,7 +55,7 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 			if err != nil {
 				return nil, maskErrNotExist(err)
 			}
-			if cfg == nil {
+			if cfg.empty() {
 				// Empty, nothing to do...
 				continue
 			}
@@ -67,7 +67,7 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 		if err != nil {
 			return nil, maskErrNotExist(err)
 		}
-		if cfg == nil {
+		if cfg.empty() {
 			// Empty, nothing to do...
 			continue
 		}
@@ -84,15 +84,21 @@ type configYML struct {
 }
 
 func (c *configYML) Aspects() []*aspect.Aspect {
-	var res []*aspect.Aspect
+	if c == nil {
+		return nil
+	}
 
+	var res []*aspect.Aspect
 	for _, ext := range c.extends {
 		res = append(res, ext.Aspects()...)
 	}
-
 	res = append(res, c.aspects...)
 
 	return res
+}
+
+func (c *configYML) empty() bool {
+	return c == nil || (len(c.extends) == 0 && len(c.aspects) == 0)
 }
 
 type ymlFile struct {
