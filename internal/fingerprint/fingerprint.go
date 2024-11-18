@@ -48,9 +48,9 @@ func (h *Hasher) Finish() string {
 // than those same two things one after the other.
 func (h *Hasher) Named(name string, vals ...Hashable) error {
 	var (
-		soh = []byte{1} // Start of key-value-pair beacon
-		sot = []byte{2} // Start of value & end of key beacon
-		etx = []byte{3} // End of key-value-pair beacon
+		soh = []byte{0x01} // Start of key-value-pair beacon
+		sot = []byte{0x02} // Start of value & end of key beacon
+		etx = []byte{0x03} // End of key-value-pair beacon
 	)
 
 	if _, err := h.hash.Write(soh); err != nil {
