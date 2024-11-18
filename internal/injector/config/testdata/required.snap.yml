@@ -4,6 +4,9 @@ imports:
     yaml:
       name: orchestrion.yml
       extends:
+        - name: ./yaml/directive/orchestrion-enabled.yml
+          aspects:
+            - Initialize to true
         - name: ./yaml/stdlib/runtime.yml
           aspects:
             - GLS Access
