@@ -61,7 +61,7 @@ type (
 	}
 )
 
-func Map[K comparable, V any, H Hashable](m map[K]V, fn func(K, V) (string, H)) Hashable {
+func Map[K comparable, V any, H Hashable](m map[K]V, fn func(K, V) (string, H)) mapped[H] {
 	res := make(mapped[H], 0, len(m))
 
 	for key, val := range m {

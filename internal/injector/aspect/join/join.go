@@ -9,7 +9,6 @@ package join
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -155,9 +154,5 @@ func (n TypeName) AsCode() jen.Code {
 }
 
 func (n TypeName) Hash(h *fingerprint.Hasher) error {
-	return errors.Join(
-		h.Named("path", fingerprint.String(n.path)),
-		h.Named("name", fingerprint.String(n.name)),
-		h.Named("pointer", fingerprint.Bool(n.pointer)),
-	)
+	return h.Named("type-name", fingerprint.String(n.name), fingerprint.String(n.path), fingerprint.Bool(n.pointer))
 }

@@ -164,7 +164,7 @@ func (s *structLiteral) AsCode() jen.Code {
 }
 
 func (s *structLiteral) Hash(h *fingerprint.Hasher) error {
-	return h.Named("struct-literal", s.TypeName, fingerprint.String(s.Field), fingerprint.Int(s.Match))
+	return h.Named("struct-literal", s.TypeName, fingerprint.String(s.Field), s.Match)
 }
 
 func init() {
@@ -258,4 +258,8 @@ func (s StructLiteralMatch) asCode() jen.Code {
 		panic(fmt.Errorf("invalid StructLiteralMatch(%d)", int(s)))
 	}
 	return jen.Qual(pkgPath, constName)
+}
+
+func (s StructLiteralMatch) Hash(h *fingerprint.Hasher) error {
+	return h.Named("struct-literal-match", fingerprint.Int(s))
 }

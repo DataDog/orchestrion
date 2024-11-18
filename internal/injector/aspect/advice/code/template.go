@@ -226,6 +226,7 @@ func (t *Template) Hash(h *fingerprint.Hasher) error {
 		"template",
 		fingerprint.Map(t.Imports, func(k string, v string) (string, fingerprint.String) { return k, fingerprint.String(v) }),
 		fingerprint.String(t.Source),
+		t.Lang,
 	)
 }
 
