@@ -9,51 +9,30 @@ meta:
   description: HTTP server implementation.
   icon: at-symbol
 aspects:
-  # When httpmode is "wrap"
-  - id: Wrap http.Server.Handler
+  - id: Instrument http.Server#Serve
     join-point:
-      all-of:
-        - configuration:
-            httpmode: wrap
-        - struct-literal:
-            type: net/http.Server
-            field: Handler
-        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-        - not:
-            one-of:
-              - import-path: github.com/go-chi/chi/v5
-              - import-path: github.com/go-chi/chi/v5/middleware
-              - import-path: golang.org/x/net/http2
+      function-body:
+        function:
+          - receiver: '*net/http.Server'
+          - name: Serve
     advice:
-      - wrap-expression:
+      - inject-declarations:
+          # We need to use go:linkname to refer to a number of declarations in order to avoid creating
+          # circular dependencies, as these features have transitive dependencies on `net/http`...
           imports:
-            instrument: github.com/DataDog/orchestrion/instrument
+            context: context
+            ddtrace: gopkg.in/DataDog/dd-trace-go.v1/ddtrace
+          links:
+            - github.com/DataDog/orchestrion/instrument
           template: |-
-            //dd:startwrap
-            instrument.WrapHandler({{.}})
-            //dd:endwrap
-  - id: Wrap http.HandlerFunc
-    join-point:
-      all-of:
-        - configuration:
-            httpmode: wrap
-        - function:
-            - name: '' # This filters only *dst.FuncLit
-            - signature:
-                args: [net/http.ResponseWriter, '*net/http.Request']
-        # No instrumenting github.com/go-chi/chi/v5 as this causes a circular dependency.
-        - not:
-            one-of:
-              - import-path: github.com/go-chi/chi/v5
-              - import-path: github.com/go-chi/chi/v5/middleware
-              # No instrumenting golang.org/x/net as it causes a circular dependency via GRPC
-              - import-path: golang.org/x/net/http2
-    advice:
-      - wrap-expression:
-          imports:
-            instrument: "github.com/DataDog/orchestrion/instrument"
+            //go:linkname __dd_orchestrion_instrument_WrapHandler github.com/DataDog/orchestrion/instrument.WrapHandler
+            func __dd_orchestrion_instrument_WrapHandler(handler Handler) Handler
+      - prepend-statements:
           template: |-
-            instrument.WrapHandlerFunc({{.}})
+            {{- $srv := .Function.Receiver -}}
+            if {{ $srv }}.Handler != nil {
+              {{ $srv }}.Handler = __dd_orchestrion_instrument_WrapHandler({{ $srv }}.Handler)
+            }
 
   # When httpmode is "report"
   - id: Report http.HandlerFunc calls
