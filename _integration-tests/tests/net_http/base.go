@@ -30,7 +30,9 @@ func (b *base) Setup(t *testing.T) {
 	require.NotNil(t, b.handler, "tc.handler needs to be initialized in your test case")
 
 	b.srv = &http.Server{
-		Addr: "127.0.0.1:" + utils.GetFreePort(t),
+		Addr:         "127.0.0.1:" + utils.GetFreePort(t),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	b.srv.Handler = b.handler
 
