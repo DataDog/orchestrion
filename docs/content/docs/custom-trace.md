@@ -40,11 +40,8 @@ func definitelyInstrumented() {
   // Orchestrion may add or modify code in this function
   // ... etc ...
 
-  //orchestrion:ignore This particular server will NOT be instrumented
-  server := &http.Server {
-    Addr:    "127.0.0.1:8080",
-    Handler: internalServerHandler,
-  }
+  //orchestrion:ignore This particular database connection will NOT be instrumented
+  db, err := db.Open("driver-name", "database=example")
 
   // Orchestrion may add or modify code further down in this function
   // ... etc ...
@@ -58,8 +55,12 @@ instrumentation).
 
 In such cases, it is currently not possible to opt-out of instrumentation. This
 is the case for:
+- `cloud.google.com/go/pubsub`
+- `github.com/confluentinc/confluent-kafka-go/kafka`
+- `github.com/gorilla/mux`
+- `github.com/julienschmidt/httprouter`
+- `github.com/segmentio/kafka-go`
 - `net/http` client instrumentation
-- `github.com/gorilla/mux` middleware instrumentation
 {{</callout>}}
 
 ## Creating custom trace spans
