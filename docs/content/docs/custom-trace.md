@@ -40,6 +40,7 @@ func definitelyInstrumented() {
   // ... etc ...
 
   //dd:ignore This particular server will NOT be instrumented
+  // FIXME: this example is no longer working as we switched to library-side instrumentation.
   server := &http.Server {
     Addr:    "127.0.0.1:8080",
     Handler: internalServerHandler,

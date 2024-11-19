@@ -7,7 +7,7 @@
 
 //go:build integration
 
-package mux
+package gorilla_mux
 
 import (
 	"datadoghq.dev/orchestrion/_integration-tests/utils"

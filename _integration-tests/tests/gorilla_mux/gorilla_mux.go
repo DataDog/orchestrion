@@ -5,7 +5,7 @@
 
 //go:build integration
 
-package mux
+package gorilla_mux
 
 import (
 	"context"
@@ -57,7 +57,7 @@ func (tc *TestCase) ExpectedTraces() trace.Traces {
 	url := fmt.Sprintf("http://%s/ping", tc.Server.Addr)
 	return trace.Traces{
 		{
-			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
+			// NB: 2 Top-level spans are from the HTTP Client/Server, which are library-side instrumented.
 			Tags: map[string]any{
 				"name":     "http.request",
 				"resource": "GET /ping",
@@ -95,22 +95,7 @@ func (tc *TestCase) ExpectedTraces() trace.Traces {
 								"component": "gorilla/mux",
 								"span.kind": "server",
 							},
-							Children: trace.Traces{
-								{
-									// FIXME: this span shouldn't exist
-									Tags: map[string]any{
-										"name":     "http.request",
-										"resource": "GET /ping",
-										"type":     "web",
-										"service":  "mux.router",
-									},
-									Meta: map[string]string{
-										"http.url":  url,
-										"component": "net/http",
-										"span.kind": "server",
-									},
-								},
-							},
+							Children: nil,
 						},
 					},
 				},
