@@ -21,7 +21,7 @@ import (
 
 type ConfigurationFile struct {
 	Metadata Metadata `yaml:"meta"`
-	Aspects  []IdentifiedAspect
+	Aspects  []*aspect.Aspect
 }
 
 type Metadata struct {
@@ -29,11 +29,6 @@ type Metadata struct {
 	Description string
 	Icon        string `yaml:",omitempty"`
 	Caveats     string `yaml:",omitempty"`
-}
-
-type IdentifiedAspect struct {
-	ID     string        `yaml:"id"`
-	Aspect aspect.Aspect `yaml:",inline"`
 }
 
 var (

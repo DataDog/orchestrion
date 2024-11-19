@@ -18,6 +18,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -121,6 +122,10 @@ func main() {
 		config, err := readConfigFile(match)
 		if err != nil {
 			log.Fatalf("Parsing %q: %v\n", match, err)
+		}
+
+		if depsFile != nil {
+			depsFile.Anon(aspect.InjectedPaths(config.Aspects)...)
 		}
 
 		chomped := removeLeadingSegments(match, chomp)
