@@ -28,7 +28,7 @@ type TestCase struct {
 func (tc *TestCase) Setup(t *testing.T) {
 	router := chi.NewRouter()
 
-	//dd:ignore
+	//orchestrion:ignore
 	tc.Server = &http.Server{
 		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
 		Handler: router,

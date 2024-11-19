@@ -19,8 +19,9 @@ to not be instrumented, either because they result in excessively verbose
 traces, or because those trace spans would be duplicated (for example, when
 using a custom-made `net/http` middleware stack).
 
-The `//dd:ignore` directive can be added anywhere in your application's code,
-and will disable all `orchestrion` instrumentation in the annotated syntax tree.
+The `//orchestrion:ignore` directive can be added anywhere in your application's
+code, and will disable all `orchestrion` instrumentation in the annotated syntax
+tree.
 
 For example:
 
@@ -29,7 +30,7 @@ package demo
 
 import "net/http"
 
-//dd:ignore I don't want any of this to be instrumented, ever.
+//orchestrion:ignore I don't want any of this to be instrumented, ever.
 func noInstrumentationThere() {
   // Orchestrion will never add or modify any code in this function
   // ... etc ...
@@ -39,7 +40,7 @@ func definitelyInstrumented() {
   // Orchestrion may add or modify code in this function
   // ... etc ...
 
-  //dd:ignore This particular server will NOT be instrumented
+  //orchestrion:ignore This particular server will NOT be instrumented
   server := &http.Server {
     Addr:    "127.0.0.1:8080",
     Handler: internalServerHandler,

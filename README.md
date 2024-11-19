@@ -127,7 +127,7 @@ Library                                               | Since    | Notes
 `github.com/go-redis/redis/v8`                        | `v0.7.0` | [Aspect][go-redis-v8]
 `github.com/gofiber/fiber/v2`                         | `v0.7.0` | [Aspect][fiber-v2]
 `github.com/gomodule/redigo/redis`                    | `v0.7.0` | [Aspect][redigo]
-`github.com/gorilla/mux`                              | `v0.7.0` | [Aspect][gorilla]. Cannot be opted out of via `//dd:ignore`
+`github.com/gorilla/mux`                              | `v0.7.0` | [Aspect][gorilla]. Cannot be opted out of via `//orchestrion:ignore`
 `github.com/jinzhu/gorm`                              | `v0.7.0` | [Aspect][jinzhu-gorm]
 `github.com/labstack/echo/v4`                         | `v0.7.0` | [Aspect][echo]
 `google.golang.org/grpc`                              | `v0.7.0` | [Aspect][grpc]
