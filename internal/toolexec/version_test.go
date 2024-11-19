@@ -35,7 +35,7 @@ func Test(t *testing.T) {
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
 	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
 
-	require.NoError(t, os.WriteFile(filepath.Join(tmp, config.OrchestrionToolGo), []byte(`
+	require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`
 		//go:build tools
 		package tools
 
