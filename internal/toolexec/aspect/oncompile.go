@@ -62,9 +62,55 @@ var weavingSpecialCase = []specialCase{
 	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
 }
 
-func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
+func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (result error) {
 	log.SetContext("PHASE", "compile")
 	defer log.SetContext("PHASE", "")
+
+	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	if err != nil {
+		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+	}
+
+	var linkDeps linkdeps.LinkDeps
+	for _, archiveName := range imports.PackageFile {
+		deps, err := linkdeps.FromArchive(archiveName)
+		if err != nil {
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archiveName, err)
+		}
+		for _, depPath := range deps.Dependencies() {
+			if _, found := imports.PackageFile[depPath]; found {
+				continue
+			}
+			linkDeps.Add(depPath)
+		}
+	}
+
+	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
+
+	defer func() {
+		if result != nil {
+			return
+		}
+
+		// Write the link.deps file and add it to the output object once the compilation has completed.
+		if err := os.MkdirAll(orchestrionDir, 0o755); err != nil {
+			result = fmt.Errorf("making directory %s: %w", orchestrionDir, err)
+			return
+		}
+		linkDepsFile := filepath.Join(orchestrionDir, linkdeps.LinkDepsFilename)
+		if err := linkDeps.WriteFile(linkDepsFile); err != nil {
+			result = fmt.Errorf("writing %s file: %w", linkdeps.LinkDepsFilename, err)
+			return
+		}
+		cmd.OnClose(func() error {
+			log.Debugf("Adding %s file into %q\n", linkdeps.LinkDepsFilename, cmd.Flags.Output)
+			child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
+			if err := child.Run(); err != nil {
+				return fmt.Errorf("running %q: %w", child.Args, err)
+			}
+			return nil
+		})
+	}()
 
 	aspects := builtin.Aspects[:]
 	for _, sc := range weavingSpecialCase {
@@ -99,12 +145,6 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		break
 	}
 
-	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
-	if err != nil {
-		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
-	}
-
-	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	injector := injector.Injector{
 		Aspects:    aspects,
 		RootConfig: map[string]string{"httpmode": "wrap"},
@@ -140,10 +180,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return nil
 	}
 
-	var (
-		linkDeps   linkdeps.LinkDeps
-		regUpdated bool
-	)
+	var regUpdated bool
 	for depImportPath, kind := range references.Map() {
 		if depImportPath == "unsafe" {
 			// Unsafe isn't like other go packages, and it does not have an associated archive file.
@@ -200,32 +237,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		}
 	}
 
-	if linkDeps.Empty() {
-		// There are no synthetic dependencies, so we don't need to write an updated importcfg or add
-		// extra objects in the output file.
-		return nil
-	}
-
 	if regUpdated {
 		// Creating updated version of the importcfg file, with new dependencies
 		if err := writeUpdatedImportConfig(imports, cmd.Flags.ImportCfg); err != nil {
 			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 		}
 	}
-
-	// Write the link.deps file and add it to the output object once the compilation has completed.
-	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.LinkDepsFilename)
-	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
-		return fmt.Errorf("writing %s file: %w", linkdeps.LinkDepsFilename, err)
-	}
-	cmd.OnClose(func() error {
-		log.Debugf("Adding %s file into %q\n", linkdeps.LinkDepsFilename, cmd.Flags.Output)
-		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
-		if err := child.Run(); err != nil {
-			return fmt.Errorf("running %q: %w", child.Args, err)
-		}
-		return nil
-	})
 
 	return nil
 }
