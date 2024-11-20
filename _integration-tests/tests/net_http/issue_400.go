@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-// TestCaseIssue400 tests regressions for https://github.com/DataDog/orchestrion/issues/400
+// TestCaseIssue400 tests regressions for https://github.com/DataDog/orchestrion/issues/400.
 type TestCaseIssue400 struct {
 	base
 }

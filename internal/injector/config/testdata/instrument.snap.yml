@@ -183,9 +183,7 @@ yaml:
             - Wire context through http.Get/Head/Post/PostForm
         - name: ./yaml/stdlib/net-http.server.yml
           aspects:
-            - Wrap http.Server.Handler
-            - Wrap http.HandlerFunc
-            - Report http.HandlerFunc calls
+            - Instrument http.Server#Serve
         - name: ./yaml/stdlib/ossec.yml
           aspects:
             - OpenFile
