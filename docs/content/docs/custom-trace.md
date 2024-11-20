@@ -16,12 +16,19 @@ removes the possibility of someone forgetting to instrument a particular call.
 
 There are however cases where you may want specific sections of your application
 to not be instrumented, either because they result in excessively verbose
-traces, or because those trace spans would be duplicated (for example, when
-using a custom-made `net/http` middleware stack).
+traces, or because those trace spans would be duplicated.
 
 The `//orchestrion:ignore` directive can be added anywhere in your application's
 code, and will disable all `orchestrion` instrumentation in the annotated syntax
 tree.
+
+{{<callout emoji="⚠️">}}
+Library-side (also known as callee-side) instrumentation cannot be opted out of
+using `//orchestrion:ignore`. Refer to the [README document][readme] to learn
+about which integrations are library-side.
+
+[readme]: https://github.com/DataDog/orchestrion#supported-libraries
+{{</callout>}}
 
 For example:
 
