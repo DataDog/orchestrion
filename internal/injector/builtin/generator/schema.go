@@ -150,7 +150,7 @@ func validateSchema(data []byte) error {
 
 func init() {
 	_, thisFile, _, _ := runtime.Caller(0)
-	schemaFile := filepath.Join(thisFile, "..", "..", "..", "..", "..", "docs", "static", "schema.json")
+	schemaFile := filepath.Join(thisFile, "..", "..", "..", "..", "..", "_docs", "static", "schema.json")
 
 	file, err := os.Open(schemaFile)
 	if err != nil {

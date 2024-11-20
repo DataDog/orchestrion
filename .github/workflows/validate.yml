@@ -72,7 +72,7 @@ jobs:
         run: find . -iname go.mod -execdir go mod tidy \;
 
       - name: Refresh LICENSE-3rdparty.csv
-        run: ./tools/make-licenses.sh
+        run: ./_tools/make-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
 
@@ -155,7 +155,7 @@ jobs:
           version: v1.60.3
           working-directory: _integration-tests
       - name: Verify license headers
-        run: go run tools/headercheck/header_check.go
+        run: go run ./_tools/headercheck/header_check.go
       - name: vet
         run: go vet ./...
 
