@@ -139,7 +139,7 @@ func (h *harness) exec(b *testing.B, name string, args ...string) {
 	require.NoError(b, cmd.Run(), "command failed: %s\n%s", cmd, output)
 }
 
-func (h *harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo string) string {
+func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo string) string {
 	b.Helper()
 
 	// NB -- Default page size is 30, and releases are sorted by creation date... We should be able to rely on the tag
