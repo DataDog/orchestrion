@@ -19,14 +19,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
 )
 
 type testCase interface {
-	baseline()
-	instrumented()
+	baseline(b *testing.B)
+	instrumented(b *testing.B)
 }
 
 var testCases = map[string]func(b *testing.B) testCase{
@@ -39,19 +38,21 @@ var testCases = map[string]func(b *testing.B) testCase{
 
 func Benchmark(b *testing.B) {
 	for name, create := range testCases {
-		tc := create(b)
-		b.Run(fmt.Sprintf("repo=%s/variant=baseline", name), func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				tc.baseline()
-			}
-		})
+		b.Run(fmt.Sprintf("repo=%s", name), func(b *testing.B) {
+			tc := create(b)
+			b.Run("variant=baseline", func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					tc.baseline(b)
+				}
+			})
 
-		b.Run(fmt.Sprintf("repo=%s/variant=instrumented", name), func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				tc.instrumented()
-			}
+			b.Run("variant=instrumented", func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					tc.instrumented(b)
+				}
+			})
 		})
 	}
 }
@@ -64,17 +65,17 @@ func benchmarkGithub(owner string, repo string, build string) func(b *testing.B)
 	return func(b *testing.B) testCase {
 		b.Helper()
 
-		tc := &benchGithub{harness{B: b, build: build}}
+		tc := &benchGithub{harness{build: build}}
 
-		tag := tc.findLatestGithubReleaseTag(owner, repo)
-		tc.gitCloneGithub(owner, repo, tag)
-		tc.exec("go", "mod", "download")
-		tc.exec("go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+		tag := tc.findLatestGithubReleaseTag(b, owner, repo)
+		tc.gitCloneGithub(b, owner, repo, tag)
+		tc.exec(b, "go", "mod", "download")
+		tc.exec(b, "go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
 		if stat, err := os.Stat(filepath.Join(tc.dir, "vendor")); err == nil && stat.IsDir() {
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
-			tc.exec("go", "mod", "vendor")
+			tc.exec(b, "go", "mod", "vendor")
 		}
-		tc.exec(buildOrchestrion(b), "pin")
+		tc.exec(b, buildOrchestrion(b), "pin")
 
 		return tc
 	}
@@ -84,68 +85,67 @@ type benchOrchestrion struct {
 	harness
 }
 
-func benchmarkOrchestrion(b *testing.B) testCase {
-	return &benchOrchestrion{harness{B: b, dir: rootDir, build: "."}}
+func benchmarkOrchestrion(_ *testing.B) testCase {
+	return &benchOrchestrion{harness{dir: rootDir, build: "."}}
 }
 
 type harness struct {
-	*testing.B
 	dir   string // The directory in which the source code of the package to be built is located.
 	build string // The package to be built as part of the test.
 }
 
-func (h *harness) baseline() {
-	h.Helper()
+func (h *harness) baseline(b *testing.B) {
+	b.Helper()
 
-	cmd := exec.Command("go", "build", "-o", h.TempDir(), h.build)
+	cmd := exec.Command("go", "build", "-o", b.TempDir(), h.build)
 	cmd.Dir = h.dir
-	cmd.Env = append(os.Environ(), "GOCACHE="+h.TempDir())
+	cmd.Env = append(os.Environ(), "GOCACHE="+b.TempDir())
 	output := bytes.NewBuffer(make([]byte, 0, 4_096))
 	cmd.Stdout = output
 	cmd.Stderr = output
 
-	h.StartTimer()
+	b.StartTimer()
 	err := cmd.Run()
-	h.StopTimer()
+	b.StopTimer()
 
-	assert.NoError(h, err, "build failed:\n%s", output)
+	require.NoError(b, err, "build failed:\n%s", output)
 }
 
-func (h *harness) instrumented() {
-	h.Helper()
+func (h *harness) instrumented(b *testing.B) {
+	b.Helper()
 
-	cmd := exec.Command(buildOrchestrion(h.B), "go", "build", "-o", h.TempDir(), h.build)
+	cmd := exec.Command(buildOrchestrion(b), "go", "build", "-o", b.TempDir(), h.build)
 	cmd.Dir = h.dir
-	cmd.Env = append(os.Environ(), "GOCACHE="+h.TempDir())
+	cmd.Env = append(os.Environ(), "GOCACHE="+b.TempDir())
 	output := bytes.NewBuffer(make([]byte, 0, 4_096))
 	cmd.Stdout = output
 	cmd.Stderr = output
 
-	h.StartTimer()
+	b.StartTimer()
 	err := cmd.Run()
-	h.StopTimer()
+	b.StopTimer()
 
-	assert.NoError(h, err, "build failed:\n%s", output)
+	require.NoError(b, err, "build failed:\n%s", output)
 }
 
-func (h *harness) exec(name string, args ...string) {
+func (h *harness) exec(b *testing.B, name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = h.dir
-	cmd.Env = append(os.Environ(), "GOCACHE="+h.TempDir())
+	cmd.Env = append(os.Environ(), "GOCACHE="+b.TempDir())
 	output := bytes.NewBuffer(make([]byte, 0, 4_096))
 	cmd.Stdout = output
 	cmd.Stderr = output
 
-	require.NoError(h, cmd.Run(), "command failed: %s\n%s", cmd, output)
+	require.NoError(b, cmd.Run(), "command failed: %s\n%s", cmd, output)
 }
 
-func (h *harness) findLatestGithubReleaseTag(owner string, repo string) string {
-	h.Helper()
+func (h *harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo string) string {
+	b.Helper()
 
 	// NB -- Default page size is 30, and releases are sorted by creation date... We should be able to rely on the tag
 	// we are looking for being present in the first page, ergo we don't bother traversing all pages.
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo), nil)
-	require.NoError(h, err)
+	require.NoError(b, err)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
 	if token, ok := getGithubToken(); ok {
@@ -153,17 +153,17 @@ func (h *harness) findLatestGithubReleaseTag(owner string, repo string) string {
 	}
 
 	resp, err := http.DefaultClient.Do(req)
-	require.NoError(h, err)
+	require.NoError(b, err)
 	defer resp.Body.Close()
 
-	require.Equal(h, http.StatusOK, resp.StatusCode, "error response body:\n%s", contentString{resp.Body})
+	require.Equal(b, http.StatusOK, resp.StatusCode, "error response body:\n%s", contentString{resp.Body})
 
 	var payload []struct {
 		Prerelease bool   `json:"prerelease"`
 		TagName    string `json:"tag_name"`
 	}
-	require.NoError(h, json.NewDecoder(resp.Body).Decode(&payload))
-	require.NotEmpty(h, payload)
+	require.NoError(b, json.NewDecoder(resp.Body).Decode(&payload))
+	require.NotEmpty(b, payload)
 
 	var tagName string
 	for _, release := range payload {
@@ -176,7 +176,7 @@ func (h *harness) findLatestGithubReleaseTag(owner string, repo string) string {
 		}
 	}
 
-	require.NotEmpty(h, tagName)
+	require.NotEmpty(b, tagName)
 
 	return tagName
 }
@@ -198,11 +198,11 @@ func getGithubToken() (string, bool) {
 	return strings.TrimSpace(bytes.String()), true
 }
 
-func (h *harness) gitCloneGithub(owner string, repo string, tag string) string {
-	h.Helper()
+func (h *harness) gitCloneGithub(b *testing.B, owner string, repo string, tag string) string {
+	b.Helper()
 
-	h.dir = h.TempDir()
-	h.exec("git", "clone", "--depth=1", fmt.Sprintf("--branch=%s", tag), fmt.Sprintf("https://github.com/%s/%s.git", owner, repo), h.dir)
+	h.dir = b.TempDir()
+	h.exec(b, "git", "clone", "--depth=1", fmt.Sprintf("--branch=%s", tag), fmt.Sprintf("https://github.com/%s/%s.git", owner, repo), h.dir)
 
 	return h.dir
 }
