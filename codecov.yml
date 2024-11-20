@@ -10,7 +10,7 @@ comment:
 
 ignore:
   - 'samples/**' # This is sample code for instrumentable things
-  - 'tools/**' # Repository maintenance tooling
+  - '_tools/**' # Repository maintenance tooling
   - 'internal/injector/aspect/advice/code/dot_ast.proxies.go' # Auto-generated proxy code
 
 coverage:
