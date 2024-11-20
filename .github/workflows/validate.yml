@@ -462,7 +462,7 @@ jobs:
             const process = require('node:process');
 
             const flags = [];
-            const files = {};
+            const flagFiles = {};
             for (const dirname of fs.readdirSync(process.cwd())) {
               const prefix = 'coverage-';
               if (!dirname.startsWith(prefix)) {
@@ -480,24 +480,24 @@ jobs:
                   flags.push(flag);
                 }
 
-                files[flag] ??= [];
-                files[flag].push(...files);
+                flagFiles[flag] ??= [];
+                flagFiles[flag].push(...files);
               }
             }
 
             console.log('Flags:', flags);
-            console.log('Files:', files);
+            console.log('Files:', flagFiles);
 
             // Join the lists because the workflow subsequently expects a whitespace-separted list.
-            for (const [flag, list] of Object.entries(files)) {
-              files[flag] = list.join(' ');
+            for (const [flag, list] of Object.entries(flagFiles)) {
+              flagFiles[flag] = list.join(' ');
             }
 
             fs.writeFileSync(
               path.join(process.env.GITHUB_OUTPUT),
               [
                 "matrix=" + JSON.stringify({ flag: flags }),
-                "files=" + JSON.stringify(files),
+                "files=" + JSON.stringify(flagFiles),
               ].join('\n'),
             );
           EOF
