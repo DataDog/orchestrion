@@ -46,7 +46,7 @@ func noInstrumentationThere() {
 func definitelyInstrumented() {
   // Orchestrion may add or modify code in this function
   // ... etc ...
-	
+
   //orchestrion:ignore This particular database connection will NOT be instrumented
   db, err := db.Open("driver-name", "database=example")
 
