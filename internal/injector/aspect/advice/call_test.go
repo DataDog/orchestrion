@@ -20,23 +20,23 @@ func TestAppendArgs(t *testing.T) {
 	t.Run("AddedImports", func(t *testing.T) {
 		type testCase struct {
 			argType         join.TypeName
-			args            []code.Template
+			args            []*code.Template
 			expectedImports []string
 		}
 
 		testCases := map[string]testCase{
 			"imports-none": {
 				argType: join.MustTypeName("any"),
-				args:    []code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
+				args:    []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 			},
 			"imports-from-arg-type": {
 				argType:         join.MustTypeName("*net/http.Request"),
-				args:            []code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
+				args:            []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 				expectedImports: []string{"net/http"},
 			},
 			"imports-from-templates": {
 				argType: join.MustTypeName("any"),
-				args: []code.Template{
+				args: []*code.Template{
 					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/foo"}, context.GoLangVersion{}),
 					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/bar"}, context.GoLangVersion{}),
 				},

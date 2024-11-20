@@ -8,6 +8,7 @@ package advice
 import (
 	"sort"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
@@ -15,13 +16,13 @@ import (
 )
 
 type injectDeclarations struct {
-	Template code.Template
+	Template *code.Template
 	Links    []string
 }
 
 // InjectDeclarations merges all declarations in the provided source file into the current file. The package name of both
 // original & injected files must match.
-func InjectDeclarations(template code.Template, links []string) injectDeclarations {
+func InjectDeclarations(template *code.Template, links []string) injectDeclarations {
 	return injectDeclarations{template, links}
 }
 
@@ -65,6 +66,14 @@ func (a injectDeclarations) AsCode() jen.Code {
 	)
 }
 
+func (a injectDeclarations) Hash(h *fingerprint.Hasher) error {
+	return h.Named(
+		"inject-declarations",
+		fingerprint.Cast(a.Links, func(s string) fingerprint.String { return fingerprint.String(s) }),
+		a.Template,
+	)
+}
+
 func (a injectDeclarations) AddedImports() []string {
 	return append(a.Template.AddedImports(), a.Links...)
 }
@@ -72,7 +81,7 @@ func (a injectDeclarations) AddedImports() []string {
 func init() {
 	unmarshalers["inject-declarations"] = func(node *yaml.Node) (Advice, error) {
 		var config struct {
-			Template code.Template `yaml:",inline"`
+			Template *code.Template `yaml:",inline"`
 			Links    []string
 		}
 		if err := node.Decode(&config); err != nil {

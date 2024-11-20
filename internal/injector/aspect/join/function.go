@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -26,6 +27,7 @@ type (
 	FunctionOption interface {
 		// asCode produces a jen.Code representation of the receiver.
 		asCode() jen.Code
+		fingerprint.Hashable
 
 		impliesImported() []string
 		evaluate(functionInformation) bool
@@ -84,6 +86,10 @@ func (s *functionDeclaration) AsCode() jen.Code {
 	})
 }
 
+func (s *functionDeclaration) Hash(h *fingerprint.Hasher) error {
+	return h.Named("function", fingerprint.List[FunctionOption](s.Options))
+}
+
 type functionName string
 
 func Name(name string) FunctionOption {
@@ -100,6 +106,10 @@ func (fo functionName) evaluate(info functionInformation) bool {
 
 func (fo functionName) asCode() jen.Code {
 	return jen.Qual(pkgPath, "Name").Call(jen.Lit(string(fo)))
+}
+
+func (fo functionName) Hash(h *fingerprint.Hasher) error {
+	return h.Named("name", fingerprint.String(fo))
 }
 
 type signature struct {
@@ -183,55 +193,12 @@ func (fo *signature) asCode() jen.Code {
 	})
 }
 
-type oneOfFunctions []FunctionOption
-
-func OneOfFunctions(opts ...FunctionOption) oneOfFunctions {
-	return oneOfFunctions(opts)
-}
-
-func (fo oneOfFunctions) impliesImported() (list []string) {
-	// We can only assume a package is imported if all candidates imply it.
-	counts := make(map[string]uint)
-	for _, opt := range fo {
-		for _, path := range opt.impliesImported() {
-			counts[path]++
-		}
-	}
-
-	total := uint(len(fo))
-	list = make([]string, 0, len(counts))
-	for path, count := range counts {
-		if count == total {
-			list = append(list, path)
-		}
-	}
-	return
-}
-
-func (fo oneOfFunctions) evaluate(info functionInformation) bool {
-	for _, opt := range fo {
-		if opt.evaluate(info) {
-			return true
-		}
-	}
-	return false
-}
-
-func (fo oneOfFunctions) AsCode() jen.Code {
-	if len(fo) == 1 {
-		return (fo)[0].asCode()
-	}
-
-	return jen.Qual(pkgPath, "OneOfFunctions").CallFunc(func(g *jen.Group) {
-		for _, opt := range fo {
-			g.Line().Add(opt.asCode())
-		}
-		g.Line().Empty()
-	})
-}
-
-func (oneOfFunctions) toHTML() string {
-	return "one-of"
+func (fo *signature) Hash(h *fingerprint.Hasher) error {
+	return h.Named(
+		"signature",
+		fingerprint.List[TypeName](fo.Arguments),
+		fingerprint.List[TypeName](fo.Results),
+	)
 }
 
 type receiver struct {
@@ -252,6 +219,10 @@ func (*receiver) impliesImported() []string {
 
 func (fo *receiver) asCode() jen.Code {
 	return jen.Qual(pkgPath, "Receiver").Call(fo.TypeName.AsCode())
+}
+
+func (fo *receiver) Hash(h *fingerprint.Hasher) error {
+	return h.Named("receiver", fo.TypeName)
 }
 
 type functionBody struct {
@@ -292,6 +263,10 @@ func (s *functionBody) Matches(ctx context.AspectContext) bool {
 
 func (s *functionBody) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "FunctionBody").Call(s.Function.AsCode())
+}
+
+func (s *functionBody) Hash(h *fingerprint.Hasher) error {
+	return h.Named("function-body", s.Function)
 }
 
 func init() {

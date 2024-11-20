@@ -10,12 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"go/token"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
@@ -52,14 +52,14 @@ package _
 // imports map. The imports map associates names to import paths. The produced
 // AST nodes will feature qualified *dst.Ident nodes in all places where a
 // property of mapped names is selected.
-func NewTemplate(text string, imports map[string]string, lang context.GoLangVersion) (Template, error) {
+func NewTemplate(text string, imports map[string]string, lang context.GoLangVersion) (*Template, error) {
 	template := template.Must(wrapper.Clone())
 	template, err := template.Parse(text)
-	return Template{template, imports, text, lang}, err
+	return &Template{template, imports, text, lang}, err
 }
 
 // MustTemplate is the same as NewTemplate, but panics if an error occurs.
-func MustTemplate(text string, imports map[string]string, lang context.GoLangVersion) (template Template) {
+func MustTemplate(text string, imports map[string]string, lang context.GoLangVersion) (template *Template) {
 	var err error
 	if template, err = NewTemplate(text, imports, lang); err != nil {
 		panic(err)
@@ -221,6 +221,15 @@ func (t *Template) AsCode() jen.Code {
 	)
 }
 
+func (t *Template) Hash(h *fingerprint.Hasher) error {
+	return h.Named(
+		"template",
+		fingerprint.Map(t.Imports, func(k string, v string) (string, fingerprint.String) { return k, fingerprint.String(v) }),
+		fingerprint.String(t.Source),
+		t.Lang,
+	)
+}
+
 func (t *Template) AddedImports() []string {
 	imports := make([]string, 0, len(t.Imports))
 	for _, path := range t.Imports {
@@ -240,8 +249,13 @@ func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
 		return
 	}
 
-	*t, err = NewTemplate(cfg.Template, cfg.Imports, cfg.Lang)
-	return err
+	newT, err := NewTemplate(cfg.Template, cfg.Imports, cfg.Lang)
+	if err != nil {
+		return err
+	}
+
+	*t = *newT
+	return nil
 }
 
 func numberLines(text string) string {
@@ -253,37 +267,4 @@ func numberLines(text string) string {
 	}
 
 	return strings.Join(lines, "\n")
-}
-
-func (t *Template) RenderHTML() string {
-	var buf strings.Builder
-
-	if len(t.Imports) > 0 {
-		keys := make([]string, 0, len(t.Imports))
-		nameLen := 0
-		for name := range t.Imports {
-			keys = append(keys, name)
-			if l := len(name); l > nameLen {
-				nameLen = l
-			}
-		}
-		sort.Strings(keys)
-
-		_, _ = buf.WriteString("\n\n```go\n")
-		_, _ = buf.WriteString("// Using the following synthetic imports:\n")
-		_, _ = buf.WriteString("import (\n")
-		for _, name := range keys {
-			_, _ = fmt.Fprintf(&buf, "\t%-*s %q\n", nameLen, name, t.Imports[name])
-		}
-		_, _ = buf.WriteString(")\n```")
-	}
-
-	_, _ = buf.WriteString("\n\n```go-template\n")
-	// Render with tabs so it's more go-esque!
-	_, _ = buf.WriteString(regexp.MustCompile(`(?m)^(?:  )+`).ReplaceAllStringFunc(t.Source, func(orig string) string {
-		return strings.Repeat("\t", len(orig)/2)
-	}))
-	_, _ = buf.WriteString("\n```\n")
-
-	return buf.String()
 }

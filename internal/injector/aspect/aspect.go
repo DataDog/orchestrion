@@ -8,6 +8,7 @@ package aspect
 import (
 	"errors"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/jennifer/jen"
@@ -36,6 +37,16 @@ func (a *Aspect) AsCode() (jp jen.Code, adv jen.Code) {
 		g.Empty().Line()
 	})
 	return
+}
+
+func (a *Aspect) Hash(h *fingerprint.Hasher) error {
+	return h.Named(
+		"aspect",
+		fingerprint.String(a.ID),
+		fingerprint.Bool(a.TracerInternal),
+		a.JoinPoint,
+		fingerprint.List[advice.Advice](a.Advice),
+	)
 }
 
 func (a *Aspect) AddedImports() (imports []string) {
