@@ -65,6 +65,10 @@ func PinOrchestrion(opts Options) error {
 		dstFile = defaultOrchestrionToolGo()
 	}
 
+	if err != nil {
+		return fmt.Errorf("parsing %q: %w", toolFile, err)
+	}
+
 	updateGoGenerateDirective(opts.NoGenerate, dstFile)
 
 	importSet, err := updateToolFile(dstFile)
