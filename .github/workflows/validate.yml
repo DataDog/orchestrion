@@ -485,7 +485,7 @@ jobs:
                 artifacts[flag].push(dirname);
 
                 files[flag] ??= [];
-                files[flag].push(files...);
+                files[flag].push(...files);
               }
             }
 
