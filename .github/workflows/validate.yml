@@ -462,7 +462,6 @@ jobs:
             const process = require('node:process');
 
             const flags = [];
-            const artifacts = {};
             const files = {};
             for (const dirname of fs.readdirSync(process.cwd())) {
               const prefix = 'coverage-';
@@ -481,22 +480,15 @@ jobs:
                   flags.push(flag);
                 }
 
-                artifacts[flag] ??= [];
-                artifacts[flag].push(dirname);
-
                 files[flag] ??= [];
                 files[flag].push(...files);
               }
             }
 
             console.log('Flags:', flags);
-            console.log('Artifacts:', artifacts);
             console.log('Files:', files);
 
             // Join the lists because the workflow subsequently expects a whitespace-separted list.
-            for (const [flag, list] of Object.entries(artifacts)) {
-              artifacts[flag] = list.join(' ');
-            }
             for (const [flag, list] of Object.entries(files)) {
               files[flag] = list.join(' ');
             }
@@ -505,7 +497,6 @@ jobs:
               path.join(process.env.GITHUB_OUTPUT),
               [
                 "matrix=" + JSON.stringify({ flag: flags }),
-                "artifacts=" + JSON.stringify(artifacts),
                 "files=" + JSON.stringify(files),
               ].join('\n'),
             );
@@ -526,7 +517,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
-          name: ${{ fromJson(needs.coverage-matrix.outputs.artifacts)[matrix.flag] }}
+          pattern: coverage-*
       - name: Upload Reports
         uses: ./.github/actions/codecov-upload
         with:
