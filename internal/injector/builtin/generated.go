@@ -1564,7 +1564,14 @@ var Aspects = [...]aspect.Aspect{
 	{
 		JoinPoint: join.FunctionCall("database/sql", "Register"),
 		Advice: []advice.Advice{
-			advice.ReplaceFunction("gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql", "Register"),
+			advice.WrapExpression(code.MustTemplate(
+				"func(driverName string, driver driver.Driver) {\n    sql.Register(driverName, driver)\n    sqltrace.Register(driverName, driver)\n}({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})",
+				map[string]string{
+					"sql":      "database/sql",
+					"sqltrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql",
+				},
+				context.GoLangVersion{},
+			)),
 		},
 	},
 	{
@@ -1874,4 +1881,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:xmZzyYLOd/Rd6xiw6DaourRfLxpq0vKm9vnwvz8ENJhfN/wlYdnLA0ninNmp6UO8i8pbjrPV/l/mc2ZoZaYXpQ=="
+const Checksum = "sha512:3RSiSosWn/St/Ene1Cb9HLEnIv8cxPX+xLanzGNQUX7nzp+R96xR/nruKKqodoLhNgkSWk2oi3htkwMkw5WPSA=="

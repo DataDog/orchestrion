@@ -23,32 +23,39 @@ type TestCase struct {
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
-	var err error
-	tc.DB, err = sql.Open("sqlite3", "file::memory:")
+	//orchestrion:ignore
+	prepareConn, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	require.NoError(t, err)
+
+	func() {
+		defer prepareConn.Close()
+
+		_, err = prepareConn.ExecContext(context.Background(),
+			`CREATE TABLE IF NOT EXISTS notes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			userid INTEGER,
+			content STRING,
+			created STRING
+		)`)
+		require.NoError(t, err)
+
+		_, err = prepareConn.ExecContext(context.Background(),
+			`INSERT OR REPLACE INTO notes(userid, content, created) VALUES
+			(1, 'Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.', datetime('now')),
+			(1, 'Hey, remember to mow the lawn.', datetime('now')),
+			(2, 'Reminder to submit that report by Thursday.', datetime('now')),
+			(2, 'Opportunities don''t happen, you create them.', datetime('now')),
+			(3, 'Pick up cabbage from the store on the way home.', datetime('now')),
+			(3, 'Review PR #1138', datetime('now')
+		)`)
+		require.NoError(t, err)
+	}()
+
+	tc.DB, err = sql.Open("sqlite3", "file::memory:?cache=shared")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, tc.DB.Close())
 	})
-
-	_, err = tc.DB.ExecContext(context.Background(),
-		`CREATE TABLE IF NOT EXISTS notes (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	userid INTEGER,
-	content STRING,
-	created STRING
-)`)
-	require.NoError(t, err)
-
-	_, err = tc.DB.ExecContext(context.Background(),
-		`INSERT OR REPLACE INTO notes(userid, content, created) VALUES
-		(1, 'Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.', datetime('now')),
-		(1, 'Hey, remember to mow the lawn.', datetime('now')),
-		(2, 'Reminder to submit that report by Thursday.', datetime('now')),
-		(2, 'Opportunities don''t happen, you create them.', datetime('now')),
-		(3, 'Pick up cabbage from the store on the way home.', datetime('now')),
-		(3, 'Review PR #1138', datetime('now')
-	);`)
-	require.NoError(t, err)
 }
 
 func (tc *TestCase) Run(t *testing.T) {
