@@ -178,7 +178,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 	)
 
 	pre := func(csor *dstutil.Cursor) bool {
-		if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
+		if err != nil || csor.Node() == nil || isIgnored(csor.Node()) {
 			return false
 		}
 		root := chain == nil
