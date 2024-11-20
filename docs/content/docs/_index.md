@@ -28,7 +28,7 @@ they are compiled or linked.
 
 - **Flexible** &ndash; Developers can easily influence the observability data
   produced by their applications by adding special directives, such as
-  `//dd:ignore`, or `//dd:span custom-tag:value`.
+  `//orchestrion:ignore`, or `//dd:span custom-tag:value`.
 
 - **Configurable** &ndash; Orchestrion's code manipulations can be configured
   with simple YAML documents, allowing developers to provide specific

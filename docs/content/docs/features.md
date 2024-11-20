@@ -15,7 +15,7 @@ the designated environment variables, such as `DD_ENV`, `DD_SERVICE`,
 `DD_VERSION`, etc... You can get more information on what environment variables
 are available in the [documentation][env-var-doc].
 
-If the `main` function is annotated with the `//dd:ignore` directive, the tracer
+If the `main` function is annotated with the `//orchestrion:ignore` directive, the tracer
 will not be started automatically, and you are responsible for calling
 {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer" package="tracer" name="Start" >}}
 with your preferred configuration options.

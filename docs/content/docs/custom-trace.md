@@ -16,11 +16,19 @@ removes the possibility of someone forgetting to instrument a particular call.
 
 There are however cases where you may want specific sections of your application
 to not be instrumented, either because they result in excessively verbose
-traces, or because those trace spans would be duplicated (for example, when
-using a custom-made `net/http` middleware stack).
+traces, or because those trace spans would be duplicated.
 
-The `//dd:ignore` directive can be added anywhere in your application's code,
-and will disable all `orchestrion` instrumentation in the annotated syntax tree.
+The `//orchestrion:ignore` directive can be added anywhere in your application's
+code, and will disable all `orchestrion` instrumentation in the annotated syntax
+tree.
+
+{{<callout emoji="⚠️">}}
+Library-side (also known as callee-side) instrumentation cannot be opted out of
+using `//orchestrion:ignore`. Refer to the [README document][readme] to learn
+about which integrations are library-side.
+
+[readme]: https://github.com/DataDog/orchestrion#supported-libraries
+{{</callout>}}
 
 For example:
 
@@ -29,7 +37,7 @@ package demo
 
 import "net/http"
 
-//dd:ignore I don't want any of this to be instrumented, ever.
+//orchestrion:ignore I don't want any of this to be instrumented, ever.
 func noInstrumentationThere() {
   // Orchestrion will never add or modify any code in this function
   // ... etc ...
@@ -38,13 +46,9 @@ func noInstrumentationThere() {
 func definitelyInstrumented() {
   // Orchestrion may add or modify code in this function
   // ... etc ...
-
-  //dd:ignore This particular server will NOT be instrumented
-  // FIXME: this example is no longer working as we switched to library-side instrumentation.
-  server := &http.Server {
-    Addr:    "127.0.0.1:8080",
-    Handler: internalServerHandler,
-  }
+	
+  //orchestrion:ignore This particular database connection will NOT be instrumented
+  db, err := db.Open("driver-name", "database=example")
 
   // Orchestrion may add or modify code further down in this function
   // ... etc ...
@@ -58,8 +62,12 @@ instrumentation).
 
 In such cases, it is currently not possible to opt-out of instrumentation. This
 is the case for:
+- `cloud.google.com/go/pubsub`
+- `github.com/confluentinc/confluent-kafka-go/kafka`
+- `github.com/gorilla/mux`
+- `github.com/julienschmidt/httprouter`
+- `github.com/segmentio/kafka-go`
 - `net/http` client instrumentation
-- `github.com/gorilla/mux` middleware instrumentation
 {{</callout>}}
 
 ## Creating custom trace spans
