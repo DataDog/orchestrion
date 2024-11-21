@@ -14,27 +14,54 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 )
 
 const (
-	// LinkDepsFilename is the standard file name for link.deps files.
-	LinkDepsFilename = "link.deps"
+	// Filename is the standard file name for link.deps files.
+	Filename = "link.deps"
 
-	headerV1 = "#" + LinkDepsFilename + "@v1"
+	headerV1 = "#" + Filename + "@v1"
 )
 
-// LinkDeps represents the contents of a link.deps file.
+// LinkDeps represents the contents of a [Filename] file.
 type LinkDeps struct {
 	deps map[string]struct{}
 }
 
-// FromArchive reads a link.deps file from the provided Go archive file. Returns
-// an empty LinkDeps if the archive does not contain a link.deps file.
+// FromImportConfig aggregates entries from all [Filename] found in the
+// archives listed in [importcfg.ImportConfig].
+func FromImportConfig(importcfg *importcfg.ImportConfig) (LinkDeps, error) {
+	var res LinkDeps
+
+	for importPath, archivePath := range importcfg.PackageFile {
+		ld, err := FromArchive(archivePath)
+		if err != nil {
+			return LinkDeps{}, fmt.Errorf("reading %s from %s=%s: %w", Filename, importPath, archivePath, err)
+		}
+
+		for _, dep := range ld.Dependencies() {
+			if _, satisfied := importcfg.PackageFile[dep]; satisfied {
+				// This transitive link-time dependency is already satisfied at
+				// compile-time, so we don't need to carry it over.
+				continue
+			}
+			res.Add(dep)
+		}
+	}
+
+	return res, nil
+}
+
+// FromArchive reads a [Filename] file from the provided Go archive file.
+// Returns an empty [LinkDeps] if the archive does not contain a [Filename]
+// file.
 func FromArchive(archive string) (res LinkDeps, err error) {
 	var data io.Reader
-	data, err = readArchiveData(archive, LinkDepsFilename)
+	data, err = readArchiveData(archive, Filename)
 	if err != nil {
-		return res, fmt.Errorf("reading %s from %q: %w", LinkDepsFilename, archive, err)
+		return res, fmt.Errorf("reading %s from %q: %w", Filename, archive, err)
 	}
 	if data == nil {
 		return
@@ -42,7 +69,7 @@ func FromArchive(archive string) (res LinkDeps, err error) {
 	return Read(data)
 }
 
-// ReadFile reads a link.deps file from the provided filename.
+// ReadFile reads a [Filename] file from the provided filename.
 func ReadFile(filename string) (LinkDeps, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -53,7 +80,7 @@ func ReadFile(filename string) (LinkDeps, error) {
 	return Read(file)
 }
 
-// Read reads a link.deps file content from the provided reader.
+// Read reads a [Filename] file content from the provided [io.Reader].
 func Read(r io.Reader) (l LinkDeps, err error) {
 	rd := bufio.NewReader(r)
 
@@ -71,7 +98,7 @@ func Read(r io.Reader) (l LinkDeps, err error) {
 	}
 }
 
-// parseV1 parses the contents of V1 link.deps files.
+// parseV1 parses the contents of V1 [Filename] files.
 func parseV1(r *bufio.Reader) (l LinkDeps, err error) {
 	for {
 		var line string
@@ -95,7 +122,14 @@ func parseV1(r *bufio.Reader) (l LinkDeps, err error) {
 	}
 }
 
-// Add registers a new import path in this LinkDeps instance.
+// Contains checks whether a given import path is already represented by this
+// [LinkDeps].
+func (l *LinkDeps) Contains(importPath string) bool {
+	_, found := l.deps[importPath]
+	return found
+}
+
+// Add registers a new import path in this [LinkDeps] instance.
 func (l *LinkDeps) Add(importPath string) {
 	if l.deps == nil {
 		l.deps = make(map[string]struct{})
@@ -103,7 +137,7 @@ func (l *LinkDeps) Add(importPath string) {
 	l.deps[importPath] = struct{}{}
 }
 
-// Dependencies returns all import paths registered in this LinkDeps instance.
+// Dependencies returns all import paths registered in this [LinkDeps] instance.
 func (l *LinkDeps) Dependencies() []string {
 	deps := make([]string, 0, len(l.deps))
 	for importPath := range l.deps {
@@ -112,17 +146,26 @@ func (l *LinkDeps) Dependencies() []string {
 	return deps
 }
 
-// Empty returns true if this LinkDeps instance is empty.
+// Empty returns true if this [LinkDeps] instance is empty.
 func (l *LinkDeps) Empty() bool {
 	return l.Len() == 0
 }
 
-// Len returns the number of import paths registered in this LinkDeps instance.
+// Len returns the number of import paths registered in this [LinkDeps]
+// instance.
 func (l *LinkDeps) Len() int {
 	return len(l.deps)
 }
 
-// WriteFile writes this LinkDeps instance to the provided filename.
+// RemoveFrom removes all import paths from this [LinkDeps] which are also found
+// in the provided [importcfg.ImportConfig].
+func (l *LinkDeps) RemoveFrom(importcfg *importcfg.ImportConfig) {
+	for dep := range importcfg.PackageFile {
+		delete(l.deps, dep)
+	}
+}
+
+// WriteFile writes this [LinkDeps] instance to the provided filename.
 func (l *LinkDeps) WriteFile(filename string) error {
 	wr, err := os.Create(filename)
 	if err != nil {
@@ -133,7 +176,7 @@ func (l *LinkDeps) WriteFile(filename string) error {
 	return l.Write(wr)
 }
 
-// Write writes this LinkDeps instance to the provided writer.
+// Write writes this [LinkDeps] instance to the provided writer.
 func (l *LinkDeps) Write(w io.Writer) error {
 	if _, err := fmt.Fprintln(w, headerV1); err != nil {
 		return err
