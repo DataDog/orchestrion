@@ -86,7 +86,6 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		if err != nil {
 			return
 		}
-		linkDeps.RemoveFrom(&imports)
 		err = writeLinkDeps(cmd, &linkDeps, orchestrionDir)
 	}()
 

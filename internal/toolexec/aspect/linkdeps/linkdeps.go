@@ -25,7 +25,13 @@ const (
 	headerV1 = "#" + Filename + "@v1"
 )
 
-// LinkDeps represents the contents of a [Filename] file.
+// LinkDeps represents the contents of a [Filename] file. It lists all synthetic
+// dependencies added by instrumentation into a Go object archive. These include
+// the transitive closure of link-time dependencies, so that it is not necessary
+// to perform a full traversal of transitive dependencies to consume. Link-time
+// dependencies consist of new dependencies introduced to resolve go:linkname
+// directives as well as new import-level directives that the Go toolchain is
+// not normally aware of.
 type LinkDeps struct {
 	deps map[string]struct{}
 }
@@ -155,14 +161,6 @@ func (l *LinkDeps) Empty() bool {
 // instance.
 func (l *LinkDeps) Len() int {
 	return len(l.deps)
-}
-
-// RemoveFrom removes all import paths from this [LinkDeps] which are also found
-// in the provided [importcfg.ImportConfig].
-func (l *LinkDeps) RemoveFrom(importcfg *importcfg.ImportConfig) {
-	for dep := range importcfg.PackageFile {
-		delete(l.deps, dep)
-	}
 }
 
 // WriteFile writes this [LinkDeps] instance to the provided filename.
