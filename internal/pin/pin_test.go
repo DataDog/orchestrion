@@ -93,6 +93,16 @@ func TestPin(t *testing.T) {
 		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
 		assert.NotContains(t, data.Require, goModRequire{"github.com/skyrocknroll/go-mod-example", "v0.0.0-20190130140558-29b3c92445e5"})
 	})
+
+	t.Run("empty-tool-dot-go", func(t *testing.T) {
+		tmp := scaffold(t, make(map[string]string))
+		require.NoError(t, os.Chdir(tmp))
+
+		toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
+		require.NoError(t, os.WriteFile(toolDotGo, nil, 0644))
+
+		require.ErrorContains(t, PinOrchestrion(Options{}), "expected 'package', found 'EOF'")
+	})
 }
 
 var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test
