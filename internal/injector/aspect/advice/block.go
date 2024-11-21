@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -46,10 +45,6 @@ func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
 	ctx.EnsureMinGoLang(a.Template.Lang)
 
 	return true, nil
-}
-
-func (a *prependStatements) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "PrependStmts").Call(a.Template.AsCode())
 }
 
 func (a *prependStatements) Hash(h *fingerprint.Hasher) error {

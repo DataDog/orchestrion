@@ -13,7 +13,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -74,10 +73,6 @@ func (d directive) matches(dec string) bool {
 
 func (directive) ImpliesImported() []string {
 	return nil
-}
-
-func (d directive) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(string(d)))
 }
 
 func (d directive) Hash(h *fingerprint.Hasher) error {

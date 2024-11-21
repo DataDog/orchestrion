@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,10 +49,6 @@ func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 	}
 
 	return ctx.ImportPath() == s.TypeName.path
-}
-
-func (s *structDefinition) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "StructDefinition").Call(s.TypeName.AsCode())
 }
 
 func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
@@ -156,13 +151,6 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 	return s.TypeName.Matches(lit.Type)
 }
 
-func (s *structLiteral) AsCode() jen.Code {
-	if s.Field != "" {
-		return jen.Qual(pkgPath, "StructLiteralField").Call(s.TypeName.AsCode(), jen.Lit(s.Field))
-	}
-	return jen.Qual(pkgPath, "StructLiteral").Call(s.TypeName.AsCode(), s.Match.asCode())
-}
-
 func (s *structLiteral) Hash(h *fingerprint.Hasher) error {
 	return h.Named("struct-literal", s.TypeName, fingerprint.String(s.Field), s.Match)
 }
@@ -243,21 +231,6 @@ func (s StructLiteralMatch) String() string {
 	default:
 		panic(fmt.Errorf("invalid StructLiteralMatch(%d)", int(s)))
 	}
-}
-
-func (s StructLiteralMatch) asCode() jen.Code {
-	var constName string
-	switch s {
-	case StructLiteralMatchAny:
-		constName = "StructLiteralMatchAny"
-	case StructLiteralMatchValueOnly:
-		constName = "StructLiteralMatchValueOnly"
-	case StructLiteralMatchPointerOnly:
-		constName = "StructLiteralMatchPointerOnly"
-	default:
-		panic(fmt.Errorf("invalid StructLiteralMatch(%d)", int(s)))
-	}
-	return jen.Qual(pkgPath, constName)
 }
 
 func (s StructLiteralMatch) Hash(h *fingerprint.Hasher) error {

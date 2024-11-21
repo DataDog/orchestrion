@@ -15,7 +15,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -98,16 +97,6 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	return true, nil
 }
 
-func (a *appendArgs) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AppendArgs").CallFunc(func(group *jen.Group) {
-		group.Line().Add(a.TypeName.AsCode())
-		for _, t := range a.Templates {
-			group.Line().Add(t.AsCode())
-		}
-		group.Empty().Line()
-	})
-}
-
 func (a *appendArgs) AddedImports() []string {
 	imports := make([]string, 0, len(a.Templates)+1)
 	if argTypeImportPath := a.TypeName.ImportPath(); argTypeImportPath != "" {
@@ -153,10 +142,6 @@ func (r *redirectCall) Apply(ctx context.AdviceContext) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (r *redirectCall) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "ReplaceFunction").Call(jen.Lit(r.ImportPath), jen.Lit(r.Name))
 }
 
 func (r *redirectCall) Hash(h *fingerprint.Hasher) error {

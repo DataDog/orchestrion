@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,10 +50,6 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 	ctx.EnsureMinGoLang(a.Template.Lang)
 
 	return true, nil
-}
-
-func (a *wrapExpression) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "WrapExpression").Call(a.Template.AsCode())
 }
 
 func (a *wrapExpression) Hash(h *fingerprint.Hasher) error {
