@@ -3,7 +3,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
 ---
-# yaml-language-server: $schema=../../../../../docs/static/schema.json
+# yaml-language-server: $schema=../../../config/schema.json
 meta:
   name: github.com/gocql/gocql
   description: Package gocql implements a fast and robust Cassandra client for the Go programming language.
@@ -28,7 +28,7 @@ aspects:
             gocqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql
           template: |-
             func(cluster *gocql.ClusterConfig) *gocql.ClusterConfig {
-              obs := gocqltrace.NewObserver(cluster)              
+              obs := gocqltrace.NewObserver(cluster)
               cluster.QueryObserver = obs
               cluster.BatchObserver = obs
               cluster.ConnectObserver = obs
@@ -51,7 +51,7 @@ aspects:
             gocqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql
           template: |-
             func(cluster gocql.ClusterConfig) gocql.ClusterConfig {
-              obs := gocqltrace.NewObserver(&cluster)              
+              obs := gocqltrace.NewObserver(&cluster)
               cluster.QueryObserver = obs
               cluster.BatchObserver = obs
               cluster.ConnectObserver = obs

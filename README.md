@@ -127,12 +127,12 @@ Library                                               | Since    | Notes
 `github.com/go-redis/redis/v8`                        | `v0.7.0` | [Aspect][go-redis-v8]
 `github.com/gofiber/fiber/v2`                         | `v0.7.0` | [Aspect][fiber-v2]
 `github.com/gomodule/redigo/redis`                    | `v0.7.0` | [Aspect][redigo]
-`github.com/gorilla/mux`                              | `v0.7.0` | [Aspect][gorilla]. Cannot be opted out of via `//dd:ignore`
+`github.com/gorilla/mux`                              | `v0.7.0` | [Aspect][gorilla] ([library-side][lib-side])
 `github.com/jinzhu/gorm`                              | `v0.7.0` | [Aspect][jinzhu-gorm]
 `github.com/labstack/echo/v4`                         | `v0.7.0` | [Aspect][echo]
 `google.golang.org/grpc`                              | `v0.7.0` | [Aspect][grpc]
 `gorm.io/gorm`                                        | `v0.7.0` | [Aspect][gorm]
-`net/http`                                            | `v0.7.0` | [Client][net-http.client] / [Server][net-http.server]
+`net/http`                                            | `v0.7.0` | [Client][net-http.client] ([library-side][lib-side]) / [Server][net-http.server]
 `go.mongodb.org/mongo-driver/mongo`                   | `v0.7.3` | [Aspect][mongo]
 `github.com/aws-sdk-go/aws`                           | `v0.7.4` | [Aspect][aws-sdk-go]
 `github.com/hashicorp/vault`                          | `v0.7.4` | [Aspect][hashicorp-vault]
@@ -144,7 +144,7 @@ Library                                               | Since    | Notes
 `github.com/aws/aws-sdk-go-v2`                        | `v0.8.0` | [Aspect][aws-sdk-go-v2]
 `github.com/redis/go-redis/v9`                        | `v0.8.0` | [Aspect][go-redis-v9]
 `github.com/gocql/gocql`                              | `v0.8.0` | [Aspect][gocql]
-`cloud.google.com/go/pubsub`                          | `v0.9.0` | [Aspect][pubsub]
+`cloud.google.com/go/pubsub`                          | `v0.9.0` | [Aspect][pubsub] ([library-side][lib-side])
 `github.com/99designs/gqlgen`                         | `v0.9.1` | [Aspect][gqlgen]
 `github.com/redis/go-redis`                           | `v0.9.1` | [Aspect][go-redis]
 `github.com/graph-gophers/graphql-go`                 | `v0.9.1` | [Aspect][graph-gophers]
@@ -153,11 +153,13 @@ Library                                               | Since    | Notes
 `github.com/jackc/pgx`                                | `v0.9.4` | [Aspect][pgx]
 `github.com/elastic/go-elasticsearch`                 | `v0.9.4` | [Aspect][elasticsearch]
 `github.com/twitchtv/twirp`                           | `v0.9.4` | [Aspect][twirp]
-`github.com/segmentio/kafka-go`                       | `v0.9.4` | [Aspect][segmentio-kafka-go]
-`github.com/confluentinc/confluent-kafka-go/kafka`    | `v0.9.4` | [Aspect][confluent-kafka-go-v1]
-`github.com/confluentinc/confluent-kafka-go/kafka/v2` | `v0.9.4` | [Aspect][confluent-kafka-go-v2]
-`github.com/julienschmidt/httprouter`                 | `v0.9.4` | [Aspect][httprouter]
+`github.com/segmentio/kafka-go`                       | `v0.9.4` | [Aspect][segmentio-kafka-go] ([library-side][lib-side])
+`github.com/confluentinc/confluent-kafka-go/kafka`    | `v0.9.4` | [Aspect][confluent-kafka-go-v1] ([library-side][lib-side])
+`github.com/confluentinc/confluent-kafka-go/kafka/v2` | `v0.9.4` | [Aspect][confluent-kafka-go-v2] ([library-side][lib-side])
+`github.com/julienschmidt/httprouter`                 | `v0.9.4` | [Aspect][httprouter] ([library-side][lib-side])
 `github.com/sirupsen/logrus`                          | `v0.9.4` | [Aspect][logrus]
+
+[lib-side]: #library-side
 
 [db-sql]: https://datadoghq.dev/orchestrion/docs/built-in/stdlib/database-sql/
 [gin]: https://datadoghq.dev/orchestrion/docs/built-in/http/gin/
@@ -202,8 +204,18 @@ Library                                               | Since    | Notes
 
 [test-optimization]: https://docs.datadoghq.com/tests/
 
-Calls to these libraries are instrumented with library-specific code adding tracing to them, including support for
-distributed traces.
+### Library Side
+
+Most integrations are added by orchestrion at the call site, making it possible to use the [`//orchestrion:ignore`
+directive][orchestrion-ignore] to locally opt out of instrumentation for a specific instance of a component.
+
+[orchestrion-ignore]: https://datadoghq.dev/orchestrion/docs/custom-trace/#prevent-instrumentation-of-a-section-of-code
+
+Some integrations are however injected directly into the library (library-side instrumentation, also called callee-side
+instrumentation), and are hence always active and cannot be locally opted out. If you have a use-case where you need to
+locally opt out of a library-side instrumentation, please let us know about it by filing a [GitHub issue][new-gh-issue].
+
+[new-gh-issue]: https://github.com/DataDog/orchestrion/issues/new/choose
 
 ## Troubleshooting
 
