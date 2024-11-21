@@ -104,7 +104,7 @@ func (h *harness) baseline(b *testing.B) {
 
 	var cmd *exec.Cmd
 	if h.testbuild {
-		cmd = exec.Command("go", "test", "-c", "-o", h.TempDir(), h.build)
+		cmd = exec.Command("go", "test", "-c", "-o", b.TempDir(), h.build)
 	} else {
 		cmd = exec.Command("go", "build", "-o", b.TempDir(), h.build)
 	}
@@ -126,7 +126,7 @@ func (h *harness) instrumented(b *testing.B) {
 
 	var cmd *exec.Cmd
 	if h.testbuild {
-		cmd = exec.Command(buildOrchestrion(h.B), "go", "test", "-c", "-o", h.TempDir(), h.build)
+		cmd = exec.Command(buildOrchestrion(b), "go", "test", "-c", "-o", b.TempDir(), h.build)
 	} else {
 		cmd = exec.Command(buildOrchestrion(b), "go", "build", "-o", b.TempDir(), h.build)
 	}
