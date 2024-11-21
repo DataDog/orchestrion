@@ -22,8 +22,8 @@ for GOOS in linux darwin windows; do
 
   OUTFILE="${TMPDIR}/LICENSE-3rdparty.${GOOS}.csv"
   echo "Building $(basename "${OUTFILE}")"
-  GOOS="${GOOS}" "${TMPDIR}/bin/go-licenses" report ./... --ignore "${IGNORE_LIST}" --template ./tools/licenses.tpl > "${OUTFILE}" 2> "${TMPDIR}/errors" || (cat "${TMPDIR}/errors" >&2 && exit -1)
+  GOOS="${GOOS}" "${TMPDIR}/bin/go-licenses" report ./... --ignore "${IGNORE_LIST}" --template ./_tools/licenses.tpl > "${OUTFILE}" 2> "${TMPDIR}/errors" || (cat "${TMPDIR}/errors" >&2 && exit -1)
   LICENSE_FILES+=("${OUTFILE}")
 done
 
-go run ./tools/copyrights/merge.go -licenses "${SOURCES}" -output LICENSE-3rdparty.csv "${LICENSE_FILES[@]}"
+go run ./_tools/copyrights/merge.go -licenses "${SOURCES}" -output LICENSE-3rdparty.csv "${LICENSE_FILES[@]}"

@@ -33,12 +33,12 @@ jobs:
         # Set environment to anything other than "production", as the theme we use adds SRI attributes to all CSS files,
         # but datadoghq.dev is behind CloudFlare with auto-minify enabled; which breaks SRI if its minification is not
         # identical to hugo's.
-        run: go -C ./docs run github.com/gohugoio/hugo --minify --enableGitInfo --environment=gh-pages
+        run: go -C ./_docs run github.com/gohugoio/hugo --minify --enableGitInfo --environment=gh-pages
       - name: Upload Artifact
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
           name: site
-          path: docs/public/
+          path: _docs/public/
           if-no-files-found: error
 
   publish:
@@ -60,13 +60,13 @@ jobs:
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: site
-          path: docs/public/
+          path: _docs/public/
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: docs/public/
+          path: _docs/public/
       - name: Deploy to Github Pages
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
