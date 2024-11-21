@@ -524,6 +524,7 @@ jobs:
           name: ${{ matrix.flag }}
           flags: ${{ matrix.flag }}
           files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
+          token: ${{ secrets.CODECOV_TOKEN }}
 
 
   coverage-finalize:
