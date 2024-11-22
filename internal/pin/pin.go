@@ -63,6 +63,11 @@ func PinOrchestrion(opts Options) error {
 	if errors.Is(err, os.ErrNotExist) {
 		log.Debugf("no %q file found, creating a new one", config.FilenameOrchestrionToolGo)
 		dstFile = defaultOrchestrionToolGo()
+		err = nil
+	}
+
+	if err != nil {
+		return err
 	}
 
 	updateGoGenerateDirective(opts.NoGenerate, dstFile)

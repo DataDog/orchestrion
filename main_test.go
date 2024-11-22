@@ -31,10 +31,14 @@ type testCase interface {
 
 var testCases = map[string]func(b *testing.B) testCase{
 	"DataDog:orchestrion": benchmarkOrchestrion,
-	"traefik:traefik":     benchmarkGithub("traefik", "traefik", "./..."),
-	"go-delve:delve":      benchmarkGithub("go-delve", "delve", "./..."),
-	"jlegrone:tctx":       benchmarkGithub("jlegrone", "tctx", "./..."),
-	"tinylib:msgp":        benchmarkGithub("tinylib", "msgp", "./..."),
+	// normal build
+	"traefik:traefik": benchmarkGithub("traefik", "traefik", "./...", false),
+	"go-delve:delve":  benchmarkGithub("go-delve", "delve", "./...", false),
+	"jlegrone:tctx":   benchmarkGithub("jlegrone", "tctx", "./...", false),
+	"tinylib:msgp":    benchmarkGithub("tinylib", "msgp", "./...", false),
+	// test packages
+	"gin-gonic:gin.test": benchmarkGithub("gin-gonic", "gin", "./...", true),
+	"jlegrone:tctx.test": benchmarkGithub("jlegrone", "tctx", "./...", true),
 }
 
 func Benchmark(b *testing.B) {
@@ -60,11 +64,11 @@ type benchGithub struct {
 	harness
 }
 
-func benchmarkGithub(owner string, repo string, build string) func(b *testing.B) testCase {
+func benchmarkGithub(owner string, repo string, build string, testbuild bool) func(b *testing.B) testCase {
 	return func(b *testing.B) testCase {
 		b.Helper()
 
-		tc := &benchGithub{harness{B: b, build: build}}
+		tc := &benchGithub{harness{B: b, build: build, testbuild: testbuild}}
 
 		tag := tc.findLatestGithubReleaseTag(owner, repo)
 		tc.gitCloneGithub(owner, repo, tag)
@@ -85,19 +89,25 @@ type benchOrchestrion struct {
 }
 
 func benchmarkOrchestrion(b *testing.B) testCase {
-	return &benchOrchestrion{harness{B: b, dir: rootDir, build: "."}}
+	return &benchOrchestrion{harness{B: b, dir: rootDir, build: ".", testbuild: false}}
 }
 
 type harness struct {
 	*testing.B
-	dir   string // The directory in which the source code of the package to be built is located.
-	build string // The package to be built as part of the test.
+	dir       string // The directory in which the source code of the package to be built is located.
+	build     string // The package to be built as part of the test.
+	testbuild bool   // Whether the package to be built is a test package.
 }
 
 func (h *harness) baseline() {
 	h.Helper()
 
-	cmd := exec.Command("go", "build", "-o", h.TempDir(), h.build)
+	var cmd *exec.Cmd
+	if h.testbuild {
+		cmd = exec.Command("go", "test", "-c", "-o", h.TempDir(), h.build)
+	} else {
+		cmd = exec.Command("go", "build", "-o", h.TempDir(), h.build)
+	}
 	cmd.Dir = h.dir
 	cmd.Env = append(os.Environ(), "GOCACHE="+h.TempDir())
 	output := bytes.NewBuffer(make([]byte, 0, 4_096))
@@ -114,7 +124,12 @@ func (h *harness) baseline() {
 func (h *harness) instrumented() {
 	h.Helper()
 
-	cmd := exec.Command(buildOrchestrion(h.B), "go", "build", "-o", h.TempDir(), h.build)
+	var cmd *exec.Cmd
+	if h.testbuild {
+		cmd = exec.Command(buildOrchestrion(h.B), "go", "test", "-c", "-o", h.TempDir(), h.build)
+	} else {
+		cmd = exec.Command(buildOrchestrion(h.B), "go", "build", "-o", h.TempDir(), h.build)
+	}
 	cmd.Dir = h.dir
 	cmd.Env = append(os.Environ(), "GOCACHE="+h.TempDir())
 	output := bytes.NewBuffer(make([]byte, 0, 4_096))
