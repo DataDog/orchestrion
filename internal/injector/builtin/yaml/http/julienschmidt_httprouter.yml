@@ -3,7 +3,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
 ---
-# yaml-language-server: $schema=../../../../../docs/static/schema.json
+# yaml-language-server: $schema=../../../config/schema.json
 meta:
   name: github.com/julienschmidt/httprouter
   description: A high performance HTTP request router that scales well.
@@ -22,20 +22,20 @@ aspects:
             type __dd_wRouter struct {
               *Router
             }
-              
+
             func __dd_wrapRouter(r *Router) tracing.Router {
               return &__dd_wRouter{r}
             }
-              
+
             func (w __dd_wRouter) Lookup(method string, path string) (any, []tracing.Param, bool) {
               h, params, ok := w.Router.Lookup(method, path)
               return h, __dd_wrapParams(params), ok
             }
-              
+
             type __dd_wParam struct {
               Param
             }
-              
+
             func __dd_wrapParams(params Params) []tracing.Param {
               wParams := make([]tracing.Param, len(params))
               for i, p := range params {
@@ -43,15 +43,15 @@ aspects:
               }
               return wParams
             }
-              
+
             func (w __dd_wParam) GetKey() string {
               return w.Key
             }
-              
+
             func (w __dd_wParam) GetValue() string {
               return w.Value
             }
-              
+
             func __dd_init(r *Router) {
               if r.__dd_config != nil {
                 return
@@ -79,7 +79,7 @@ aspects:
             {{- $w := .Function.Argument 0 -}}
             {{- $req := .Function.Argument 1 -}}
             __dd_init({{ $r }})
-            
+
             tw, treq, afterHandle, handled := tracing.BeforeHandle({{ $r }}.__dd_config, {{ $r }}, __dd_wrapRouter, {{ $w }}, {{ $req }})
             {{ $w }} = tw
             {{ $req }} = treq

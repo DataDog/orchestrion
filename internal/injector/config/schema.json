@@ -297,7 +297,7 @@
       "items": {
         "description": "A relative path to a file or directory.",
         "type":"string",
-        "pattern": "\\A[.]{1,2}[/\\\\].+(?:\\.yml)?\\z"
+        "pattern": "^[.]{1,2}[/\\\\].+(?:\\.yml)?$"
       },
       "minItems": 1
     },

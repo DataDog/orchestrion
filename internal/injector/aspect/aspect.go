@@ -11,7 +11,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,17 +25,6 @@ type Aspect struct {
 	TracerInternal bool
 	// ID is the identifier of the aspect within its configuration file.
 	ID string
-}
-
-func (a *Aspect) AsCode() (jp jen.Code, adv jen.Code) {
-	jp = a.JoinPoint.AsCode()
-	adv = jen.Index().Qual("github.com/DataDog/orchestrion/internal/injector/aspect/advice", "Advice").ValuesFunc(func(g *jen.Group) {
-		for _, a := range a.Advice {
-			g.Line().Add(a.AsCode())
-		}
-		g.Empty().Line()
-	})
-	return
 }
 
 func (a *Aspect) Hash(h *fingerprint.Hasher) error {
@@ -65,6 +53,26 @@ func (a *Aspect) AddedImports() (imports []string) {
 		}
 	}
 	return
+}
+
+// InjectedPaths returns the list of import paths that may be injected by the
+// supplied list of aspects. The output list is not sorted in any particular way
+// but does not contain duplicted entries.
+func InjectedPaths(list []*Aspect) []string {
+	var res []string
+	dedup := make(map[string]struct{})
+
+	for _, a := range list {
+		for _, path := range a.AddedImports() {
+			if _, dup := dedup[path]; dup {
+				continue
+			}
+			dedup[path] = struct{}{}
+			res = append(res, path)
+		}
+	}
+
+	return res
 }
 
 func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {

@@ -21,6 +21,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/mod v0.22.0
 	golang.org/x/perf v0.0.0-20241112183634-aa2227201f71
+	golang.org/x/sync v0.9.0
 	golang.org/x/sys v0.27.0
 	golang.org/x/term v0.26.0
 	golang.org/x/tools v0.27.0
@@ -334,7 +335,6 @@ require (
 	golang.org/x/image v0.22.0 // indirect
 	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
 	golang.org/x/text v0.20.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect

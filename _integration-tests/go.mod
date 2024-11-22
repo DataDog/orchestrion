@@ -123,7 +123,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.23 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.41.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.176.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.35.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.4 // indirect

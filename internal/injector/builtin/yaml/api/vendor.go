@@ -3,10 +3,4 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-//go:build tools
-
-package tools
-
-import (
-	_ "github.com/DataDog/orchestrion"
-)
+package vendor

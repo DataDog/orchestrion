@@ -6,12 +6,9 @@
 package advice
 
 import (
-	"sort"
-
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,19 +48,6 @@ func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
 	ctx.EnsureMinGoLang(a.Template.Lang)
 
 	return true, nil
-}
-
-func (a injectDeclarations) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "InjectDeclarations").Call(
-		a.Template.AsCode(),
-		jen.Index().String().ValuesFunc(func(g *jen.Group) {
-			sort.Strings(a.Links)
-			for _, link := range a.Links {
-				g.Line().Lit(link)
-			}
-			g.Line()
-		}),
-	)
 }
 
 func (a injectDeclarations) Hash(h *fingerprint.Hasher) error {

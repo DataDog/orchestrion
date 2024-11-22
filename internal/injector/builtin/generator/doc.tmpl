@@ -19,10 +19,10 @@
         {{ `{{<iconSVG "search-circle">}}` }} Join Point
       </span>
       <div class="root hextra-card-subtitle hx-font-normal hx-px-4 hx-mb-4 hx-mt-2">
-        {{- "\n" }}{{ render .Aspect.JoinPoint | trim }}
+        {{- "\n" }}{{ render .JoinPoint | trim }}
       </div>
     </div>
-    {{- range .Aspect.Advice }}
+    {{- range .Advice }}
     <div class="hx-border-t">
       <span class="hextra-card-icon hx-flex hx-font-semibold hx-items-start hx-gap-2 hx-p-4 hx-text-gray-700 hover:hx-text-gray-900 dark:hx-text-neutral-200 dark:hover:hx-text-neutral-50">
         {{ `{{<iconSVG "chip">}}` }} Advice

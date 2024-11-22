@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,10 +46,6 @@ func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 	})
 
 	return true, nil
-}
-
-func (a *addStructField) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AddStructField").Call(jen.Lit(a.Name), a.TypeName.AsCode())
 }
 
 func (a *addStructField) Hash(h *fingerprint.Hasher) error {

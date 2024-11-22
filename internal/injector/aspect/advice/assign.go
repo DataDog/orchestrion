@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,10 +46,6 @@ func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
 
 func (a *assignValue) AddedImports() []string {
 	return a.Template.AddedImports()
-}
-
-func (a *assignValue) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AssignValue").Call(a.Template.AsCode())
 }
 
 func (a *assignValue) Hash(h *fingerprint.Hasher) error {

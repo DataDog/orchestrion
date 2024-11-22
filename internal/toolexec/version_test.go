@@ -6,7 +6,6 @@
 package toolexec
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/otiai10/copy"
@@ -36,24 +35,16 @@ func Test(t *testing.T) {
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
 	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
 
-	getArgs := []string{"get"}
-	for _, pkg := range builtin.InjectedPaths {
-		// We don't want to try to "go get" standard library packages; these don't contain a ".".
-		if strings.Contains(pkg, ".") && !strings.Contains(pkg, "github.com/DataDog/orchestrion") {
-			getArgs = append(getArgs, pkg)
-		}
-	}
-	runGo(t, tmp, getArgs...)
-	// Add a go source file to make sure the toolchain doesn't complain we need to run `go mod tidy`...
-	var depsGo bytes.Buffer
-	fmt.Fprintln(&depsGo, "//go:build tools")
-	fmt.Fprintln(&depsGo, "package main")
-	fmt.Fprintln(&depsGo, "import (")
-	for _, pkg := range builtin.InjectedPaths {
-		fmt.Fprintf(&depsGo, "\t_ %q\n", pkg)
-	}
-	fmt.Fprintln(&depsGo, ")")
-	require.NoError(t, os.WriteFile(filepath.Join(tmp, "deps.go"), depsGo.Bytes(), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`
+		//go:build tools
+		package tools
+
+		import (
+			_ "github.com/DataDog/orchestrion"
+			_ "github.com/DataDog/orchestrion/instrument"
+		)
+	`), 0o644))
+	runGo(t, tmp, "mod", "tidy")
 
 	// "Fake" proxy command.
 	cmd, err := proxy.ParseCommand([]string{"go", "tool", "compile", "-V=full"})

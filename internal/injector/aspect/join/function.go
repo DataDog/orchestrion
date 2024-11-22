@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,8 +24,6 @@ type (
 	}
 
 	FunctionOption interface {
-		// asCode produces a jen.Code representation of the receiver.
-		asCode() jen.Code
 		fingerprint.Hashable
 
 		impliesImported() []string
@@ -77,15 +74,6 @@ func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
 	return true
 }
 
-func (s *functionDeclaration) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Function").CallFunc(func(g *jen.Group) {
-		for _, opt := range s.Options {
-			g.Line().Add(opt.asCode())
-		}
-		g.Empty().Line()
-	})
-}
-
 func (s *functionDeclaration) Hash(h *fingerprint.Hasher) error {
 	return h.Named("function", fingerprint.List[FunctionOption](s.Options))
 }
@@ -102,10 +90,6 @@ func (functionName) impliesImported() []string {
 
 func (fo functionName) evaluate(info functionInformation) bool {
 	return info.Name == string(fo)
-}
-
-func (fo functionName) asCode() jen.Code {
-	return jen.Qual(pkgPath, "Name").Call(jen.Lit(string(fo)))
 }
 
 func (fo functionName) Hash(h *fingerprint.Hasher) error {
@@ -169,30 +153,6 @@ func (fo *signature) evaluate(info functionInformation) bool {
 	return true
 }
 
-func (fo *signature) asCode() jen.Code {
-	return jen.Qual(pkgPath, "Signature").CallFunc(func(g *jen.Group) {
-		if len(fo.Arguments) > 0 {
-			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
-				for _, arg := range fo.Arguments {
-					g.Add(arg.AsCode())
-				}
-			})
-		} else {
-			g.Line().Nil()
-		}
-		if len(fo.Results) > 0 {
-			g.Line().Index().Qual(pkgPath, "TypeName").ValuesFunc(func(g *jen.Group) {
-				for _, ret := range fo.Results {
-					g.Add(ret.AsCode())
-				}
-			})
-		} else {
-			g.Line().Nil()
-		}
-		g.Empty().Line()
-	})
-}
-
 func (fo *signature) Hash(h *fingerprint.Hasher) error {
 	return h.Named(
 		"signature",
@@ -215,10 +175,6 @@ func (fo *receiver) evaluate(info functionInformation) bool {
 
 func (*receiver) impliesImported() []string {
 	return nil
-}
-
-func (fo *receiver) asCode() jen.Code {
-	return jen.Qual(pkgPath, "Receiver").Call(fo.TypeName.AsCode())
 }
 
 func (fo *receiver) Hash(h *fingerprint.Hasher) error {
@@ -259,10 +215,6 @@ func (s *functionBody) Matches(ctx context.AspectContext) bool {
 	default:
 		return false
 	}
-}
-
-func (s *functionBody) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "FunctionBody").Call(s.Function.AsCode())
 }
 
 func (s *functionBody) Hash(h *fingerprint.Hasher) error {

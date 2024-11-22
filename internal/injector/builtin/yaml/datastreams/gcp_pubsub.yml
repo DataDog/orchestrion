@@ -3,7 +3,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
 ---
-# yaml-language-server: $schema=../../../../../docs/static/schema.json
+# yaml-language-server: $schema=../../../config/schema.json
 meta:
   name: cloud.google.com/go/pubsub
   description: Package pubsub provides an easy way to publish and receive Google Cloud Pub/Sub messages, hiding the details of the underlying server RPCs
@@ -83,7 +83,7 @@ aspects:
             __dd_ctx, __dd_closeSpan := tracing.TracePublish({{ $ctx }}, {{ $topic }}, __dd_traceMsg)
             {{ $ctx }} = __dd_ctx
             {{ $msg }}.Attributes = __dd_traceMsg.Attributes
-            
+
             defer func() {
               {{ $publishResult }}.DDCloseSpan = __dd_closeSpan
             }()

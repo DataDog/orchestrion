@@ -17,10 +17,14 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
-	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/fingerprint"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -47,19 +51,34 @@ func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, e
 	}
 	s.stats.RecordMiss()
 
-	pkgs, err := packages.Load(
-		&packages.Config{
-			Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
-			BuildFlags: []string{"-toolexec="}, // Explicitly disable toolexec to avoid infinite recursion
-			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
-		},
-		builtin.InjectedPaths[:]...,
-	)
+	cfg, err := config.NewLoader(".", false).Load()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("loading injector configuration: %w", err)
+	}
+	aspects := cfg.Aspects()
+
+	fptr := fingerprint.New()
+	defer fptr.Close()
+	if err := fptr.Named("aspects", fingerprint.List[*aspect.Aspect](aspects)); err != nil {
+		return "", fmt.Errorf("compiting injector configuration fingerprint: %w", err)
 	}
 
-	modules := make(map[string]*moduleInfo)
+	var pkgs []*packages.Package
+	if paths := aspect.InjectedPaths(aspects); len(paths) != 0 {
+		pkgs, err = packages.Load(
+			&packages.Config{
+				Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
+				BuildFlags: []string{"-toolexec="}, // Explicitly disable toolexec to avoid infinite recursion
+				Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+			},
+			paths...,
+		)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	modules := make(map[string]*moduleInfo, len(pkgs))
 	for _, pkg := range pkgs {
 		collectModules(pkg, modules, nil)
 	}
@@ -69,28 +88,18 @@ func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, e
 	}
 	sort.Strings(names)
 
-	sha := sha512.New()
 	for _, name := range names {
 		mod := modules[name]
-		if _, err := fmt.Fprintf(sha, "\x01%s\x02", name); err != nil {
+		jsonMod, err := json.Marshal(mod)
+		if err != nil {
 			return "", err
 		}
-
-		if data, err := json.Marshal(mod); err != nil {
-			return "", err
-		} else if _, err := sha.Write(data); err != nil {
+		if err := fptr.Named(name, fingerprint.String(jsonMod)); err != nil {
 			return "", err
 		}
 	}
-	var data [sha512.Size]byte
-	sum := base64.StdEncoding.EncodeToString(sha.Sum(data[:0]))
 
-	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf(
-		"orchestrion@%s%s;injectables=%s;rules=%s",
-		version.Tag, tagSuffix,
-		sum,
-		builtin.Checksum,
-	))
+	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, tagSuffix, fptr.Finish()))
 	return s.resolvedVersion, nil
 }
 
@@ -138,36 +147,46 @@ func (m *moduleInfo) MarshalJSON() ([]byte, error) {
 
 	// If this module is replaced by a directory; we'll hash the files as well...
 	if m.Replace != nil && m.Replace.Version == "" {
-		var (
-			sha hash.Hash
-			sum [sha512.Size]byte
-		)
-
 		toMarshal.Files = make([][2]string, 0, len(m.Files))
-		for file := range m.Files {
-			if sha == nil {
-				sha = sha512.New()
-			} else {
-				sha.Reset()
-			}
 
-			if err := func() error {
-				file, err := os.Open(file)
+		var (
+			pool   = sync.Pool{New: func() any { return sha512.New() }}
+			errGrp errgroup.Group
+			mu     sync.Mutex
+		)
+		for filename := range m.Files {
+			errGrp.Go(func() error {
+				file, err := os.Open(filename)
 				if err != nil {
 					return err
 				}
 				defer file.Close()
+
+				sha, _ := pool.Get().(hash.Hash)
+				defer func() {
+					sha.Reset()
+					pool.Put(sha)
+				}()
+
 				if _, err := io.Copy(sha, file); err != nil {
 					return err
 				}
-				return nil
-			}(); err != nil {
-				return nil, err
-			}
 
-			hash := base64.StdEncoding.EncodeToString(sha.Sum(sum[:0]))
-			toMarshal.Files = append(toMarshal.Files, [2]string{file, hash})
+				var buf [sha512.Size]byte
+				hash := base64.URLEncoding.EncodeToString(sha.Sum(buf[:0]))
+
+				mu.Lock()
+				defer mu.Unlock()
+				toMarshal.Files = append(toMarshal.Files, [2]string{filename, hash})
+
+				return nil
+			})
 		}
+
+		if err := errGrp.Wait(); err != nil {
+			return nil, err
+		}
+
 		// Ensure a consistent ordering on file names...
 		slices.SortFunc(toMarshal.Files, func(i, j [2]string) int {
 			return strings.Compare(i[0], j[0])
