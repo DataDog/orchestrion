@@ -23,7 +23,6 @@ require (
 	github.com/gocql/gocql v1.7.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gomodule/redigo v1.9.2
-	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/jinzhu/gorm v1.9.16

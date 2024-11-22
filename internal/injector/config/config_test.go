@@ -201,7 +201,7 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 107)
+		assert.Len(t, cfg.Aspects(), 105)
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 

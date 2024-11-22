@@ -1671,79 +1671,21 @@ var Aspects = [...]aspect.Aspect{
 	},
 	// From stdlib/net-http.server.yml
 	{
-		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "wrap",
-			}),
-			join.StructLiteralField(join.MustTypeName("net/http.Server"), "Handler"),
-			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-				join.ImportPath("golang.org/x/net/http2"),
-			)),
-		),
+		JoinPoint: join.FunctionBody(join.Function(
+			join.Receiver(join.MustTypeName("*net/http.Server")),
+			join.Name("Serve"),
+		)),
 		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"//dd:startwrap\ninstrument.WrapHandler({{.}})\n//dd:endwrap",
-				map[string]string{
-					"instrument": "github.com/DataDog/orchestrion/instrument",
-				},
+			advice.InjectDeclarations(code.MustTemplate(
+				"//go:linkname __dd_orchestrion_instrument_WrapHandler github.com/DataDog/orchestrion/instrument.WrapHandler\nfunc __dd_orchestrion_instrument_WrapHandler(handler Handler) Handler",
+				map[string]string{},
 				context.GoLangVersion{},
-			)),
-		},
-	},
-	{
-		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "wrap",
+			), []string{
+				"github.com/DataDog/orchestrion/instrument",
 			}),
-			join.Function(
-				join.Name(""),
-				join.Signature(
-					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
-					nil,
-				),
-			),
-			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-				join.ImportPath("golang.org/x/net/http2"),
-			)),
-		),
-		Advice: []advice.Advice{
-			advice.WrapExpression(code.MustTemplate(
-				"instrument.WrapHandlerFunc({{.}})",
-				map[string]string{
-					"instrument": "github.com/DataDog/orchestrion/instrument",
-				},
-				context.GoLangVersion{},
-			)),
-		},
-	},
-	{
-		JoinPoint: join.AllOf(
-			join.Configuration(map[string]string{
-				"httpmode": "report",
-			}),
-			join.FunctionBody(join.Function(
-				join.Signature(
-					[]join.TypeName{join.MustTypeName("net/http.ResponseWriter"), join.MustTypeName("*net/http.Request")},
-					nil,
-				),
-			)),
-			join.Not(join.OneOf(
-				join.ImportPath("github.com/go-chi/chi/v5"),
-				join.ImportPath("github.com/go-chi/chi/v5/middleware"),
-				join.ImportPath("golang.org/x/net/http2"),
-			)),
-		),
-		Advice: []advice.Advice{
 			advice.PrependStmts(code.MustTemplate(
-				"{{- $arg := .Function.Argument 1 -}}\n{{- $name := .Function.Name -}}\n{{$arg}} = {{$arg}}.WithContext(instrument.Report(\n  {{$arg}}.Context(),\n  event.EventStart,\n  {{with $name}}\"function-name\", {{printf \"%q\" .}},{{end}}\n  \"span.kind\", \"server\",\n  \"http.method\", {{$arg}}.Method,\n  \"http.url\", {{$arg}}.URL,\n  \"http.useragent\", {{$arg}}.Header.Get(\"User-Agent\"),\n  {{ range .DirectiveArgs \"dd:span\" -}}{{printf \"%q, %q,\\n\" .Key .Value}}{{ end }}\n))\ndefer instrument.Report(\n  {{$arg}}.Context(),\n  event.EventEnd,\n  {{with $name}}\"function-name\", {{printf \"%q\" .}},{{end}}\n  \"span.kind\", \"server\",\n  \"http.method\", {{$arg}}.Method,\n  \"http.url\", {{$arg}}.URL,\n  \"http.useragent\", {{$arg}}.Header.Get(\"User-Agent\"),\n  {{ range .DirectiveArgs \"dd:span\" -}}{{printf \"%q, %q,\" .Key .Value}}{{- end }}\n)",
-				map[string]string{
-					"event":      "github.com/DataDog/orchestrion/instrument/event",
-					"instrument": "github.com/DataDog/orchestrion/instrument",
-				},
+				"{{- $srv := .Function.Receiver -}}\nif {{ $srv }}.Handler != nil {\n  {{ $srv }}.Handler = __dd_orchestrion_instrument_WrapHandler({{ $srv }}.Handler)\n}",
+				map[string]string{},
 				context.GoLangVersion{},
 			)),
 		},
@@ -1817,7 +1759,6 @@ var InjectedPaths = [...]string{
 	"context",
 	"fmt",
 	"github.com/DataDog/orchestrion/instrument",
-	"github.com/DataDog/orchestrion/instrument/event",
 	"github.com/DataDog/orchestrion/instrument/net/http",
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events",
 	"gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen",
@@ -1881,4 +1822,4 @@ var InjectedPaths = [...]string{
 }
 
 // Checksum is a checksum of the built-in configuration which can be used to invalidate caches.
-const Checksum = "sha512:3RSiSosWn/St/Ene1Cb9HLEnIv8cxPX+xLanzGNQUX7nzp+R96xR/nruKKqodoLhNgkSWk2oi3htkwMkw5WPSA=="
+const Checksum = "sha512:6M7isTPZdLAR2kLE936vCfN6doV2jpSSzCYkLZTAtwd3kXfbPk8IWcCqjDeKMRM4em9YzcIApY3rEMmsxMDODA=="
