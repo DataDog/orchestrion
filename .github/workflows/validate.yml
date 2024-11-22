@@ -56,16 +56,10 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: ./.github/actions/codecov-upload
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
-          name: Generators
-          files: ./coverage/generator.out
-          flags: |-
-            generator
-            go${{ steps.go.outputs.version }}
-            ${{ runner.os }}
-            ${{ runner.arch }}
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-generators+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
+          path: ./coverage/generator.out
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
@@ -216,18 +210,12 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: ./.github/actions/codecov-upload
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
-          name: Unit Tests (go${{ steps.go.outputs.version }}, ${{ runner.os }}, ${{ runner.arch }})
-          files: |-
+          name: coverage-unit+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
+          path: |-
             ./coverage/unit.out
             ./coverage/integration.out
-          flags: |-
-            unit
-            go${{ steps.go.outputs.version }}
-            ${{ runner.os }}
-            ${{ runner.arch }}
-          token: ${{ secrets.CODECOV_TOKEN }}
 
   ##############################################################################
   # Run all benchmarks and generate report
@@ -358,19 +346,12 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: ./.github/actions/codecov-upload
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
-          name: Integration Tests (${{ matrix.build-mode }}, go${{ steps.go.outputs.version }}, ${{ runner.os }}, ${{ runner.arch }})
-          files: |-
+          name: coverage-integration+${{ matrix.build-mode }}+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
+          path: |-
             ./coverage/integration.out
             ./coverage/integration.run.out
-          flags: |-
-            integration
-            ${{ matrix.build-mode }}
-            go${{ steps.go.outputs.version }}
-            ${{ runner.os }}
-            ${{ runner.arch }}
-          token: ${{ secrets.CODECOV_TOKEN }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
@@ -450,13 +431,106 @@ jobs:
             --token="${CODECOV_TOKEN}"                                          \
             --slug="${{ github.repository }}"
           echo "::endgroup::"
-  coverage-finalize:
+
+  coverage-matrix:
     runs-on: ubuntu-latest
-    name: Create CodeCov report
+    name: Compute Coverage Matrix
     needs:
       - coverage-preflight
       - unit-tests
       - integration-tests
+    if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+    outputs:
+      artifacts: ${{ steps.compute.outputs.artifacts }}
+      files: ${{ steps.compute.outputs.files }}
+      matrix: ${{ steps.compute.outputs.matrix }}
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4
+        with:
+          node-version: latest
+      - name: Download Artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          pattern: coverage-*
+      - name: Compute Matrix
+        id: compute
+        run: |-
+          node <<-EOF
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const process = require('node:process');
+
+            const flags = [];
+            const flagFiles = {};
+            for (const dirname of fs.readdirSync(process.cwd())) {
+              const prefix = 'coverage-';
+              if (!dirname.startsWith(prefix)) {
+                continue;
+              }
+
+              const files = fs.globSync(path.join(process.cwd(), dirname, '**', '*.out'));
+              console.log('Found asset named ' + dirname + ' with ' + files.length + ' report files.');
+              if (files.length == 0) {
+                continue;
+              }
+
+              for (const flag of dirname.substring(prefix.length).split('+')) {
+                if (!flags.includes(flag)) {
+                  flags.push(flag);
+                }
+
+                flagFiles[flag] ??= [];
+                flagFiles[flag].push(...files);
+              }
+            }
+
+            console.log('Flags:', flags);
+            console.log('Files:', flagFiles);
+
+            // Join the lists because the workflow subsequently expects a whitespace-separted list.
+            for (const [flag, list] of Object.entries(flagFiles)) {
+              flagFiles[flag] = list.join(' ');
+            }
+
+            fs.writeFileSync(
+              path.join(process.env.GITHUB_OUTPUT),
+              [
+                "matrix=" + JSON.stringify({ flag: flags }),
+                "files=" + JSON.stringify(flagFiles),
+              ].join('\n'),
+            );
+          EOF
+
+
+  coverage-upload:
+    runs-on: ubuntu-latest
+    name: Upload report to CodeCov (${{ matrix.flag }})
+    needs: [coverage-matrix]
+    if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJson(needs.coverage-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Download Artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          pattern: coverage-*
+      - name: Upload Reports
+        uses: ./.github/actions/codecov-upload
+        with:
+          name: ${{ matrix.flag }}
+          flags: ${{ matrix.flag }}
+          files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+
+  coverage-finalize:
+    runs-on: ubuntu-latest
+    name: Create CodeCov report
+    needs: [coverage-upload]
     if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     steps:
       - name: Checkout

@@ -21,8 +21,20 @@ func resourceNamer(r *http.Request) string {
 	return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 }
 
+type ddTraceHandler struct {
+	http.Handler
+}
+
 func WrapHandler(handler http.Handler) http.Handler {
-	return httptrace.WrapHandler(handler, "", "", httptrace.WithResourceNamer(resourceNamer))
+	if isDDTraceHandler(handler) {
+		return handler
+	}
+	if mux, ok := handler.(*http.ServeMux); ok {
+		tracedMux := httptrace.NewServeMux()
+		tracedMux.ServeMux = mux
+		return tracedMux
+	}
+	return &ddTraceHandler{httptrace.WrapHandler(handler, "", "", httptrace.WithResourceNamer(resourceNamer))}
 	// TODO: We'll reintroduce this later when we stop hard-coding dd-trace-go as above.
 	//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	//		r = HandleHeader(r)
@@ -49,4 +61,14 @@ func WrapHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	//		defer Report(r.Context(), EventEnd, "name", "FooHandler", "verb", r.Method)
 	//		handlerFunc(w, r)
 	//	}
+}
+
+func isDDTraceHandler(h http.Handler) bool {
+	switch h.(type) {
+	case *httptrace.ServeMux, *ddTraceHandler:
+		return true
+
+	default:
+		return false
+	}
 }
