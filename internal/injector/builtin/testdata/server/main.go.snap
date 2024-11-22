@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 //line <generated>
-	__orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	__orchestrion_os "os"
@@ -33,17 +32,10 @@ func main() {
 	}
 //line samples/server/main.go:15
 	s := &http.Server{
-		Addr: ":8080",
-		Handler:
-		//dd:startwrap
-//line <generated>
-		__orchestrion_instrument.WrapHandler(
-//line samples/server/main.go:17
-			http.HandlerFunc(myHandler)),
-		//dd:endwrap
+		Addr:    ":8080",
+		Handler: http.HandlerFunc(myHandler),
 	}
 
-//line samples/server/main.go:20
 	log.Fatal(s.ListenAndServe())
 }
 

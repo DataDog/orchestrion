@@ -62,9 +62,32 @@ var weavingSpecialCase = []specialCase{
 	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
 }
 
-func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
+func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 	log.SetContext("PHASE", "compile")
 	defer log.SetContext("PHASE", "")
+
+	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	if err != nil {
+		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+	}
+
+	linkDeps, err := linkdeps.FromImportConfig(&imports)
+	if err != nil {
+		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
+	}
+
+	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
+
+	// Ensure we correctly register the [linkdeps.Filename] into the output
+	// archive upon returning, even if we made no changes. The contract is that
+	// an archive's [linkdeps.Filename] must represent all transitive link-time
+	// dependencies.
+	defer func() {
+		if err != nil {
+			return
+		}
+		err = writeLinkDeps(cmd, &linkDeps, orchestrionDir)
+	}()
 
 	aspects := builtin.Aspects[:]
 	for _, sc := range weavingSpecialCase {
@@ -99,12 +122,6 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		break
 	}
 
-	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
-	if err != nil {
-		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
-	}
-
-	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	injector := injector.Injector{
 		Aspects:    aspects,
 		RootConfig: map[string]string{"httpmode": "wrap"},
@@ -140,29 +157,14 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		return nil
 	}
 
-	var (
-		linkDeps   linkdeps.LinkDeps
-		regUpdated bool
-	)
+	var regUpdated bool
 	for depImportPath, kind := range references.Map() {
 		if depImportPath == "unsafe" {
 			// Unsafe isn't like other go packages, and it does not have an associated archive file.
 			continue
 		}
 
-		if archive, ok := imports.PackageFile[depImportPath]; ok {
-			deps, err := linkdeps.FromArchive(archive)
-			if err != nil {
-				return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, depImportPath, err)
-			}
-			log.Debugf("Processing %s dependencies from %s[%s]...", linkdeps.LinkDepsFilename, depImportPath, archive)
-			for _, tDep := range deps.Dependencies() {
-				if _, found := imports.PackageFile[tDep]; !found {
-					log.Debugf("Copying %s dependency on %q inherited from %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath)
-					linkDeps.Add(tDep)
-				}
-			}
-
+		if _, satisfied := imports.PackageFile[depImportPath]; satisfied {
 			// Already part of natural dependencies, nothing to do...
 			continue
 		}
@@ -179,12 +181,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 			for dep, archive := range deps {
 				deps, err := linkdeps.FromArchive(archive)
 				if err != nil {
-					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.LinkDepsFilename, dep, archive, err)
+					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
 				}
-				log.Debugf("Processing %s dependencies from %s...\n", linkdeps.LinkDepsFilename, dep)
+				log.Debugf("Processing %s dependencies from %s...\n", linkdeps.Filename, dep)
 				for _, tDep := range deps.Dependencies() {
 					if _, found := imports.PackageFile[tDep]; !found {
-						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.LinkDepsFilename, tDep, depImportPath, dep)
+						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.Filename, tDep, depImportPath, dep)
 						linkDeps.Add(tDep)
 					}
 				}
@@ -200,32 +202,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) error {
 		}
 	}
 
-	if linkDeps.Empty() {
-		// There are no synthetic dependencies, so we don't need to write an updated importcfg or add
-		// extra objects in the output file.
-		return nil
-	}
-
 	if regUpdated {
 		// Creating updated version of the importcfg file, with new dependencies
 		if err := writeUpdatedImportConfig(imports, cmd.Flags.ImportCfg); err != nil {
 			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 		}
 	}
-
-	// Write the link.deps file and add it to the output object once the compilation has completed.
-	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.LinkDepsFilename)
-	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
-		return fmt.Errorf("writing %s file: %w", linkdeps.LinkDepsFilename, err)
-	}
-	cmd.OnClose(func() error {
-		log.Debugf("Adding %s file into %q\n", linkdeps.LinkDepsFilename, cmd.Flags.Output)
-		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
-		if err := child.Run(); err != nil {
-			return fmt.Errorf("running %q: %w", child.Args, err)
-		}
-		return nil
-	})
 
 	return nil
 }
@@ -242,6 +224,37 @@ func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err 
 	if err := reg.WriteFile(filename); err != nil {
 		return fmt.Errorf("writing: %w", err)
 	}
+
+	return nil
+}
+
+// writeLinkDeps writes the [linkdeps.Filename] file into the orchestrionDir,
+// and registers it to be packed into the output archive. Does nothing if the
+// provided [linkdeps.LinkDeps] is empty.
+func writeLinkDeps(cmd *proxy.CompileCommand, linkDeps *linkdeps.LinkDeps, orchestrionDir string) error {
+	if linkDeps.Empty() {
+		// Nothing to do...
+		return nil
+	}
+
+	// Write the link.deps file and add it to the output object once the compilation has completed.
+	if err := os.MkdirAll(orchestrionDir, 0o755); err != nil {
+		return fmt.Errorf("making directory %s: %w", orchestrionDir, err)
+	}
+
+	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.Filename)
+	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
+		return fmt.Errorf("writing %s file: %w", linkdeps.Filename, err)
+	}
+
+	cmd.OnClose(func() error {
+		log.Debugf("Adding %s file into %q\n", linkdeps.Filename, cmd.Flags.Output)
+		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
+		if err := child.Run(); err != nil {
+			return fmt.Errorf("running %q: %w", child.Args, err)
+		}
+		return nil
+	})
 
 	return nil
 }

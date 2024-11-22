@@ -7,13 +7,13 @@
 
 //go:build integration
 
-package mux
+package gorilla_mux
 
 import (
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
 )
 
-func TestIntegration_mux(t *testing.T) {
+func TestIntegration_gorilla_mux(t *testing.T) {
 	utils.RunTest(t, new(TestCase))
 }

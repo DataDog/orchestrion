@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -60,6 +61,10 @@ func (i *declarationOf) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "DeclarationOf").Call(jen.Lit(i.ImportPath), jen.Lit(i.Name))
 }
 
+func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
+	return h.Named("declaration-of", fingerprint.String(i.ImportPath), fingerprint.String(i.Name))
+}
+
 type valueDeclaration struct {
 	TypeName TypeName
 }
@@ -95,6 +100,10 @@ func (i *valueDeclaration) ImpliesImported() []string {
 
 func (i *valueDeclaration) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "ValueDeclaration").Call(i.TypeName.AsCode())
+}
+
+func (i *valueDeclaration) Hash(h *fingerprint.Hasher) error {
+	return h.Named("value-declaration", i.TypeName)
 }
 
 // See: https://regex101.com/r/OXDfJ1/1

@@ -8,6 +8,7 @@ package join
 import (
 	"sort"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -49,6 +50,10 @@ func (jp configuration) AsCode() jen.Code {
 
 		g.Line().Empty()
 	}))
+}
+
+func (jp configuration) Hash(h *fingerprint.Hasher) error {
+	return h.Named("configuration", fingerprint.Map(jp, func(k string, v string) (string, fingerprint.String) { return k, fingerprint.String(v) }))
 }
 
 func init() {

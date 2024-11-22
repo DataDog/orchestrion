@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/token"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -53,6 +54,10 @@ func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 
 func (s *structDefinition) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructDefinition").Call(s.TypeName.AsCode())
+}
+
+func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
+	return h.Named("struct-definition", s.TypeName)
 }
 
 type (
@@ -158,6 +163,10 @@ func (s *structLiteral) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "StructLiteral").Call(s.TypeName.AsCode(), s.Match.asCode())
 }
 
+func (s *structLiteral) Hash(h *fingerprint.Hasher) error {
+	return h.Named("struct-literal", s.TypeName, fingerprint.String(s.Field), s.Match)
+}
+
 func init() {
 	unmarshalers["struct-definition"] = func(node *yaml.Node) (Point, error) {
 		var spec string
@@ -249,4 +258,8 @@ func (s StructLiteralMatch) asCode() jen.Code {
 		panic(fmt.Errorf("invalid StructLiteralMatch(%d)", int(s)))
 	}
 	return jen.Qual(pkgPath, constName)
+}
+
+func (s StructLiteralMatch) Hash(h *fingerprint.Hasher) error {
+	return h.Named("struct-literal-match", fingerprint.Int(s))
 }

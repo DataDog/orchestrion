@@ -10,6 +10,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -77,6 +78,10 @@ func (directive) ImpliesImported() []string {
 
 func (d directive) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "Directive").Call(jen.Lit(string(d)))
+}
+
+func (d directive) Hash(h *fingerprint.Hasher) error {
+	return h.Named("directive", fingerprint.String(d))
 }
 
 func init() {

@@ -14,6 +14,18 @@ import (
 	"testing"
 )
 
-func TestIntegration_nethttp(t *testing.T) {
-	utils.RunTest(t, new(TestCase))
+func TestIntegration_nethttp_FuncHandler(t *testing.T) {
+	utils.RunTest(t, new(TestCaseFuncHandler))
+}
+
+func TestIntegration_nethttp_HandlerImplementation(t *testing.T) {
+	utils.RunTest(t, new(TestCaseHandlerImplementation))
+}
+
+func TestIntegration_nethttp_Issue400(t *testing.T) {
+	utils.RunTest(t, new(TestCaseIssue400))
+}
+
+func TestIntegration_nethttp_ServeMuxHandler(t *testing.T) {
+	utils.RunTest(t, new(TestCaseServeMuxHandler))
 }

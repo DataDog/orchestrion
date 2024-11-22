@@ -21,35 +21,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type TestCase struct {
-	*http.Server
+type base struct {
+	srv     *http.Server
+	handler http.Handler
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
-	mux := http.NewServeMux()
-	tc.Server = &http.Server{
-		Addr:    "127.0.0.1:" + utils.GetFreePort(t),
-		Handler: mux,
+func (b *base) Setup(t *testing.T) {
+	require.NotNil(t, b.handler, "tc.handler needs to be initialized in your test case")
+
+	b.srv = &http.Server{
+		Addr:         "127.0.0.1:" + utils.GetFreePort(t),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
+	b.srv.Handler = b.handler
 
-	mux.HandleFunc("/hit", tc.handleHit)
-	mux.HandleFunc("/", tc.handleRoot)
-
-	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
+	go func() { assert.ErrorIs(t, b.srv.ListenAndServe(), http.ErrServerClosed) }()
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		assert.NoError(t, tc.Server.Shutdown(ctx))
+		assert.NoError(t, b.srv.Shutdown(ctx))
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	resp, err := http.Get(fmt.Sprintf("http://%s/", tc.Server.Addr))
+func (b *base) Run(t *testing.T) {
+	resp, err := http.Get(fmt.Sprintf("http://%s/", b.srv.Addr))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
-func (tc *TestCase) ExpectedTraces() trace.Traces {
+func (b *base) ExpectedTraces() trace.Traces {
 	return trace.Traces{
 		{
 			Tags: map[string]any{
@@ -80,7 +81,7 @@ func (tc *TestCase) ExpectedTraces() trace.Traces {
 								"type":     "http",
 							},
 							Meta: map[string]string{
-								"http.url":                 fmt.Sprintf("http://%s/hit", tc.Server.Addr),
+								"http.url":                 fmt.Sprintf("http://%s/hit", b.srv.Addr),
 								"component":                "net/http",
 								"span.kind":                "client",
 								"network.destination.name": "127.0.0.1",
@@ -97,9 +98,9 @@ func (tc *TestCase) ExpectedTraces() trace.Traces {
 									Meta: map[string]string{
 										"http.useragent":   "Go-http-client/1.1",
 										"http.status_code": "200",
-										"http.host":        tc.Server.Addr,
+										"http.host":        b.srv.Addr,
 										"component":        "net/http",
-										"http.url":         fmt.Sprintf("http://%s/hit", tc.Server.Addr),
+										"http.url":         fmt.Sprintf("http://%s/hit", b.srv.Addr),
 										"http.method":      "POST",
 										"span.kind":        "server",
 									},
@@ -113,10 +114,17 @@ func (tc *TestCase) ExpectedTraces() trace.Traces {
 	}
 }
 
-func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
+func (b *base) serveMuxHandler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/hit", b.handleHit)
+	mux.HandleFunc("/", b.handleRoot)
+	return mux
+}
+
+func (b *base) handleRoot(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	resp, err := http.Post(fmt.Sprintf("http://%s/hit", tc.Server.Addr), "text/plain", r.Body)
+	resp, err := http.Post(fmt.Sprintf("http://%s/hit", b.srv.Addr), "text/plain", r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(err.Error()))
@@ -124,7 +132,7 @@ func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	b, err := io.ReadAll(resp.Body)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(err.Error()))
@@ -132,10 +140,10 @@ func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(resp.StatusCode)
-	_, _ = w.Write(b)
+	_, _ = w.Write(bytes)
 }
 
-func (*TestCase) handleHit(w http.ResponseWriter, r *http.Request) {
+func (*base) handleHit(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	b, err := io.ReadAll(r.Body)

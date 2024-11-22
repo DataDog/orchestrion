@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/jennifer/jen"
@@ -33,6 +34,8 @@ type Point interface {
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.
 	Matches(ctx context.AspectContext) bool
+
+	fingerprint.Hashable
 }
 
 type TypeName struct {
@@ -150,10 +153,6 @@ func (n TypeName) AsCode() jen.Code {
 	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
 }
 
-func (n TypeName) RenderHTML() string {
-	var ptr string
-	if n.pointer {
-		ptr = "*"
-	}
-	return fmt.Sprintf(`{{<godoc %q %q %q>}}`, n.path, n.name, ptr)
+func (n TypeName) Hash(h *fingerprint.Hasher) error {
+	return h.Named("type-name", fingerprint.String(n.name), fingerprint.String(n.path), fingerprint.Bool(n.pointer))
 }

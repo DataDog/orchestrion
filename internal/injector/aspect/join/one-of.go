@@ -6,6 +6,7 @@
 package join
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
@@ -58,6 +59,10 @@ func (o oneOf) AsCode() jen.Code {
 			g.Line().Empty()
 		}
 	})
+}
+
+func (o oneOf) Hash(h *fingerprint.Hasher) error {
+	return h.Named("one-of", fingerprint.List[Point](o))
 }
 
 func init() {

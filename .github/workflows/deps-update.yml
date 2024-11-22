@@ -53,7 +53,7 @@ jobs:
 
       - name: Update LICENSE-3rdparty.csv
         if: steps.is-tree-dirty.outputs.result == 'true'
-        run: ./tools/make-licenses.sh
+        run: ./_tools/make-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
 
