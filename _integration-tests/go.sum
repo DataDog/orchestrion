@@ -787,8 +787,8 @@ github.com/aws/aws-sdk-go-v2/service/cloudfront v1.41.0 h1:sLXpWohpuSh6fSvI7q/D5
 github.com/aws/aws-sdk-go-v2/service/cloudfront v1.41.0/go.mod h1:GM6Olux4KAMUmRw0XgadfpN1cOpm5eWYZ31PAj59JSk=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.37.0 h1:qgDx1ChCsz5tSxok9hxWES30bt4koYM1Xub4ONuNYDU=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.37.0/go.mod h1:P+1rrWglInpWvnBpN0pH8jIIhkLkBaolkRVG4X9Kous=
-github.com/aws/aws-sdk-go-v2/service/ec2 v1.176.0 h1:fWhkSvaQqa5eWiRwBw10FUnk1YatAQ9We4GdGxKiCtg=
-github.com/aws/aws-sdk-go-v2/service/ec2 v1.176.0/go.mod h1:ISODge3zgdwOEa4Ou6WM9PKbxJWJ15DYKnr2bfmCAIA=
+github.com/aws/aws-sdk-go-v2/service/ec2 v1.93.2 h1:c6a19AjfhEXKlEX63cnlWtSQ4nzENihHZOG0I3wH6BE=
+github.com/aws/aws-sdk-go-v2/service/ec2 v1.93.2/go.mod h1:VX22JN3HQXDtQ3uS4h4TtM+K11vydq58tpHTlsm8TL8=
 github.com/aws/aws-sdk-go-v2/service/eventbridge v1.35.5 h1:O7UMjjX8eAM4eLs303VramU8DW4FzTUJz1EsQKkxqc0=
 github.com/aws/aws-sdk-go-v2/service/eventbridge v1.35.5/go.mod h1:U1Wwh1TVfPHB8sbmBt3yqH2etdYERX1quammRvGWtXs=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.0 h1:TToQNkvGguu209puTojY/ozlqy2d/SFNcoLIqTFi42g=

@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,10 +56,6 @@ func (i *declarationOf) ImpliesImported() []string {
 	return []string{i.ImportPath}
 }
 
-func (i *declarationOf) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "DeclarationOf").Call(jen.Lit(i.ImportPath), jen.Lit(i.Name))
-}
-
 func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
 	return h.Named("declaration-of", fingerprint.String(i.ImportPath), fingerprint.String(i.Name))
 }
@@ -96,10 +91,6 @@ func (i *valueDeclaration) ImpliesImported() []string {
 		return []string{path}
 	}
 	return nil
-}
-
-func (i *valueDeclaration) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "ValueDeclaration").Call(i.TypeName.AsCode())
 }
 
 func (i *valueDeclaration) Hash(h *fingerprint.Hasher) error {

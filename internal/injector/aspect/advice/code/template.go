@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"go/token"
-	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -20,7 +19,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -190,35 +188,6 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 	}, nil).(dst.Decl)
 
 	return res
-}
-
-func (t *Template) AsCode() jen.Code {
-	var lang *jen.Statement
-	if langStr := t.Lang.String(); langStr != "" {
-		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "MustParseGoLangVersion").Call(jen.Lit(langStr))
-	} else {
-		lang = jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/context", "GoLangVersion").Block()
-	}
-
-	return jen.Qual("github.com/DataDog/orchestrion/internal/injector/aspect/advice/code", "MustTemplate").Call(
-		jen.Line().Lit(t.Source),
-		jen.Line().Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
-			// We sort the keys so the generated code order is consistent...
-			keys := make([]string, 0, len(t.Imports))
-			for k := range t.Imports {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				v := t.Imports[k]
-				g.Line().Add(jen.Lit(k).Op(":").Lit(v))
-			}
-			g.Empty().Line()
-		}),
-		jen.Line().Add(lang),
-		jen.Empty().Line(),
-	)
 }
 
 func (t *Template) Hash(h *fingerprint.Hasher) error {

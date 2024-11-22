@@ -17,7 +17,7 @@ import (
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/injector"
-	"github.com/DataDog/orchestrion/internal/injector/builtin"
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,6 +32,10 @@ var (
 
 func Test(t *testing.T) {
 	t.Parallel()
+
+	config, err := config.NewLoader(samplesDir, true).Load()
+	require.NoError(t, err)
+	aspects := config.Aspects()
 
 	dirs, err := os.ReadDir(samplesDir)
 	require.NoError(t, err)
@@ -67,7 +71,7 @@ func Test(t *testing.T) {
 
 			tmp := t.TempDir()
 			inj := injector.Injector{
-				Aspects: builtin.Aspects[:],
+				Aspects: aspects,
 				ModifiedFile: func(filename string) string {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},
@@ -91,7 +95,7 @@ func Test(t *testing.T) {
 					if updateSnapshots && err == nil {
 						require.NoError(t, os.Remove(referenceFile))
 					}
-					require.ErrorIs(t, err, os.ErrNotExist)
+					require.ErrorIs(t, err, os.ErrNotExist, "expected no snapshot to exist for %s", filename)
 					return
 				}
 
@@ -118,8 +122,8 @@ func Test(t *testing.T) {
 
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
-	samplesDir = filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(filename)))), "samples")
-	referenceDir = filepath.Join(filepath.Dir(filename), "testdata")
+	samplesDir = filepath.Join(filename, "..", "..", "..", "..", "samples")
+	referenceDir = filepath.Join(filename, "..", "testdata")
 
 	flag.BoolVar(&updateSnapshots, "update", os.Getenv("UPDATE_SNAPSHOTS") != "", "update snapshots")
 }

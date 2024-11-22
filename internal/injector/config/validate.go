@@ -6,8 +6,8 @@
 package config
 
 import (
+	"bytes"
 	_ "embed" // For go:embed
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -33,18 +33,18 @@ func getSchema() *jsonschema.Schema {
 }
 
 func compileSchema() {
-	var rawSchema map[string]any
-	if err := json.Unmarshal(schemaBytes, &rawSchema); err != nil {
+	rawSchema, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaBytes))
+	if err != nil {
 		panic(fmt.Errorf("parsing JSON schema: %w", err))
 	}
-	schemaURL, _ := rawSchema["$id"].(string)
+	mapSchema, _ := rawSchema.(map[string]any)
+	schemaURL, _ := mapSchema["$id"].(string)
 
 	compiler := jsonschema.NewCompiler()
 	if err := compiler.AddResource(schemaURL, rawSchema); err != nil {
 		panic(fmt.Errorf("preparing JSON schema compiler: %w", err))
 	}
 
-	var err error
 	schema, err = compiler.Compile(schemaURL)
 	if err != nil {
 		panic(fmt.Errorf("compiling JSON schema: %w", err))

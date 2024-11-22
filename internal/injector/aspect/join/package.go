@@ -8,7 +8,6 @@ package join
 import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,10 +23,6 @@ func (p importPath) ImpliesImported() []string {
 
 func (p importPath) Matches(ctx context.AspectContext) bool {
 	return ctx.ImportPath() == string(p)
-}
-
-func (p importPath) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "ImportPath").Call(jen.Lit(string(p)))
 }
 
 func (p importPath) Hash(h *fingerprint.Hasher) error {
@@ -46,10 +41,6 @@ func (packageName) ImpliesImported() []string {
 
 func (p packageName) Matches(ctx context.AspectContext) bool {
 	return ctx.Package() == string(p)
-}
-
-func (p packageName) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "PackageName").Call(jen.Lit(string(p)))
 }
 
 func (p packageName) Hash(h *fingerprint.Hasher) error {

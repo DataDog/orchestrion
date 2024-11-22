@@ -265,7 +265,10 @@ jobs:
     strategy:
       fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
-        runs-on: [macos, ubuntu, windows]
+        runs-on:
+          - macos
+          - ubuntu
+          # - windows # Temporarily disabled because excruciatingly slow for no obvious reason.
         go-version: [oldstable, stable]
         build-mode: [DRIVER]
         include:

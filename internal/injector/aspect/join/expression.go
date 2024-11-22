@@ -12,7 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,10 +51,6 @@ func (i *functionCall) Matches(ctx context.AspectContext) bool {
 	default:
 		return false
 	}
-}
-
-func (i *functionCall) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "FunctionCall").Call(jen.Lit(i.ImportPath), jen.Lit(i.Name))
 }
 
 func (i *functionCall) Hash(h *fingerprint.Hasher) error {

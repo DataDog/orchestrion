@@ -18,7 +18,13 @@ import (
 
 //line samples/server/database.go:16
 func init() {
-	__orchestrion_sql.Register("test", &testDriver{})
+//line <generated>
+	func(driverName string, driver driver.Driver) {
+		sql.Register(driverName, driver)
+		__orchestrion_sql.Register(driverName, driver)
+	}(
+//line samples/server/database.go:17
+		"test", &testDriver{})
 }
 
 type testDriver struct{}
