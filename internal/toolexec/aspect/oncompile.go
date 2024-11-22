@@ -108,7 +108,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 
 		case weaveTracerInternal:
 			log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
-			slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
+			aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
 				return !a.TracerInternal
 			})
 
