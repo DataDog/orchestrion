@@ -8,14 +8,18 @@ package aspect
 import (
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/format"
+	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"github.com/dave/jennifer/jen"
 )
 
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for
@@ -37,37 +41,31 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	var addImports []string
-	for importPath, archive := range reg.PackageFile {
-		linkDeps, err := linkdeps.FromArchive(archive)
-		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, importPath, err)
-		}
-
-		log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.LinkDepsFilename, importPath, archive)
-		for _, depPath := range linkDeps.Dependencies() {
-			if arch, found := reg.PackageFile[depPath]; found {
-				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, depPath, arch)
-				continue
-			}
-
-			deps, err := resolvePackageFiles(depPath, cmd.WorkDir)
-			if err != nil {
-				return fmt.Errorf("resolving %q: %w", depPath, err)
-			}
-			for p, a := range deps {
-				if _, found := reg.PackageFile[p]; !found {
-					log.Debugf("Recording resolved %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, p, a)
-					reg.PackageFile[p] = a
-				}
-			}
-			addImports = append(addImports, depPath)
-		}
+	linkDeps, err := linkdeps.FromImportConfig(&reg)
+	if err != nil {
+		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
 
-	if len(addImports) == 0 {
+	if linkDeps.Empty() {
 		// Nothing was added, we're done!
 		return nil
+	}
+
+	newDeps := linkDeps.Dependencies()
+
+	// Add package resolutions of link-time dependencies to the importcfg file:
+	for _, linkDepPath := range newDeps {
+		deps, err := resolvePackageFiles(linkDepPath, cmd.WorkDir)
+		if err != nil {
+			return fmt.Errorf("resolving %q: %w", linkDepPath, err)
+		}
+		for p, a := range deps {
+			if _, found := reg.PackageFile[p]; found {
+				continue
+			}
+			log.Debugf("Recording resolved %s dependency: %q => %q\n", linkdeps.Filename, p, a)
+			reg.PackageFile[p] = a
+		}
 	}
 
 	// We back up the original ImportCfg file only if there's not already such a file (could have been created by OnCompile)
@@ -83,9 +81,15 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 		return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	source := jen.NewFile("main")
-	for _, imp := range addImports {
-		source.Anon(imp)
+	// Generate a synthetic source file with blank imports to link-time
+	// dependencies, so the linker actually sees them.
+	genDecl := &ast.GenDecl{Tok: token.IMPORT, Specs: make([]ast.Spec, len(newDeps))}
+	fileAST := &ast.File{Name: ast.NewIdent("main"), Decls: []ast.Decl{genDecl}, Imports: make([]*ast.ImportSpec, len(newDeps))}
+	slices.Sort(newDeps) // Consistent order for deterministic output
+	for idx, path := range newDeps {
+		spec := &ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(path)}}
+		genDecl.Specs[idx] = spec
+		fileAST.Imports[idx] = spec
 	}
 
 	genDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion", "src", "synthetic")
@@ -94,8 +98,14 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 	if err := os.MkdirAll(genDir, 0o755); err != nil {
 		return fmt.Errorf("creating directory %q: %w", genDir, err)
 	}
-	if err := source.Save(genFile); err != nil {
-		return fmt.Errorf("writing generated code to %q: %w", genFile, err)
+
+	file, err := os.Create(genFile)
+	if err != nil {
+		return fmt.Errorf("create %q: %w", genFile, err)
+	}
+	defer file.Close()
+	if err := format.Node(file, token.NewFileSet(), fileAST); err != nil {
+		return fmt.Errorf("formatting generated code for %s: %w", genFile, err)
 	}
 
 	log.Debugf("Adding synthetic source file to command: %q\n", genFile)

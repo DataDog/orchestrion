@@ -48,14 +48,14 @@ func RunTest(t *testing.T, tc TestCase) {
 	require.True(t, built.WithOrchestrion, "this test suite must be run with orchestrion enabled")
 
 	mockAgent, err := agent.New(t)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to start mock agent")
 	defer mockAgent.Close()
 
 	t.Log("Running setup")
 	tc.Setup(t)
 
 	sess, err := mockAgent.NewSession(t)
-	require.NoError(t, err)
+	require.NoError(t, err, "failed to create a new mock agent session")
 
 	t.Log("Running test")
 	tc.Run(t)
