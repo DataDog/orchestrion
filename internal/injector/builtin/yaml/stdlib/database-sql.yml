@@ -14,7 +14,15 @@ aspects:
     join-point:
       function-call: database/sql.Register
     advice:
-      - replace-function: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql.Register
+      - wrap-expression:
+          imports:
+            sqltrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+            sql: database/sql
+          template: |-
+            func(driverName string, driver driver.Driver) {
+                sql.Register(driverName, driver)
+                sqltrace.Register(driverName, driver)
+            }({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
 
   - id: Open
     join-point:
