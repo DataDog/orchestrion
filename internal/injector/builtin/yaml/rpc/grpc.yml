@@ -23,9 +23,9 @@ aspects:
             - imports: &imports
                 grpc: google.golang.org/grpc
                 grpctrace: gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc
-              template: grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())
+              template: grpc.WithChainStreamInterceptor(grpctrace.StreamClientInterceptor())
             - imports: *imports
-              template: grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())
+              template: grpc.WithChainUnaryInterceptor(grpctrace.UnaryClientInterceptor())
 
   # Server Instrumentation
   - id: Add gRPC server interceptors
@@ -36,6 +36,6 @@ aspects:
           type: google.golang.org/grpc.ServerOption
           values:
             - imports: *imports
-              template: grpc.StreamInterceptor(grpctrace.StreamServerInterceptor())
+              template: grpc.ChainStreamInterceptor(grpctrace.StreamServerInterceptor())
             - imports: *imports
-              template: grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor())
+              template: grpc.ChainUnaryInterceptor(grpctrace.UnaryServerInterceptor())
