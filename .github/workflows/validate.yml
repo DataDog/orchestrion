@@ -39,7 +39,7 @@ jobs:
       - name: Run 'go generate ./...'
         run: |-
           mkdir -p ${GOCOVERDIR}
-          find . -iname go.mod -execdir go generate ./... \;
+          find . -name go.mod -execdir go generate ./... \;
         env:
           GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/DataDog/orchestrion/...,./...
           GOCOVERDIR: ${{ github.workspace }}/coverage
@@ -61,7 +61,7 @@ jobs:
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
-        run: find . -iname go.mod -execdir go mod tidy \;
+        run: find . -name go.mod -execdir go mod tidy \;
 
       - name: Refresh LICENSE-3rdparty.csv
         run: ./_tools/make-licenses.sh
