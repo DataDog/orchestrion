@@ -39,9 +39,7 @@ jobs:
       - name: Run 'go generate ./...'
         run: |-
           mkdir -p ${GOCOVERDIR}
-          go generate ./...
-          go -C _integration-tests generate -tags=integration ./...
-          go -C samples generate -tags=tools ./...
+          find . -iname go.mod -execdir go generate ./... \;
         env:
           GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/DataDog/orchestrion/...,./...
           GOCOVERDIR: ${{ github.workspace }}/coverage
@@ -246,7 +244,7 @@ jobs:
           path: ${{ runner.temp }}/benchmarks.txt
       - name: Format Report
         run: |-
-          go run golang.org/x/perf/cmd/benchstat  \
+          go _tools run golang.org/x/perf/cmd/benchstat  \
             -table=.name -row=/repo -col=/variant \
             ${{ runner.temp }}/benchmarks.txt     \
             | tee ${{ runner.temp }}/benchmarks-formatted.txt

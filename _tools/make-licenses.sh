@@ -4,7 +4,9 @@ set -euo pipefail
 TMPDIR=$(mktemp -d "${TMPDIR}/make-licenses.XXXXXX")
 trap "rm -rf ${TMPDIR}" EXIT ERR TERM
 
-go build -o "${TMPDIR}/bin/go-licenses" github.com/google/go-licenses/v2
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+go -C $(dirname "${BASH_SOURCE[0]}") build -o "${TMPDIR}/bin/go-licenses" github.com/google/go-licenses/v2
 
 # This package somehow breaks the license detection...
 IGNORE_LIST="github.com/DataDog/sketches-go/ddsketch"

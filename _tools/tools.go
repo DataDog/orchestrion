@@ -9,7 +9,6 @@ package tools
 
 import (
 	// Tool dependencies
-	_ "github.com/gohugoio/hugo"
 	_ "github.com/google/go-licenses/v2"
-	_ "golang.org/x/perf/cmd/benchstat"
+	_ "golang.org/x/perf/cmd/benchstat" // Used in GitHub Workflow validate.yml
 )
