@@ -244,7 +244,7 @@ jobs:
           path: ${{ runner.temp }}/benchmarks.txt
       - name: Format Report
         run: |-
-          go _tools run golang.org/x/perf/cmd/benchstat  \
+          go -C _tools run golang.org/x/perf/cmd/benchstat  \
             -table=.name -row=/repo -col=/variant \
             ${{ runner.temp }}/benchmarks.txt     \
             | tee ${{ runner.temp }}/benchmarks-formatted.txt
