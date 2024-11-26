@@ -36,14 +36,12 @@ jobs:
 
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
       # does not support that specific go release.
-      - name: "Update: Project root"
-        run: go get -t -u go@1.22 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy && go mod edit -toolchain=none
-      - name: "Update: Samples"
-        run: go get -t -u go@1.22 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy && go mod edit -toolchain=none
-        working-directory: samples
-      - name: "Update: Integration Tests"
-        run: go get -t -u go@1.22 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... && go mod tidy && go mod edit -toolchain=none
-        working-directory: _integration-tests
+      - name: Update dependencies
+        run: find . -name go.mod -execdir go get -t -u go@1.22 gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... \;
+      - name: Run go mod tidy
+        run: find . -name go.mod -execdir go mod tidy \;
+      - name: Ensure no toolchain directive
+        run: find . -name go.mod -execdir go mod edit -toolchain=none \;
 
       - id: is-tree-dirty
         name: Check for updates
