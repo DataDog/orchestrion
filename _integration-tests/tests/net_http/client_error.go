@@ -30,7 +30,7 @@ func (b *TestCaseClientError) Setup(t *testing.T) {
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	b.srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	b.srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTeapot)
 	})
 
