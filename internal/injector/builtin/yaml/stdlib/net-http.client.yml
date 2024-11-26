@@ -150,8 +150,8 @@ aspects:
                   span.SetTag(ext.Error, {{ $err }})
                 } else {
                   span.SetTag(ext.HTTPCode, strconv.Itoa({{ $res }}.StatusCode))
-                  if {{ $res }}.StatusCode >= 500 && {{ $res}}.StatusCode < 600 {
-                    // Treat HTTP 5XX as errors
+                  if {{ $res }}.StatusCode >= 400 && {{ $res}}.StatusCode < 500 {
+                    // Treat HTTP 4XX as errors
                     span.SetTag("http.errors", {{ $res }}.Status)
                     span.SetTag(ext.Error, fmt.Errorf("%d: %s", {{ $res }}.StatusCode, StatusText({{ $res }}.StatusCode)))
                   }
