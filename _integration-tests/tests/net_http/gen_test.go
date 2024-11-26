@@ -14,6 +14,10 @@ import (
 	"testing"
 )
 
+func TestIntegration_nethttp_ClientError(t *testing.T) {
+	utils.RunTest(t, new(TestCaseClientError))
+}
+
 func TestIntegration_nethttp_FuncHandler(t *testing.T) {
 	utils.RunTest(t, new(TestCaseFuncHandler))
 }
