@@ -3,21 +3,21 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package cmd
+package binpath
 
 import (
 	"os"
 	"path/filepath"
 )
 
-var orchestrionBinPath string
+var Orchestrion string
 
 func init() {
 	var err error
-	if orchestrionBinPath, err = os.Executable(); err != nil {
-		if orchestrionBinPath, err = filepath.Abs(os.Args[0]); err != nil {
-			orchestrionBinPath = os.Args[0]
+	if Orchestrion, err = os.Executable(); err != nil {
+		if Orchestrion, err = filepath.Abs(os.Args[0]); err != nil {
+			Orchestrion = os.Args[0]
 		}
 	}
-	orchestrionBinPath = filepath.Clean(orchestrionBinPath)
+	Orchestrion = filepath.Clean(Orchestrion)
 }

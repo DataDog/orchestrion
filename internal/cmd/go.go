@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os/exec"
 
+	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goproxy"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/urfave/cli/v2"
@@ -24,7 +25,7 @@ var (
 		Action: func(c *cli.Context) error {
 			pin.AutoPinOrchestrion()
 
-			if err := goproxy.Run(c.Args().Slice(), goproxy.WithToolexec(orchestrionBinPath, "toolexec")); err != nil {
+			if err := goproxy.Run(c.Args().Slice(), goproxy.WithToolexec(binpath.Orchestrion, "toolexec")); err != nil {
 				var exitErr *exec.ExitError
 				if errors.As(err, &exitErr) {
 					return cli.Exit("", exitErr.ExitCode())

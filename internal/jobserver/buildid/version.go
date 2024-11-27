@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
+	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/log"
@@ -65,10 +66,16 @@ func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, e
 
 	var pkgs []*packages.Package
 	if paths := aspect.InjectedPaths(aspects); len(paths) != 0 {
+		flags, err := goflags.Flags()
+		if err != nil {
+			return "", err
+		}
+		flags.Trim("-toolexec")
+
 		pkgs, err = packages.Load(
 			&packages.Config{
 				Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
-				BuildFlags: []string{"-toolexec="}, // Explicitly disable toolexec to avoid infinite recursion
+				BuildFlags: append(flags.Slice(), "-toolexec="), // Explicitly disable toolexec to avoid infinite recursion
 				Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
 			},
 			paths...,

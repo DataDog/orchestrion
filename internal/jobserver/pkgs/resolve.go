@@ -14,6 +14,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/binpath"
+	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/log"
 	"golang.org/x/tools/go/packages"
@@ -21,11 +23,19 @@ import (
 
 const (
 	envVarParentID = "ORCHESTRION_PKG.RESOLVE_PARENT_ID"
+	envVarGotmpdir = "GOTMPDIR"
 )
 
 var envIgnoreList = map[string]func(*ResolveRequest, string){
 	// We don't use this, instead rely on the [ResolveRequest.Dir] field.
 	"PWD": nil,
+	// We override `GOTMPDIR` with the [ResolveRequest.TempDir] field.
+	envVarGotmpdir: func(r *ResolveRequest, dir string) {
+		if r.TempDir != "" {
+			return
+		}
+		r.TempDir = dir
+	},
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
 	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
 	envVarParentID:        func(r *ResolveRequest, id string) { r.resolveParentID = id },
@@ -38,6 +48,8 @@ type (
 		BuildFlags []string `json:"buildFlags,omitempty"` // Additional build flags to pass to the resolution driver
 		Pattern    string   `json:"pattern"`              // Package pattern to resolve
 
+		TempDir string `json:"tmpdir"` // A temporary directory to use for Go build artifacts
+
 		// Fields set by canonicalization
 		resolveParentID    string // The value of the [envVarParentID] environment variable
 		toolexecImportpath string // The value of the TOOLEXEC_IMPORTPATH environment variable
@@ -49,16 +61,10 @@ type (
 )
 
 func NewResolveRequest(dir string, buildFlags []string, pattern string) *ResolveRequest {
-	// We add the `-toolexec` flags here (client-side) because it otherwise makes it difficult to test
-	// the implementation of the resolver without causing the tests to recursively spawn temselves.
-	allFlags := make([]string, 0, len(buildFlags)+1)
-	allFlags = append(allFlags, buildFlags...)
-	allFlags = append(allFlags, fmt.Sprintf("-toolexec=%q toolexec", os.Args[0]))
-
 	return &ResolveRequest{
 		Dir:        dir,
 		Env:        os.Environ(),
-		BuildFlags: allFlags,
+		BuildFlags: buildFlags,
 		Pattern:    pattern,
 	}
 }
@@ -112,13 +118,38 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		defer s.graph.RemoveEdge(req.resolveParentID, req.toolexecImportpath)
 	}
 
-	env := req.Env
-	if req.toolexecImportpath != "" {
-		env = make([]string, 0, len(req.Env)+1)
-		env = append(env, req.Env...)
-		env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
-	}
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
+		log.Tracef("[JOBSERVER] pkgs.Resolve(%s in %s with %#v)\n", req.Pattern, req.Dir, req.BuildFlags)
+
+		env := req.Env
+		if req.toolexecImportpath != "" {
+			env = make([]string, 0, len(req.Env)+1)
+			env = append(env, req.Env...)
+			env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
+		}
+		if req.TempDir != "" {
+			// Make sure the directory exists (go blindly assumes that...)
+			if err := os.MkdirAll(req.TempDir, 0o755); err != nil {
+				return nil, fmt.Errorf("creating temporary directory %q: %w", req.TempDir, err)
+			}
+			env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
+		}
+
+		goFlags, err := goflags.Flags()
+		if err != nil {
+			return nil, fmt.Errorf("resolving go build flags: %w", err)
+		}
+		goFlags.Trim(
+			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
+			"-toolexec", // We'll override `-toolexec` later with `orchestrion toolexec`, no need to pass multiple times...
+		)
+		goFlagsSlice := goFlags.Slice()
+
+		buildFlags := make([]string, 0, len(goFlagsSlice)+len(req.BuildFlags)+1)
+		buildFlags = append(buildFlags, goFlagsSlice...)
+		buildFlags = append(buildFlags, req.BuildFlags...)
+		buildFlags = append(buildFlags, fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion))
+
 		pkgs, err := packages.Load(
 			&packages.Config{
 				Mode:
@@ -130,12 +161,13 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 					packages.NeedName,
 				Dir:        req.Dir,
 				Env:        env,
-				BuildFlags: req.BuildFlags,
+				BuildFlags: buildFlags,
 				Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
 			},
 			req.Pattern,
 		)
 		if err != nil {
+			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, err)
 			return nil, err
 		}
 
@@ -143,6 +175,8 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		for _, pkg := range pkgs {
 			resp.mergeFrom(pkg)
 		}
+
+		log.Tracef("[JOBSERVER] pkgs.Resolve(%s) result: %#v\n", req.Pattern, resp)
 		return resp, nil
 	})
 	if err != nil {

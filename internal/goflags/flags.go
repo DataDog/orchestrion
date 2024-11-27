@@ -31,6 +31,7 @@ type CommandFlags struct {
 
 var (
 	shortFlags = map[string]struct{}{
+		"-a":          {}, // Rebuild everything, ignoring cached artifacts
 		"-asan":       {}, // Enables address sanitizer
 		"-cover":      {}, // Enables coverage collection
 		"-linkshared": {}, // Build code that links against shared libraries
@@ -56,6 +57,7 @@ var (
 		"-pgo":        {}, // Set profile-guided optimization profile file
 		"-pkgdir":     {}, // Set package install & load directory
 		"-tags":       {}, // Set build tags
+		"-toolexec":   {}, // Set the command to run around tool execution
 	}
 )
 
@@ -181,7 +183,12 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 		}
 	}
 
-	return flags, flags.inferCoverpkg(wd, positional)
+	if err := flags.inferCoverpkg(wd, positional); err != nil {
+		return flags, err
+	}
+
+	log.Tracef("Parsed flags: %#v\n", flags)
+	return flags, nil
 }
 
 // inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and `-coverpkg` is not, as
@@ -230,6 +237,7 @@ func Flags() (CommandFlags, error) {
 // slice. Does nothing if SetFlags or Flags has already been called once.
 func SetFlags(wd string, args []string) {
 	once.Do(func() {
+		log.Tracef("Storing provided go flags: %#v\n", args)
 		flags, flagsErr = ParseCommandFlags(wd, args)
 	})
 }
@@ -247,6 +255,8 @@ func isShort(str string) bool {
 // parentGoCommandFlags backtracks through the process tree
 // to find a parent go command invocation and returns its arguments
 func parentGoCommandFlags() (flags CommandFlags, err error) {
+	log.Tracef("Attempting to parse parent Go command arguments\n")
+
 	goBin, err := goenv.GoBinPath()
 	if err != nil {
 		return flags, fmt.Errorf("failed to resolve go command path: %w", err)
@@ -278,12 +288,13 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		}
 	}
 
+	log.Tracef("Found parent go command process %d: %#v\n", p.Pid, args)
 	wd, err := p.Cwd()
 	if err != nil {
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	return ParseCommandFlags(wd, args[2:])
+	return ParseCommandFlags(wd, args[1:])
 }
 
 var (
