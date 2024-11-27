@@ -137,7 +137,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 
 		goFlags, err := goflags.Flags()
 		if err != nil {
-			return nil, fmt.Errorf("resolving go build flags: %w", err)
+			log.Warnf("Failed to obtain go build flags: %v\n", err)
 		}
 		goFlags.Trim(
 			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
