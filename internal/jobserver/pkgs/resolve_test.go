@@ -29,7 +29,6 @@ func Test(t *testing.T) {
 	goflags.SetFlags(wd, []string{"test"})
 
 	t.Run("Cache", func(t *testing.T) {
-
 		server, err := jobserver.New(nil)
 		require.NoError(t, err)
 		defer server.Shutdown()
