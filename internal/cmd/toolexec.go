@@ -40,7 +40,7 @@ var Toolexec = &cli.Command{
 		pin.AutoPinOrchestrion()
 
 		if proxyCmd.ShowVersion() {
-			log.Tracef("Toolexec version command: %q\n", proxyCmd)
+			log.Tracef("Toolexec version command: %#v\n", proxyCmd)
 			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
 			if err != nil {
 				return err
@@ -64,6 +64,11 @@ var Toolexec = &cli.Command{
 		}
 
 		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
-		return proxy.RunCommand(proxyCmd)
+		if err := proxy.RunCommand(proxyCmd); err != nil {
+			// Logging as debug, as the error will likely surface back to the user anyway...
+			log.Debugf("Proxied command failed: %v\n", err)
+			return err
+		}
+		return nil
 	},
 }

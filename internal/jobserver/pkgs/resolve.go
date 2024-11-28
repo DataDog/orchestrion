@@ -9,11 +9,14 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/binpath"
+	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/log"
 	"golang.org/x/tools/go/packages"
@@ -21,11 +24,19 @@ import (
 
 const (
 	envVarParentID = "ORCHESTRION_PKG.RESOLVE_PARENT_ID"
+	envVarGotmpdir = "GOTMPDIR"
 )
 
 var envIgnoreList = map[string]func(*ResolveRequest, string){
 	// We don't use this, instead rely on the [ResolveRequest.Dir] field.
 	"PWD": nil,
+	// We override `GOTMPDIR` with the [ResolveRequest.TempDir] field.
+	envVarGotmpdir: func(r *ResolveRequest, dir string) {
+		if r.TempDir != "" {
+			return
+		}
+		r.TempDir = dir
+	},
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
 	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
 	envVarParentID:        func(r *ResolveRequest, id string) { r.resolveParentID = id },
@@ -33,10 +44,10 @@ var envIgnoreList = map[string]func(*ResolveRequest, string){
 
 type (
 	ResolveRequest struct {
-		Dir        string   `json:"dir"`                  // The directory to resolve from (usually where `go.mod` is)
-		Env        []string `json:"env"`                  // Environment variables to use during resolution
-		BuildFlags []string `json:"buildFlags,omitempty"` // Additional build flags to pass to the resolution driver
-		Pattern    string   `json:"pattern"`              // Package pattern to resolve
+		Dir     string   `json:"dir"`              // The directory to resolve from (usually where `go.mod` is)
+		Env     []string `json:"env"`              // Environment variables to use during resolution
+		Pattern string   `json:"pattern"`          // Package pattern to resolve
+		TempDir string   `json:"tmpdir,omitempty"` // A temporary directory to use for Go build artifacts
 
 		// Fields set by canonicalization
 		resolveParentID    string // The value of the [envVarParentID] environment variable
@@ -48,18 +59,11 @@ type (
 	ResolveResponse map[string]string
 )
 
-func NewResolveRequest(dir string, buildFlags []string, pattern string) *ResolveRequest {
-	// We add the `-toolexec` flags here (client-side) because it otherwise makes it difficult to test
-	// the implementation of the resolver without causing the tests to recursively spawn temselves.
-	allFlags := make([]string, 0, len(buildFlags)+1)
-	allFlags = append(allFlags, buildFlags...)
-	allFlags = append(allFlags, fmt.Sprintf("-toolexec=%q toolexec", os.Args[0]))
-
+func NewResolveRequest(dir string, pattern string) *ResolveRequest {
 	return &ResolveRequest{
-		Dir:        dir,
-		Env:        os.Environ(),
-		BuildFlags: allFlags,
-		Pattern:    pattern,
+		Dir:     dir,
+		Env:     os.Environ(),
+		Pattern: pattern,
 	}
 }
 
@@ -112,13 +116,37 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		defer s.graph.RemoveEdge(req.resolveParentID, req.toolexecImportpath)
 	}
 
-	env := req.Env
-	if req.toolexecImportpath != "" {
-		env = make([]string, 0, len(req.Env)+1)
-		env = append(env, req.Env...)
-		env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
-	}
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
+		log.Tracef("[JOBSERVER] pkgs.Resolve(%s in %s)\n", req.Pattern, req.Dir)
+
+		env := req.Env
+		if req.toolexecImportpath != "" {
+			env = make([]string, 0, len(req.Env)+1)
+			env = append(env, req.Env...)
+			env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
+		}
+		if req.TempDir != "" {
+			// Make sure the directory exists (go blindly assumes that...)
+			if err := os.MkdirAll(req.TempDir, 0o755); err != nil {
+				return nil, fmt.Errorf("creating temporary directory %q: %w", req.TempDir, err)
+			}
+			env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
+		}
+
+		goFlags, err := goflags.Flags()
+		if err != nil {
+			log.Warnf("Failed to obtain go build flags: %v\n", err)
+		}
+		goFlags.Trim(
+			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
+			"-toolexec", // We'll override `-toolexec` later with `orchestrion toolexec`, no need to pass multiple times...
+		)
+
+		buildFlags := append(
+			goFlags.Slice(),
+			fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion),
+		)
+
 		pkgs, err := packages.Load(
 			&packages.Config{
 				Mode:
@@ -130,19 +158,28 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 					packages.NeedName,
 				Dir:        req.Dir,
 				Env:        env,
-				BuildFlags: req.BuildFlags,
+				BuildFlags: buildFlags,
 				Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
 			},
 			req.Pattern,
 		)
 		if err != nil {
+			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, err)
 			return nil, err
 		}
 
 		resp := make(ResolveResponse)
+		var errs error
 		for _, pkg := range pkgs {
-			resp.mergeFrom(pkg)
+			errs = errors.Join(errs, resp.mergeFrom(pkg))
 		}
+
+		if errs != nil {
+			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, errs)
+			return nil, errs
+		}
+
+		log.Tracef("[JOBSERVER] pkgs.Resolve(%s) result: %#v\n", req.Pattern, resp)
 		return resp, nil
 	})
 	if err != nil {
@@ -156,10 +193,7 @@ func (r *ResolveRequest) canonicalize() {
 	if r.canonical {
 		return
 	}
-
-	slices.Sort(r.BuildFlags)
 	r.canonicalizeEnviron()
-
 	r.canonical = true
 }
 
@@ -176,19 +210,23 @@ func (r *ResolveRequest) hash() (string, error) {
 	return base64.URLEncoding.EncodeToString(hash.Sum(sum[:0])), nil
 }
 
-func (r ResolveResponse) mergeFrom(pkg *packages.Package) {
+func (r ResolveResponse) mergeFrom(pkg *packages.Package) error {
 	if pkg.PkgPath == "" || pkg.PkgPath == "unsafe" || r[pkg.PkgPath] != "" {
 		// Ignore the "unsafe" package (no archive file, ever), packages with an empty import path
 		// (standard library), and those already present in the map (already processed previously).
-		return
+		return nil
 	}
 
+	var errs error
 	for _, err := range pkg.Errors {
-		log.Errorf("[JOBSERVER] Error during resolution of %q: %v\n", pkg.PkgPath, err)
+		errs = errors.Join(errs, err)
 	}
 
 	r[pkg.PkgPath] = pkg.ExportFile
+
 	for _, dep := range pkg.Imports {
-		r.mergeFrom(dep)
+		errs = errors.Join(errs, r.mergeFrom(dep))
 	}
+
+	return errs
 }
