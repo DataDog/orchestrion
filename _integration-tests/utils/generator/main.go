@@ -77,20 +77,7 @@ func main() {
 			continue
 		}
 
-		out := path.Join(testDir, genTestName)
-
-		file, err := os.Create(out)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		defer file.Close()
-
-		tmpl, err := fileTemplate.Clone()
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		if err := tmpl.Execute(file, testData); err != nil {
+		if err := testData.generate(filepath.Join(testDir, genTestName)); err != nil {
 			log.Fatalln(err)
 		}
 	}
@@ -166,6 +153,21 @@ func parseCode(testDir string) testCases {
 	cases = slices.Compact(cases)
 
 	return testCases{BuildConstraint: buildConstraint, PkgName: pkgName, Cases: cases}
+}
+
+func (t *testCases) generate(filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	tmpl, err := fileTemplate.Clone()
+	if err != nil {
+		return err
+	}
+
+	return tmpl.Execute(file, t)
 }
 
 func getBuildConstraint(f *ast.File) string {
