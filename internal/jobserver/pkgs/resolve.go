@@ -43,12 +43,10 @@ var envIgnoreList = map[string]func(*ResolveRequest, string){
 
 type (
 	ResolveRequest struct {
-		Dir        string   `json:"dir"`                  // The directory to resolve from (usually where `go.mod` is)
-		Env        []string `json:"env"`                  // Environment variables to use during resolution
-		BuildFlags []string `json:"buildFlags,omitempty"` // Additional build flags to pass to the resolution driver
-		Pattern    string   `json:"pattern"`              // Package pattern to resolve
-
-		TempDir string `json:"tmpdir"` // A temporary directory to use for Go build artifacts
+		Dir     string   `json:"dir"`              // The directory to resolve from (usually where `go.mod` is)
+		Env     []string `json:"env"`              // Environment variables to use during resolution
+		Pattern string   `json:"pattern"`          // Package pattern to resolve
+		TempDir string   `json:"tmpdir,omitempty"` // A temporary directory to use for Go build artifacts
 
 		// Fields set by canonicalization
 		resolveParentID    string // The value of the [envVarParentID] environment variable
@@ -60,12 +58,11 @@ type (
 	ResolveResponse map[string]string
 )
 
-func NewResolveRequest(dir string, buildFlags []string, pattern string) *ResolveRequest {
+func NewResolveRequest(dir string, pattern string) *ResolveRequest {
 	return &ResolveRequest{
-		Dir:        dir,
-		Env:        os.Environ(),
-		BuildFlags: buildFlags,
-		Pattern:    pattern,
+		Dir:     dir,
+		Env:     os.Environ(),
+		Pattern: pattern,
 	}
 }
 
@@ -119,7 +116,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	}
 
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
-		log.Tracef("[JOBSERVER] pkgs.Resolve(%s in %s with %#v)\n", req.Pattern, req.Dir, req.BuildFlags)
+		log.Tracef("[JOBSERVER] pkgs.Resolve(%s in %s)\n", req.Pattern, req.Dir)
 
 		env := req.Env
 		if req.toolexecImportpath != "" {
@@ -143,12 +140,11 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
 			"-toolexec", // We'll override `-toolexec` later with `orchestrion toolexec`, no need to pass multiple times...
 		)
-		goFlagsSlice := goFlags.Slice()
 
-		buildFlags := make([]string, 0, len(goFlagsSlice)+len(req.BuildFlags)+1)
-		buildFlags = append(buildFlags, goFlagsSlice...)
-		buildFlags = append(buildFlags, req.BuildFlags...)
-		buildFlags = append(buildFlags, fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion))
+		buildFlags := append(
+			goFlags.Slice(),
+			fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion),
+		)
 
 		pkgs, err := packages.Load(
 			&packages.Config{
@@ -190,10 +186,7 @@ func (r *ResolveRequest) canonicalize() {
 	if r.canonical {
 		return
 	}
-
-	slices.Sort(r.BuildFlags)
 	r.canonicalizeEnviron()
-
 	r.canonical = true
 }
 

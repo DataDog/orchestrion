@@ -100,7 +100,7 @@ func Test(t *testing.T) {
 		resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
 			context.Background(),
 			conn,
-			&pkgs.ResolveRequest{BuildFlags: []string{"-definitely-not-a-valid-build=flag"}, Pattern: "definitely.not/a@valid\x01package"},
+			&pkgs.ResolveRequest{Pattern: "definitely.not/a@valid\x01package"},
 		)
 		assert.Nil(t, resp)
 		assert.EqualValues(t, 0, server.CacheStats.Hits())

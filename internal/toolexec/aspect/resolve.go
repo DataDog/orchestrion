@@ -29,8 +29,10 @@ func resolvePackageFiles(importPath string, workDir string) (map[string]string, 
 		return nil, err
 	}
 
-	req := pkgs.NewResolveRequest(cwd, nil, importPath)
+	req := pkgs.NewResolveRequest(cwd, importPath)
 	if workDir != "" {
+		// Nest the future GOTMPDIR under this $WORK directory, so that builds with `-work` are nested,
+		// and the root work tree contains all child work trees involved in resolutions.
 		req.TempDir = filepath.Join(workDir, "__tmp__")
 	}
 	archives, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
