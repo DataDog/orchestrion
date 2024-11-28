@@ -277,7 +277,7 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || format('{0}-latest', matrix.runs-on) }}
+    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || (matrix.runs-on == 'windows' && fromJson('{"labels":"windows-shared-8core","group":"LARGE WINDOWS SHARED"}')) || format('{0}-latest', matrix.runs-on) }}
     env:
       # Ryuk is problematic with concurrent executions, and unnecessary in ephemeral environments like GHA.
       TESTCONTAINERS_RYUK_DISABLED: true
