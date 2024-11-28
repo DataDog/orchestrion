@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-//go:build integration
+//go:build integration && (linux || !githubci)
 
 package ibm_sarama
 

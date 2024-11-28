@@ -10,26 +10,27 @@
 package nethttp
 
 import (
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 )
 
-func TestIntegration_nethttp_ClientError(t *testing.T) {
+func TestClientError(t *testing.T) {
 	utils.RunTest(t, new(TestCaseClientError))
 }
 
-func TestIntegration_nethttp_FuncHandler(t *testing.T) {
+func TestFuncHandler(t *testing.T) {
 	utils.RunTest(t, new(TestCaseFuncHandler))
 }
 
-func TestIntegration_nethttp_HandlerImplementation(t *testing.T) {
+func TestHandlerImplementation(t *testing.T) {
 	utils.RunTest(t, new(TestCaseHandlerImplementation))
 }
 
-func TestIntegration_nethttp_Issue400(t *testing.T) {
+func TestIssue400(t *testing.T) {
 	utils.RunTest(t, new(TestCaseIssue400))
 }
 
-func TestIntegration_nethttp_ServeMuxHandler(t *testing.T) {
+func TestServeMuxHandler(t *testing.T) {
 	utils.RunTest(t, new(TestCaseServeMuxHandler))
 }

@@ -10,22 +10,23 @@
 package logrus
 
 import (
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 )
 
-func TestIntegration_logrus_GlobalLogger(t *testing.T) {
+func TestGlobalLogger(t *testing.T) {
 	utils.RunTest(t, new(TestCaseGlobalLogger))
 }
 
-func TestIntegration_logrus_NewLogger(t *testing.T) {
+func TestNewLogger(t *testing.T) {
 	utils.RunTest(t, new(TestCaseNewLogger))
 }
 
-func TestIntegration_logrus_StructLiteralPtr(t *testing.T) {
+func TestStructLiteralPtr(t *testing.T) {
 	utils.RunTest(t, new(TestCaseStructLiteralPtr))
 }
 
-func TestIntegration_logrus_StructLiteralVal(t *testing.T) {
+func TestStructLiteralVal(t *testing.T) {
 	utils.RunTest(t, new(TestCaseStructLiteralVal))
 }

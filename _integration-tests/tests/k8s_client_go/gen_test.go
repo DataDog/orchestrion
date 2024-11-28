@@ -10,18 +10,19 @@
 package k8sclientgo
 
 import (
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 )
 
-func TestIntegration_k8sclientgo_NewCfgFunc(t *testing.T) {
+func TestNewCfgFunc(t *testing.T) {
 	utils.RunTest(t, new(TestCaseNewCfgFunc))
 }
 
-func TestIntegration_k8sclientgo_StructLiteralWithParam(t *testing.T) {
+func TestStructLiteralWithParam(t *testing.T) {
 	utils.RunTest(t, new(TestCaseStructLiteralWithParam))
 }
 
-func TestIntegration_k8sclientgo_StructLiteralWithoutParam(t *testing.T) {
+func TestStructLiteralWithoutParam(t *testing.T) {
 	utils.RunTest(t, new(TestCaseStructLiteralWithoutParam))
 }

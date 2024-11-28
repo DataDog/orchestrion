@@ -10,10 +10,11 @@
 package gorilla_mux
 
 import (
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 )
 
-func TestIntegration_gorilla_mux(t *testing.T) {
+func Test(t *testing.T) {
 	utils.RunTest(t, new(TestCase))
 }
