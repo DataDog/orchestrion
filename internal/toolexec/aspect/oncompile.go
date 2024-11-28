@@ -124,6 +124,20 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		break
 	}
 
+	// Remove aspects that would require the current package to have certain packages imports to be effective.
+	aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
+		for _, path := range a.JoinPoint.ImpliesImported() {
+			if path == w.ImportPath {
+				return false
+			}
+			if _, satisfied := imports.PackageFile[path]; !satisfied {
+				log.Tracef("Aspect %q requires %q to be imported, but it's not, skipping for package %q\n", a.ID, path, w.ImportPath)
+				return true
+			}
+		}
+		return false
+	})
+
 	injector := injector.Injector{
 		Aspects:    aspects,
 		RootConfig: map[string]string{"httpmode": "wrap"},
