@@ -9,6 +9,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -168,8 +169,14 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		}
 
 		resp := make(ResolveResponse)
+		var errs error
 		for _, pkg := range pkgs {
-			resp.mergeFrom(pkg)
+			errs = errors.Join(errs, resp.mergeFrom(pkg))
+		}
+
+		if errs != nil {
+			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, errs)
+			return nil, errs
 		}
 
 		log.Tracef("[JOBSERVER] pkgs.Resolve(%s) result: %#v\n", req.Pattern, resp)
@@ -203,19 +210,23 @@ func (r *ResolveRequest) hash() (string, error) {
 	return base64.URLEncoding.EncodeToString(hash.Sum(sum[:0])), nil
 }
 
-func (r ResolveResponse) mergeFrom(pkg *packages.Package) {
+func (r ResolveResponse) mergeFrom(pkg *packages.Package) error {
 	if pkg.PkgPath == "" || pkg.PkgPath == "unsafe" || r[pkg.PkgPath] != "" {
 		// Ignore the "unsafe" package (no archive file, ever), packages with an empty import path
 		// (standard library), and those already present in the map (already processed previously).
-		return
+		return nil
 	}
 
+	var errs error
 	for _, err := range pkg.Errors {
-		log.Errorf("[JOBSERVER] Error during resolution of %q: %v\n", pkg.PkgPath, err)
+		errs = errors.Join(errs, err)
 	}
 
 	r[pkg.PkgPath] = pkg.ExportFile
+
 	for _, dep := range pkg.Imports {
-		r.mergeFrom(dep)
+		errs = errors.Join(errs, r.mergeFrom(dep))
 	}
+
+	return errs
 }
