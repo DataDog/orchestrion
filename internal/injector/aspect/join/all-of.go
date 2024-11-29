@@ -24,6 +24,15 @@ func (o allOf) ImpliesImported() (list []string) {
 	return
 }
 
+func (o allOf) EarlyMatch(ctx context.EarlyContext) bool {
+	for _, candidate := range o {
+		if !candidate.EarlyMatch(ctx) {
+			return false
+		}
+	}
+	return true
+}
+
 func (o allOf) Matches(ctx context.AspectContext) bool {
 	for _, candidate := range o {
 		if !candidate.Matches(ctx) {

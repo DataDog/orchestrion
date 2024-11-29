@@ -15,6 +15,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/log"
@@ -124,18 +125,13 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		break
 	}
 
+	earlyCtx := context.EarlyContext{
+		ImportPath: w.ImportPath,
+		ImportMap:  imports.ImportMap,
+	}
 	// Remove aspects that would require the current package to have certain packages imports to be effective.
 	aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-		for _, path := range a.JoinPoint.ImpliesImported() {
-			if path == w.ImportPath {
-				return false
-			}
-			if _, satisfied := imports.PackageFile[path]; !satisfied {
-				log.Tracef("Aspect %q requires %q to be imported, but it's not, skipping for package %q\n", a.ID, path, w.ImportPath)
-				return true
-			}
-		}
-		return false
+		return !a.JoinPoint.EarlyMatch(earlyCtx)
 	})
 
 	injector := injector.Injector{

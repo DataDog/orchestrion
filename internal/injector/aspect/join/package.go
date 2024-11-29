@@ -21,6 +21,10 @@ func (p importPath) ImpliesImported() []string {
 	return []string{string(p)} // Technically the current package in this instance
 }
 
+func (p importPath) EarlyMatch(ctx context.EarlyContext) bool {
+	return ctx.PackageImports(string(p))
+}
+
 func (p importPath) Matches(ctx context.AspectContext) bool {
 	return ctx.ImportPath() == string(p)
 }
@@ -37,6 +41,10 @@ func PackageName(name string) packageName {
 
 func (packageName) ImpliesImported() []string {
 	return nil // Can't assume anything here...
+}
+
+func (p packageName) EarlyMatch(ctx context.EarlyContext) bool {
+	return ctx.ImportPath == string(p)
 }
 
 func (p packageName) Matches(ctx context.AspectContext) bool {

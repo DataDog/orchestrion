@@ -33,6 +33,10 @@ func (s *structDefinition) ImpliesImported() []string {
 	return nil
 }
 
+func (s *structDefinition) EarlyMatch(ctx context.EarlyContext) bool {
+	return ctx.ImportPath == s.TypeName.ImportPath()
+}
+
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 	if s.TypeName.pointer {
 		// We can't ever match a pointer definition
@@ -99,6 +103,10 @@ func (s *structLiteral) ImpliesImported() []string {
 		return []string{path}
 	}
 	return nil
+}
+
+func (s *structLiteral) EarlyMatch(ctx context.EarlyContext) bool {
+	return ctx.PackageImports(s.TypeName.ImportPath())
 }
 
 func (s *structLiteral) Matches(ctx context.AspectContext) bool {

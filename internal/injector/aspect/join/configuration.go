@@ -23,6 +23,10 @@ func (configuration) ImpliesImported() []string {
 	return nil
 }
 
+func (configuration) EarlyMatch(_ context.EarlyContext) bool {
+	return true
+}
+
 func (jp configuration) Matches(ctx context.AspectContext) bool {
 	for k, v := range jp {
 		cfg, found := ctx.Config(k)

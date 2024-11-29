@@ -22,6 +22,11 @@ func Directive(name string) directive {
 	return directive(name)
 }
 
+func (directive) EarlyMatch(_ context.EarlyContext) bool {
+	// TODO: try to grep the files or something
+	return true
+}
+
 func (d directive) Matches(ctx context.AspectContext) bool {
 	return d.matchesChain(ctx.Chain())
 }

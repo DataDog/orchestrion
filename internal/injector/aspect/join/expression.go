@@ -28,6 +28,10 @@ func (i *functionCall) ImpliesImported() []string {
 	return []string{i.ImportPath}
 }
 
+func (i *functionCall) EarlyMatch(ctx context.EarlyContext) bool {
+	return ctx.PackageImports(i.ImportPath)
+}
+
 func (i *functionCall) Matches(ctx context.AspectContext) bool {
 	call, ok := ctx.Node().(*dst.CallExpr)
 	if !ok {

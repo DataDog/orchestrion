@@ -27,6 +27,7 @@ type (
 		fingerprint.Hashable
 
 		impliesImported() []string
+		earlyEvaluate(ctx context.EarlyContext) bool
 		evaluate(functionInformation) bool
 	}
 
@@ -46,6 +47,15 @@ func (s *functionDeclaration) ImpliesImported() (list []string) {
 		list = append(list, opt.impliesImported()...)
 	}
 	return
+}
+
+func (s *functionDeclaration) EarlyMatch(ctx context.EarlyContext) bool {
+	for _, opt := range s.Options {
+		if opt.earlyEvaluate(ctx) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
@@ -88,6 +98,10 @@ func (functionName) impliesImported() []string {
 	return nil
 }
 
+func (functionName) earlyEvaluate(_ context.EarlyContext) bool {
+	return true
+}
+
 func (fo functionName) evaluate(info functionInformation) bool {
 	return info.Name == string(fo)
 }
@@ -105,6 +119,10 @@ type signature struct {
 // value types.
 func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{Arguments: args, Results: ret}
+}
+
+func (*signature) earlyEvaluate(_ context.EarlyContext) bool {
+	return true
 }
 
 func (fo *signature) impliesImported() (list []string) {
@@ -169,6 +187,10 @@ func Receiver(typeName TypeName) FunctionOption {
 	return &receiver{typeName}
 }
 
+func (fo *receiver) earlyEvaluate(ctx context.EarlyContext) bool {
+	return ctx.PackageImports(fo.TypeName.ImportPath())
+}
+
 func (fo *receiver) evaluate(info functionInformation) bool {
 	return info.Receiver != nil && fo.TypeName.MatchesDefinition(info.Receiver, info.ImportPath)
 }
@@ -195,6 +217,10 @@ func FunctionBody(up Point) *functionBody {
 
 func (s *functionBody) ImpliesImported() []string {
 	return s.Function.ImpliesImported()
+}
+
+func (s *functionBody) EarlyMatch(ctx context.EarlyContext) bool {
+	return s.Function.EarlyMatch(ctx)
 }
 
 func (s *functionBody) Matches(ctx context.AspectContext) bool {

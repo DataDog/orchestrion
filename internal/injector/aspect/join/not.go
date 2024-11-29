@@ -23,6 +23,10 @@ func (not) ImpliesImported() []string {
 	return nil
 }
 
+func (n not) EarlyMatch(ctx context.EarlyContext) bool {
+	return !n.JoinPoint.EarlyMatch(ctx)
+}
+
 func (n not) Matches(ctx context.AspectContext) bool {
 	return !n.JoinPoint.Matches(ctx)
 }

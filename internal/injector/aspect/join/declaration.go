@@ -56,6 +56,10 @@ func (i *declarationOf) ImpliesImported() []string {
 	return []string{i.ImportPath}
 }
 
+func (i *declarationOf) EarlyMatch(ctx context.EarlyContext) bool {
+	return ctx.PackageImports(i.ImportPath)
+}
+
 func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
 	return h.Named("declaration-of", fingerprint.String(i.ImportPath), fingerprint.String(i.Name))
 }
@@ -66,6 +70,10 @@ type valueDeclaration struct {
 
 func ValueDeclaration(typeName TypeName) *valueDeclaration {
 	return &valueDeclaration{typeName}
+}
+
+func (*valueDeclaration) EarlyMatch(_ context.EarlyContext) bool {
+	return true
 }
 
 func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
