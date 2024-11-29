@@ -10,10 +10,11 @@
 package echo
 
 import (
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"testing"
+
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
 )
 
-func TestIntegration_echo(t *testing.T) {
+func Test(t *testing.T) {
 	utils.RunTest(t, new(TestCase))
 }

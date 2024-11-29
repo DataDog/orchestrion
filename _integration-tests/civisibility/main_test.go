@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 	// module event
 	events.
 		CheckEventsByType("test_module_end", 1).
-		CheckEventsByResourceName("datadoghq.dev/orchestrion/_integration-tests/tests/civisibility", 1)
+		CheckEventsByResourceName("datadoghq.dev/orchestrion/_integration-tests/civisibility", 1)
 
 	// test suite event
 	events.CheckEventsByType("test_suite_end", 1).

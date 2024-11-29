@@ -17,7 +17,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.37.1
 	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/confluentinc/confluent-kafka-go/v2 v2.5.4
-	github.com/dave/jennifer v1.7.1
 	github.com/docker/go-connections v0.5.0
 	github.com/elastic/go-elasticsearch/v6 v6.8.5
 	github.com/elastic/go-elasticsearch/v7 v7.17.1

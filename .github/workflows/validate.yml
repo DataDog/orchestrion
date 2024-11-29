@@ -266,7 +266,7 @@ jobs:
         runs-on:
           - macos
           - ubuntu
-          # - windows # Temporarily disabled because excruciatingly slow for no obvious reason.
+          - windows
         go-version: [oldstable, stable]
         build-mode: [DRIVER]
         include:
@@ -277,7 +277,7 @@ jobs:
           - runs-on: ubuntu
             go-version: oldstable
             build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || format('{0}-latest', matrix.runs-on) }}
+    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || (matrix.runs-on == 'windows' && fromJson('{"labels":"windows-shared-8core","group":"LARGE WINDOWS SHARED"}')) || format('{0}-latest', matrix.runs-on) }}
     env:
       # Ryuk is problematic with concurrent executions, and unnecessary in ephemeral environments like GHA.
       TESTCONTAINERS_RYUK_DISABLED: true
@@ -334,7 +334,7 @@ jobs:
           esac
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
-          GOFLAGS: ${{ matrix.runs-on == 'ubuntu' && '-p=4' || ''}} -tags=integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+          GOFLAGS: ${{ matrix.runs-on == 'ubuntu' && '-p=4' || ''}} -tags=githubci,integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
