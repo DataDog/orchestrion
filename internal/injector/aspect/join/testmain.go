@@ -6,8 +6,8 @@
 package join
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,8 +27,8 @@ func (testMain) ImpliesImported() []string {
 	return nil
 }
 
-func (t testMain) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "TestMain").Call(jen.Lit(bool(t)))
+func (t testMain) Hash(h *fingerprint.Hasher) error {
+	return h.Named("test-main", fingerprint.Bool(t))
 }
 
 func init() {
