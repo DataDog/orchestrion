@@ -6,8 +6,8 @@
 package context
 
 type EarlyContext struct {
-	// PackageDir is the directory of the current package on disk
-	PackageDir string
+	// GoFiles is the list of .go files in the current package
+	GoFiles []string
 	// ImportPath is the fully qualified import path of the current package
 	ImportPath string
 	// ImportMap maps package dependencies import paths to their fully-qualified version

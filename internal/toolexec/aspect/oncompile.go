@@ -125,7 +125,9 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		break
 	}
 
+	goFiles := cmd.GoFiles()
 	earlyCtx := context.EarlyContext{
+		GoFiles:    goFiles,
 		ImportPath: w.ImportPath,
 		ImportMap:  imports.ImportMap,
 	}
@@ -133,6 +135,18 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 	aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
 		return !a.JoinPoint.EarlyMatch(earlyCtx)
 	})
+
+	if len(aspects) == 0 {
+		log.Debugf("No aspects to weave in %q\n", w.ImportPath)
+		return nil
+	}
+
+	//aspectsNames := make([]string, len(aspects))
+	//for i, a := range aspects {
+	//	aspectsNames[i] = a.ID
+	//}
+	//
+	//fmt.Printf("Weaving aspects %v into %q\n", aspectsNames, w.ImportPath)
 
 	injector := injector.Injector{
 		Aspects:    aspects,
@@ -146,7 +160,6 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		},
 	}
 
-	goFiles := cmd.GoFiles()
 	results, goLang, err := injector.InjectFiles(goFiles)
 	if err != nil {
 		return err

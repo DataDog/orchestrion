@@ -6,12 +6,16 @@
 package join
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -22,9 +26,41 @@ func Directive(name string) directive {
 	return directive(name)
 }
 
-func (directive) EarlyMatch(_ context.EarlyContext) bool {
-	// TODO: try to grep the files or something
-	return true
+const maxReadEarlyMatch = 1 << 20 // 1MB
+
+func (d directive) EarlyMatch(ctx context.EarlyContext) bool {
+	var (
+		buffer    = make([]byte, 4096)
+		directive = []byte("//" + string(d))
+	)
+	for _, file := range ctx.GoFiles {
+		fp, err := os.Open(file)
+		if err != nil {
+			log.Debugf("(directive).EarlyMatch: failed to open file %s: %v", file, err)
+			return true
+		}
+
+		limitReader := io.LimitReader(fp, maxReadEarlyMatch)
+		for {
+			n, err := limitReader.Read(buffer[:])
+			if err != nil && err != io.EOF {
+				log.Debugf("(directive).EarlyMatch: failed to read file %s: %v", file, err)
+				_ = fp.Close()
+				return true
+			}
+
+			if n == 0 || err == io.EOF {
+				break
+			}
+
+			if bytes.Contains(buffer[:n], directive) {
+				_ = fp.Close()
+				return true
+			}
+		}
+		_ = fp.Close()
+	}
+	return false
 }
 
 func (d directive) Matches(ctx context.AspectContext) bool {

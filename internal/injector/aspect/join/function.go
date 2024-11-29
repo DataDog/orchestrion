@@ -51,11 +51,11 @@ func (s *functionDeclaration) ImpliesImported() (list []string) {
 
 func (s *functionDeclaration) EarlyMatch(ctx context.EarlyContext) bool {
 	for _, opt := range s.Options {
-		if opt.earlyEvaluate(ctx) {
-			return true
+		if !opt.earlyEvaluate(ctx) {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
@@ -188,7 +188,7 @@ func Receiver(typeName TypeName) FunctionOption {
 }
 
 func (fo *receiver) earlyEvaluate(ctx context.EarlyContext) bool {
-	return ctx.PackageImports(fo.TypeName.ImportPath())
+	return fo.TypeName.ImportPath() == ctx.ImportPath
 }
 
 func (fo *receiver) evaluate(info functionInformation) bool {
