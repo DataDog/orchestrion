@@ -92,7 +92,6 @@ require (
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/dave/dst v0.27.3 // indirect
-	github.com/dave/jennifer v1.7.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
