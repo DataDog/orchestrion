@@ -28,13 +28,13 @@ func (Weaver) OnLink(cmd *proxy.LinkCommand) error {
 	for archiveImportPath, archive := range reg.PackageFile {
 		linkDeps, err := linkdeps.FromArchive(archive)
 		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.LinkDepsFilename, archiveImportPath, err)
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.Filename, archiveImportPath, err)
 		}
 
-		log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.LinkDepsFilename, archiveImportPath, archive)
+		log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.Filename, archiveImportPath, archive)
 		for _, depPath := range linkDeps.Dependencies() {
 			if arch, found := reg.PackageFile[depPath]; found {
-				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, depPath, arch)
+				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.Filename, depPath, arch)
 				continue
 			}
 
@@ -44,7 +44,7 @@ func (Weaver) OnLink(cmd *proxy.LinkCommand) error {
 			}
 			for p, a := range deps {
 				if _, found := reg.PackageFile[p]; !found {
-					log.Debugf("Recording resolved %s dependency: %q => %q\n", linkdeps.LinkDepsFilename, p, a)
+					log.Debugf("Recording resolved %s dependency: %q => %q\n", linkdeps.Filename, p, a)
 					reg.PackageFile[p] = a
 					changed = true
 				}

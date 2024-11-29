@@ -8,18 +8,18 @@ package advice
 import (
 	"fmt"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
 type assignValue struct {
-	Template code.Template
+	Template *code.Template
 }
 
-func AssignValue(template code.Template) *assignValue {
+func AssignValue(template *code.Template) *assignValue {
 	return &assignValue{template}
 }
 
@@ -48,13 +48,13 @@ func (a *assignValue) AddedImports() []string {
 	return a.Template.AddedImports()
 }
 
-func (a *assignValue) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AssignValue").Call(a.Template.AsCode())
+func (a *assignValue) Hash(h *fingerprint.Hasher) error {
+	return h.Named("assign-value", a.Template)
 }
 
 func init() {
 	unmarshalers["assign-value"] = func(node *yaml.Node) (Advice, error) {
-		var template code.Template
+		var template *code.Template
 		if err := node.Decode(&template); err != nil {
 			return nil, err
 		}

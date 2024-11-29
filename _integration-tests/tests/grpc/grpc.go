@@ -10,6 +10,7 @@ package grpc
 import (
 	"context"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -31,17 +32,50 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 	tc.addr = lis.Addr().String()
 
-	tc.Server = grpc.NewServer()
+	var (
+		interceptedDirect atomic.Bool
+		interceptedChain  atomic.Bool
+	)
+	tc.Server = grpc.NewServer(
+		// Register a bunch of interceptors to ensure ours does not cause a runtime crash.
+		grpc.UnaryInterceptor(func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+			interceptedDirect.Store(true)
+			return handler(ctx, req)
+		}),
+		grpc.ChainUnaryInterceptor(func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+			interceptedChain.Store(true)
+			return handler(ctx, req)
+		}),
+	)
 	helloworld.RegisterGreeterServer(tc.Server, &server{})
 
 	go func() { assert.NoError(t, tc.Server.Serve(lis)) }()
 	t.Cleanup(func() {
 		tc.Server.GracefulStop()
+		assert.True(t, interceptedDirect.Load(), "original interceptor was not called")
+		assert.True(t, interceptedChain.Load(), "original chained interceptor was not called")
 	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {
-	conn, err := grpc.NewClient(tc.addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var (
+		interceptedDirect atomic.Bool
+		interceptedChain  atomic.Bool
+	)
+
+	conn, err := grpc.NewClient(
+		tc.addr,
+		// Register a bunch of interceptors to ensure ours does not cause a runtime crash.
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			interceptedDirect.Store(true)
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+		grpc.WithChainUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			interceptedChain.Store(true)
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}),
+	)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, conn.Close()) }()
 
@@ -52,6 +86,9 @@ func (tc *TestCase) Run(t *testing.T) {
 	resp, err := client.SayHello(ctx, &helloworld.HelloRequest{Name: "rob"})
 	require.NoError(t, err)
 	require.Equal(t, "Hello rob", resp.GetMessage())
+
+	assert.True(t, interceptedDirect.Load(), "original interceptor was not called")
+	assert.True(t, interceptedChain.Load(), "original chained interceptor was not called")
 }
 
 func (*TestCase) ExpectedTraces() trace.Traces {

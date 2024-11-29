@@ -55,7 +55,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	projectID := tc.container.Settings.ProjectID
 
-	//dd:ignore
+	//orchestrion:ignore
 	conn, err := grpc.NewClient(tc.container.URI, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 

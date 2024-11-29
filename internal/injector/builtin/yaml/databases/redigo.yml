@@ -3,7 +3,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2023-present Datadog, Inc.
 ---
-# yaml-language-server: $schema=../../../../../docs/static/schema.json
+# yaml-language-server: $schema=../../../config/schema.json
 meta:
   name: github.com/gomodule/redigo/redis
   description: Redigo is a Go client for the Redis database.

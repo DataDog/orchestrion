@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/DataDog/orchestrion/internal/log"
 )
@@ -62,14 +63,9 @@ func FromEnvironment(workDir string) (*Client, error) {
 	log.Debugf("Connecting to job server rooted in %q\n", workDir)
 	urlFilePath := filepath.Join(workDir, urlFileName)
 
-	bin, err := os.Executable()
-	if err != nil {
-		bin = os.Args[0]
-	}
-
 	// Try to start a server. The server process is idempotent if the `-url-file` flag is used, so we do not check the
 	// command's exit status, because another process might act as our server down the line.
-	cmd := exec.Command(bin, "server", "-inactivity-timeout=15m", fmt.Sprintf("-url-file=%s", urlFilePath))
+	cmd := exec.Command(binpath.Orchestrion, "server", "-inactivity-timeout=15m", fmt.Sprintf("-url-file=%s", urlFilePath))
 	cmd.SysProcAttr = &sysProcAttrDaemon                   // Make sure go doesn't wait for this to exit...
 	cmd.Env = append(os.Environ(), "TOOLEXEC_IMPORTPATH=") // Suppress the TOOLEXEC_IMPORTPATH variable if it's set.
 	cmd.Stdin = nil                                        // Connect to `os.DevNull`

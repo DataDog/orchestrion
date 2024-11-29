@@ -10,22 +10,22 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
 type appendArgs struct {
 	TypeName  join.TypeName
-	Templates []code.Template
+	Templates []*code.Template
 }
 
 // AppendArgs appends arguments of a given type to the end of a function call. All arguments must be
 // of the same type, as they may be appended at the tail end of a variadic call.
-func AppendArgs(typeName join.TypeName, templates ...code.Template) *appendArgs {
+func AppendArgs(typeName join.TypeName, templates ...*code.Template) *appendArgs {
 	return &appendArgs{typeName, templates}
 }
 
@@ -97,16 +97,6 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	return true, nil
 }
 
-func (a *appendArgs) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AppendArgs").CallFunc(func(group *jen.Group) {
-		group.Line().Add(a.TypeName.AsCode())
-		for _, t := range a.Templates {
-			group.Line().Add(t.AsCode())
-		}
-		group.Empty().Line()
-	})
-}
-
 func (a *appendArgs) AddedImports() []string {
 	imports := make([]string, 0, len(a.Templates)+1)
 	if argTypeImportPath := a.TypeName.ImportPath(); argTypeImportPath != "" {
@@ -116,6 +106,10 @@ func (a *appendArgs) AddedImports() []string {
 		imports = append(imports, t.AddedImports()...)
 	}
 	return imports
+}
+
+func (a *appendArgs) Hash(h *fingerprint.Hasher) error {
+	return h.Named("append-args", a.TypeName, fingerprint.List[*code.Template](a.Templates))
 }
 
 type redirectCall struct {
@@ -150,8 +144,8 @@ func (r *redirectCall) Apply(ctx context.AdviceContext) (bool, error) {
 	return true, nil
 }
 
-func (r *redirectCall) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "ReplaceFunction").Call(jen.Lit(r.ImportPath), jen.Lit(r.Name))
+func (r *redirectCall) Hash(h *fingerprint.Hasher) error {
+	return h.Named("replace-function", fingerprint.String(r.ImportPath), fingerprint.String(r.Name))
 }
 
 func (r *redirectCall) AddedImports() []string {
@@ -164,8 +158,8 @@ func (r *redirectCall) AddedImports() []string {
 func init() {
 	unmarshalers["append-args"] = func(node *yaml.Node) (Advice, error) {
 		var args struct {
-			TypeName string          `yaml:"type"`
-			Values   []code.Template `yaml:"values"`
+			TypeName string           `yaml:"type"`
+			Values   []*code.Template `yaml:"values"`
 		}
 
 		if err := node.Decode(&args); err != nil {

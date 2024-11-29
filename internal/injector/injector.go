@@ -30,7 +30,7 @@ type (
 	// Injector injects go code into a specific Go package.
 	Injector struct {
 		// Aspects is the set of configured aspects to use.
-		Aspects []aspect.Aspect
+		Aspects []*aspect.Aspect
 
 		// ImportPath is the import path of the package that will be injected.
 		ImportPath string
@@ -180,7 +180,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 	)
 
 	pre := func(csor *dstutil.Cursor) bool {
-		if err != nil || csor.Node() == nil || ddIgnored(csor.Node()) {
+		if err != nil || csor.Node() == nil || isIgnored(csor.Node()) {
 			return false
 		}
 		root := chain == nil

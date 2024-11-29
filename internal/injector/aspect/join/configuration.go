@@ -6,10 +6,8 @@
 package join
 
 import (
-	"sort"
-
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 
 	_ "embed" // For go:embed
@@ -35,20 +33,8 @@ func (jp configuration) Matches(ctx context.AspectContext) bool {
 	return true
 }
 
-func (jp configuration) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "Configuration").Call(jen.Map(jen.String()).String().ValuesFunc(func(g *jen.Group) {
-		keys := make([]string, 0, len(jp))
-		for k := range jp {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		for _, k := range keys {
-			g.Line().Lit(k).Op(":").Lit(jp[k])
-		}
-
-		g.Line().Empty()
-	}))
+func (jp configuration) Hash(h *fingerprint.Hasher) error {
+	return h.Named("configuration", fingerprint.Map(jp, func(k string, v string) (string, fingerprint.String) { return k, fingerprint.String(v) }))
 }
 
 func init() {

@@ -50,26 +50,49 @@ func (tc *TestCase) Run(t *testing.T) {
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {
+	httpUrl := "http://" + tc.Server.Addr + "/ping"
 	return trace.Traces{
 		{
-			// NB: Top-level span is from the HTTP Client, which is library-side instrumented.
+			// NB: 2 Top-level spans are from the HTTP Client/Server, which are library-side instrumented.
 			Tags: map[string]any{
 				"name":     "http.request",
 				"resource": "GET /ping",
+				"service":  "gin.test",
 				"type":     "http",
 			},
 			Meta: map[string]string{
-				"http.url": "http://" + tc.Server.Addr + "/ping",
+				"http.url":  httpUrl,
+				"component": "net/http",
+				"span.kind": "client",
 			},
 			Children: trace.Traces{
 				{
 					Tags: map[string]any{
 						"name":     "http.request",
 						"resource": "GET /ping",
+						"service":  "gin.test",
 						"type":     "web",
 					},
 					Meta: map[string]string{
-						"http.url": "http://" + tc.Server.Addr + "/ping",
+						"http.url":  httpUrl,
+						"component": "net/http",
+						"span.kind": "server",
+					},
+
+					Children: trace.Traces{
+						{
+							Tags: map[string]any{
+								"name":     "http.request",
+								"resource": "GET /ping",
+								"service":  "gin.router",
+								"type":     "web",
+							},
+							Meta: map[string]string{
+								"http.url":  httpUrl,
+								"component": "gin-gonic/gin",
+								"span.kind": "server",
+							},
+						},
 					},
 				},
 			},

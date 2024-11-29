@@ -6,8 +6,8 @@
 package join
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,19 +34,8 @@ func (o allOf) Matches(ctx context.AspectContext) bool {
 	return len(o) > 0
 }
 
-func (o allOf) AsCode() jen.Code {
-	if len(o) == 1 {
-		return o[0].AsCode()
-	}
-
-	return jen.Qual(pkgPath, "AllOf").CallFunc(func(g *jen.Group) {
-		if len(o) > 0 {
-			for _, candidate := range o {
-				g.Line().Add(candidate.AsCode())
-			}
-			g.Line().Empty()
-		}
-	})
+func (o allOf) Hash(h *fingerprint.Hasher) error {
+	return h.Named("all-of", fingerprint.List[Point](o))
 }
 
 func init() {

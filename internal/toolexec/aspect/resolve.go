@@ -9,8 +9,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
-	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 )
@@ -29,15 +29,16 @@ func resolvePackageFiles(importPath string, workDir string) (map[string]string, 
 		return nil, err
 	}
 
-	flags, err := goflags.Flags()
-	if err != nil {
-		return nil, fmt.Errorf("retrieving go command flags: %w", err)
+	req := pkgs.NewResolveRequest(cwd, importPath)
+	if workDir != "" {
+		// Nest the future GOTMPDIR under this $WORK directory, so that builds with `-work` are nested,
+		// and the root work tree contains all child work trees involved in resolutions.
+		req.TempDir = filepath.Join(workDir, "__tmp__")
 	}
-
 	archives, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
 		context.Background(),
 		conn,
-		pkgs.NewResolveRequest(cwd, flags.Slice(), importPath),
+		req,
 	)
 	if err != nil {
 		return nil, err

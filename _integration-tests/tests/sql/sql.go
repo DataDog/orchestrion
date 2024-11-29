@@ -20,26 +20,38 @@ import (
 
 type TestCase struct {
 	*sql.DB
+	// untraced is the un-traced database connection, used to set up the test case
+	// without producing unnecessary spans. It is retained as a [TestCase] field
+	// and cleaned up using [t.Cleanup] to ensure the shared cache is not lost, as
+	// it stops existing once the last DB connection using it is closed.
+	untraced *sql.DB
 }
 
 func (tc *TestCase) Setup(t *testing.T) {
+	const (
+		dn  = "sqlite3"
+		dsn = "file::memory:?cache=shared"
+	)
+
 	var err error
-	tc.DB, err = sql.Open("sqlite3", "file::memory:")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, tc.DB.Close())
-	})
 
-	_, err = tc.DB.ExecContext(context.Background(),
+	//orchestrion:ignore
+	tc.untraced, err = sql.Open(dn, dsn)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, tc.untraced.Close()) })
+
+	ctx := context.Background()
+
+	_, err = tc.untraced.ExecContext(ctx,
 		`CREATE TABLE IF NOT EXISTS notes (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	userid INTEGER,
-	content STRING,
-	created STRING
-)`)
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		userid INTEGER,
+		content STRING,
+		created STRING
+	)`)
 	require.NoError(t, err)
 
-	_, err = tc.DB.ExecContext(context.Background(),
+	_, err = tc.untraced.ExecContext(ctx,
 		`INSERT OR REPLACE INTO notes(userid, content, created) VALUES
 		(1, 'Hello, John. This is John. You are leaving a note for yourself. You are welcome and thank you.', datetime('now')),
 		(1, 'Hey, remember to mow the lawn.', datetime('now')),
@@ -47,8 +59,14 @@ func (tc *TestCase) Setup(t *testing.T) {
 		(2, 'Opportunities don''t happen, you create them.', datetime('now')),
 		(3, 'Pick up cabbage from the store on the way home.', datetime('now')),
 		(3, 'Review PR #1138', datetime('now')
-	);`)
+	)`)
 	require.NoError(t, err)
+
+	tc.DB, err = sql.Open(dn, dsn)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, tc.DB.Close())
+	})
 }
 
 func (tc *TestCase) Run(t *testing.T) {

@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/urfave/cli/v2"
 )
@@ -16,19 +17,25 @@ var Pin = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "generate",
-			Usage: "Add a //go:generate directive to `orchestrion.tool.go` to facilitate automated upkeep of its contents.",
+			Usage: "Add a //go:generate directive to " + config.FilenameOrchestrionToolGo + " to facilitate automated upkeep of its contents.",
 			Value: true,
 		},
 		&cli.BoolFlag{
 			Name:  "prune",
-			Usage: "Remove imports from `orchestrion.tool.go` that do not contain a valid `orchestrion.yml` file declaring integrations.",
+			Usage: "Remove imports from " + config.FilenameOrchestrionToolGo + " that do not contain a valid " + config.FilenameOrchestrionYML + " file declaring integrations.",
 			Value: true,
+		},
+		&cli.BoolFlag{
+			Name:  "validate",
+			Usage: "Validate all " + config.FilenameOrchestrionYML + " files in the project.",
+			Value: false,
 		},
 	},
 	Action: func(ctx *cli.Context) error {
 		return pin.PinOrchestrion(pin.Options{
 			Writer:     ctx.App.Writer,
 			ErrWriter:  ctx.App.ErrWriter,
+			Validate:   ctx.Bool("validate"),
 			NoGenerate: !ctx.Bool("generate"),
 			NoPrune:    !ctx.Bool("prune"),
 		})

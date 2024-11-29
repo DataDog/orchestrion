@@ -8,18 +8,18 @@ package advice
 import (
 	"fmt"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
 type wrapExpression struct {
-	Template code.Template
+	Template *code.Template
 }
 
-func WrapExpression(template code.Template) *wrapExpression {
+func WrapExpression(template *code.Template) *wrapExpression {
 	return &wrapExpression{Template: template}
 }
 
@@ -52,8 +52,8 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 	return true, nil
 }
 
-func (a *wrapExpression) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "WrapExpression").Call(a.Template.AsCode())
+func (a *wrapExpression) Hash(h *fingerprint.Hasher) error {
+	return h.Named("wrap-expression", a.Template)
 }
 
 func (a *wrapExpression) AddedImports() []string {
@@ -62,7 +62,7 @@ func (a *wrapExpression) AddedImports() []string {
 
 func init() {
 	unmarshalers["wrap-expression"] = func(node *yaml.Node) (Advice, error) {
-		var template code.Template
+		var template *code.Template
 		if err := node.Decode(&template); err != nil {
 			return nil, err
 		}

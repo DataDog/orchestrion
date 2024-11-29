@@ -8,13 +8,12 @@
 package join
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
 
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
-	"github.com/dave/jennifer/jen"
 )
 
 const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/join"
@@ -22,9 +21,6 @@ const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/join"
 // Point is the interface that abstracts selection of nodes where to inject
 // code.
 type Point interface {
-	// AsCode produces a jen.Code representation of the receiver.
-	AsCode() jen.Code
-
 	// ImpliesImported returns a list of import paths that are known to already be
 	// imported if the join point matches.
 	ImpliesImported() []string
@@ -33,6 +29,8 @@ type Point interface {
 	// node or not. The node's ancestry is also provided to allow Point to make
 	// decisions based on parent nodes.
 	Matches(ctx context.AspectContext) bool
+
+	fingerprint.Hashable
 }
 
 type TypeName struct {
@@ -136,24 +134,6 @@ func (n *TypeName) AsNode() dst.Expr {
 	return ident
 }
 
-func (n TypeName) AsCode() jen.Code {
-	str := bytes.NewBuffer(make([]byte, 0, 1+len(n.path)+len(n.name)))
-	if n.pointer {
-		_, _ = str.WriteString("*")
-	}
-	if n.path != "" {
-		_, _ = str.WriteString(n.path)
-		_, _ = str.WriteString(".")
-	}
-	_, _ = str.WriteString(n.name)
-
-	return jen.Qual(pkgPath, "MustTypeName").Call(jen.Lit(str.String()))
-}
-
-func (n TypeName) RenderHTML() string {
-	var ptr string
-	if n.pointer {
-		ptr = "*"
-	}
-	return fmt.Sprintf(`{{<godoc %q %q %q>}}`, n.path, n.name, ptr)
+func (n TypeName) Hash(h *fingerprint.Hasher) error {
+	return h.Named("type-name", fingerprint.String(n.name), fingerprint.String(n.path), fingerprint.Bool(n.pointer))
 }

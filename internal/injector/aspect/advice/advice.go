@@ -8,8 +8,8 @@
 package advice
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 )
 
 const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
@@ -17,9 +17,6 @@ const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 // Advice is the interface abstracting actual AST changes performed by
 // injections.
 type Advice interface {
-	// AsCode produces a jen.Code representation of the receiver.
-	AsCode() jen.Code
-
 	// AddedImports returns the list of import paths the receiver may introduce in
 	// modified code.
 	AddedImports() []string
@@ -29,4 +26,6 @@ type Advice interface {
 	// short-circuit and not do anything; e.g. import injection may be skipped if
 	// the import already exists).
 	Apply(context.AdviceContext) (bool, error)
+
+	fingerprint.Hashable
 }

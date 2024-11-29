@@ -8,6 +8,7 @@ package instrument
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/DataDog/orchestrion/instrument/event"
 
@@ -31,7 +32,7 @@ func Report(ctx context.Context, e event.Event, metadata ...any) context.Context
 		var ok bool
 		span, ok = tracer.SpanFromContext(ctx)
 		if !ok {
-			_, _ = fmt.Printf("Error: Received end/return event but have no corresponding span in the context.\n")
+			_, _ = fmt.Fprintf(os.Stderr, "Error: Received end/return event but have no corresponding span in the context.\n")
 			return ctx
 		}
 		span.Finish()

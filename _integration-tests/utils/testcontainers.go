@@ -102,7 +102,7 @@ func StartRedisTestContainer(t *testing.T) (*redis.RedisContainer, string) {
 	}
 
 	container, err := redis.Run(ctx,
-		"redis:7",
+		"redis:7-alpine",
 		testcontainers.WithLogger(testcontainers.TestLogger(t)),
 		WithTestLogConsumer(t),
 		testcontainers.WithWaitStrategy(

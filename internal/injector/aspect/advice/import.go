@@ -8,8 +8,8 @@
 package advice
 
 import (
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/jennifer/jen"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,12 +24,12 @@ func (a addBlankImport) Apply(ctx context.AdviceContext) (bool, error) {
 	return added, nil
 }
 
-func (a addBlankImport) AsCode() jen.Code {
-	return jen.Qual(pkgPath, "AddBlankImport").Call(jen.Lit(string(a)))
-}
-
 func (a addBlankImport) AddedImports() []string {
 	return []string{string(a)}
+}
+
+func (a addBlankImport) Hash(h *fingerprint.Hasher) error {
+	return h.Named("add-blank-import", fingerprint.String(a))
 }
 
 func init() {

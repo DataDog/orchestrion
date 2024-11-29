@@ -18,7 +18,7 @@ import (
 func grpcClient() {
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(),
 //line <generated>
-		grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
+		grpc.WithChainStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithChainUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
 //line samples/client/grpc.go:16
 	if err != nil {
 		log.Fatal(err)
