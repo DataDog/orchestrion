@@ -14,9 +14,6 @@ inserts instrumentation. This instrumentation produces Datadog APM traces from t
 Datadog Application Security Management.
 
 > [!IMPORTANT]
-> Orchestrion is under active development. The supported features are rapidly growing, and the user experience may evolve
-> with future releases.
->
 > Should you encounter issues or a bug when using `orchestrion`, please report it in the [bug tracker][gh-issues].
 >
 > For support & general questions, you are welcome to use [GitHub discussions][gh-discussions]. You may also contact us
