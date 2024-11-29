@@ -30,7 +30,7 @@ const (
 var (
 	//go:embed "testfile.tmpl"
 	templateText string
-	fileTemplate *template.Template
+	fileTemplate = template.Must(template.New("").Parse(templateText))
 )
 
 func init() {
@@ -38,12 +38,6 @@ func init() {
 		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s <dir>\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-
-	tmpl, err := template.New("").Parse(templateText)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fileTemplate = tmpl
 }
 
 func main() {
@@ -74,7 +68,7 @@ func main() {
 		testDir := path.Join(root, pkg.Name())
 		testData := parseCode(testDir)
 		if len(testData.Cases) == 0 {
-			continue
+			log.Fatalf("No test cases found in %s\n", testDir)
 		}
 
 		if err := testData.generate(filepath.Join(testDir, genTestName)); err != nil {
