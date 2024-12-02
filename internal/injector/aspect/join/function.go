@@ -188,7 +188,7 @@ func Receiver(typeName TypeName) FunctionOption {
 }
 
 func (fo *receiver) earlyEvaluate(ctx context.EarlyContext) bool {
-	return fo.TypeName.ImportPath() == ctx.ImportPath
+	return ctx.PackageImports(fo.TypeName.ImportPath())
 }
 
 func (fo *receiver) evaluate(info functionInformation) bool {

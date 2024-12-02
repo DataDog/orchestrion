@@ -133,6 +133,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 	}
 	// Remove aspects that would require the current package to have certain packages imports to be effective.
 	aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
+		log.Debugf("Evaluating early match for %q\n", a.ID)
 		return !a.JoinPoint.EarlyMatch(earlyCtx)
 	})
 
@@ -141,12 +142,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		return nil
 	}
 
-	//aspectsNames := make([]string, len(aspects))
-	//for i, a := range aspects {
-	//	aspectsNames[i] = a.ID
-	//}
-	//
-	//fmt.Printf("Weaving aspects %v into %q\n", aspectsNames, w.ImportPath)
+	aspectsNames := make([]string, len(aspects))
+	for i, a := range aspects {
+		aspectsNames[i] = a.ID
+	}
+
+	_, _ = fmt.Printf("Weaving %d aspects into %q: %v\n", len(aspectsNames), w.ImportPath, aspectsNames)
 
 	injector := injector.Injector{
 		Aspects:    aspects,
