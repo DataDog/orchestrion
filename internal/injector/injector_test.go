@@ -97,13 +97,12 @@ func Test(t *testing.T) {
 			runGo(t, tmp, "mod", "tidy")
 
 			inj := injector.Injector{
-				Aspects:      config.Aspects,
 				ModifiedFile: func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
 				ImportPath:   testModuleName,
 				Lookup:       testLookup,
 			}
 
-			res, resGoLang, err := inj.InjectFiles([]string{inputFile})
+			res, resGoLang, err := inj.InjectFiles([]string{inputFile}, config.Aspects)
 			require.NoError(t, err, "failed to inject file")
 
 			resFile, modified := res[inputFile]

@@ -56,8 +56,12 @@ func (i *declarationOf) ImpliesImported() []string {
 	return []string{i.ImportPath}
 }
 
-func (i *declarationOf) EarlyMatch(ctx context.EarlyContext) bool {
+func (i *declarationOf) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	return ctx.PackageImports(i.ImportPath)
+}
+
+func (i *declarationOf) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains(i.Name)
 }
 
 func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
@@ -72,7 +76,11 @@ func ValueDeclaration(typeName TypeName) *valueDeclaration {
 	return &valueDeclaration{typeName}
 }
 
-func (*valueDeclaration) EarlyMatch(_ context.EarlyContext) bool {
+func (i *valueDeclaration) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	return ctx.PackageImports(i.TypeName.ImportPath())
+}
+
+func (*valueDeclaration) FileMayMatch(_ *context.FileMayMatchContext) bool {
 	return true
 }
 

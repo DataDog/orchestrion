@@ -13,28 +13,33 @@ import (
 	"go/token"
 	"io"
 	"os"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 )
 
 // parseFiles parses all provided files, after having applied any leading
 // "//line" directives if present.
-func parseFiles(fset *token.FileSet, files []string) ([]*ast.File, error) {
-	result := make([]*ast.File, len(files))
-	for idx, file := range files {
-		var err error
-		result[idx], err = parseFile(fset, file)
+func parseFiles(fset *token.FileSet, files []string, aspects []*aspect.Aspect) (map[string]*ast.File, map[string][]*aspect.Aspect, error) {
+	result := make(map[string]*ast.File, len(files))
+	aspectsPerFile := make(map[string][]*aspect.Aspect, len(files))
+	for _, file := range files {
+		resultFile, aspectsFile, err := parseFile(fset, file, aspects)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+
+		result[file] = resultFile
+		aspectsPerFile[file] = aspectsFile
 	}
-	return result, nil
+	return result, aspectsPerFile, nil
 }
 
 // parseFile parses the provided filename, after having applied a leading
 // "//line" directive if one is present.
-func parseFile(fset *token.FileSet, filename string) (*ast.File, error) {
+func parseFile(fset *token.FileSet, filename string, aspects []*aspect.Aspect) (*ast.File, []*aspect.Aspect, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("open %q: %w", filename, err)
+		return nil, nil, fmt.Errorf("open %q: %w", filename, err)
 	}
 	defer file.Close()
 
@@ -44,17 +49,28 @@ func parseFile(fset *token.FileSet, filename string) (*ast.File, error) {
 	// effort to do it early.
 	mappedFilename := filename
 	if mapped, err := consumeLineDirective(file); err != nil {
-		return nil, fmt.Errorf("peeking at first line of %q: %w", filename, err)
+		return nil, nil, fmt.Errorf("peeking at first line of %q: %w", filename, err)
 	} else if mapped != "" {
 		mappedFilename = mapped
 	}
 
-	astFile, err := parser.ParseFile(fset, mappedFilename, file, parser.ParseComments)
+	fileContent, err := io.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("parsing %q: %w", filename, err)
+		return nil, nil, fmt.Errorf("reading %q: %w", filename, err)
 	}
 
-	return astFile, nil
+	aspectsPerFile := make([]*aspect.Aspect, len(aspects))
+	for i, a := range aspects {
+		aspectsPerFile[i] = a
+	}
+
+	aspectsPerFile = contentContainsFilter(aspectsPerFile, fileContent)
+	astFile, err := parser.ParseFile(fset, mappedFilename, fileContent, parser.ParseComments)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parsing %q: %w", filename, err)
+	}
+
+	return astFile, aspectsPerFile, nil
 }
 
 // consumeLineDirective consumes the first line from r if it's a "//line"

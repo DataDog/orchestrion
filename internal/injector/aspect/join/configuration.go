@@ -23,7 +23,11 @@ func (configuration) ImpliesImported() []string {
 	return nil
 }
 
-func (configuration) EarlyMatch(_ context.EarlyContext) bool {
+func (configuration) PackageMayMatch(_ *context.PackageMayMatchContext) bool {
+	return true
+}
+
+func (configuration) FileMayMatch(_ *context.FileMayMatchContext) bool {
 	return true
 }
 

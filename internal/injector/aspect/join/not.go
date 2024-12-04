@@ -23,8 +23,12 @@ func (not) ImpliesImported() []string {
 	return nil
 }
 
-func (n not) EarlyMatch(ctx context.EarlyContext) bool {
-	return !n.JoinPoint.EarlyMatch(ctx)
+func (n not) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	return !n.JoinPoint.PackageMayMatch(ctx)
+}
+
+func (n not) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return !n.JoinPoint.FileMayMatch(ctx)
 }
 
 func (n not) Matches(ctx context.AspectContext) bool {

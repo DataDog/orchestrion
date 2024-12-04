@@ -36,9 +36,18 @@ func (o oneOf) ImpliesImported() []string {
 	return list
 }
 
-func (o oneOf) EarlyMatch(ctx context.EarlyContext) bool {
+func (o oneOf) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	for _, candidate := range o {
-		if candidate.EarlyMatch(ctx) {
+		if candidate.PackageMayMatch(ctx) {
+			return true
+		}
+	}
+	return false
+}
+
+func (o oneOf) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	for _, candidate := range o {
+		if candidate.FileMayMatch(ctx) {
 			return true
 		}
 	}

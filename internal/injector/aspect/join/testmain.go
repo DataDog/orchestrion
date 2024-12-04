@@ -13,6 +13,14 @@ import (
 
 type testMain bool
 
+func (t testMain) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	return true
+}
+
+func (t testMain) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return true
+}
+
 // TestMain matches only nodes in ASTs in files that either are (if true), or
 // are not (if false) part of a synthetic test main package.
 func TestMain(v bool) testMain {

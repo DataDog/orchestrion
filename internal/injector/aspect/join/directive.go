@@ -6,18 +6,12 @@
 package join
 
 import (
-	"bytes"
-	"errors"
-	"io"
-	"os"
 	"strings"
-	"sync"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -28,56 +22,12 @@ func Directive(name string) directive {
 	return directive(name)
 }
 
-const earlyMatchBufferSize = 1 << 17 // 128KB
-
-var earlyMatchBufferPool = sync.Pool{
-	New: func() any { return make([]byte, earlyMatchBufferSize) },
+func (directive) PackageMayMatch(_ *context.PackageMayMatchContext) bool {
+	return true
 }
 
-func (d directive) EarlyMatch(ctx context.EarlyContext) bool {
-	directive := []byte("//" + string(d))
-	buffer, _ := earlyMatchBufferPool.Get().([]byte)
-	defer earlyMatchBufferPool.Put(buffer)
-
-	for _, file := range ctx.GoFiles {
-		fp, err := os.Open(file)
-		if err != nil {
-			log.Debugf("(directive).EarlyMatch: failed to open file %s: %v", file, err)
-			return true
-		}
-
-		n := 0
-		for {
-			i, err := fp.Read(buffer[n:])
-			if errors.Is(err, io.EOF) {
-				// We've read the whole file but didn't find the directive, proceed to the next file
-				break
-			}
-
-			if err != nil {
-				// We can't read the file, so we can't early match, wait for the real match to fail
-				_ = fp.Close()
-				return true
-			}
-
-			n += i
-			if n >= earlyMatchBufferSize {
-				// The file is too big, we can't early match, wait for the real match
-				_ = fp.Close()
-				return true
-			}
-
-			if bytes.Contains(buffer[n-i:n], directive) {
-				// We found the directive, we are 90% sure that this aspect will match, but we need to check the real match
-				_ = fp.Close()
-				return true
-			}
-		}
-
-		_ = fp.Close()
-	}
-
-	return false
+func (d directive) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains("//" + string(d))
 }
 
 func (d directive) Matches(ctx context.AspectContext) bool {

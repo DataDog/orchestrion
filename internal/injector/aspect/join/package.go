@@ -21,8 +21,12 @@ func (p importPath) ImpliesImported() []string {
 	return []string{string(p)} // Technically the current package in this instance
 }
 
-func (p importPath) EarlyMatch(ctx context.EarlyContext) bool {
-	return ctx.PackageImports(string(p))
+func (p importPath) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	return ctx.ImportPath == string(p)
+}
+
+func (p importPath) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains(string(p))
 }
 
 func (p importPath) Matches(ctx context.AspectContext) bool {
@@ -43,8 +47,12 @@ func (packageName) ImpliesImported() []string {
 	return nil // Can't assume anything here...
 }
 
-func (p packageName) EarlyMatch(ctx context.EarlyContext) bool {
-	return ctx.ImportPath == string(p)
+func (packageName) PackageMayMatch(_ *context.PackageMayMatchContext) bool {
+	return true
+}
+
+func (p packageName) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains(string(p))
 }
 
 func (p packageName) Matches(ctx context.AspectContext) bool {

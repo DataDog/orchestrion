@@ -15,7 +15,6 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/log"
@@ -125,43 +124,20 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		break
 	}
 
-	goFiles := cmd.GoFiles()
-	earlyCtx := context.EarlyContext{
-		GoFiles:    goFiles,
-		ImportPath: w.ImportPath,
-		ImportMap:  imports.ImportMap,
-	}
-	// Remove aspects that would require the current package to have certain packages imports to be effective.
-	aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-		log.Debugf("Evaluating early match for %q\n", a.ID)
-		return !a.JoinPoint.EarlyMatch(earlyCtx)
-	})
-
-	if len(aspects) == 0 {
-		log.Debugf("No aspects to weave in %q\n", w.ImportPath)
-		return nil
-	}
-
-	aspectsNames := make([]string, len(aspects))
-	for i, a := range aspects {
-		aspectsNames[i] = a.ID
-	}
-
-	_, _ = fmt.Printf("Weaving %d aspects into %q: %v\n", len(aspectsNames), w.ImportPath, aspectsNames)
-
 	injector := injector.Injector{
-		Aspects:    aspects,
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
 		TestMain:   cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test"),
+		ImportMap:  imports.PackageFile,
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
 		},
 	}
 
-	results, goLang, err := injector.InjectFiles(goFiles)
+	goFiles := cmd.GoFiles()
+	results, goLang, err := injector.InjectFiles(goFiles, aspects)
 	if err != nil {
 		return err
 	}

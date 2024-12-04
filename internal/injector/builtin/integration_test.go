@@ -71,7 +71,6 @@ func Test(t *testing.T) {
 
 			tmp := t.TempDir()
 			inj := injector.Injector{
-				Aspects: aspects,
 				ModifiedFile: func(filename string) string {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},
@@ -83,7 +82,7 @@ func Test(t *testing.T) {
 			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
 
-			results, _, err := inj.InjectFiles(files)
+			results, _, err := inj.InjectFiles(files, aspects)
 			require.NoError(t, err)
 
 			for _, filename := range files {

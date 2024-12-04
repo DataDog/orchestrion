@@ -28,8 +28,12 @@ func (i *functionCall) ImpliesImported() []string {
 	return []string{i.ImportPath}
 }
 
-func (i *functionCall) EarlyMatch(ctx context.EarlyContext) bool {
+func (i *functionCall) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	return ctx.PackageImports(i.ImportPath)
+}
+
+func (i *functionCall) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains(i.Name)
 }
 
 func (i *functionCall) Matches(ctx context.AspectContext) bool {

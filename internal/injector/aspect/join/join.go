@@ -23,8 +23,11 @@ type Point interface {
 	// imported if the join point matches.
 	ImpliesImported() []string
 
-	// EarlyMatch determines whether the injection should be performed on importcfg file and package name
-	EarlyMatch(ctx context.EarlyContext) bool
+	// PackageMayMatch determines whether the join point may match the given package data from the importcfg file.
+	PackageMayMatch(ctx *context.PackageMayMatchContext) bool
+
+	// FileMayMatch determines whether the join point may match the given file raw content
+	FileMayMatch(ctx *context.FileMayMatchContext) bool
 
 	// Matches determines whether the injection should be performed on the given
 	// node or not. The node's ancestry is also provided to allow Point to make

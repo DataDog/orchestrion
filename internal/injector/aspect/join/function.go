@@ -27,7 +27,10 @@ type (
 		fingerprint.Hashable
 
 		impliesImported() []string
-		earlyEvaluate(ctx context.EarlyContext) bool
+
+		packageMayMatch(ctx *context.PackageMayMatchContext) bool
+		fileMayMatch(ctx *context.FileMayMatchContext) bool
+
 		evaluate(functionInformation) bool
 	}
 
@@ -49,9 +52,18 @@ func (s *functionDeclaration) ImpliesImported() (list []string) {
 	return
 }
 
-func (s *functionDeclaration) EarlyMatch(ctx context.EarlyContext) bool {
+func (s *functionDeclaration) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	for _, opt := range s.Options {
-		if !opt.earlyEvaluate(ctx) {
+		if !opt.packageMayMatch(ctx) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *functionDeclaration) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	for _, opt := range s.Options {
+		if !opt.fileMayMatch(ctx) {
 			return false
 		}
 	}
@@ -98,8 +110,12 @@ func (functionName) impliesImported() []string {
 	return nil
 }
 
-func (functionName) earlyEvaluate(_ context.EarlyContext) bool {
+func (functionName) packageMayMatch(_ *context.PackageMayMatchContext) bool {
 	return true
+}
+
+func (fo functionName) fileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains(string(fo))
 }
 
 func (fo functionName) evaluate(info functionInformation) bool {
@@ -121,7 +137,21 @@ func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{Arguments: args, Results: ret}
 }
 
-func (*signature) earlyEvaluate(_ context.EarlyContext) bool {
+func (fo *signature) packageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	for _, tn := range fo.Arguments {
+		if !ctx.PackageImports(tn.ImportPath()) {
+			return false
+		}
+	}
+	for _, tn := range fo.Results {
+		if !ctx.PackageImports(tn.ImportPath()) {
+			return false
+		}
+	}
+	return true
+}
+
+func (*signature) fileMayMatch(_ *context.FileMayMatchContext) bool {
 	return true
 }
 
@@ -187,16 +217,20 @@ func Receiver(typeName TypeName) FunctionOption {
 	return &receiver{typeName}
 }
 
-func (fo *receiver) earlyEvaluate(ctx context.EarlyContext) bool {
-	return ctx.PackageImports(fo.TypeName.ImportPath())
+func (fo *receiver) packageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	return ctx.ImportPath == fo.TypeName.ImportPath()
+}
+
+func (fo *receiver) fileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains(fo.TypeName.Name())
 }
 
 func (fo *receiver) evaluate(info functionInformation) bool {
 	return info.Receiver != nil && fo.TypeName.MatchesDefinition(info.Receiver, info.ImportPath)
 }
 
-func (*receiver) impliesImported() []string {
-	return nil
+func (fo *receiver) impliesImported() []string {
+	return []string{fo.TypeName.ImportPath()}
 }
 
 func (fo *receiver) Hash(h *fingerprint.Hasher) error {
@@ -219,8 +253,12 @@ func (s *functionBody) ImpliesImported() []string {
 	return s.Function.ImpliesImported()
 }
 
-func (s *functionBody) EarlyMatch(ctx context.EarlyContext) bool {
-	return s.Function.EarlyMatch(ctx)
+func (s *functionBody) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+	return s.Function.PackageMayMatch(ctx)
+}
+
+func (s *functionBody) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return s.Function.FileMayMatch(ctx)
 }
 
 func (s *functionBody) Matches(ctx context.AspectContext) bool {

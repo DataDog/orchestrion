@@ -33,8 +33,12 @@ func (s *structDefinition) ImpliesImported() []string {
 	return nil
 }
 
-func (s *structDefinition) EarlyMatch(ctx context.EarlyContext) bool {
+func (s *structDefinition) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	return ctx.ImportPath == s.TypeName.ImportPath()
+}
+
+func (*structDefinition) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+	return ctx.FileContains("struct")
 }
 
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
@@ -105,8 +109,12 @@ func (s *structLiteral) ImpliesImported() []string {
 	return nil
 }
 
-func (s *structLiteral) EarlyMatch(ctx context.EarlyContext) bool {
+func (s *structLiteral) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	return ctx.PackageImports(s.TypeName.ImportPath())
+}
+
+func (*structLiteral) FileMayMatch(_ *context.FileMayMatchContext) bool {
+	return true
 }
 
 func (s *structLiteral) Matches(ctx context.AspectContext) bool {
