@@ -27,6 +27,8 @@ aspects:
       - prepend-statements:
           template: |-
             {{- $srv := .Function.Receiver -}}
-            if {{ $srv }}.Handler != nil {
+            if {{ $srv }}.Handler == nil {
+              {{ $srv }}.Handler = __dd_orchestrion_instrument_WrapHandler(DefaultServeMux)
+            } else {
               {{ $srv }}.Handler = __dd_orchestrion_instrument_WrapHandler({{ $srv }}.Handler)
             }
