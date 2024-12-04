@@ -36,7 +36,7 @@ layout: hextra-home
     style="background: radial-gradient(ellipse at 50% 80%, rgba(194,97,254,.15),hsla(0,0%,100%,0));"
   >}}
   {{<hextra/feature-card
-    title="Exhaustive"
+    title="Comprehensive"
     subtitle="Benefit from all current and future Datadog observability and security features"
     style="background: radial-gradient(ellipse at 50% 80%, rgba(194,97,254,.15),hsla(0,0%,100%,0));"
   >}}
