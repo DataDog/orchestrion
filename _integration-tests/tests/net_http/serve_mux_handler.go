@@ -8,6 +8,7 @@
 package nethttp
 
 import (
+	"net/http"
 	"testing"
 )
 
@@ -17,5 +18,16 @@ type TestCaseServeMuxHandler struct {
 
 func (tc *TestCaseServeMuxHandler) Setup(t *testing.T) {
 	tc.handler = tc.serveMuxHandler()
+	tc.base.Setup(t)
+}
+
+type TestCaseHandlerIsNil struct {
+	base
+}
+
+func (tc *TestCaseHandlerIsNil) Setup(t *testing.T) {
+	http.HandleFunc("/hit", tc.base.handleHit)
+	http.HandleFunc("/", tc.base.handleRoot)
+	tc.base.handler = nil // Set handler to nil to test http.DefaultServeMux
 	tc.base.Setup(t)
 }
