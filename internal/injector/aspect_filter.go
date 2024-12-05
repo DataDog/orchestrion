@@ -13,10 +13,11 @@ import (
 )
 
 // ImportsFilter filters out aspects that imply imports not present in the import map.
-func importsFilter(aspects []*aspect.Aspect, importMap map[string]string, pkgImportPath string) []*aspect.Aspect {
+func importsFilter(aspects []*aspect.Aspect, testMain bool, importMap map[string]string, pkgImportPath string) []*aspect.Aspect {
 	ctx := &may.PackageContext{
 		ImportPath: pkgImportPath,
 		ImportMap:  importMap,
+		TestMain:   testMain,
 	}
 	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
 		if a.JoinPoint.PackageMayMatch(ctx) == may.CantMatch {
@@ -35,10 +36,15 @@ func importsFilter(aspects []*aspect.Aspect, importMap map[string]string, pkgImp
 // - After all aspects are processed for a file, transform the []byte back to an io.ReadCloser and store it in the result map
 // - If any limit was hit, we stop the filtering on this file and return it as is in the result map
 func contentContainsFilter(aspects []*aspect.Aspect, fileContent []byte) []*aspect.Aspect {
+	aspectsCopy := make([]*aspect.Aspect, len(aspects))
+	for i, a := range aspects {
+		aspectsCopy[i] = a
+	}
+
 	ctx := &may.FileMayMatchContext{
 		FileContent: fileContent,
 	}
-	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) (res bool) {
+	return slices.DeleteFunc(aspectsCopy, func(a *aspect.Aspect) (res bool) {
 		if a.JoinPoint.FileMayMatch(ctx) == may.CantMatch {
 			return true
 		}

@@ -17,29 +17,68 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 )
 
+const maxBytesEagerness = 1 << 19 // 512 KiB
+
+type goFile struct {
+	name       string
+	mappedName string
+	content    []byte
+}
+
 // parseFiles parses all provided files, after having applied any leading
 // "//line" directives if present.
 func parseFiles(fset *token.FileSet, files []string, aspects []*aspect.Aspect) (map[string]*ast.File, map[string][]*aspect.Aspect, error) {
 	result := make(map[string]*ast.File, len(files))
 	aspectsPerFile := make(map[string][]*aspect.Aspect, len(files))
+
+	eagerFileReadingBuffer := make([]goFile, 0, len(files))
+	var filesBytesCount uint64
+	enableEagerness := true
 	for _, file := range files {
-		resultFile, aspectsFile, err := parseFile(fset, file, aspects)
+		goFile, err := readFile(file)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		result[file] = resultFile
-		aspectsPerFile[file] = aspectsFile
+		filesBytesCount += uint64(len(goFile.content))
+		fileAspects := contentContainsFilter(aspects, goFile.content)
+
+		if enableEagerness && filesBytesCount <= maxBytesEagerness && len(fileAspects) == 0 {
+			eagerFileReadingBuffer = append(eagerFileReadingBuffer, goFile)
+			continue
+		}
+
+		// We have reached a file that actually have some aspects linked to it or the package is too big,
+		// so we need to parse all the files of the package to be able to apply the aspects to the correct files
+		for _, eagerFile := range eagerFileReadingBuffer {
+			astFile, err := parser.ParseFile(fset, eagerFile.mappedName, eagerFile.content, parser.ParseComments)
+
+			if err != nil {
+				return nil, nil, fmt.Errorf("parsing %q: %w", eagerFile.name, err)
+			}
+
+			result[eagerFile.name] = astFile
+			aspectsPerFile[eagerFile.name] = nil
+		}
+		eagerFileReadingBuffer = eagerFileReadingBuffer[:0]
+		enableEagerness = false
+
+		astFile, err := parser.ParseFile(fset, goFile.mappedName, goFile.content, parser.ParseComments)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parsing %q: %w", goFile.name, err)
+		}
+
+		result[file] = astFile
+		aspectsPerFile[file] = fileAspects
 	}
+
 	return result, aspectsPerFile, nil
 }
 
-// parseFile parses the provided filename, after having applied a leading
-// "//line" directive if one is present.
-func parseFile(fset *token.FileSet, filename string, aspects []*aspect.Aspect) (*ast.File, []*aspect.Aspect, error) {
+func readFile(filename string) (goFile, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, nil, fmt.Errorf("open %q: %w", filename, err)
+		return goFile{}, fmt.Errorf("open %q: %w", filename, err)
 	}
 	defer file.Close()
 
@@ -49,28 +88,17 @@ func parseFile(fset *token.FileSet, filename string, aspects []*aspect.Aspect) (
 	// effort to do it early.
 	mappedFilename := filename
 	if mapped, err := consumeLineDirective(file); err != nil {
-		return nil, nil, fmt.Errorf("peeking at first line of %q: %w", filename, err)
+		return goFile{}, fmt.Errorf("peeking at first line of %q: %w", filename, err)
 	} else if mapped != "" {
 		mappedFilename = mapped
 	}
 
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading %q: %w", filename, err)
+		return goFile{}, fmt.Errorf("reading %q: %w", filename, err)
 	}
 
-	aspectsPerFile := make([]*aspect.Aspect, len(aspects))
-	for i, a := range aspects {
-		aspectsPerFile[i] = a
-	}
-
-	aspectsPerFile = contentContainsFilter(aspectsPerFile, fileContent)
-	astFile, err := parser.ParseFile(fset, mappedFilename, fileContent, parser.ParseComments)
-	if err != nil {
-		return nil, nil, fmt.Errorf("parsing %q: %w", filename, err)
-	}
-
-	return astFile, aspectsPerFile, nil
+	return goFile{filename, mappedFilename, fileContent}, nil
 }
 
 // consumeLineDirective consumes the first line from r if it's a "//line"

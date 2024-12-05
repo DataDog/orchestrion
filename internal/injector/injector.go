@@ -83,7 +83,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 
 	//fmt.Println("starting aspects to inject: ", len(aspects))
 
-	aspects = importsFilter(aspects, i.ImportMap, i.ImportPath)
+	aspects = importsFilter(aspects, i.TestMain, i.ImportMap, i.ImportPath)
 	if len(aspects) == 0 {
 		log.Debugf("no aspects to apply to %s after filtering on imports\n", i.ImportPath)
 		return nil, context.GoLangVersion{}, nil
@@ -182,7 +182,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, as
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
 	var err error
-	result.Modified, result.References, result.GoLang, err = applyAspects(decorator, file, i.RootConfig, aspects)
+	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig, aspects)
 	if err != nil {
 		return result, err
 	}
@@ -197,7 +197,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, as
 	return result, nil
 }
 
-func applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, aspects []*aspect.Aspect) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, aspects []*aspect.Aspect) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool

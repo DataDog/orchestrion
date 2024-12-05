@@ -12,6 +12,7 @@ import (
 type PackageContext struct {
 	ImportPath string
 	ImportMap  map[string]string
+	TestMain   bool
 }
 
 func (ctx *PackageContext) PackageImports(path string) MatchType {

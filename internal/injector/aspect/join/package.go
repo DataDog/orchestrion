@@ -6,6 +6,9 @@
 package join
 
 import (
+	"bufio"
+	"bytes"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
@@ -57,7 +60,14 @@ func (packageName) PackageMayMatch(_ *may.PackageContext) may.MatchType {
 }
 
 func (p packageName) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
-	return ctx.FileContains(string(p))
+	scanner := bufio.NewScanner(bytes.NewReader(ctx.FileContent))
+	for scanner.Scan() {
+		if bytes.Contains(scanner.Bytes(), []byte("package")) && bytes.Contains(scanner.Bytes(), []byte(p)) {
+			return may.Match
+		}
+	}
+
+	return may.CantMatch
 }
 
 func (p packageName) Matches(ctx context.AspectContext) bool {
