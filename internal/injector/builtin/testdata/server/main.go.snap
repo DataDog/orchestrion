@@ -14,20 +14,13 @@ import (
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	__orchestrion_os "os"
-	__orchestrion_testing "testing"
-	_ "unsafe"
 )
 
 //line samples/server/main.go:14
 func main() {
 //line <generated>
 	{
-		// Only finalize if is not a test process and if CI Visibility has not been disabled (by the kill switch).
-		// For a test process the ci visibility instrumentation will finalize the tracer
-		if !__orchestrion_testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {
-			defer __orchestrion_tracer.Stop()
-		}
-
+		defer __orchestrion_tracer.Stop()
 		defer __orchestrion_profiler.Stop()
 	}
 //line samples/server/main.go:15
@@ -68,16 +61,9 @@ func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 
 // comment that is just hanging out unattached
 //
-//go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled
 //line <generated>
-func __dd_civisibility_isCiVisibilityEnabled() bool
-
 func init() {
-	// Only initialize if is not a test process and if CI Visibility has not been disabled (by the kill switch).
-	// For a test process the ci visibility instrumentation will initialize the tracer
-	if !__orchestrion_testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {
-		__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-	}
+	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 }
 func init() {
 	switch __orchestrion_os.Getenv("DD_PROFILING_ENABLED") {

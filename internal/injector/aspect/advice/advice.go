@@ -12,8 +12,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 )
 
-const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/advice"
-
 // Advice is the interface abstracting actual AST changes performed by
 // injections.
 type Advice interface {

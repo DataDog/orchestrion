@@ -67,6 +67,10 @@ func (m mockAdviceContext) Package() string {
 	assert.FailNow(m.t, "unexpected method call")
 	return ""
 }
+func (m mockAdviceContext) TestMain() bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
+}
 func (m mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil

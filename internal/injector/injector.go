@@ -39,6 +39,8 @@ type (
 		// GoVersion is the go runtime version required by this package. If blank, no go runtime compatibility will be
 		// asserted.
 		GoVersion string
+		// TestMain must be set to true when injecting into the generated test main package.
+		TestMain bool
 
 		// ModifiedFile is called to determine the output file name for a modified file. If nil, the input file is modified
 		// in-place.
@@ -206,6 +208,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 			RefMap:       &references,
 			SourceParser: decorator,
 			MinGoLang:    &minGoLang,
+			TestMain:     i.TestMain,
 		})
 		defer ctx.Release()
 		changed, err = i.injectNode(ctx)

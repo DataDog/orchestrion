@@ -16,8 +16,6 @@ import (
 	"github.com/dave/dst"
 )
 
-const pkgPath = "github.com/DataDog/orchestrion/internal/injector/aspect/join"
-
 // Point is the interface that abstracts selection of nodes where to inject
 // code.
 type Point interface {

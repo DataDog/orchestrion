@@ -13,31 +13,22 @@ aspects:
     join-point:
       all-of:
         - package-name: main
+        - test-main: false
         - function-body:
             function:
               - name: main
               - signature: {}
     advice:
       - inject-declarations:
-          links:
-            - gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting
           imports:
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
-            testing: testing
           # Note: it is valid to have multiple func init() in a single compile unit (e.g, `.go` file), in which case
           # they get executed in declaration order. This means it's okay for us to add a new init function if there is
           # already one in the file, but as it currently is appended AFTER all other declarations in the file, it means
           # that it will be executed last (tracing contents of previous init functions will not be possible).
           template: |-
-            //go:linkname __dd_civisibility_isCiVisibilityEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting.isCiVisibilityEnabled
-            func __dd_civisibility_isCiVisibilityEnabled() bool
-
             func init() {
-              // Only initialize if is not a test process and if CI Visibility has not been disabled (by the kill switch).
-              // For a test process the ci visibility instrumentation will initialize the tracer
-              if !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {
-                tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
-              }
+              tracer.Start(tracer.WithOrchestrion(map[string]string{"version": {{printf "%q" Version}}}))
             }
 
       - inject-declarations:
@@ -84,12 +75,6 @@ aspects:
           imports:
             profiler: gopkg.in/DataDog/dd-trace-go.v1/profiler
             tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
-            testing: testing
           template: |-
-            // Only finalize if is not a test process and if CI Visibility has not been disabled (by the kill switch).
-            // For a test process the ci visibility instrumentation will finalize the tracer
-            if !testing.Testing() || !__dd_civisibility_isCiVisibilityEnabled() {
-              defer tracer.Stop()
-            }
-
+            defer tracer.Stop()
             defer profiler.Stop()

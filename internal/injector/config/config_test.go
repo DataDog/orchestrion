@@ -186,7 +186,7 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 3)
+		assert.Len(t, cfg.Aspects(), 4)
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
@@ -201,7 +201,7 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 105)
+		assert.Len(t, cfg.Aspects(), 106)
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 
@@ -232,7 +232,7 @@ func TestLoad(t *testing.T) {
 		loader := NewLoader(tmp, false)
 		cfg, err := loader.Load()
 		require.NoError(t, err)
-		require.Len(t, cfg.Aspects(), 4)
+		require.Len(t, cfg.Aspects(), 5)
 	})
 }
 

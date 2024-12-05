@@ -40,7 +40,7 @@ var Toolexec = &cli.Command{
 		pin.AutoPinOrchestrion()
 
 		if proxyCmd.ShowVersion() {
-			log.Tracef("Toolexec version command: %#v\n", proxyCmd)
+			log.Tracef("Toolexec version command: %#v\n", proxyCmd.Args())
 			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
 			if err != nil {
 				return err

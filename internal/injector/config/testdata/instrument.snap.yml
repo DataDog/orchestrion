@@ -11,6 +11,7 @@ imports:
           aspects:
             - GLS Access
             - Clear GLS slot on goroutine exit
+            - Hack tracer.SpanFromContext
 yaml:
   name: orchestrion.yml
   extends:
