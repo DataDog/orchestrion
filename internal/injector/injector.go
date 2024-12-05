@@ -14,8 +14,6 @@ import (
 	"go/ast"
 	"go/importer"
 	"go/token"
-	"maps"
-	"slices"
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -109,7 +107,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 		return nil, context.GoLangVersion{}, nil
 	}
 
-	uses, err := i.typeCheck(fset, slices.Collect(maps.Values(astFiles)))
+	uses, err := i.typeCheck(fset, astFiles)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
