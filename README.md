@@ -1,6 +1,7 @@
 # Orchestrion
 
-[![Documentation](https://img.shields.io/badge/documentation-datadoghq.dev/orchestrion-blue.svg?style=flat)](https://datadoghq.dev/orchestrion)
+[![User Documentation](https://img.shields.io/badge/docs.datadoghq.com-blue?logo=datadog&label=User%20Guide&labelColor=632CA6&style=flat)](https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/go/?tab=compiletimeinstrumentation)
+[![Project Documentation](https://img.shields.io/badge/Project%20Documentation-datadoghq.dev/orchestrion-blue.svg?logo=github&&labelColor=181717&style=flat)](https://datadoghq.dev/orchestrion)
 ![Latest Release](https://img.shields.io/github/v/release/DataDog/orchestrion?display_name=tag&label=Latest%20Release)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/datadog/orchestrion)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/DataDog/orchestrion/badge)](https://scorecard.dev/viewer/?uri=github.com/DataDog/orchestrion)
@@ -9,9 +10,8 @@ Automatic compile-time instrumentation of Go code.
 
 ## Overview
 
-[Orchestrion](https://en.wikipedia.org/wiki/Orchestrion) processes Go source code at compilation time and automatically
-inserts instrumentation. This instrumentation produces Datadog APM traces from the instrumented code and supports
-Datadog Application Security Management.
+Orchestrion processes Go source code at compilation time and automatically inserts instrumentation. This instrumentation
+produces Datadog APM traces from the instrumented code and supports Datadog Application Security Management.
 
 > [!IMPORTANT]
 > Should you encounter issues or a bug when using `orchestrion`, please report it in the [bug tracker][gh-issues].
@@ -206,7 +206,7 @@ Library                                               | Since    | Notes
 Most integrations are added by orchestrion at the call site, making it possible to use the [`//orchestrion:ignore`
 directive][orchestrion-ignore] to locally opt out of instrumentation for a specific instance of a component.
 
-[orchestrion-ignore]: https://datadoghq.dev/orchestrion/docs/custom-trace/#prevent-instrumentation-of-a-section-of-code
+[orchestrion-ignore]: https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/go/?tab=compiletimeinstrumentation#prevent-instrumentation-of-some-code
 
 Some integrations are however injected directly into the library (library-side instrumentation, also called callee-side
 instrumentation), and are hence always active and cannot be locally opted out. If you have a use-case where you need to
@@ -228,7 +228,10 @@ diagnosing issues.
 
 ## More information
 
-Orchestrion's documentation can be found at [datadoghq.dev/orchestrion](https://datadoghq.dev/orchestrion); in
+Datadog's user guide for Orchestrion can be found on [docs.datadoghq.com][dd-doc].
+[dd-doc]: https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/go/?tab=compiletimeinstrumentation
+
+Orchestrion's project documentation can be found at [datadoghq.dev/orchestrion](https://datadoghq.dev/orchestrion); in
 particular:
 - the [user guide](https://datadoghq.dev/orchestrion/docs/) provides information about available configuration, and how
   to customize the traces produced by your application;
