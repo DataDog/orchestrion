@@ -20,10 +20,7 @@ func importsFilter(aspects []*aspect.Aspect, testMain bool, importMap map[string
 		TestMain:   testMain,
 	}
 	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-		if a.JoinPoint.PackageMayMatch(ctx) == may.CantMatch {
-			return true
-		}
-		return false
+		return a.JoinPoint.PackageMayMatch(ctx) == may.CantMatch
 	})
 }
 
@@ -45,9 +42,6 @@ func contentContainsFilter(aspects []*aspect.Aspect, fileContent []byte) []*aspe
 		FileContent: fileContent,
 	}
 	return slices.DeleteFunc(aspectsCopy, func(a *aspect.Aspect) (res bool) {
-		if a.JoinPoint.FileMayMatch(ctx) == may.CantMatch {
-			return true
-		}
-		return false
+		return a.JoinPoint.FileMayMatch(ctx) == may.CantMatch
 	})
 }
