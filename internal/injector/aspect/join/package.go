@@ -25,8 +25,8 @@ func (p importPath) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
 	return ctx.ImportPath == string(p)
 }
 
-func (p importPath) FileMayMatch(ctx *context.FileMayMatchContext) bool {
-	return ctx.FileContains(string(p))
+func (importPath) FileMayMatch(_ *context.FileMayMatchContext) bool {
+	return true
 }
 
 func (p importPath) Matches(ctx context.AspectContext) bool {
