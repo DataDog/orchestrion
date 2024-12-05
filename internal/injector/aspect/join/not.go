@@ -8,6 +8,7 @@ package join
 import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,12 +24,12 @@ func (not) ImpliesImported() []string {
 	return nil
 }
 
-func (n not) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
-	return !n.JoinPoint.PackageMayMatch(ctx)
+func (n not) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	return n.JoinPoint.PackageMayMatch(ctx).Not()
 }
 
-func (n not) FileMayMatch(ctx *context.FileMayMatchContext) bool {
-	return !n.JoinPoint.FileMayMatch(ctx)
+func (n not) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+	return n.JoinPoint.FileMayMatch(ctx).Not()
 }
 
 func (n not) Matches(ctx context.AspectContext) bool {

@@ -9,17 +9,20 @@ import (
 	"slices"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 )
 
 // ImportsFilter filters out aspects that imply imports not present in the import map.
 func importsFilter(aspects []*aspect.Aspect, importMap map[string]string, pkgImportPath string) []*aspect.Aspect {
-	ctx := &context.PackageMayMatchContext{
+	ctx := &may.PackageContext{
 		ImportPath: pkgImportPath,
 		ImportMap:  importMap,
 	}
 	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-		return !a.JoinPoint.PackageMayMatch(ctx)
+		if a.JoinPoint.PackageMayMatch(ctx) == may.CantMatch {
+			return true
+		}
+		return false
 	})
 }
 
@@ -32,10 +35,13 @@ func importsFilter(aspects []*aspect.Aspect, importMap map[string]string, pkgImp
 // - After all aspects are processed for a file, transform the []byte back to an io.ReadCloser and store it in the result map
 // - If any limit was hit, we stop the filtering on this file and return it as is in the result map
 func contentContainsFilter(aspects []*aspect.Aspect, fileContent []byte) []*aspect.Aspect {
-	ctx := &context.FileMayMatchContext{
+	ctx := &may.FileMayMatchContext{
 		FileContent: fileContent,
 	}
 	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) (res bool) {
-		return !a.JoinPoint.FileMayMatch(ctx)
+		if a.JoinPoint.FileMayMatch(ctx) == may.CantMatch {
+			return true
+		}
+		return false
 	})
 }

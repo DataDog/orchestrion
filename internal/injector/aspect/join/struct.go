@@ -11,6 +11,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -33,11 +34,15 @@ func (s *structDefinition) ImpliesImported() []string {
 	return nil
 }
 
-func (s *structDefinition) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
-	return ctx.ImportPath == s.TypeName.ImportPath()
+func (s *structDefinition) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	if ctx.ImportPath == s.TypeName.ImportPath() {
+		return may.Match
+	}
+
+	return may.CantMatch
 }
 
-func (*structDefinition) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+func (*structDefinition) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
 	return ctx.FileContains("struct")
 }
 
@@ -109,12 +114,12 @@ func (s *structLiteral) ImpliesImported() []string {
 	return nil
 }
 
-func (s *structLiteral) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+func (s *structLiteral) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return ctx.PackageImports(s.TypeName.ImportPath())
 }
 
-func (*structLiteral) FileMayMatch(_ *context.FileMayMatchContext) bool {
-	return true
+func (*structLiteral) FileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+	return may.Unknown
 }
 
 func (s *structLiteral) Matches(ctx context.AspectContext) bool {

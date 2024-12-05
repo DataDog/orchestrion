@@ -13,6 +13,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 )
 
@@ -24,10 +25,10 @@ type Point interface {
 	ImpliesImported() []string
 
 	// PackageMayMatch determines whether the join point may match the given package data from the importcfg file.
-	PackageMayMatch(ctx *context.PackageMayMatchContext) bool
+	PackageMayMatch(ctx *may.PackageContext) may.MatchType
 
 	// FileMayMatch determines whether the join point may match the given file raw content
-	FileMayMatch(ctx *context.FileMayMatchContext) bool
+	FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType
 
 	// Matches determines whether the injection should be performed on the given
 	// node or not. The node's ancestry is also provided to allow Point to make
@@ -119,7 +120,7 @@ func (n TypeName) Matches(node dst.Expr) bool {
 	}
 }
 
-// MacthesDefinition determines whether the provided node matches the definition
+// MatchesDefinition determines whether the provided node matches the definition
 // of this TypeName. The `importPath` argument determines the context in which
 // the assertion is made.
 func (n TypeName) MatchesDefinition(node dst.Expr, importPath string) bool {

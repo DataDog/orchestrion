@@ -11,6 +11,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -28,8 +29,8 @@ type (
 
 		impliesImported() []string
 
-		packageMayMatch(ctx *context.PackageMayMatchContext) bool
-		fileMayMatch(ctx *context.FileMayMatchContext) bool
+		packageMayMatch(ctx *may.PackageContext) may.MatchType
+		fileMayMatch(ctx *may.FileMayMatchContext) may.MatchType
 
 		evaluate(functionInformation) bool
 	}
@@ -52,22 +53,26 @@ func (s *functionDeclaration) ImpliesImported() (list []string) {
 	return
 }
 
-func (s *functionDeclaration) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
-	for _, opt := range s.Options {
-		if !opt.packageMayMatch(ctx) {
-			return false
+func (s *functionDeclaration) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	sum := may.Match
+	for _, candidate := range s.Options {
+		sum = sum.And(candidate.packageMayMatch(ctx))
+		if sum == may.CantMatch {
+			return may.CantMatch
 		}
 	}
-	return true
+	return sum
 }
 
-func (s *functionDeclaration) FileMayMatch(ctx *context.FileMayMatchContext) bool {
-	for _, opt := range s.Options {
-		if !opt.fileMayMatch(ctx) {
-			return false
+func (s *functionDeclaration) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+	sum := may.Match
+	for _, candidate := range s.Options {
+		sum = sum.And(candidate.fileMayMatch(ctx))
+		if sum == may.CantMatch {
+			return may.CantMatch
 		}
 	}
-	return true
+	return sum
 }
 
 func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
@@ -110,11 +115,11 @@ func (functionName) impliesImported() []string {
 	return nil
 }
 
-func (functionName) packageMayMatch(_ *context.PackageMayMatchContext) bool {
-	return true
+func (functionName) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	return may.Unknown
 }
 
-func (fo functionName) fileMayMatch(ctx *context.FileMayMatchContext) bool {
+func (fo functionName) fileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
 	return ctx.FileContains(string(fo))
 }
 
@@ -137,22 +142,25 @@ func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{Arguments: args, Results: ret}
 }
 
-func (fo *signature) packageMayMatch(ctx *context.PackageMayMatchContext) bool {
-	for _, tn := range fo.Arguments {
-		if !ctx.PackageImports(tn.ImportPath()) {
-			return false
+func (fo *signature) packageMayMatch(ctx *may.PackageContext) may.MatchType {
+	sum := may.Match
+	for _, candidate := range fo.Arguments {
+		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
+		if sum == may.CantMatch {
+			return may.CantMatch
 		}
 	}
-	for _, tn := range fo.Results {
-		if !ctx.PackageImports(tn.ImportPath()) {
-			return false
+	for _, candidate := range fo.Results {
+		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
+		if sum == may.CantMatch {
+			return may.CantMatch
 		}
 	}
-	return true
+	return sum
 }
 
-func (*signature) fileMayMatch(_ *context.FileMayMatchContext) bool {
-	return true
+func (*signature) fileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+	return may.Unknown
 }
 
 func (fo *signature) impliesImported() (list []string) {
@@ -217,11 +225,15 @@ func Receiver(typeName TypeName) FunctionOption {
 	return &receiver{typeName}
 }
 
-func (fo *receiver) packageMayMatch(ctx *context.PackageMayMatchContext) bool {
-	return ctx.ImportPath == fo.TypeName.ImportPath()
+func (fo *receiver) packageMayMatch(ctx *may.PackageContext) may.MatchType {
+	if ctx.ImportPath == fo.TypeName.ImportPath() {
+		return may.Match
+	}
+
+	return may.CantMatch
 }
 
-func (fo *receiver) fileMayMatch(ctx *context.FileMayMatchContext) bool {
+func (fo *receiver) fileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
 	return ctx.FileContains(fo.TypeName.Name())
 }
 
@@ -253,11 +265,11 @@ func (s *functionBody) ImpliesImported() []string {
 	return s.Function.ImpliesImported()
 }
 
-func (s *functionBody) PackageMayMatch(ctx *context.PackageMayMatchContext) bool {
+func (s *functionBody) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return s.Function.PackageMayMatch(ctx)
 }
 
-func (s *functionBody) FileMayMatch(ctx *context.FileMayMatchContext) bool {
+func (s *functionBody) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
 	return s.Function.FileMayMatch(ctx)
 }
 
