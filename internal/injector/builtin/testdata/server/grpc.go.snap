@@ -11,7 +11,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
-//line <generated>
+//line <generated>:1
 	__orchestrion_grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 )
 
@@ -23,7 +23,7 @@ func grpcServer() {
 	}
 
 	s := grpc.NewServer(grpc.EmptyServerOption{},
-//line <generated>
+//line <generated>:1
 		grpc.ChainStreamInterceptor(__orchestrion_grpctrace.StreamServerInterceptor()), grpc.ChainUnaryInterceptor(__orchestrion_grpctrace.UnaryServerInterceptor()))
 //line samples/server/grpc.go:22
 	if err := s.Serve(ln); err != nil {

@@ -10,14 +10,14 @@ import (
 	"log"
 
 	"github.com/gocql/gocql"
-//line <generated>
+//line <generated>:1
 	__orchestrion_gocqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql"
 )
 
 //line samples/client/gocql.go:14
 func SampleGoCQL1() {
 	cluster :=
-//line <generated>
+//line <generated>:1
 		func(cluster *gocql.ClusterConfig) *gocql.ClusterConfig {
 			obs := __orchestrion_gocqltrace.NewObserver(cluster)
 			cluster.QueryObserver = obs
@@ -35,7 +35,7 @@ func SampleGoCQL1() {
 
 func SampleGoCQL2() {
 	cluster :=
-//line <generated>
+//line <generated>:1
 		func(cluster gocql.ClusterConfig) gocql.ClusterConfig {
 			obs := __orchestrion_gocqltrace.NewObserver(&cluster)
 			cluster.QueryObserver = obs
@@ -53,7 +53,7 @@ func SampleGoCQL2() {
 
 func SampleGoCQL3() {
 	cluster :=
-//line <generated>
+//line <generated>:1
 		func(cluster *gocql.ClusterConfig) *gocql.ClusterConfig {
 			obs := __orchestrion_gocqltrace.NewObserver(cluster)
 			cluster.QueryObserver = obs

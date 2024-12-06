@@ -93,7 +93,7 @@ func (v *annotationVisitor) Visit(node ast.Node) ast.Visitor {
 		}
 
 		// This is a synthetic node...
-		v.adjFile, v.adjLine = generated, 0
+		v.adjFile, v.adjLine = generated, 1
 
 		if prevInfo.adjFile != generated {
 			decs := dstNode.Decorations()

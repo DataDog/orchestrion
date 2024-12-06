@@ -11,7 +11,7 @@ import "github.com/sirupsen/logrus"
 //line samples/client/logrus.go:10
 func SampleLogrus() {
 	logger :=
-//line <generated>
+//line <generated>:1
 		func(logger *logrus.Logger) *logrus.Logger {
 			logger.AddHook(&logrus.DDContextLogHook{})
 			return logger

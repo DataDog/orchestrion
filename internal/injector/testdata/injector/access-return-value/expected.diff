@@ -11,7 +11,7 @@
  
 -func test() (interface{}, error) {
 +func test() (_ interface{}, __result__1 error) {
-+//line <generated>
++//line <generated>:1
 +  {
 +    defer func() {
 +      if __result__1 != nil {

@@ -9,7 +9,7 @@ package main
 import (
 	"github.com/IBM/sarama"
 
-//line <generated>
+//line <generated>:1
 	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
 )
 
@@ -19,7 +19,7 @@ func ibmSaramaProducer() {
 	cfg.Producer.Return.Successes = true
 
 	producer, err :=
-//line <generated>
+//line <generated>:1
 		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
@@ -43,7 +43,7 @@ func ibmSaramaProducerFromClient() {
 		panic(err)
 	}
 	producer, err :=
-//line <generated>
+//line <generated>:1
 		func(p sarama.SyncProducer, err error) (sarama.SyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapSyncProducer(nil, p)
@@ -63,7 +63,7 @@ func ibmSaramaAsyncProducer() {
 	cfg.Version = sarama.V0_11_0_0 // minimum version that supports headers which are required for tracing
 
 	producer, err :=
-//line <generated>
+//line <generated>:1
 		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)
@@ -87,7 +87,7 @@ func ibmSaramaAsyncProducerFromClient() {
 		panic(err)
 	}
 	producer, err :=
-//line <generated>
+//line <generated>:1
 		func(p sarama.AsyncProducer, err error) (sarama.AsyncProducer, error) {
 			if p != nil {
 				p = __orchestrion_saramatrace.WrapAsyncProducer(nil, p)

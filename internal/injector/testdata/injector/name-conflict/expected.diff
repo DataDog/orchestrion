@@ -4,7 +4,7 @@
 +//line input.go:1:1
  package test
  
-+//line <generated>
++//line <generated>:1
 +import __orchestrion_fmt "fmt"
 +
 +//line input.go:3
@@ -12,7 +12,7 @@
  
  //dd:span
  func foo() {
-+//line <generated>
++//line <generated>:1
 +  {
 +    __orchestrion_fmt.Println("hello world")
 +  }

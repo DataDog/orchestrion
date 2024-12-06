@@ -12,14 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-//line <generated>
+//line <generated>:1
 	__orchestrion_instrument "github.com/DataDog/orchestrion/instrument/net/http"
 )
 
 //line samples/client/http.go:16
 func shortHandsWithContext(__argument__0 context.Context) {
 	resp, err :=
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.Get(
 			__argument__0,
 //line samples/client/http.go:17
@@ -30,7 +30,7 @@ func shortHandsWithContext(__argument__0 context.Context) {
 	resp.Body.Close()
 
 	resp, err =
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.Head(
 			__argument__0,
 //line samples/client/http.go:23
@@ -41,7 +41,7 @@ func shortHandsWithContext(__argument__0 context.Context) {
 	resp.Body.Close()
 
 	resp, err =
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.Post(
 			__argument__0,
 //line samples/client/http.go:29
@@ -52,7 +52,7 @@ func shortHandsWithContext(__argument__0 context.Context) {
 	resp.Body.Close()
 
 	resp, err =
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.PostForm(
 			__argument__0,
 //line samples/client/http.go:35
@@ -65,7 +65,7 @@ func shortHandsWithContext(__argument__0 context.Context) {
 
 func shortHandsWithRequest(__argument__0 *http.Request /* for context */) {
 	resp, err :=
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.Get(
 			__argument__0.Context(),
 //line samples/client/http.go:43
@@ -76,7 +76,7 @@ func shortHandsWithRequest(__argument__0 *http.Request /* for context */) {
 	resp.Body.Close()
 
 	resp, err =
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.Head(
 			__argument__0.Context(),
 //line samples/client/http.go:49
@@ -87,7 +87,7 @@ func shortHandsWithRequest(__argument__0 *http.Request /* for context */) {
 	resp.Body.Close()
 
 	resp, err =
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.Post(
 			__argument__0.Context(),
 //line samples/client/http.go:55
@@ -98,7 +98,7 @@ func shortHandsWithRequest(__argument__0 *http.Request /* for context */) {
 	resp.Body.Close()
 
 	resp, err =
-//line <generated>
+//line <generated>:1
 		__orchestrion_instrument.PostForm(
 			__argument__0.Context(),
 //line samples/client/http.go:61

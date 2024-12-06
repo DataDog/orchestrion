@@ -10,19 +10,19 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-//line <generated>
+//line <generated>:1
 	__orchestrion_echotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
 )
 
 //line samples/server/echov4.go:14
 func echoV4Server() {
 	r :=
-//line <generated>
+//line <generated>:1
 		func() *echo.Echo {
 			e :=
 //line samples/server/echov4.go:15
 				echo.New()
-//line <generated>
+//line <generated>:1
 			e.Use(__orchestrion_echotrace.Middleware())
 			return e
 		}()
@@ -41,12 +41,12 @@ type api struct {
 
 func (a *api) echoV4Server() {
 	a.srv =
-//line <generated>
+//line <generated>:1
 		func() *echo.Echo {
 			e :=
 //line samples/server/echov4.go:29
 				echo.New()
-//line <generated>
+//line <generated>:1
 			e.Use(__orchestrion_echotrace.Middleware())
 			return e
 		}()

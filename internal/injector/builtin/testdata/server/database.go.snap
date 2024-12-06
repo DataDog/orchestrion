@@ -12,13 +12,13 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"log"
-//line <generated>
+//line <generated>:1
 	__orchestrion_sql "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 )
 
 //line samples/server/database.go:16
 func init() {
-//line <generated>
+//line <generated>:1
 	func(driverName string, driver driver.Driver) {
 		sql.Register(driverName, driver)
 		__orchestrion_sql.Register(driverName, driver)

@@ -10,19 +10,19 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-//line <generated>
+//line <generated>:1
 	__orchestrion_gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
 )
 
 //line samples/server/gin.go:14
 func ginServer() {
 	r :=
-//line <generated>
+//line <generated>:1
 		func() *gin.Engine {
 			e :=
 //line samples/server/gin.go:15
 				gin.Default()
-//line <generated>
+//line <generated>:1
 			e.Use(__orchestrion_gintrace.Middleware(""))
 			return e
 		}()

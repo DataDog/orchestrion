@@ -8,19 +8,19 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
-//line <generated>
+//line <generated>:1
 	__orchestrion_fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
 )
 
 //line samples/server/fiberv2.go:12
 func fiberV2Server() {
 	r :=
-//line <generated>
+//line <generated>:1
 		func() *fiber.App {
 			app :=
 //line samples/server/fiberv2.go:13
 				fiber.New()
-//line <generated>
+//line <generated>:1
 			app.Use(__orchestrion_fibertrace.Middleware())
 			return app
 		}()

@@ -10,7 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-//line <generated>
+//line <generated>:1
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	__orchestrion_os "os"
@@ -18,7 +18,7 @@ import (
 
 //line samples/server/main.go:14
 func main() {
-//line <generated>
+//line <generated>:1
 	{
 		defer __orchestrion_tracer.Stop()
 		defer __orchestrion_profiler.Stop()
@@ -61,7 +61,7 @@ func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 
 // comment that is just hanging out unattached
 //
-//line <generated>
+//line <generated>:1
 func init() {
 	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 }

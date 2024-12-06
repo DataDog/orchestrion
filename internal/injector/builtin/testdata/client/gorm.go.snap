@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 
 	_ "github.com/mattn/go-sqlite3"
-//line <generated>
+//line <generated>:1
 	__orchestrion_sql "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 	__orchestrion_gorm "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	__orchestrion_gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
@@ -43,12 +43,12 @@ func gormClient() {
 
 func jinzhuGormClient() {
 	db, err :=
-//line <generated>
+//line <generated>:1
 		func() (*jinzhu.DB, error) {
 			db, err :=
 //line samples/client/gorm.go:39
 				jinzhu.Open("sqlite3", "file::memory:?cache=shared")
-//line <generated>
+//line <generated>:1
 			if err != nil {
 				return nil, err
 			}

@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-//line <generated>
+//line <generated>:1
 	__orchestrion_awstrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws"
 )
 
@@ -32,7 +32,7 @@ func AWSClientV2() {
 
 func newCfg1() aws.Config {
 	cfg :=
-//line <generated>
+//line <generated>:1
 		func(cfg *aws.Config) *aws.Config {
 			__orchestrion_awstrace.AppendMiddleware(cfg)
 			return cfg
@@ -44,7 +44,7 @@ func newCfg1() aws.Config {
 
 func newCfg2() aws.Config {
 	cfg :=
-//line <generated>
+//line <generated>:1
 		func(cfg *aws.Config) *aws.Config {
 			__orchestrion_awstrace.AppendMiddleware(cfg)
 			return cfg
@@ -59,7 +59,7 @@ func newCfg2() aws.Config {
 }
 
 func newCfg3() aws.Config {
-	return func //line <generated>
+	return func //line <generated>:1
 	(cfg aws.Config) aws.Config {
 		__orchestrion_awstrace.AppendMiddleware(&cfg)
 		return cfg

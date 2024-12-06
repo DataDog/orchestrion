@@ -14,7 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-//line <generated>
+//line <generated>:1
 	__orchestrion_gqlgentrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen"
 )
 
@@ -31,7 +31,7 @@ func Serve99Designs() {
 `})
 
 	server :=
-//line <generated>
+//line <generated>:1
 		func(s *handler.Server) *handler.Server {
 			s.Use(__orchestrion_gqlgentrace.NewTracer())
 			return s
