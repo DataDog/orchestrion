@@ -11,13 +11,13 @@ package injector
 import (
 	"errors"
 	"fmt"
-	"go/ast"
 	"go/importer"
 	"go/token"
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
@@ -82,26 +82,18 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	aspects = i.packageFilterAspects(aspects)
 
 	fset := token.NewFileSet()
-	astFiles, aspectsPerFile, err := parseFiles(fset, files, aspects)
+	parser := parse.NewParser(fset, len(files))
+	parsedFiles, err := parser.ParseFiles(files, aspects)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
 
-	if len(aspectsPerFile) != len(astFiles) {
-		panic(fmt.Sprintf("number of aspects (%d) does not match number of files (%d)", len(aspectsPerFile), len(astFiles)))
-	}
-
-	if len(astFiles) == 0 {
-		log.Debugf("no files to inject in %s after filtering on imports and file content\n", i.ImportPath)
+	if len(parsedFiles) == 0 {
+		log.Debugf("no files to inject in %s after filtering on imports and files\n", i.ImportPath)
 		return nil, context.GoLangVersion{}, nil
 	}
 
-	// We either match all files or none, otherwise type checking will fail.
-	if len(files) != len(astFiles) {
-		panic(fmt.Sprintf("number of files (%d) does not match number of parsed files (%d)", len(files), len(astFiles)))
-	}
-
-	uses, err := i.typeCheck(fset, astFiles)
+	uses, err := i.typeCheck(fset, parsedFiles)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -110,19 +102,19 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 		wg           sync.WaitGroup
 		errs         []error
 		errsMu       sync.Mutex
-		result       = make(map[string]InjectedFile, len(astFiles))
+		result       = make(map[string]InjectedFile, len(parsedFiles))
 		resultGoLang context.GoLangVersion
 		resultMu     sync.Mutex
 	)
 
-	wg.Add(len(astFiles))
-	for filename, astFile := range astFiles {
+	wg.Add(len(parsedFiles))
+	for _, parsedFile := range parsedFiles {
 		//fmt.Printf("filename: %s nb aspects: %d\n", filename, len(aspectsPerFile[filename]))
-		go func(filename string, astFile *ast.File) {
+		go func(parsedFile parse.File) {
 			defer wg.Done()
 
 			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
-			dstFile, err := decorator.DecorateFile(astFile)
+			dstFile, err := decorator.DecorateFile(parsedFile.AstFile)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -130,7 +122,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 				return
 			}
 
-			res, err := i.injectFile(decorator, dstFile, aspectsPerFile[filename])
+			res, err := i.injectFile(decorator, dstFile, parsedFile.Aspects)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -144,9 +136,9 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 
 			resultMu.Lock()
 			defer resultMu.Unlock()
-			result[filename] = res.InjectedFile
+			result[parsedFile.Name] = res.InjectedFile
 			resultGoLang.SetAtLeast(res.GoLang)
-		}(filename, astFile)
+		}(parsedFile)
 	}
 	wg.Wait()
 
