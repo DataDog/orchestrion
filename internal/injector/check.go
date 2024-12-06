@@ -32,7 +32,6 @@ func (i *Injector) typeCheck(fset *token.FileSet, files map[string]*ast.File) (m
 		idx++
 	}
 
-
 	if err := checker.Files(values); err != nil {
 		return nil, fmt.Errorf("type-checking files: %w", err)
 	}
