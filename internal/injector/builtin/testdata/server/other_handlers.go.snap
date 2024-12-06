@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 	"time"
-//line <generated>
+//line <generated>:1
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -78,7 +78,7 @@ func buildHandlers() {
 
 //dd:span foo:bar type:potato
 func myFunc(__argument__0 context.Context, name string) {
-//line <generated>
+//line <generated>:1
 	{
 		var span __orchestrion_tracer.Span
 		span, __argument__0 = __orchestrion_tracer.StartSpanFromContext(__argument__0, "myFunc",
@@ -95,7 +95,7 @@ func myFunc(__argument__0 context.Context, name string) {
 
 //dd:span foo2:bar2 type:request
 func myFunc2(name string, __argument__1 *http.Request) {
-//line <generated>
+//line <generated>:1
 	{
 		ctx := __argument__1.Context()
 		var span __orchestrion_tracer.Span
@@ -114,7 +114,7 @@ func myFunc2(name string, __argument__1 *http.Request) {
 
 //dd:span foo3:bar3 type:request span.name:customName
 func myFunc3(name string) (__result__0 error) {
-//line <generated>
+//line <generated>:1
 	{
 		ctx := context.TODO()
 		var span __orchestrion_tracer.Span

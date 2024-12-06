@@ -7,7 +7,7 @@
  import (
    "log"
    "net/http"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
 +  __orchestrion_event "github.com/DataDog/orchestrion/instrument/event"
  )
@@ -22,7 +22,7 @@
  
 -func handle(http.ResponseWriter, *http.Request) {
 +func handle(_ http.ResponseWriter, __argument__1 *http.Request) {
-+//line <generated>
++//line <generated>:1
 +  {
 +    __argument__1 = __argument__1.WithContext(__orchestrion_instrument.Report(
 +      __argument__1.Context(),

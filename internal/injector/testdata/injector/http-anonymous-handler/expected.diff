@@ -8,7 +8,7 @@
    "io"
    "log"
    "net/http"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
 +  __orchestrion_event "github.com/DataDog/orchestrion/instrument/event"
  )
@@ -18,7 +18,7 @@
    s := &http.Server{
      Addr: ":8085",
      Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-+//line <generated>
++//line <generated>:1
 +      {
 +        r = r.WithContext(__orchestrion_instrument.Report(
 +          r.Context(),
