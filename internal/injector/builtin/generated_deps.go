@@ -11,6 +11,7 @@ package builtin
 
 import (
 	_ "context"
+	_ "database/sql/driver"
 	_ "fmt"
 	_ "github.com/DataDog/orchestrion/instrument"
 	_ "github.com/DataDog/orchestrion/instrument/net/http"
