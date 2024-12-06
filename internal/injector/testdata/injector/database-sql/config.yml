@@ -22,6 +22,9 @@ aspects:
               {{range .AST.Args}}{{.}},
             {{end}})
 
+import-map:
+  database/sql: ""
+
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql: true
 

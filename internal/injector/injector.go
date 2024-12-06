@@ -9,11 +9,14 @@
 package injector
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"go/ast"
 	"go/importer"
 	"go/token"
+	"maps"
+	"slices"
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -82,11 +85,6 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	//fmt.Println("starting aspects to inject: ", len(aspects))
 
 	aspects = importsFilter(aspects, i.TestMain, i.ImportMap, i.ImportPath)
-	if len(aspects) == 0 {
-		log.Debugf("no aspects to apply to %s after filtering on imports\n", i.ImportPath)
-		return nil, context.GoLangVersion{}, nil
-	}
-
 	fset := token.NewFileSet()
 	astFiles, aspectsPerFile, err := parseFiles(fset, files, aspects)
 	if err != nil {
@@ -102,9 +100,23 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	//
 	//fmt.Printf("after parse files: %v %q\n", len(aspectNames), aspectNames)
 
+	if len(aspectsPerFile) != len(astFiles) {
+		panic(fmt.Sprintf("number of aspects (%d) does not match number of files (%d)", len(aspectsPerFile), len(astFiles)))
+	}
+
 	if len(astFiles) == 0 {
+		log.Infof("number of aspects to inject in package %s: 0\n", i.ImportPath)
 		log.Debugf("no files to inject in %s after filtering on imports and file content\n", i.ImportPath)
 		return nil, context.GoLangVersion{}, nil
+	}
+
+	log.Infof("number of aspects to inject in package %s: %d\n", i.ImportPath, len(slices.MaxFunc(slices.Collect(maps.Values(aspectsPerFile)), func(a, b []*aspect.Aspect) int {
+		return cmp.Compare(len(a), len(b))
+	})))
+
+	// We either match all files or none, otherwise type checking will fail.
+	if len(files) != len(astFiles) {
+		panic(fmt.Sprintf("number of files (%d) does not match number of parsed files (%d)", len(files), len(astFiles)))
 	}
 
 	uses, err := i.typeCheck(fset, astFiles)

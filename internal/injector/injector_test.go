@@ -35,6 +35,8 @@ type testConfig struct {
 	SyntheticReferences map[string]typed.ReferenceKind `yaml:"syntheticReferences"`
 	GoLang              context.GoLangVersion          `yaml:"required-lang"`
 	Code                string                         `yaml:"code"`
+	ImportPath          string                         `yaml:"import-path"`
+	ImportMap           map[string]string              `yaml:"import-map"`
 }
 
 const testModuleName = "dummy/test/module"
@@ -96,10 +98,15 @@ func Test(t *testing.T) {
 			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
 			runGo(t, tmp, "mod", "tidy")
 
+			if config.ImportPath == "" {
+				config.ImportPath = testModuleName
+			}
+
 			inj := injector.Injector{
 				ModifiedFile: func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
-				ImportPath:   testModuleName,
+				ImportPath:   config.ImportPath,
 				Lookup:       testLookup,
+				ImportMap:    config.ImportMap,
 			}
 
 			res, resGoLang, err := inj.InjectFiles([]string{inputFile}, config.Aspects)

@@ -37,6 +37,9 @@ aspects:
               {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
             )
 
+import-map:
+  net/http: ""
+
 syntheticReferences:
   github.com/DataDog/orchestrion/instrument/event: true
   github.com/DataDog/orchestrion/instrument: true

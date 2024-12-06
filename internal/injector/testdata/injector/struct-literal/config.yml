@@ -31,6 +31,9 @@ aspects:
               return cfg
             }({{ . }})
 
+import-map:
+  github.com/aws/aws-sdk-go-v2/aws: ""
+
 preserveLineInfo: true
 mustCompile: true
 
@@ -39,8 +42,8 @@ syntheticReferences:
 
 code: |-
   package test
-  
+
   import "github.com/aws/aws-sdk-go-v2/aws"
-  
+
   var cfgValue = aws.Config{}
   var cfgPtr = &aws.Config{}
