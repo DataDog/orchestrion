@@ -22,7 +22,7 @@ func (t testMain) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return may.CantMatch
 }
 
-func (testMain) FileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+func (testMain) FileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 

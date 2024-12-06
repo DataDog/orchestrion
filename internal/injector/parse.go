@@ -43,7 +43,16 @@ func parseFiles(fset *token.FileSet, files []string, aspects []*aspect.Aspect) (
 		fileAspects := aspects
 		filesBytesCount += uint64(len(goFile.content))
 		if enableEagerness && filesBytesCount <= maxBytesEagerness {
-			fileAspects = contentContainsFilter(aspects, goFile.content)
+			ast, err := parser.ParseFile(fset, goFile.mappedName, goFile.content, parser.PackageClauseOnly)
+			if err != nil {
+				return nil, nil, fmt.Errorf("parsing %q: %w", goFile.name, err)
+			}
+
+			if ast.Name == nil {
+				panic(fmt.Sprintf("no package name found in %q", goFile.name))
+			}
+
+			fileAspects = fileFilterAspects(aspects, goFile.content, ast.Name.Name)
 			if len(fileAspects) == 0 {
 				eagerFileReadingBuffer = append(eagerFileReadingBuffer, goFile)
 				continue
@@ -54,7 +63,6 @@ func parseFiles(fset *token.FileSet, files []string, aspects []*aspect.Aspect) (
 		// so we need to parse all the files of the package to be able to apply the aspects to the correct files
 		for _, eagerFile := range eagerFileReadingBuffer {
 			astFile, err := parser.ParseFile(fset, eagerFile.mappedName, eagerFile.content, parser.ParseComments)
-
 			if err != nil {
 				return nil, nil, fmt.Errorf("parsing %q: %w", eagerFile.name, err)
 			}

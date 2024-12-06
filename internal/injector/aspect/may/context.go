@@ -9,10 +9,16 @@ import (
 	"bytes"
 )
 
+// PackageContext is the context for a package to be matched.
 type PackageContext struct {
+	// ImportPath is the import path of the package in its module.
 	ImportPath string
-	ImportMap  map[string]string
-	TestMain   bool
+
+	// ImportMap is the map of import paths to their respective package archives
+	ImportMap map[string]string
+
+	// TestMain is true if the package is a test package.
+	TestMain bool
 }
 
 func (ctx *PackageContext) PackageImports(path string) MatchType {
@@ -27,11 +33,16 @@ func (ctx *PackageContext) PackageImports(path string) MatchType {
 	return CantMatch
 }
 
-type FileMayMatchContext struct {
+// FileContext is the context for a file to be matched.
+type FileContext struct {
+	// FileContent is the content of the file to be matched.
 	FileContent []byte
+
+	// PackageName is the name of the package given as seen in `package main` for example.
+	PackageName string
 }
 
-func (ctx *FileMayMatchContext) FileContains(content string) MatchType {
+func (ctx *FileContext) FileContains(content string) MatchType {
 	if bytes.Contains(ctx.FileContent, []byte(content)) {
 		return Match
 	}

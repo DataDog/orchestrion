@@ -28,7 +28,7 @@ func (n not) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return n.JoinPoint.PackageMayMatch(ctx).Not()
 }
 
-func (n not) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (n not) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	return n.JoinPoint.FileMayMatch(ctx).Not()
 }
 

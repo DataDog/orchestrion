@@ -28,7 +28,7 @@ func (configuration) PackageMayMatch(_ *may.PackageContext) may.MatchType {
 	return may.Unknown
 }
 
-func (configuration) FileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+func (configuration) FileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 

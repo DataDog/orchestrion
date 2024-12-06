@@ -27,7 +27,7 @@ func (directive) PackageMayMatch(_ *may.PackageContext) may.MatchType {
 	return may.Unknown
 }
 
-func (d directive) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (d directive) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	return ctx.FileContains("//" + string(d))
 }
 

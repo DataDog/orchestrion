@@ -28,7 +28,7 @@ type Point interface {
 	PackageMayMatch(ctx *may.PackageContext) may.MatchType
 
 	// FileMayMatch determines whether the join point may match the given file raw content
-	FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType
+	FileMayMatch(ctx *may.FileContext) may.MatchType
 
 	// Matches determines whether the injection should be performed on the given
 	// node or not. The node's ancestry is also provided to allow Point to make

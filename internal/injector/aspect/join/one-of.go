@@ -48,7 +48,7 @@ func (o oneOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return sum
 }
 
-func (o oneOf) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (o oneOf) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	sum := may.CantMatch
 	for _, candidate := range o {
 		sum = sum.Or(candidate.FileMayMatch(ctx))

@@ -79,9 +79,8 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 		return nil, context.GoLangVersion{}, err
 	}
 
-	//fmt.Println("starting aspects to inject: ", len(aspects))
+	aspects = i.packageFilterAspects(aspects)
 
-	aspects = importsFilter(aspects, i.TestMain, i.ImportMap, i.ImportPath)
 	fset := token.NewFileSet()
 	astFiles, aspectsPerFile, err := parseFiles(fset, files, aspects)
 	if err != nil {

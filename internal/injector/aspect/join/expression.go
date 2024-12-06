@@ -33,7 +33,7 @@ func (i *functionCall) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return ctx.PackageImports(i.ImportPath)
 }
 
-func (i *functionCall) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (i *functionCall) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	return ctx.FileContains(i.Name)
 }
 

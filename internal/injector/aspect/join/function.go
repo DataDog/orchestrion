@@ -30,7 +30,7 @@ type (
 		impliesImported() []string
 
 		packageMayMatch(ctx *may.PackageContext) may.MatchType
-		fileMayMatch(ctx *may.FileMayMatchContext) may.MatchType
+		fileMayMatch(ctx *may.FileContext) may.MatchType
 
 		evaluate(functionInformation) bool
 	}
@@ -64,7 +64,7 @@ func (s *functionDeclaration) PackageMayMatch(ctx *may.PackageContext) may.Match
 	return sum
 }
 
-func (s *functionDeclaration) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (s *functionDeclaration) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range s.Options {
 		sum = sum.And(candidate.fileMayMatch(ctx))
@@ -119,7 +119,7 @@ func (functionName) packageMayMatch(_ *may.PackageContext) may.MatchType {
 	return may.Unknown
 }
 
-func (fo functionName) fileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (fo functionName) fileMayMatch(ctx *may.FileContext) may.MatchType {
 	return ctx.FileContains(string(fo))
 }
 
@@ -159,7 +159,7 @@ func (fo *signature) packageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return sum
 }
 
-func (*signature) fileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+func (*signature) fileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 
@@ -233,7 +233,7 @@ func (fo *receiver) packageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return may.CantMatch
 }
 
-func (fo *receiver) fileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (fo *receiver) fileMayMatch(ctx *may.FileContext) may.MatchType {
 	return ctx.FileContains(fo.TypeName.Name())
 }
 
@@ -269,7 +269,7 @@ func (s *functionBody) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return s.Function.PackageMayMatch(ctx)
 }
 
-func (s *functionBody) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (s *functionBody) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	return s.Function.FileMayMatch(ctx)
 }
 

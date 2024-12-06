@@ -36,7 +36,7 @@ func (o allOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return sum
 }
 
-func (o allOf) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (o allOf) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range o {
 		sum = sum.And(candidate.FileMayMatch(ctx))

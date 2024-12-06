@@ -42,7 +42,7 @@ func (s *structDefinition) PackageMayMatch(ctx *may.PackageContext) may.MatchTyp
 	return may.CantMatch
 }
 
-func (*structDefinition) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (*structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	return ctx.FileContains("struct")
 }
 
@@ -118,7 +118,7 @@ func (s *structLiteral) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return ctx.PackageImports(s.TypeName.ImportPath())
 }
 
-func (*structLiteral) FileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+func (*structLiteral) FileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 

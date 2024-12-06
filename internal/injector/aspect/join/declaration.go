@@ -61,7 +61,7 @@ func (i *declarationOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return ctx.PackageImports(i.ImportPath)
 }
 
-func (i *declarationOf) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
+func (i *declarationOf) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	return ctx.FileContains(i.Name)
 }
 
@@ -81,7 +81,7 @@ func (i *valueDeclaration) PackageMayMatch(ctx *may.PackageContext) may.MatchTyp
 	return ctx.PackageImports(i.TypeName.ImportPath())
 }
 
-func (*valueDeclaration) FileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+func (*valueDeclaration) FileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 

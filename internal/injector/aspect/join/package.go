@@ -6,9 +6,6 @@
 package join
 
 import (
-	"bufio"
-	"bytes"
-
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
@@ -33,7 +30,7 @@ func (p importPath) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return may.CantMatch
 }
 
-func (importPath) FileMayMatch(_ *may.FileMayMatchContext) may.MatchType {
+func (importPath) FileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 
@@ -59,12 +56,9 @@ func (packageName) PackageMayMatch(_ *may.PackageContext) may.MatchType {
 	return may.Unknown
 }
 
-func (p packageName) FileMayMatch(ctx *may.FileMayMatchContext) may.MatchType {
-	scanner := bufio.NewScanner(bytes.NewReader(ctx.FileContent))
-	for scanner.Scan() {
-		if bytes.Contains(scanner.Bytes(), []byte("package")) && bytes.Contains(scanner.Bytes(), []byte(p)) {
-			return may.Match
-		}
+func (p packageName) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	if ctx.PackageName == string(p) {
+		return may.Match
 	}
 
 	return may.CantMatch
