@@ -3,16 +3,20 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package config
+package config_test
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -47,7 +51,7 @@ func TestBuiltinYAML(t *testing.T) {
 			return nil
 		}
 
-		if d.Name() != FilenameOrchestrionYML && !strings.Contains(path, yamlSegment) {
+		if d.Name() != config.FilenameOrchestrionYML && !strings.Contains(path, yamlSegment) {
 			// Only look at `.yml` files that aren't `orchestrion.yml` if they're
 			// under a `yaml` directory...
 			return nil
@@ -63,13 +67,44 @@ func TestBuiltinYAML(t *testing.T) {
 
 			var raw map[string]any
 			require.NoError(t, yaml.NewDecoder(file).Decode(&raw))
-			require.NoError(t, ValidateObject(raw))
+			require.NoError(t, config.ValidateObject(raw))
 		})
 
 		return nil
 	})
 
 	require.Positive(t, count)
+}
+
+var (
+	//go:embed "schema.json"
+	schemaBytes []byte
+	schema      *jsonschema.Schema
+	schemaOnce  sync.Once
+)
+
+func getSchema() *jsonschema.Schema {
+	schemaOnce.Do(compileSchema)
+	return schema
+}
+
+func compileSchema() {
+	rawSchema, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaBytes))
+	if err != nil {
+		panic(fmt.Errorf("parsing JSON schema: %w", err))
+	}
+	mapSchema, _ := rawSchema.(map[string]any)
+	schemaURL, _ := mapSchema["$id"].(string)
+
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource(schemaURL, rawSchema); err != nil {
+		panic(fmt.Errorf("preparing JSON schema compiler: %w", err))
+	}
+
+	schema, err = compiler.Compile(schemaURL)
+	if err != nil {
+		panic(fmt.Errorf("compiling JSON schema: %w", err))
+	}
 }
 
 func TestSchemaValidity(t *testing.T) {
