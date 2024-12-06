@@ -40,12 +40,14 @@ func parseFiles(fset *token.FileSet, files []string, aspects []*aspect.Aspect) (
 			return nil, nil, err
 		}
 
+		fileAspects := aspects
 		filesBytesCount += uint64(len(goFile.content))
-		fileAspects := contentContainsFilter(aspects, goFile.content)
-
-		if enableEagerness && filesBytesCount <= maxBytesEagerness && len(fileAspects) == 0 {
-			eagerFileReadingBuffer = append(eagerFileReadingBuffer, goFile)
-			continue
+		if enableEagerness && filesBytesCount <= maxBytesEagerness {
+			fileAspects = contentContainsFilter(aspects, goFile.content)
+			if len(fileAspects) == 0 {
+				eagerFileReadingBuffer = append(eagerFileReadingBuffer, goFile)
+				continue
+			}
 		}
 
 		// We have reached a file that actually have some aspects linked to it or the package is too big,
