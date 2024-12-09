@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/_tools
 
-go 1.22.9
+go 1.22.10
 
 require (
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1

@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/_docs
 
-go 1.22.9
+go 1.22.10
 
 require github.com/gohugoio/hugo v0.139.2
 
