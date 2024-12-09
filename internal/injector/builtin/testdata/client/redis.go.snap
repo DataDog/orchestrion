@@ -16,7 +16,7 @@ import (
 	redisv8 "github.com/go-redis/redis/v8"
 	redigo "github.com/gomodule/redigo/redis"
 	redisv9 "github.com/redis/go-redis/v9"
-//line <generated>
+//line <generated>:1
 	__orchestrion_trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis"
 	__orchestrion_trace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
 	__orchestrion_trace2 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
@@ -27,12 +27,12 @@ import (
 //line samples/client/redis.go:20
 func redisV0Client() {
 	client :=
-//line <generated>
+//line <generated>:1
 		func() (client *redisv0.Client) {
 			client =
 //line samples/client/redis.go:21
 				redisv0.NewClient(&redisv0.Options{Addr: "127.0.0.1", Password: "", DB: 0})
-//line <generated>
+//line <generated>:1
 			__orchestrion_trace.WrapClient(client)
 			return
 		}()
@@ -45,12 +45,12 @@ func redisV0Client() {
 
 func redisV7Client() {
 	client :=
-//line <generated>
+//line <generated>:1
 		func() (client *redisv7.Client) {
 			client =
 //line samples/client/redis.go:29
 				redisv7.NewClient(&redisv7.Options{Addr: "127.0.0.1", Password: "", DB: 0})
-//line <generated>
+//line <generated>:1
 			__orchestrion_trace1.WrapClient(client)
 			return
 		}()
@@ -63,12 +63,12 @@ func redisV7Client() {
 
 func redisV8Client(ctx context.Context) {
 	client :=
-//line <generated>
+//line <generated>:1
 		func() (client *redisv8.Client) {
 			client =
 //line samples/client/redis.go:37
 				redisv8.NewClient(&redisv8.Options{Addr: "127.0.0.1", Password: "", DB: 0})
-//line <generated>
+//line <generated>:1
 			__orchestrion_trace2.WrapClient(client)
 			return
 		}()
@@ -81,12 +81,12 @@ func redisV8Client(ctx context.Context) {
 
 func redisV9Client(ctx context.Context) {
 	client :=
-//line <generated>
+//line <generated>:1
 		func() (client *redisv9.Client) {
 			client =
 //line samples/client/redis.go:45
 				redisv9.NewClient(&redisv9.Options{Addr: "127.0.0.1", Password: "", DB: 0})
-//line <generated>
+//line <generated>:1
 			__orchestrion_trace3.WrapClient(client)
 			return
 		}()
@@ -107,7 +107,7 @@ func redigoClient(ctx context.Context, net, addr string) {
 	}
 
 	if conn, err :=
-//line <generated>
+//line <generated>:1
 		func() (redigo.Conn, error) {
 			return __orchestrion_redigotrace.Dial(
 //line samples/client/redis.go:61
@@ -121,7 +121,7 @@ func redigoClient(ctx context.Context, net, addr string) {
 	}
 
 	if conn, err :=
-//line <generated>
+//line <generated>:1
 		func() (redigo.Conn, error) {
 			return __orchestrion_redigotrace.DialContext(
 //line samples/client/redis.go:67
@@ -135,12 +135,12 @@ func redigoClient(ctx context.Context, net, addr string) {
 	}
 
 	if conn, err :=
-//line <generated>
+//line <generated>:1
 		func() (redigo.Conn, error) {
 			opts :=
 //line samples/client/redis.go:73
 				options
-//line <generated>
+//line <generated>:1
 			anyOpts := make([]interface{}, len(opts))
 			for i, v := range opts {
 				anyOpts[i] = v
@@ -148,7 +148,7 @@ func redigoClient(ctx context.Context, net, addr string) {
 			return __orchestrion_redigotrace.DialURL(
 //line samples/client/redis.go:73
 				fmt.Sprintf("%s://%s", net, addr),
-//line <generated>
+//line <generated>:1
 				anyOpts...)
 		}();
 //line samples/client/redis.go:73

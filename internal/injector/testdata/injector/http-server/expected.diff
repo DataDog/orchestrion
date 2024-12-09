@@ -8,7 +8,7 @@
    "io"
    "log"
    "net/http"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
  )
  
@@ -20,7 +20,7 @@
 +    Addr: ":8085",
 +    Handler:
 +    //dd:startwrap
-+//line <generated>
++//line <generated>:1
 +    __orchestrion_instrument.WrapHandler(
 +//line input.go:12
 +      http.HandlerFunc(handle)),

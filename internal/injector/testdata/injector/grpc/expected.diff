@@ -9,7 +9,7 @@
    "net"
  
    "google.golang.org/grpc"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
  )
  
@@ -18,7 +18,7 @@
    dialOpts := []grpc.DialOption{grpc.WithInsecure()}
 -  conn, err := grpc.Dial("localhost:50051", dialOpts...)
 +  conn, err := grpc.Dial("localhost:50051",
-+//line <generated>
++//line <generated>:1
 +    func(opts ...grpc.DialOption) []grpc.DialOption {
 +      return append(opts, grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
 +    }(
@@ -33,7 +33,7 @@
  
 -  s := grpc.NewServer(grpc.EmptyServerOption{})
 +  s := grpc.NewServer(grpc.EmptyServerOption{},
-+//line <generated>
++//line <generated>:1
 +    grpc.StreamInterceptor(__orchestrion_grpctrace.StreamServerInterceptor()), grpc.UnaryInterceptor(__orchestrion_grpctrace.UnaryServerInterceptor()))
 +//line input.go:26
    if err := s.Serve(ln); err != nil {

@@ -6,14 +6,14 @@
  
  import (
    "context"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
  )
  
  //dd:span foo:bar baz:qux
 +//line input.go:8
  func outer(ctx context.Context) {
-+//line <generated>
++//line <generated>:1
 +  {
 +    var span __orchestrion_tracer.Span
 +    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "outer",
@@ -27,7 +27,7 @@
    //dd:span
 +//line input.go:10
    inner := func(c context.Context) {
-+//line <generated>
++//line <generated>:1
 +    {
 +      var span __orchestrion_tracer.Span
 +      span, c = __orchestrion_tracer.StartSpanFromContext(c, "")

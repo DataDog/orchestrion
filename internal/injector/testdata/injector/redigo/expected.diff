@@ -8,7 +8,7 @@
    "time"
  
    "github.com/gomodule/redigo/redis"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_redigotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
  )
  
@@ -16,7 +16,7 @@
  func dial1(net, address string) error {
 -  c, err := redis.Dial(net, address)
 +  c, err :=
-+//line <generated>
++//line <generated>:1
 +    func() (redis.Conn, error) {
 +      return __orchestrion_redigotrace.Dial(
 +//line input.go:10
@@ -32,7 +32,7 @@
  func dial2(net, address string) error {
 -  c, err := redis.Dial(net, address, redis.DialConnectTimeout(5*time.Second), redis.DialConnectTimeout(time.Minute))
 +  c, err :=
-+//line <generated>
++//line <generated>:1
 +    func() (redis.Conn, error) {
 +      return __orchestrion_redigotrace.Dial(
 +//line input.go:19
@@ -51,12 +51,12 @@
    }
 -  c, err := redis.Dial(net, address, options...)
 +  c, err :=
-+//line <generated>
++//line <generated>:1
 +    func() (redis.Conn, error) {
 +      opts :=
 +//line input.go:31
 +        options
-+//line <generated>
++//line <generated>:1
 +      anyOpts := make([]interface{}, len(opts))
 +      for i, v := range opts {
 +        anyOpts[i] = v
@@ -64,7 +64,7 @@
 +      return __orchestrion_redigotrace.Dial(
 +//line input.go:31
 +        net, address,
-+//line <generated>
++//line <generated>:1
 +        anyOpts...)
 +    }()
 +//line input.go:32
