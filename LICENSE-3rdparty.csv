@@ -72,6 +72,9 @@ orchestrion,github.com/tinylib/msgp/msgp,MIT,Copyright (c) 2014 Philip Hofer
 orchestrion,github.com/tklauser/go-sysconf,BSD-3-Clause,"Copyright (c) 2018-2022, Tobias Klauser"
 orchestrion,github.com/tklauser/numcpus,Apache-2.0,unknown
 orchestrion,github.com/urfave/cli/v2,MIT,Copyright (c) 2022 urfave/cli maintainers
+orchestrion,github.com/xeipuuv/gojsonpointer,Apache-2.0,Copyright 2015 xeipuuv
+orchestrion,github.com/xeipuuv/gojsonreference,Apache-2.0,Copyright 2015 xeipuuv
+orchestrion,github.com/xeipuuv/gojsonschema,Apache-2.0,Copyright 2015 xeipuuv
 orchestrion,github.com/xrash/smetrics,MIT,Copyright (C) 2016 Felipe da Cunha Gonçalves
 orchestrion,github.com/yusufpapurcu/wmi,MIT,Copyright (c) 2013 Stack Exchange
 orchestrion,go.opentelemetry.io/collector/component,Apache-2.0,unknown

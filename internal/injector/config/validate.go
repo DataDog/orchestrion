@@ -6,46 +6,48 @@
 package config
 
 import (
-	"bytes"
 	_ "embed" // For go:embed
+	"errors"
 	"fmt"
 	"sync"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 // ValidateObject checks the provided object for conformance to the embedded
 // JSON schema. Returns an error if the object does not conform to the schema.
 func ValidateObject(obj map[string]any) error {
-	return getSchema().Validate(obj)
+	res, err := getSchema().Validate(gojsonschema.NewGoLoader(obj))
+	if err != nil {
+		return fmt.Errorf("unknown object type for schema validation: %w", err)
+	}
+
+	if !res.Valid() {
+		errs := make([]error, len(res.Errors()))
+		for i, err := range res.Errors() {
+			errs[i] = fmt.Errorf("error at %s: %s", err.Field(), err.Description())
+		}
+		return fmt.Errorf("object does not conform to schema: %w", errors.Join(errs...))
+	}
+
+	return nil
 }
 
 var (
 	//go:embed "schema.json"
 	schemaBytes []byte
-	schema      *jsonschema.Schema
+	schema      *gojsonschema.Schema
 	schemaOnce  sync.Once
 )
 
-func getSchema() *jsonschema.Schema {
+func getSchema() *gojsonschema.Schema {
 	schemaOnce.Do(compileSchema)
 	return schema
 }
 
 func compileSchema() {
-	rawSchema, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaBytes))
-	if err != nil {
-		panic(fmt.Errorf("parsing JSON schema: %w", err))
-	}
-	mapSchema, _ := rawSchema.(map[string]any)
-	schemaURL, _ := mapSchema["$id"].(string)
-
-	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource(schemaURL, rawSchema); err != nil {
-		panic(fmt.Errorf("preparing JSON schema compiler: %w", err))
-	}
-
-	schema, err = compiler.Compile(schemaURL)
+	var err error
+	schema, err = gojsonschema.NewSchema(gojsonschema.NewBytesLoader(schemaBytes))
 	if err != nil {
 		panic(fmt.Errorf("compiling JSON schema: %w", err))
 	}

@@ -166,7 +166,7 @@ func TestHasConfig(t *testing.T) {
 				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
 			_, err := HasConfig(pkg, true)
-			require.ErrorContains(t, err, "missing property 'meta'")
+			require.ErrorContains(t, err, "meta is required")
 		})
 	})
 }
