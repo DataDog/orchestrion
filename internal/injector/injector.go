@@ -11,14 +11,15 @@ package injector
 import (
 	"errors"
 	"fmt"
-	"go/ast"
 	"go/importer"
 	"go/token"
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver"
@@ -29,9 +30,6 @@ import (
 type (
 	// Injector injects go code into a specific Go package.
 	Injector struct {
-		// Aspects is the set of configured aspects to use.
-		Aspects []*aspect.Aspect
-
 		// ImportPath is the import path of the package that will be injected.
 		ImportPath string
 		// Name is the name of the package that will be injected. If blank, it will be determined from parsing source files.
@@ -41,6 +39,9 @@ type (
 		GoVersion string
 		// TestMain must be set to true when injecting into the generated test main package.
 		TestMain bool
+
+		// ImportMap is a map of import paths to their respective .a archive file. Without transitive dependencies
+		ImportMap map[string]string
 
 		// ModifiedFile is called to determine the output file name for a modified file. If nil, the input file is modified
 		// in-place.
@@ -73,18 +74,26 @@ type (
 // InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
-func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context.GoLangVersion, error) {
+func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[string]InjectedFile, context.GoLangVersion, error) {
 	if err := i.validate(); err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
 
+	aspects = i.packageFilterAspects(aspects)
+
 	fset := token.NewFileSet()
-	astFiles, err := parseFiles(fset, files)
+	parser := parse.NewParser(fset, len(files))
+	parsedFiles, err := parser.ParseFiles(files, aspects)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
 
-	uses, err := i.typeCheck(fset, astFiles)
+	if len(parsedFiles) == 0 {
+		log.Debugf("no files to inject in %s after filtering on imports and files\n", i.ImportPath)
+		return nil, context.GoLangVersion{}, nil
+	}
+
+	uses, err := i.typeCheck(fset, parsedFiles)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -93,18 +102,19 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 		wg           sync.WaitGroup
 		errs         []error
 		errsMu       sync.Mutex
-		result       = make(map[string]InjectedFile, len(astFiles))
+		result       = make(map[string]InjectedFile, len(parsedFiles))
 		resultGoLang context.GoLangVersion
 		resultMu     sync.Mutex
 	)
 
-	wg.Add(len(astFiles))
-	for idx, astFile := range astFiles {
-		go func(idx int, astFile *ast.File) {
+	wg.Add(len(parsedFiles))
+	for _, parsedFile := range parsedFiles {
+		//fmt.Printf("filename: %s nb aspects: %d\n", filename, len(aspectsPerFile[filename]))
+		go func(parsedFile parse.File) {
 			defer wg.Done()
 
 			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
-			dstFile, err := decorator.DecorateFile(astFile)
+			dstFile, err := decorator.DecorateFile(parsedFile.AstFile)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -112,7 +122,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 				return
 			}
 
-			res, err := i.injectFile(decorator, dstFile)
+			res, err := i.injectFile(decorator, dstFile, parsedFile.Aspects)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -126,9 +136,9 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 
 			resultMu.Lock()
 			defer resultMu.Unlock()
-			result[files[idx]] = res.InjectedFile
+			result[parsedFile.Name] = res.InjectedFile
 			resultGoLang.SetAtLeast(res.GoLang)
-		}(idx, astFile)
+		}(parsedFile)
 	}
 	wg.Wait()
 
@@ -152,11 +162,11 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (result, error) {
+func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, aspects []*aspect.Aspect) (result, error) {
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
 	var err error
-	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig)
+	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig, aspects)
 	if err != nil {
 		return result, err
 	}
@@ -171,7 +181,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (r
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, aspects []*aspect.Aspect) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
@@ -211,7 +221,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 			TestMain:     i.TestMain,
 		})
 		defer ctx.Release()
-		changed, err = i.injectNode(ctx)
+		changed, err = injectNode(ctx, aspects)
 		modified = modified || changed
 
 		return err == nil
@@ -232,8 +242,8 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 // injectNode assesses all configured aspects agaisnt the current node, and performs any AST
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
-func (i *Injector) injectNode(ctx context.AdviceContext) (mod bool, err error) {
-	for _, inj := range i.Aspects {
+func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, err error) {
+	for _, inj := range aspects {
 		if !inj.JoinPoint.Matches(ctx) {
 			continue
 		}

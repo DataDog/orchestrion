@@ -14,6 +14,9 @@ aspects:
             instrument.WrapHandler({{ . }})
             //dd:endwrap
 
+import-map:
+  net/http: ""
+
 syntheticReferences:
   github.com/DataDog/orchestrion/instrument: true
 
