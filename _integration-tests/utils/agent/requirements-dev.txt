@@ -15,7 +15,7 @@ multidict==6.1.0
 propcache==0.2.1
 protobuf==5.29.1
 requests==2.32.3
-six==1.16.0
+six==1.17.0
 typing_extensions==4.12.2
 urllib3==2.2.3
 yarl==1.18.3
