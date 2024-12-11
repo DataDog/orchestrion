@@ -224,8 +224,13 @@ func (c *context) ParseSource(bytes []byte) (*dst.File, error) {
 	return c.sourceParser.Parse(bytes)
 }
 
-func (c *context) AddImport(path string, alias string) bool {
-	return c.refMap.AddImport(c.file, path, alias)
+func (c *context) AddImport(path string, name string) bool {
+	nodeChain := []dst.Node{c.node}
+	for p := c.NodeChain.parent; p != nil; p = p.parent {
+		nodeChain = append(nodeChain, p.node)
+	}
+
+	return c.refMap.AddImport(c.file, nodeChain, path, name)
 }
 
 func (c *context) AddLink(path string) bool {

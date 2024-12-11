@@ -7,7 +7,9 @@ package typed
 
 import (
 	"fmt"
+	"go/ast"
 	"go/token"
+	"go/types"
 	"slices"
 	"strings"
 
@@ -23,6 +25,8 @@ type (
 	ReferenceMap struct {
 		refs    map[string]ReferenceKind
 		aliases map[string]string
+		nodeMap map[dst.Node]ast.Node
+		scopes  map[ast.Node]*types.Scope
 	}
 )
 
@@ -33,44 +37,100 @@ const (
 	RelocationTarget ReferenceKind = false
 )
 
-// AddImport determines whether a new import declaration needs to be added to make the provided path
-// available within the specified file. Returns true if that is the case. False if the import path
-// is already available within the file.
-func (r *ReferenceMap) AddImport(file *dst.File, path string, alias string) bool {
-	if hasImport(file, path) {
+func NewReferenceMap(nodeMap map[dst.Node]ast.Node, scopes map[ast.Node]*types.Scope) ReferenceMap {
+	return ReferenceMap{nodeMap: nodeMap, scopes: scopes}
+}
+
+// AddImport takes a package import path and the name in file and the result of a recursive parent lookup.
+// It first determines if the import is already present
+// and if it has not been shadowed by a local declaration. If both conditions are met, the import is added to the
+// reference map and the function returns true. Otherwise, it returns false.
+func (r *ReferenceMap) AddImport(file *dst.File, nodes []dst.Node, path string, localName string) bool {
+	if len(nodes) == 0 {
+		panic("nodeChain must not be empty")
+	}
+
+	// If the import is already present, has a meaningful alias or no alias,
+	// and is accessible from the current scope, we don't need to do anything.
+	prevLocalName, ok := hasImport(file, path)
+	if ok && prevLocalName != "." && prevLocalName != "_" && r.isImportInScope(nodes, path, localName) {
 		return false
 	}
 
 	// Register in this ReferenceMap
 	r.add(path, ImportStatement)
-	if alias != "_" {
+	if localName != "_" {
 		// We don't register blank aliases, as this is the default behavior anyway...
 		if r.aliases == nil {
 			r.aliases = make(map[string]string)
 		}
-		r.aliases[path] = fmt.Sprintf("__orchestrion_%s", alias)
+		r.aliases[path] = fmt.Sprintf("__orchestrion_%s", localName)
 	}
 
 	return true
 }
 
-func hasImport(file *dst.File, path string) bool {
+// isImportInScope checks if the provided name is an import in the scope of the provided node
+func (r *ReferenceMap) isImportInScope(nodes []dst.Node, path string, name string) bool {
+	if len(nodes) == 0 {
+		panic("nodes must not be empty")
+	}
+
+	var (
+		scope *types.Scope
+		pos   = r.nodeMap[nodes[0]].Pos()
+	)
+	for i := 0; i < len(nodes) && scope == nil; i++ {
+		node := nodes[i]
+		if funcDecl, ok := node.(*dst.FuncDecl); ok {
+			// Somehow scopes are not attached to FuncDecl nodes, so we need to look at the type ¯\_(シ)_/¯
+			node = funcDecl.Type
+		}
+
+		astNode, ok := r.nodeMap[node]
+		if !ok {
+			continue
+		}
+
+		scope = r.scopes[astNode]
+	}
+
+	if scope == nil {
+		panic(fmt.Errorf("unable to find scope for node %T in parent chain", nodes[0]))
+	}
+
+	_, obj := scope.LookupParent(name, pos)
+	if obj != nil {
+		if pkg, isImport := obj.(*types.PkgName); isImport {
+			return pkg.Imported().Path() == path
+		}
+	}
+
+	return false
+}
+
+// hasImport checks if the provided file already imports the provided path and its local name.
+func hasImport(file *dst.File, path string) (string, bool) {
 	for _, spec := range file.Imports {
 		specPath, err := basiclit.String(spec.Path)
 		if err != nil {
 			continue
 		}
 		if specPath == path {
-			return true
+			name := ""
+			if spec.Name != nil {
+				name = spec.Name.Name
+			}
+			return name, true
 		}
 	}
-	return false
+	return "", false
 }
 
 // AddLink registers the provided path as a relocation target resolution source. If this path is
 // already registered as an import, this method does nothing and returns false.
 func (r *ReferenceMap) AddLink(file *dst.File, path string) bool {
-	if hasImport(file, path) {
+	if _, ok := hasImport(file, path); ok {
 		return false
 	}
 

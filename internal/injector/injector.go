@@ -14,6 +14,7 @@ import (
 	"go/ast"
 	"go/importer"
 	"go/token"
+	"go/types"
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -84,7 +85,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 		return nil, context.GoLangVersion{}, err
 	}
 
-	uses, err := i.typeCheck(fset, astFiles)
+	typeInfo, err := i.typeCheck(fset, astFiles)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -103,7 +104,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 		go func(idx int, astFile *ast.File) {
 			defer wg.Done()
 
-			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
+			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(typeInfo.Uses))
 			dstFile, err := decorator.DecorateFile(astFile)
 			if err != nil {
 				errsMu.Lock()
@@ -112,7 +113,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 				return
 			}
 
-			res, err := i.injectFile(decorator, dstFile)
+			res, err := i.injectFile(decorator, dstFile, typeInfo)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -152,11 +153,11 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (result, error) {
+func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, typeInfo types.Info) (result, error) {
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
 	var err error
-	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig)
+	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig, typeInfo)
 	if err != nil {
 		return result, err
 	}
@@ -171,11 +172,11 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File) (r
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
+func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, typeInfo types.Info) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
-		references typed.ReferenceMap
+		references = typed.NewReferenceMap(decorator.Ast.Nodes, typeInfo.Scopes)
 		err        error
 	)
 
@@ -183,6 +184,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		if err != nil || csor.Node() == nil || isIgnored(csor.Node()) {
 			return false
 		}
+
 		root := chain == nil
 		chain = chain.Child(csor)
 		if root {
