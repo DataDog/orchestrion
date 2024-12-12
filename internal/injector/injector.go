@@ -109,7 +109,6 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 
 	wg.Add(len(parsedFiles))
 	for _, parsedFile := range parsedFiles {
-		//fmt.Printf("filename: %s nb aspects: %d\n", filename, len(aspectsPerFile[filename]))
 		go func(parsedFile parse.File) {
 			defer wg.Done()
 
