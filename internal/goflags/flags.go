@@ -9,9 +9,13 @@
 package goflags
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -279,6 +283,22 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 			return flags, fmt.Errorf("failed to get command line of %d: %w", p.Pid, err)
 		}
 		cmd, err := exec.LookPath(args[0])
+		// When running in containers using on macOS VZ+rosetta, the reported command line may be led by
+		// the registered rosetta binfmt handler. In such cases, the argv0 has a leaf name of "rosetta"
+		// and is not present within the container itself (it's only on the hypervisor). In such cases,
+		// we try to resolve argv[1] instead. This can only manifest itself on amd64 + linux.
+		if errors.Is(err, fs.ErrNotExist) && runtime.GOARCH == "amd64" && runtime.GOOS == "linux" && filepath.Base(args[0]) == "rosetta" && len(args) > 1 {
+			log.Tracef("Attempting to resolve rosetta target after error resolving argv0: %v\n", err)
+			var err2 error
+			cmd, err2 = exec.LookPath(args[1])
+			if err2 != nil {
+				err = errors.Join(err, fmt.Errorf("failed to resolve argv1 (%q) of %d (attempting Apple rosetta fallback): %w", args[1], p.Pid, err2))
+			} else {
+				// The fallback was successful, we no longer have an error!
+				err = nil
+				log.Tracef("Rosetta fall-back was successful, resolved command is %q\n", cmd)
+			}
+		}
 		if err != nil {
 			return flags, fmt.Errorf("failed to resolve argv0 (%q) of %d: %w", args[0], p.Pid, err)
 		}
