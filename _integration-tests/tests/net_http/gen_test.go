@@ -27,6 +27,10 @@ func TestHandlerImplementation(t *testing.T) {
 	utils.RunTest(t, new(TestCaseHandlerImplementation))
 }
 
+func TestHandlerIsNil(t *testing.T) {
+	utils.RunTest(t, new(TestCaseHandlerIsNil))
+}
+
 func TestIssue400(t *testing.T) {
 	utils.RunTest(t, new(TestCaseIssue400))
 }

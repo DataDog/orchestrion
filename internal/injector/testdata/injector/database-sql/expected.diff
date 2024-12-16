@@ -8,7 +8,7 @@
 -  "database/sql"
 +//line input.go:5
    "database/sql/driver"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
  )
  
@@ -18,7 +18,7 @@
  func main() {
 -  db1, err := sql.Open("foo", "bar")
 +  db1, err :=
-+//line <generated>
++//line <generated>:1
 +    __orchestrion_sqltrace.Open(
 +//line input.go:11
 +      "foo", "bar")
@@ -29,7 +29,7 @@
  
 -  db2 := sql.OpenDB(conn)
 +  db2 :=
-+//line <generated>
++//line <generated>:1
 +    __orchestrion_sqltrace.OpenDB(
 +//line input.go:17
 +      conn)

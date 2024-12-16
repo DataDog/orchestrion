@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 	"time"
-//line <generated>
+//line <generated>:1
 	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
 	__orchestrion_log "log"
@@ -23,7 +23,7 @@ import (
 //dd:span
 //line samples/client/main.go:19
 func main() {
-//line <generated>
+//line <generated>:1
 	{
 		defer __orchestrion_tracer.Stop()
 		defer __orchestrion_profiler.Stop()
@@ -66,7 +66,7 @@ func main() {
 	fmt.Println(string(b))
 }
 
-//line <generated>
+//line <generated>:1
 func init() {
 	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
 }

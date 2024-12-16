@@ -9,7 +9,7 @@ package main
 import (
 	"github.com/IBM/sarama"
 
-//line <generated>
+//line <generated>:1
 	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
 )
 
@@ -17,7 +17,7 @@ import (
 func ibmSaramaConsumer() {
 	cfg := sarama.NewConfig()
 	consumer, err :=
-//line <generated>
+//line <generated>:1
 		func(c sarama.Consumer, err error) (sarama.Consumer, error) {
 			if c != nil {
 				c = __orchestrion_saramatrace.WrapConsumer(c)

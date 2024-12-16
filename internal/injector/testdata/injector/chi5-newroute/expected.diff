@@ -9,7 +9,7 @@
    "net/http"
  
    "github.com/go-chi/chi/v5"
-+//line <generated>
++//line <generated>:1
 +  __orchestrion_chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
  )
  
@@ -17,12 +17,12 @@
  func main() {
 -  router := chi.NewRouter()
 +  router :=
-+//line <generated>
++//line <generated>:1
 +    func() *chi.Mux {
 +      mux :=
 +//line input.go:11
 +        chi.NewRouter()
-+//line <generated>
++//line <generated>:1
 +      mux.Use(__orchestrion_chitrace.Middleware())
 +      return mux
 +    }()

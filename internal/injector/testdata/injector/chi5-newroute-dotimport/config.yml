@@ -19,6 +19,7 @@ import-map:
   github.com/go-chi/chi/v5: ""
 
 syntheticReferences:
+  github.com/go-chi/chi/v5: true
   gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5: true
 
 code: |-

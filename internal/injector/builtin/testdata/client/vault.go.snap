@@ -10,18 +10,18 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/vault/api"
-//line <generated>
+//line <generated>:1
 	__orchestrion_vaulttrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault"
 )
 
 //line samples/client/vault.go:14
 func vaultClient() {
 	c, err := api.NewClient(&
-//line <generated>
+//line <generated>:1
 //line samples/client/vault.go:15
 	api.Config{
 		Address: "http://vault.mydomain.com:8200",
-//line <generated>
+//line <generated>:1
 		HttpClient: __orchestrion_vaulttrace.NewHTTPClient(),
 	})
 //line samples/client/vault.go:18
@@ -33,10 +33,10 @@ func vaultClient() {
 
 func vaultProvidedClient() {
 	c, err := api.NewClient(&
-//line <generated>
+//line <generated>:1
 //line samples/client/vault.go:25
 	api.Config{
-//line <generated>
+//line <generated>:1
 		HttpClient: __orchestrion_vaulttrace.WrapHTTPClient(
 //line samples/client/vault.go:26
 			&http.Client{}),

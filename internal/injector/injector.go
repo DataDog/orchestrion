@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"go/importer"
 	"go/token"
+	"go/types"
 	"sync"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -64,6 +65,13 @@ type (
 		Filename string
 	}
 
+	parameters struct {
+		Decorator *decorator.Decorator
+		File      *dst.File
+		TypeInfo  types.Info
+		Aspects   []*aspect.Aspect
+	}
+
 	result struct {
 		InjectedFile
 		Modified bool
@@ -93,7 +101,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 		return nil, context.GoLangVersion{}, nil
 	}
 
-	uses, err := i.typeCheck(fset, parsedFiles)
+	typeInfo, err := i.typeCheck(fset, parsedFiles)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -112,7 +120,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 		go func(parsedFile parse.File) {
 			defer wg.Done()
 
-			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(uses))
+			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(typeInfo.Uses))
 			dstFile, err := decorator.DecorateFile(parsedFile.AstFile)
 			if err != nil {
 				errsMu.Lock()
@@ -121,7 +129,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 				return
 			}
 
-			res, err := i.injectFile(decorator, dstFile, parsedFile.Aspects)
+			res, err := i.injectFile(decorator, dstFile, typeInfo, parsedFile.Aspects)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -161,11 +169,13 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, aspects []*aspect.Aspect) (result, error) {
-	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
-
-	var err error
-	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig, aspects)
+func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, typeInfo types.Info, aspects []*aspect.Aspect) (result, error) {
+	result, err := i.applyAspects(parameters{
+		Decorator: decorator,
+		File:      file,
+		TypeInfo:  typeInfo,
+		Aspects:   aspects,
+	})
 	if err != nil {
 		return result, err
 	}
@@ -180,11 +190,11 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, as
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, aspects []*aspect.Aspect) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
+func (i *Injector) applyAspects(params parameters) (result, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
-		references typed.ReferenceMap
+		references = typed.NewReferenceMap(params.Decorator.Ast.Nodes, params.TypeInfo.Scopes)
 		err        error
 	)
 
@@ -192,10 +202,11 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		if err != nil || csor.Node() == nil || isIgnored(csor.Node()) {
 			return false
 		}
+
 		root := chain == nil
 		chain = chain.Child(csor)
 		if root {
-			chain.SetConfig(rootConfig)
+			chain.SetConfig(i.RootConfig)
 		}
 		return true
 	}
@@ -212,30 +223,40 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 		var changed bool
 		ctx := chain.Context(context.ContextArgs{
 			Cursor:       csor,
-			ImportPath:   decorator.Path,
-			File:         file,
+			ImportPath:   params.Decorator.Path,
+			File:         params.File,
 			RefMap:       &references,
-			SourceParser: decorator,
+			SourceParser: params.Decorator,
 			MinGoLang:    &minGoLang,
 			TestMain:     i.TestMain,
 		})
 		defer ctx.Release()
-		changed, err = injectNode(ctx, aspects)
+		changed, err = injectNode(ctx, params.Aspects)
 		modified = modified || changed
 
 		return err == nil
 	}
 
-	dstutil.Apply(file, pre, post)
+	dstutil.Apply(params.File, pre, post)
+	if err != nil {
+		return result{}, err
+	}
 
 	// We only inject synthetic imports here because it may offset declarations by one position in
 	// case a new import declaration is necessary, which causes dstutil.Apply to re-traverse the
 	// current declaration.
-	if references.AddSyntheticImports(file) {
+	if references.AddSyntheticImports(params.File) {
 		modified = true
 	}
 
-	return modified, references, minGoLang, err
+	return result{
+		InjectedFile: InjectedFile{
+			References: references,
+			Filename:   params.Decorator.Filenames[params.File],
+		},
+		Modified: modified,
+		GoLang:   minGoLang,
+	}, nil
 }
 
 // injectNode assesses all configured aspects agaisnt the current node, and performs any AST

@@ -19,9 +19,12 @@ import (
 
 // typeCheck runs the Go type checker on the provided files, and returns the
 // Uses type information map that is built in the process.
-func (i *Injector) typeCheck(fset *token.FileSet, files []parse.File) (map[*ast.Ident]types.Object, error) {
+func (i *Injector) typeCheck(fset *token.FileSet, files []parse.File) (types.Info, error) {
 	pkg := types.NewPackage(i.ImportPath, i.Name)
-	typeInfo := types.Info{Uses: make(map[*ast.Ident]types.Object)}
+	typeInfo := types.Info{
+		Uses:   make(map[*ast.Ident]types.Object),
+		Scopes: make(map[ast.Node]*types.Scope),
+	}
 
 	checkerCfg := types.Config{
 		GoVersion: i.GoVersion,
@@ -38,11 +41,11 @@ func (i *Injector) typeCheck(fset *token.FileSet, files []parse.File) (map[*ast.
 		// This is a workaround for the fact that the Go type checker does not return a specific unexported error type
 		// TODO: Ask better error typing from the Go team for the go/types package
 		if strings.Contains("package requires newer Go version", err.Error()) {
-			return nil, fmt.Errorf("orchestrion was built with Go version %s but package %q requires a newer go version, please reinstall and pin orchestrion with a newer Go version: type-checking files: %w", runtime.Version(), i.ImportPath, err)
+			return types.Info{}, fmt.Errorf("orchestrion was built with Go version %s but package %q requires a newer go version, please reinstall and pin orchestrion with a newer Go version: type-checking files: %w", runtime.Version(), i.ImportPath, err)
 		}
 
-		return nil, fmt.Errorf("type-checking files: %w", err)
+		return types.Info{}, fmt.Errorf("type-checking files: %w", err)
 	}
 
-	return typeInfo.Uses, nil
+	return typeInfo, nil
 }
