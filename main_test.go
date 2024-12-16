@@ -23,12 +23,41 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-type testCase interface {
+func TestBuildFromModuleSubdirectory(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+
+	run.exec(t, "go", "mod", "init", "github.com/DataDog/orchestrion.testing")
+	run.exec(t, "go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+	require.NoError(t, os.Mkdir(filepath.Join(run.dir, "cmd"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(run.dir, "cmd", "main.go"), []byte(`package main
+
+import (
+	"log"
+
+	"github.com/DataDog/orchestrion/runtime/built"
+)
+
+func main() {
+	if !built.WithOrchestrion {
+		log.Fatalln("Not built with orchestrion 🤨")
+	}
+}
+`), 0o644))
+	orchestrionBin := buildOrchestrion(t)
+	run.exec(t, orchestrionBin, "pin")
+
+	// Run the command from a working directory that is NOT the module root, so we can ensure the
+	// configuration is appopriately loaded from the module's root anyway.
+	runCmd := runner{dir: filepath.Join(run.dir, "cmd")}
+	runCmd.exec(t, orchestrionBin, "go", "run", ".")
+}
+
+type benchCase interface {
 	baseline(b *testing.B)
 	instrumented(b *testing.B)
 }
 
-var testCases = map[string]func(b *testing.B) testCase{
+var benchCases = map[string]func(b *testing.B) benchCase{
 	"DataDog:orchestrion": benchmarkOrchestrion,
 	// normal build
 	"traefik:traefik": benchmarkGithub("traefik", "traefik", "./...", false),
@@ -41,7 +70,7 @@ var testCases = map[string]func(b *testing.B) testCase{
 }
 
 func Benchmark(b *testing.B) {
-	for name, create := range testCases {
+	for name, create := range benchCases {
 		b.Run(fmt.Sprintf("repo=%s", name), func(b *testing.B) {
 			tc := create(b)
 			b.Run("variant=baseline", func(b *testing.B) {
@@ -65,8 +94,8 @@ type benchGithub struct {
 	harness
 }
 
-func benchmarkGithub(owner string, repo string, build string, testbuild bool) func(b *testing.B) testCase {
-	return func(b *testing.B) testCase {
+func benchmarkGithub(owner string, repo string, build string, testbuild bool) func(b *testing.B) benchCase {
+	return func(b *testing.B) benchCase {
 		b.Helper()
 
 		tc := &benchGithub{harness{build: build, testbuild: testbuild}}
@@ -89,12 +118,16 @@ type benchOrchestrion struct {
 	harness
 }
 
-func benchmarkOrchestrion(_ *testing.B) testCase {
-	return &benchOrchestrion{harness{dir: rootDir, build: ".", testbuild: false}}
+func benchmarkOrchestrion(_ *testing.B) benchCase {
+	return &benchOrchestrion{harness{runner: runner{dir: rootDir}, build: ".", testbuild: false}}
+}
+
+type runner struct {
+	dir string // The directory where commands are to be executed
 }
 
 type harness struct {
-	dir       string // The directory in which the source code of the package to be built is located.
+	runner
 	build     string // The package to be built as part of the test.
 	testbuild bool   // Whether the package to be built is a test package.
 }
@@ -143,15 +176,15 @@ func (h *harness) instrumented(b *testing.B) {
 	require.NoError(b, err, "build failed:\n%s", output)
 }
 
-func (h *harness) exec(b *testing.B, name string, args ...string) {
+func (r *runner) exec(tb testing.TB, name string, args ...string) {
 	cmd := exec.Command(name, args...)
-	cmd.Dir = h.dir
-	cmd.Env = append(os.Environ(), "GOCACHE="+b.TempDir())
+	cmd.Dir = r.dir
+	cmd.Env = append(os.Environ(), "GOCACHE="+tb.TempDir())
 	output := bytes.NewBuffer(make([]byte, 0, 4_096))
 	cmd.Stdout = output
 	cmd.Stderr = output
 
-	require.NoError(b, cmd.Run(), "command failed: %s\n%s", cmd, output)
+	require.NoError(tb, cmd.Run(), "command failed: %s\n%s", cmd, output)
 }
 
 func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo string) string {
@@ -227,14 +260,14 @@ var (
 	orchestrionBin     string
 )
 
-func buildOrchestrion(b *testing.B) string {
-	b.Helper()
+func buildOrchestrion(tb testing.TB) string {
+	tb.Helper()
 
 	orchestrionBinOnce.Do(func() {
 		orchestrionBin = filepath.Join(rootDir, "bin", "orchestrion.exe")
 
 		cmd := exec.Command("go", "build", fmt.Sprintf("-o=%s", orchestrionBin), rootDir)
-		require.NoError(b, cmd.Run())
+		require.NoError(tb, cmd.Run())
 	})
 
 	return orchestrionBin

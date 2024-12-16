@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
@@ -90,7 +91,14 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		err = writeLinkDeps(cmd, &linkDeps, orchestrionDir)
 	}()
 
-	cfg, err := config.NewLoader(".", false).Load()
+	goMod, err := goenv.GOMOD(".")
+	if err != nil {
+		return fmt.Errorf("go env GOMOD: %w", err)
+	}
+	goModDir := filepath.Dir(goMod)
+	log.Tracef("Identified module directory: %s\n", goModDir)
+
+	cfg, err := config.NewLoader(goModDir, false).Load()
 	if err != nil {
 		return fmt.Errorf("loading injector configuration: %w", err)
 	}
