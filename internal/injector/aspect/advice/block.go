@@ -29,12 +29,12 @@ func PrependStmts(template *code.Template) *prependStatements {
 func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
 	block, ok := ctx.Node().(*dst.BlockStmt)
 	if !ok {
-		return false, fmt.Errorf("expected *dst.BlockStmt, got %T", ctx.Node())
+		return false, fmt.Errorf("prepend-statements: expected *dst.BlockStmt, got %T", ctx.Node())
 	}
 
 	stmts, err := a.Template.CompileBlock(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("prepend-statements: %w", err)
 	}
 
 	list := make([]dst.Stmt, 1+len(block.List))

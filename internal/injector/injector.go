@@ -159,7 +159,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, ty
 	var err error
 	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig, typeInfo)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("%q: %w", result.Filename, err)
 	}
 
 	if result.Modified {
@@ -239,14 +239,14 @@ func (i *Injector) injectNode(ctx context.AdviceContext) (mod bool, err error) {
 		if !inj.JoinPoint.Matches(ctx) {
 			continue
 		}
-		for _, act := range inj.Advice {
+		for idx, act := range inj.Advice {
 			var changed bool
 			changed, err = act.Apply(ctx)
 			if changed {
 				mod = true
 			}
 			if err != nil {
-				return
+				return mod, fmt.Errorf("%q[%d]: %w", inj.ID, idx, err)
 			}
 		}
 	}
