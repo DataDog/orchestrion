@@ -38,33 +38,32 @@ type File struct {
 type Parser struct {
 	fset *token.FileSet // thread-safe data structure
 
-	// rawFileEagerness is a channel that receives files that are not parsed because we are not sure we need to parse them
-	// because no aspects has match the package yet.
-	// this means that all files in have no aspects to run on, they are only there of the type checking
-	rawFileEagerness      []rawFile
-	rawFileEagernessIndex atomic.Int32
+	// rawFiles is an intermediary data structure to store the raw content of the files before parsing them.
+	rawFiles []rawFile
 
-	// filesBytesCount is the total number of bytes of all the files that have been read so far.
-	// if this number is more than maxBytesEagerness, we stop using rawFileEagerness and parse all the files.
+	// filesBytesCount is the sum of the bytes of all files parsed so far.
 	filesBytesCount atomic.Uint64
 
-	// Output fields
-	parsedFiles      []File
-	parsedFilesIndex atomic.Int32
+	// eagerness is a flag that is set to true if at least one file has been parsed and requires all files to be parsed.
+	eagerness atomic.Bool
+
+	// parsedFiles is what is returned by ParseFiles.
+	parsedFiles []File
 
 	wg sync.WaitGroup
 
-	errs      []error
-	errsIndex atomic.Int32
+	errs   []error
+	errsMu sync.Mutex
 }
 
 func NewParser(fset *token.FileSet, nbFiles int) *Parser {
 	p := &Parser{
-		fset:             fset,
-		rawFileEagerness: make([]rawFile, nbFiles),
-		parsedFiles:      make([]File, nbFiles),
-		errs:             make([]error, nbFiles),
+		fset:        fset,
+		rawFiles:    make([]rawFile, nbFiles),
+		parsedFiles: make([]File, nbFiles),
 	}
+
+	p.eagerness.Store(true)
 
 	return p
 }
@@ -73,75 +72,85 @@ func NewParser(fset *token.FileSet, nbFiles int) *Parser {
 func (p *Parser) ParseFiles(files []string, aspects []*aspect.Aspect) ([]File, error) {
 	p.wg.Add(len(files))
 
-	for _, file := range files {
+	for idx, file := range files {
 		fileAspects := make([]*aspect.Aspect, len(aspects))
 		copy(fileAspects, aspects)
 
-		go func() {
+		go func(idx int, file string) {
 			defer p.wg.Done()
-			rawFile, err := readFile(file)
+			var err error
+			p.rawFiles[idx], err = readFile(file)
 			if err != nil {
 				p.addError(fmt.Errorf("reading %q: %w", file, err))
 				return
 			}
 
-			p.filesBytesCount.Add(uint64(len(rawFile.content)))
-			if p.parsedFilesIndex.Load() > 0 && p.filesBytesCount.Load() <= maxBytesEagerness {
-				fileAspects = p.fileFilterAspects(fileAspects, rawFile)
+			p.filesBytesCount.Add(uint64(len(p.rawFiles[idx].content)))
+			if p.aspectMayMatch() {
+				fileAspects = p.fileFilterAspects(fileAspects, p.rawFiles[idx])
 				if len(fileAspects) == 0 {
-					p.storeRawFile(rawFile)
+					// No aspects can match on this file, no need to fill up the File.AstFile field.
+					p.parsedFiles[idx] = File{Name: file}
 					return
 				}
 			}
 
-			p.parseFile(rawFile, fileAspects)
-		}()
+			p.eagerness.Store(false)
+			p.parsedFiles[idx] = p.parseFile(p.rawFiles[idx], fileAspects)
+		}(idx, file)
 	}
 
 	p.wg.Wait()
 
-	if p.parsedFilesIndex.Load() == 0 {
+	// No aspects can match on this package, return nothing
+	if !p.aspectMayMatch() {
+		return nil, nil
+	}
+
+	if len(p.errs) > 0 {
 		return nil, errors.Join(p.errs...)
 	}
 
-	// Parse eager files if at least one goroutine decided to parse it's own file because type-checking requires all
-	// files of the package
-	p.goParseEagerFiles()
+	// If we arrived here, this means we need to parse all files anyway because the type-checking pass will need them.
+	p.parseMissingFiles()
 	p.wg.Wait()
 
 	return p.parsedFiles, errors.Join(p.errs...)
 }
 
+// aspectMayMatch returns true if the parser should parse all files because at least one file requires it.
+func (p *Parser) aspectMayMatch() bool {
+	return !p.eagerness.Load() || p.filesBytesCount.Load() > maxBytesEagerness
+}
+
 func (p *Parser) addError(err error) {
-	p.errs[p.errsIndex.Add(1)-1] = err
+	p.errsMu.Lock()
+	defer p.errsMu.Unlock()
+	p.errs = append(p.errs, err)
 }
 
-func (p *Parser) storeRawFile(rawFile rawFile) {
-	p.rawFileEagerness[p.rawFileEagernessIndex.Add(1)-1] = rawFile
-}
-
-func (p *Parser) parseFile(rawFile rawFile, aspects []*aspect.Aspect) {
+func (p *Parser) parseFile(rawFile rawFile, aspects []*aspect.Aspect) File {
 	astFile, err := goparser.ParseFile(p.fset, rawFile.mappedName, rawFile.content, goparser.ParseComments)
 	if err != nil {
 		p.addError(fmt.Errorf("parsing %q: %w", rawFile.name, err))
-		return
+		return File{}
 	}
 
-	p.parsedFiles[p.parsedFilesIndex.Add(1)-1] = File{rawFile.name, astFile, aspects}
+	return File{rawFile.name, astFile, aspects}
 }
 
-func (p *Parser) goParseEagerFiles() {
-	for _, file := range p.rawFileEagerness {
-		// at this point, the array is not written to anymore but "empty" files from the initialization are in there
-		if file.name == "" {
+func (p *Parser) parseMissingFiles() {
+	for i := range p.parsedFiles {
+		// Skip files that have already been parsed.
+		if p.parsedFiles[i].AstFile != nil {
 			continue
 		}
 
 		p.wg.Add(1)
-		go func(file rawFile) {
+		go func(i int) {
 			defer p.wg.Done()
-			p.parseFile(file, nil)
-		}(file)
+			p.parsedFiles[i] = p.parseFile(p.rawFiles[i], nil)
+		}(i)
 	}
 }
 
@@ -163,7 +172,7 @@ func (p *Parser) fileFilterAspects(aspects []*aspect.Aspect, file rawFile) []*as
 		PackageName: astFile.Name.Name,
 	}
 
-	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) (res bool) {
+	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
 		return a.JoinPoint.FileMayMatch(ctx) == may.CantMatch
 	})
 }
