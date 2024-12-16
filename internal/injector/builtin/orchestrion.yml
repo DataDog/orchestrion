@@ -12,4 +12,3 @@ meta:
 
 extends:
   - ./yaml/directive/orchestrion-enabled.yml
-  - ./yaml/stdlib/runtime.yml

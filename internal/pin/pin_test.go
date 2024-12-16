@@ -110,12 +110,16 @@ var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.co
 
 go {{ .GoVersion }}
 
-replace github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
+replace (
+	github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
+	github.com/DataDog/orchestrion/instrument {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}{{ .PathSep }}instrument
+)
 
-{{ range $path, $version := .Require }}
-require	{{ $path }} {{ $version }}
-{{ end }}
-
+require (
+{{- range $path, $version := .Require }}
+	{{ $path }} {{ $version }}
+{{- end }}
+)
 `))
 
 func scaffold(t *testing.T, requires map[string]string) string {
@@ -134,11 +138,13 @@ func scaffold(t *testing.T, requires map[string]string) string {
 		GoVersion          string
 		OrchestrionVersion string
 		OrchestrionPath    string
+		PathSep            string
 		Require            map[string]string
 	}{
 		GoVersion:          runtime.Version()[2:6],
 		OrchestrionVersion: version.Tag,
 		OrchestrionPath:    rootDir,
+		PathSep:            string(filepath.Separator),
 		Require:            requires,
 	}))
 

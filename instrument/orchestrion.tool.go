@@ -10,4 +10,7 @@ package instrument
 // Ensures that `orchestrion.tool.go` files importing this package include all
 // the necessary transitive dependencies for all possible integrations, and
 // correctly discover the aspects to inject.
-import _ "github.com/DataDog/orchestrion/internal/injector/builtin"
+import (
+	_ "github.com/DataDog/orchestrion"  // integration
+	_ "gopkg.in/DataDog/dd-trace-go.v1" // integration
+)

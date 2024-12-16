@@ -8,6 +8,5 @@
 package tools
 
 import (
-	// Instrumentation packages
-	_ "github.com/DataDog/orchestrion/internal/injector/builtin"
+	_ "github.com/DataDog/orchestrion/internal/injector/builtin" // integration
 )

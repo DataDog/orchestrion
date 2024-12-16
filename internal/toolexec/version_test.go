@@ -15,10 +15,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/otiai10/copy"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,7 +36,10 @@ func Test(t *testing.T) {
 
 	tmp := t.TempDir()
 	runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
-	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+	runGo(t, tmp, "mod", "edit",
+		fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
+		fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+	)
 
 	require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`
 		//go:build tools
@@ -51,9 +56,14 @@ func Test(t *testing.T) {
 	cmd, err := proxy.ParseCommand([]string{"go", "tool", "compile", "-V=full"})
 	require.NoError(t, err)
 
+	ctx := zerolog.New(zerolog.MultiLevelWriter(zerolog.NewTestWriter(t))).WithContext(context.Background())
+
+	// Artificailly set goflags as this is needed for the test to run....
+	goflags.SetFlags(ctx, tmp, []string{"test", "./..."})
+
 	// Compute the initial version string...
 	initial := inDir(t, tmp, func() string {
-		v, err := ComputeVersion(context.Background(), cmd)
+		v, err := ComputeVersion(ctx, cmd)
 		require.NoError(t, err)
 		return v
 	})
@@ -69,10 +79,13 @@ func Test(t *testing.T) {
 	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 42"), 0o644))
 
 	// Replace the orchestrion package with the copy we just made...
-	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", copyDir))
+	runGo(t, tmp, "mod", "edit",
+		fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", copyDir),
+		fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(copyDir, "instrument")),
+	)
 	runGo(t, tmp, "mod", "tidy") // The hash of the dependency has changed... go list would complain...
 	updated := inDir(t, tmp, func() string {
-		v, err := ComputeVersion(context.Background(), cmd)
+		v, err := ComputeVersion(ctx, cmd)
 		require.NoError(t, err)
 		return v
 	})
@@ -82,7 +95,7 @@ func Test(t *testing.T) {
 	// Modify the beacon
 	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 1337"), 0o644))
 	final := inDir(t, tmp, func() string {
-		v, err := ComputeVersion(context.Background(), cmd)
+		v, err := ComputeVersion(ctx, cmd)
 		require.NoError(t, err)
 		return v
 	})

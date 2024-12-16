@@ -7,9 +7,4 @@ imports:
         - name: ./yaml/directive/orchestrion-enabled.yml
           aspects:
             - Initialize to true
-        - name: ./yaml/stdlib/runtime.yml
-          aspects:
-            - GLS Access
-            - Clear GLS slot on goroutine exit
-            - Hack tracer.SpanFromContext
 yaml: null

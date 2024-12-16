@@ -27,7 +27,10 @@ func TestBuildFromModuleSubdirectory(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 
 	run.exec(t, "go", "mod", "init", "github.com/DataDog/orchestrion.testing")
-	run.exec(t, "go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+	run.exec(t, "go", "mod", "edit",
+		fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
+		fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+	)
 	require.NoError(t, os.Mkdir(filepath.Join(run.dir, "cmd"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(run.dir, "cmd", "main.go"), []byte(`package main
 
@@ -101,9 +104,14 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 		tc := &benchGithub{harness{build: build, testbuild: testbuild}}
 
 		tag := tc.findLatestGithubReleaseTag(b, owner, repo)
+		b.Logf("Latest release is %s/%s@%s", owner, repo, tag)
+
 		tc.gitCloneGithub(b, owner, repo, tag)
 		tc.exec(b, "go", "mod", "download")
-		tc.exec(b, "go", "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+		tc.exec(b, "go", "mod", "edit",
+			fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
+			fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+		)
 		if stat, err := os.Stat(filepath.Join(tc.dir, "vendor")); err == nil && stat.IsDir() {
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")
@@ -151,7 +159,7 @@ func (h *harness) baseline(b *testing.B) {
 	err := cmd.Run()
 	b.StopTimer()
 
-	require.NoError(b, err, "build failed:\n%s", output)
+	require.NoError(b, err, "build failed:\n%s\n%s", cmd, output)
 }
 
 func (h *harness) instrumented(b *testing.B) {

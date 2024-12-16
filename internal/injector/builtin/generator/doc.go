@@ -155,9 +155,9 @@ func resolvePackageName(path string) (string, error) {
 	}
 
 	_, thisFile, _, _ := runtime.Caller(0)
-	integTestDir := filepath.Join(thisFile, "..", "..", "..", "..", "..", "_integration-tests")
+	rootDir := filepath.Join(thisFile, "..", "..", "..", "..", "..")
 
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: integTestDir}, path)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: rootDir}, path)
 	if err != nil {
 		return "", err
 	}

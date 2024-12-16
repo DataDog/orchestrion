@@ -16,6 +16,9 @@ import (
 )
 
 func TestReport(t *testing.T) {
+	tracer.Start()
+	defer tracer.Stop()
+
 	t.Run("start", func(t *testing.T) {
 		ctx := context.Background()
 		ctx = instrument.Report(ctx, event.EventStart)

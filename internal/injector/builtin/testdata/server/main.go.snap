@@ -20,8 +20,10 @@ import (
 func main() {
 //line <generated>:1
 	{
-		defer __orchestrion_tracer.Stop()
 		defer __orchestrion_profiler.Stop()
+	}
+	{
+		defer __orchestrion_tracer.Stop()
 	}
 //line samples/server/main.go:15
 	s := &http.Server{

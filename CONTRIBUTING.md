@@ -54,6 +54,22 @@ We expect PRs to include new tests for any added or significantly updated functi
 adequate coverage for the changed surface. The CodeCov integration can help you get a sense of what the test coverage
 for your change is. Reviewers may request additional tests be added before approving a change.
 
+#### Integration Tests
+
+There is [an `orchestrion` integration test suite in `dd-trace-go`][dd-trace-go] that validates provided integration
+configurations. This test suite is executed as part of orchestrion's CI. It can be executed locally using the following
+commands:
+
+```console
+$ git clone github.com:DataDog/dd-trace-go         # Clone the DataDog/dd-trace-go repository
+$ cd dd-trace-go/internal/orchestrion/_integration # Move into the integration tests directory
+$ go mod edit \                                    # Use the local copy of orchestrion
+    -replace "github.com/DataDog/orchestrion=>${orchestrion_dir}"
+$ go mod tidy                                      # Make sure go.mod & go.sum are up-to-date
+$ go run github.com/DataDog/orchestrion \          # Run integration test suite with orchestrion
+    go test -shuffle=on ./...
+```
+
 ### What to expect
 
 We try to review new PRs within a week or so of creation. If your PR passes all automated tests and has been waiting for
@@ -71,3 +87,4 @@ our automated testing suite.
 <!-- Links -->
 [new-issue]: https://github.com/DataDog/orchestrion/issues/new/choose
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/
+[dd-trace-go]: https://github.com/DataDog/dd-trace-go/internal/orchestrion/_integration
