@@ -91,13 +91,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		err = writeLinkDeps(cmd, &linkDeps, orchestrionDir)
 	}()
 
-	var goModDir string
-	if goMod, err := goenv.GOMOD("."); err != nil {
-		return err
-	} else {
-		goModDir = filepath.Dir(goMod)
-		log.Tracef("Identified module directory: %s\n", goModDir)
+	goMod, err := goenv.GOMOD(".")
+	if err != nil {
+		return fmt.Errorf("go env GOMOD: %w", err)
 	}
+	goModDir := filepath.Dir(goMod)
+	log.Tracef("Identified module directory: %s\n", goModDir)
 
 	cfg, err := config.NewLoader(goModDir, false).Load()
 	if err != nil {
