@@ -26,12 +26,12 @@ func AssignValue(template *code.Template) *assignValue {
 func (a *assignValue) Apply(ctx context.AdviceContext) (bool, error) {
 	spec, ok := ctx.Node().(*dst.ValueSpec)
 	if !ok {
-		return false, fmt.Errorf("expected *dst.ValueSpec, got %T", ctx.Node())
+		return false, fmt.Errorf("assign-value: expected *dst.ValueSpec, got %T", ctx.Node())
 	}
 
 	expr, err := a.Template.CompileExpression(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("assign-value: %w", err)
 	}
 
 	spec.Values = make([]dst.Expr, len(spec.Names))

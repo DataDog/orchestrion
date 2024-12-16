@@ -32,7 +32,7 @@ func AppendArgs(typeName join.TypeName, templates ...*code.Template) *appendArgs
 func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	call, ok := ctx.Node().(*dst.CallExpr)
 	if !ok {
-		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", ctx.Node())
+		return false, fmt.Errorf("append-arguments: expected a *dst.CallExpr, received %T", ctx.Node())
 	}
 
 	newArgs := make([]dst.Expr, len(a.Templates))
@@ -40,7 +40,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	for i, t := range a.Templates {
 		newArgs[i], err = t.CompileExpression(ctx)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("append-arguments[%d]: %w", i, err)
 		}
 		ctx.EnsureMinGoLang(t.Lang)
 	}

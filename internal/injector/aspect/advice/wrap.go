@@ -33,12 +33,12 @@ func (a *wrapExpression) Apply(ctx context.AdviceContext) (bool, error) {
 		ctx = ctx.Child(kve.Value, "Value", -1)
 		defer ctx.Release()
 	} else if _, ok = ctx.Node().(dst.Expr); !ok {
-		return false, fmt.Errorf("expected dst.Expr or *dst.KeyValueExpr, got %T", ctx.Node())
+		return false, fmt.Errorf("wrap-expression: expected dst.Expr or *dst.KeyValueExpr, got %T", ctx.Node())
 	}
 
 	repl, err := a.Template.CompileExpression(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("wrap-expression: %w", err)
 	}
 
 	if kve == nil {

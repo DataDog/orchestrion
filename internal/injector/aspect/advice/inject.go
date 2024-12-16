@@ -6,6 +6,8 @@
 package advice
 
 import (
+	"fmt"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
@@ -26,7 +28,7 @@ func InjectDeclarations(template *code.Template, links []string) injectDeclarati
 func (a injectDeclarations) Apply(ctx context.AdviceContext) (bool, error) {
 	decls, err := a.Template.CompileDeclarations(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("inject-declarations: %w", err)
 	}
 
 	if len(decls) == 0 {
