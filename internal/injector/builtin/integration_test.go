@@ -92,9 +92,7 @@ func Test(t *testing.T) {
 			require.NoError(t, err)
 
 			copyAspects := make([]*aspect.Aspect, len(aspects))
-			for i, a := range aspects {
-				copyAspects[i] = a
-			}
+			copy(copyAspects, aspects)
 
 			results, _, err := inj.InjectFiles(files, copyAspects)
 			require.NoError(t, err)

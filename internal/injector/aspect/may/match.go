@@ -10,30 +10,30 @@ import (
 )
 
 // MatchType is an enumeration of the possible outcomes of a join point
-type MatchType int
+type MatchType byte
 
 const (
-	// Match indicates that the join point may match the given context
-	Match MatchType = iota
-	// CantMatch indicates that the join point DOES NOT match the given context
-	CantMatch
 	// Unknown indicates that the join point cannot determine whether it matches the given context
-	Unknown
+	Unknown MatchType = '?'
+	// Match indicates that the join point may match the given context
+	Match MatchType = 'Y'
+	// NeverMatch indicates that the join point DOES NOT match the given context
+	NeverMatch MatchType = 'N'
 )
 
 // Not returns the logical NOT of a MatchType value
 // Truth table:
 //
-// | A       | NOT A   |
-// |---------|---------|
-// | Cant    | Match   |
-// | Unknown | Unknown |
-// | Match   | Cant    |
+// | A | NOT A |
+// |---|-------|
+// | N | Y     |
+// | ? | ?     |
+// | Y | N     |
 func (m MatchType) Not() MatchType {
 	switch m {
 	case Match:
-		return CantMatch
-	case CantMatch:
+		return NeverMatch
+	case NeverMatch:
 		return Match
 	case Unknown:
 		return Unknown
@@ -45,21 +45,21 @@ func (m MatchType) Not() MatchType {
 // Or returns the logical OR of two MatchType values
 // Truth table:
 //
-// | A       | B       | A OR B  |
-// |---------|---------|---------|
-// | Cant    | Cant    | Cant    |
-// | Cant    | Unknown | Unknown |
-// | Cant    | May     | Match   |
-// | Unknown | Unknown | Unknown |
-// | Unknown | Match   | Match   |
-// | Match   | Match   | Match   |
+// | A | B  | A OR B |
+// |---|---|---------|
+// | N | N | N       |
+// | N | ? | ?       |
+// | N | Y | Y       |
+// | ? | ? | ?       |
+// | ? | Y | Y       |
+// | Y | Y | Y       |
 func (m MatchType) Or(other MatchType) MatchType {
 	if m == Match || other == Match {
 		return Match
 	}
 
-	if m == CantMatch && other == CantMatch {
-		return CantMatch
+	if m == NeverMatch && other == NeverMatch {
+		return NeverMatch
 	}
 
 	return Unknown
@@ -68,17 +68,17 @@ func (m MatchType) Or(other MatchType) MatchType {
 // And returns the logical AND of two MatchType values
 // Truth table:
 //
-// | A       | B       | A AND B |
-// |---------|---------|---------|
-// | Cant    | Cant    | Cant    |
-// | Cant    | Unknown | Cant    |
-// | Cant    | Match   | Cant    |
-// | Unknown | Unknown | Unknown |
-// | Unknown | Match   | Unknown |
-// | Match   | Match   | Match   |
+// | A | B | A AND B |
+// |---|---|---------|
+// | N | N | N       |
+// | N | ? | N       |
+// | N | Y | N       |
+// | ? | ? | ?       |
+// | ? | Y | ?       |
+// | Y | Y | Y       |
 func (m MatchType) And(other MatchType) MatchType {
-	if m == CantMatch || other == CantMatch {
-		return CantMatch
+	if m == NeverMatch || other == NeverMatch {
+		return NeverMatch
 	}
 	if m == Match && other == Match {
 		return Match

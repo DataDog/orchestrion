@@ -37,9 +37,6 @@ aspects:
               {{ range .DirectiveArgs "dd:span" -}}{{printf "%q, %q," .Key .Value}}{{- end }}
             )
 
-import-map:
-  net/http: ""
-
 code: |-
   package main
 

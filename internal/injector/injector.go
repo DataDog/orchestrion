@@ -97,7 +97,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	}
 
 	if len(parsedFiles) == 0 {
-		log.Debugf("no files to inject in %s after filtering on imports and files\n", i.ImportPath)
+		log.Debugf("No files to inject in %s after filtering on imports and files\n", i.ImportPath)
 		return nil, context.GoLangVersion{}, nil
 	}
 

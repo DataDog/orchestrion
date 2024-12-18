@@ -40,7 +40,7 @@ func (i *Injector) typeCheck(fset *token.FileSet, files []parse.File) (types.Inf
 	if err := checker.Files(astFiles); err != nil {
 		// This is a workaround for the fact that the Go type checker does not return a specific unexported error type
 		// TODO: Ask better error typing from the Go team for the go/types package
-		if strings.Contains("package requires newer Go version", err.Error()) {
+		if strings.Contains(err.Error(), "package requires newer Go version") {
 			return types.Info{}, fmt.Errorf("orchestrion was built with Go version %s but package %q requires a newer go version, please reinstall and pin orchestrion with a newer Go version: type-checking files: %w", runtime.Version(), i.ImportPath, err)
 		}
 

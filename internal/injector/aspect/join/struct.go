@@ -39,7 +39,7 @@ func (s *structDefinition) PackageMayMatch(ctx *may.PackageContext) may.MatchTyp
 		return may.Match
 	}
 
-	return may.CantMatch
+	return may.NeverMatch
 }
 
 func (*structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {

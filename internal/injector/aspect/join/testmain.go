@@ -19,7 +19,7 @@ func (t testMain) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 		return may.Match
 	}
 
-	return may.CantMatch
+	return may.NeverMatch
 }
 
 func (testMain) FileMayMatch(_ *may.FileContext) may.MatchType {

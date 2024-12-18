@@ -57,8 +57,8 @@ func (s *functionDeclaration) PackageMayMatch(ctx *may.PackageContext) may.Match
 	sum := may.Match
 	for _, candidate := range s.Options {
 		sum = sum.And(candidate.packageMayMatch(ctx))
-		if sum == may.CantMatch {
-			return may.CantMatch
+		if sum == may.NeverMatch {
+			return may.NeverMatch
 		}
 	}
 	return sum
@@ -68,8 +68,8 @@ func (s *functionDeclaration) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range s.Options {
 		sum = sum.And(candidate.fileMayMatch(ctx))
-		if sum == may.CantMatch {
-			return may.CantMatch
+		if sum == may.NeverMatch {
+			return may.NeverMatch
 		}
 	}
 	return sum
@@ -146,14 +146,14 @@ func (fo *signature) packageMayMatch(ctx *may.PackageContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range fo.Arguments {
 		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
-		if sum == may.CantMatch {
-			return may.CantMatch
+		if sum == may.NeverMatch {
+			return may.NeverMatch
 		}
 	}
 	for _, candidate := range fo.Results {
 		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
-		if sum == may.CantMatch {
-			return may.CantMatch
+		if sum == may.NeverMatch {
+			return may.NeverMatch
 		}
 	}
 	return sum
@@ -230,7 +230,7 @@ func (fo *receiver) packageMayMatch(ctx *may.PackageContext) may.MatchType {
 		return may.Match
 	}
 
-	return may.CantMatch
+	return may.NeverMatch
 }
 
 func (fo *receiver) fileMayMatch(ctx *may.FileContext) may.MatchType {

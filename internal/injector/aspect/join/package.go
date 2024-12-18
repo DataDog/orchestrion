@@ -27,7 +27,7 @@ func (p importPath) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 		return may.Match
 	}
 
-	return may.CantMatch
+	return may.NeverMatch
 }
 
 func (importPath) FileMayMatch(_ *may.FileContext) may.MatchType {
@@ -61,7 +61,7 @@ func (p packageName) FileMayMatch(ctx *may.FileContext) may.MatchType {
 		return may.Match
 	}
 
-	return may.CantMatch
+	return may.NeverMatch
 }
 
 func (p packageName) Matches(ctx context.AspectContext) bool {

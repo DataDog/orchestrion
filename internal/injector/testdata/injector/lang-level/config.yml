@@ -17,9 +17,6 @@ aspects:
 
 required-lang: go1.18
 
-import-map:
-  net/http: ""
-
 syntheticReferences:
   github.com/DataDog/orchestrion/instrument: true
 

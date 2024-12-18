@@ -6,7 +6,6 @@
 package parse
 
 import (
-	"errors"
 	"fmt"
 	"go/ast"
 	goparser "go/parser"
@@ -14,13 +13,18 @@ import (
 	"io"
 	"os"
 	"slices"
-	"sync"
 	"sync/atomic"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"golang.org/x/sync/errgroup"
 )
 
+// maxBytesEagerness is the maximum number of bytes the files of a certain package can have before
+// stop we decide to stop trying to run join.Point.FileMayMatch on each file.
+// Since 99% of package have no aspects that ACTUALLY match on them, we can save a lot of time by
+// applying the join.Point.FileMayMatch heuristic. But if the package has a lot of files, we may
+// end up parsing all files anyway so we can just skip this heuristic if the package is too big.
 const maxBytesEagerness = 1 << 19 // 512 KiB
 
 type rawFile struct {
@@ -29,9 +33,13 @@ type rawFile struct {
 	content    []byte
 }
 
+// File represents a parsed file with its name, its AST and with the aspects that may match on it.
 type File struct {
-	Name    string
+	// Name is the name of the file.
+	Name string
+	// AstFile is the parsed AST of the file, cannot be nil
 	AstFile *ast.File
+	// Aspects is the list of aspects that may match on this file.
 	Aspects []*aspect.Aspect
 }
 
@@ -44,127 +52,115 @@ type Parser struct {
 	// filesBytesCount is the sum of the bytes of all files parsed so far.
 	filesBytesCount atomic.Uint64
 
-	// eagerness is a flag that is set to true if at least one file has been parsed and requires all files to be parsed.
-	eagerness atomic.Bool
+	// mustParseAll is a flag that is set to true if at least one file has been parsed and requires all files to be parsed.
+	mustParseAll atomic.Bool
 
 	// parsedFiles is what is returned by ParseFiles.
 	parsedFiles []File
 
-	wg sync.WaitGroup
-
-	errs   []error
-	errsMu sync.Mutex
+	wg errgroup.Group
 }
 
+// NewParser creates a new parser with the given [token.FileSet] and the number of files to parse.
 func NewParser(fset *token.FileSet, nbFiles int) *Parser {
-	p := &Parser{
+	return &Parser{
 		fset:        fset,
 		rawFiles:    make([]rawFile, nbFiles),
 		parsedFiles: make([]File, nbFiles),
 	}
-
-	p.eagerness.Store(true)
-
-	return p
 }
 
 // ParseFiles return either zero files or all files parsed with their respective aspects
 func (p *Parser) ParseFiles(files []string, aspects []*aspect.Aspect) ([]File, error) {
-	p.wg.Add(len(files))
-
 	for idx, file := range files {
-		fileAspects := make([]*aspect.Aspect, len(aspects))
-		copy(fileAspects, aspects)
-
-		go func(idx int, file string) {
-			defer p.wg.Done()
+		idx, file := idx, file
+		p.wg.Go(func() error {
 			var err error
 			p.rawFiles[idx], err = readFile(file)
 			if err != nil {
-				p.addError(fmt.Errorf("reading %q: %w", file, err))
-				return
+				return fmt.Errorf("reading %q: %w", file, err)
 			}
 
+			fileAspects := aspects
 			p.filesBytesCount.Add(uint64(len(p.rawFiles[idx].content)))
-			if p.aspectMayMatch() {
-				fileAspects = p.fileFilterAspects(fileAspects, p.rawFiles[idx])
+			if !p.hasApplicableAspects() {
+				// While the current packae still has a chance to not require all files to be parsed, we can try to filter out
+				// aspects that cannot match on this file before parsing it.
+				fileAspects, err = p.fileFilterAspects(fileAspects, p.rawFiles[idx])
+				if err != nil {
+					return fmt.Errorf("filtering aspects for %q: %w", file, err)
+				}
 				if len(fileAspects) == 0 {
 					// No aspects can match on this file, no need to fill up the File.AstFile field.
 					p.parsedFiles[idx] = File{Name: file}
-					return
+					return nil
 				}
 			}
 
-			p.eagerness.Store(false)
-			p.parsedFiles[idx] = p.parseFile(p.rawFiles[idx], fileAspects)
-		}(idx, file)
+			p.mustParseAll.Store(true)
+			p.parsedFiles[idx], err = p.parseFile(p.rawFiles[idx], fileAspects)
+			return err
+		})
 	}
 
-	p.wg.Wait()
+	if err := p.wg.Wait(); err != nil {
+		return nil, err
+	}
 
 	// No aspects can match on this package, return nothing
-	if !p.aspectMayMatch() {
+	if !p.hasApplicableAspects() {
 		return nil, nil
 	}
 
-	if len(p.errs) > 0 {
-		return nil, errors.Join(p.errs...)
+	// If we arrived here, this means we need to parse all files anyway because the type-checking pass will need them.
+	if err := p.parseMissingFiles(); err != nil {
+		return nil, err
 	}
 
-	// If we arrived here, this means we need to parse all files anyway because the type-checking pass will need them.
-	p.parseMissingFiles()
-	p.wg.Wait()
-
-	return p.parsedFiles, errors.Join(p.errs...)
+	return p.parsedFiles, nil
 }
 
-// aspectMayMatch returns true if the parser should parse all files because at least one file requires it.
-func (p *Parser) aspectMayMatch() bool {
-	return !p.eagerness.Load() || p.filesBytesCount.Load() > maxBytesEagerness
+// hasApplicableAspects returns true if the parser should parse all files because at least one file requires it.
+func (p *Parser) hasApplicableAspects() bool {
+	return p.mustParseAll.Load() || p.filesBytesCount.Load() > maxBytesEagerness
 }
 
-func (p *Parser) addError(err error) {
-	p.errsMu.Lock()
-	defer p.errsMu.Unlock()
-	p.errs = append(p.errs, err)
-}
-
-func (p *Parser) parseFile(rawFile rawFile, aspects []*aspect.Aspect) File {
+func (p *Parser) parseFile(rawFile rawFile, aspects []*aspect.Aspect) (File, error) {
 	astFile, err := goparser.ParseFile(p.fset, rawFile.mappedName, rawFile.content, goparser.ParseComments)
 	if err != nil {
-		p.addError(fmt.Errorf("parsing %q: %w", rawFile.name, err))
-		return File{}
+		return File{}, fmt.Errorf("parsing %q: %w", rawFile.name, err)
 	}
 
-	return File{rawFile.name, astFile, aspects}
+	return File{rawFile.name, astFile, aspects}, nil
 }
 
-func (p *Parser) parseMissingFiles() {
+func (p *Parser) parseMissingFiles() error {
 	for i := range p.parsedFiles {
 		// Skip files that have already been parsed.
 		if p.parsedFiles[i].AstFile != nil {
 			continue
 		}
 
-		p.wg.Add(1)
-		go func(i int) {
-			defer p.wg.Done()
-			p.parsedFiles[i] = p.parseFile(p.rawFiles[i], nil)
-		}(i)
+		i := i
+		p.wg.Go(func() error {
+			var err error
+			p.parsedFiles[i], err = p.parseFile(p.rawFiles[i], nil)
+			return err
+		})
 	}
+
+	return p.wg.Wait()
 }
 
-// fileFilterAspects filters out aspects for a specific file.
-func (p *Parser) fileFilterAspects(aspects []*aspect.Aspect, file rawFile) []*aspect.Aspect {
+// fileFilterAspects filters out aspects for a specific file and returns a copy of them
+func (p *Parser) fileFilterAspects(aspects []*aspect.Aspect, file rawFile) ([]*aspect.Aspect, error) {
 	astFile, err := goparser.ParseFile(p.fset, file.mappedName, file.content, goparser.PackageClauseOnly)
 	if err != nil {
-		p.addError(fmt.Errorf("parsing package clause %q: %w", file.name, err))
-		return nil
+		return nil, fmt.Errorf("parsing package clause %q: %w", file.name, err)
 	}
 
 	if astFile.Name == nil {
-		p.addError(fmt.Errorf("no package name found in %q", file.name))
-		return nil
+		return nil, fmt.Errorf("no package name found in %q", file.name)
 	}
 
 	ctx := &may.FileContext{
@@ -172,9 +168,12 @@ func (p *Parser) fileFilterAspects(aspects []*aspect.Aspect, file rawFile) []*as
 		PackageName: astFile.Name.Name,
 	}
 
-	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-		return a.JoinPoint.FileMayMatch(ctx) == may.CantMatch
-	})
+	copyAspects := make([]*aspect.Aspect, len(aspects))
+	copy(copyAspects, aspects)
+
+	return slices.DeleteFunc(copyAspects, func(a *aspect.Aspect) bool {
+		return a.JoinPoint.FileMayMatch(ctx) == may.NeverMatch
+	}), nil
 }
 
 func readFile(filename string) (rawFile, error) {

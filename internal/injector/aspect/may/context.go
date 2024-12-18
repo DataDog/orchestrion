@@ -30,7 +30,7 @@ func (ctx *PackageContext) PackageImports(path string) MatchType {
 		return Match
 	}
 
-	return CantMatch
+	return NeverMatch
 }
 
 // FileContext is the context for a file to be matched.
@@ -47,5 +47,5 @@ func (ctx *FileContext) FileContains(content string) MatchType {
 		return Match
 	}
 
-	return CantMatch
+	return NeverMatch
 }

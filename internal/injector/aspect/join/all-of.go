@@ -29,8 +29,8 @@ func (o allOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range o {
 		sum = sum.And(candidate.PackageMayMatch(ctx))
-		if sum == may.CantMatch {
-			return may.CantMatch
+		if sum == may.NeverMatch {
+			return may.NeverMatch
 		}
 	}
 	return sum
@@ -40,8 +40,8 @@ func (o allOf) FileMayMatch(ctx *may.FileContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range o {
 		sum = sum.And(candidate.FileMayMatch(ctx))
-		if sum == may.CantMatch {
-			return may.CantMatch
+		if sum == may.NeverMatch {
+			return may.NeverMatch
 		}
 	}
 	return sum

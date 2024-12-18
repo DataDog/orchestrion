@@ -38,7 +38,7 @@ func (o oneOf) ImpliesImported() []string {
 }
 
 func (o oneOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	sum := may.CantMatch
+	sum := may.NeverMatch
 	for _, candidate := range o {
 		sum = sum.Or(candidate.PackageMayMatch(ctx))
 		if sum == may.Match {
@@ -49,7 +49,7 @@ func (o oneOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 }
 
 func (o oneOf) FileMayMatch(ctx *may.FileContext) may.MatchType {
-	sum := may.CantMatch
+	sum := may.NeverMatch
 	for _, candidate := range o {
 		sum = sum.Or(candidate.FileMayMatch(ctx))
 		if sum == may.Match {

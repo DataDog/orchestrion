@@ -31,9 +31,6 @@ aspects:
               return cfg
             }({{ . }})
 
-import-map:
-  github.com/aws/aws-sdk-go-v2/aws: ""
-
 preserveLineInfo: true
 mustCompile: true
 

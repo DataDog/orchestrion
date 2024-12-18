@@ -17,15 +17,19 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
-// packageFilterAspects filters out aspects that imply imports not present in the import map.
+// packageFilterAspects filters out aspects that imply imports not present in the import map and return a copy
+// of the aspect array.
 func (i *Injector) packageFilterAspects(aspects []*aspect.Aspect) []*aspect.Aspect {
+	copyAspects := make([]*aspect.Aspect, len(aspects))
+	copy(copyAspects, aspects)
+
 	ctx := &may.PackageContext{
 		ImportPath: i.ImportPath,
 		ImportMap:  i.ImportMap,
 		TestMain:   i.TestMain,
 	}
-	return slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-		return a.JoinPoint.PackageMayMatch(ctx) == may.CantMatch
+	return slices.DeleteFunc(copyAspects, func(a *aspect.Aspect) bool {
+		return a.JoinPoint.PackageMayMatch(ctx) == may.NeverMatch
 	})
 }
 

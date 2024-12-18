@@ -27,9 +27,6 @@ aspects:
               {{ end }}
             }()
 
-import-map:
-  github.com/gomodule/redigo/redis: ""
-
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo: true
 
