@@ -167,6 +167,9 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, err)
 			return nil, err
 		}
+		if len(pkgs) == 0 {
+			return nil, fmt.Errorf("no packages returned for pattern: %q", req.Pattern)
+		}
 
 		resp := make(ResolveResponse)
 		var errs error

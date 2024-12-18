@@ -45,10 +45,18 @@ func resolvePackageFiles(importPath string, workDir string) (map[string]string, 
 	}
 
 	// Check for missing archives...
+	var found bool
 	for ip, arch := range archives {
 		if arch == "" {
 			return nil, fmt.Errorf("failed to resolve archive for %q", ip)
 		}
+		if ip == importPath {
+			found = true
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("resolution did not include requested package %q", importPath)
 	}
 
 	return archives, nil
