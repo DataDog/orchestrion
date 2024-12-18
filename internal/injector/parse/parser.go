@@ -52,7 +52,8 @@ type Parser struct {
 	// filesBytesCount is the sum of the bytes of all files parsed so far.
 	filesBytesCount atomic.Uint64
 
-	// mustParseAll is a flag that is set to true if at least one file has been parsed and requires all files to be parsed.
+	// mustParseAll is a flag that is set to true if at least one file has been parsed.
+	// at this point all files must be parsed. It also signals that an aspect matched on a file.
 	mustParseAll atomic.Bool
 
 	// parsedFiles is what is returned by ParseFiles.
@@ -70,7 +71,8 @@ func NewParser(fset *token.FileSet, nbFiles int) *Parser {
 	}
 }
 
-// ParseFiles return either zero files or all files parsed with their respective aspects
+// ParseFiles return either zero files if no aspect matched on any file of the package,
+// or all files parsed with their respective aspects that can match on them.
 func (p *Parser) ParseFiles(files []string, aspects []*aspect.Aspect) ([]File, error) {
 	for idx, file := range files {
 		idx, file := idx, file
