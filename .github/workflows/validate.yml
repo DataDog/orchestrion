@@ -267,7 +267,7 @@ jobs:
           - macos
           - ubuntu
           - windows
-        go-version: [oldstable, stable]
+        go-version: [oldstable, stable, '1.24-rc.1']
         build-mode: [DRIVER]
         include:
           # Alternate build modes (only on ubuntu, latest go; to save CI time)
