@@ -117,7 +117,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	}
 
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
-		log.Tracef("[JOBSERVER] pkgs.Resolve(%s in %s)\n", req.Pattern, req.Dir)
+		log.Debugf("[JOBSERVER] pkgs.Resolve(%s in %s)\n", req.Pattern, req.Dir)
 
 		env := req.Env
 		if req.toolexecImportpath != "" {
@@ -152,20 +152,25 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 				Mode:
 				// We need the export file (the whole point of the resolution)
 				packages.NeedExportFile |
-					// We want to also resolve transitive dependencies, so we need Deps & Imports
-					packages.NeedDeps | packages.NeedImports |
+					// We want to also resolve transitive dependencies, so we need Deps & Imports. We also
+					// need CompiledGoFiles in order to see imports possibly added by the toolchain (cgo,
+					// cover, etc...)
+					packages.NeedCompiledGoFiles | packages.NeedDeps | packages.NeedImports |
 					// Finally, we need the resolved package import path
 					packages.NeedName,
 				Dir:        req.Dir,
 				Env:        env,
 				BuildFlags: buildFlags,
-				Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
+				Logf:       func(format string, args ...any) { log.Tracef("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
 			},
 			req.Pattern,
 		)
 		if err != nil {
 			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, err)
 			return nil, err
+		}
+		if len(pkgs) == 0 {
+			return nil, fmt.Errorf("no packages returned for pattern: %q", req.Pattern)
 		}
 
 		resp := make(ResolveResponse)
@@ -179,7 +184,7 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 			return nil, errs
 		}
 
-		log.Tracef("[JOBSERVER] pkgs.Resolve(%s) result: %#v\n", req.Pattern, resp)
+		log.Debugf("[JOBSERVER] pkgs.Resolve(%s) result: %#v\n", req.Pattern, resp)
 		return resp, nil
 	})
 	if err != nil {

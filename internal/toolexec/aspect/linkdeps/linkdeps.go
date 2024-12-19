@@ -47,7 +47,7 @@ func FromImportConfig(importcfg *importcfg.ImportConfig) (LinkDeps, error) {
 			return LinkDeps{}, fmt.Errorf("reading %s from %s=%s: %w", Filename, importPath, archivePath, err)
 		}
 
-		for _, dep := range ld.Dependencies() {
+		for dep := range ld.deps {
 			if _, satisfied := importcfg.PackageFile[dep]; satisfied {
 				// This transitive link-time dependency is already satisfied at
 				// compile-time, so we don't need to carry it over.
