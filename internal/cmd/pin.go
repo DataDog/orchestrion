@@ -32,7 +32,7 @@ var Pin = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		return pin.PinOrchestrion(pin.Options{
+		return pin.PinOrchestrion(ctx.Context, pin.Options{
 			Writer:     ctx.App.Writer,
 			ErrWriter:  ctx.App.ErrWriter,
 			Validate:   ctx.Bool("validate"),

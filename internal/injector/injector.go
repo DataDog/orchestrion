@@ -9,6 +9,7 @@
 package injector
 
 import (
+	gocontext "context"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -74,7 +75,7 @@ type (
 // InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
-func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context.GoLangVersion, error) {
+func (i *Injector) InjectFiles(ctx gocontext.Context, files []string) (map[string]InjectedFile, context.GoLangVersion, error) {
 	if err := i.validate(); err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -113,7 +114,7 @@ func (i *Injector) InjectFiles(files []string) (map[string]InjectedFile, context
 				return
 			}
 
-			res, err := i.injectFile(decorator, dstFile, typeInfo)
+			res, err := i.injectFile(ctx, decorator, dstFile, typeInfo)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -153,17 +154,17 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, typeInfo types.Info) (result, error) {
+func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decorator, file *dst.File, typeInfo types.Info) (result, error) {
 	result := result{InjectedFile: InjectedFile{Filename: decorator.Filenames[file]}}
 
 	var err error
-	result.Modified, result.References, result.GoLang, err = i.applyAspects(decorator, file, i.RootConfig, typeInfo)
+	result.Modified, result.References, result.GoLang, err = i.applyAspects(ctx, decorator, file, i.RootConfig, typeInfo)
 	if err != nil {
 		return result, fmt.Errorf("%q: %w", result.Filename, err)
 	}
 
 	if result.Modified {
-		result.Filename, err = i.writeModifiedFile(decorator, file)
+		result.Filename, err = i.writeModifiedFile(ctx, decorator, file)
 		if err != nil {
 			return result, err
 		}
@@ -172,7 +173,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, ty
 	return result, nil
 }
 
-func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, typeInfo types.Info) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
+func (i *Injector) applyAspects(ctx gocontext.Context, decorator *decorator.Decorator, file *dst.File, rootConfig map[string]string, typeInfo types.Info) (bool, typed.ReferenceMap, context.GoLangVersion, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
@@ -181,7 +182,7 @@ func (i *Injector) applyAspects(decorator *decorator.Decorator, file *dst.File, 
 	)
 
 	pre := func(csor *dstutil.Cursor) bool {
-		if err != nil || csor.Node() == nil || isIgnored(csor.Node()) {
+		if err != nil || csor.Node() == nil || isIgnored(ctx, csor.Node()) {
 			return false
 		}
 

@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/DataDog/orchestrion/internal/toolexec"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
+	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,8 +23,10 @@ var Toolexec = &cli.Command{
 	UsageText:       "orchestrion toolexec [tool] [tool args...]",
 	Args:            true,
 	SkipFlagParsing: true,
-	Action: func(c *cli.Context) error {
-		proxyCmd, err := proxy.ParseCommand(c.Args().Slice())
+	Action: func(ctx *cli.Context) error {
+		log := zerolog.Ctx(ctx.Context)
+
+		proxyCmd, err := proxy.ParseCommand(ctx.Args().Slice())
 		if err != nil {
 			return err
 		}
@@ -37,36 +39,36 @@ var Toolexec = &cli.Command{
 		}
 
 		// Ensure Orchestrion is properly pinned
-		pin.AutoPinOrchestrion()
+		pin.AutoPinOrchestrion(ctx.Context)
 
 		if proxyCmd.ShowVersion() {
-			log.Tracef("Toolexec version command: %#v\n", proxyCmd.Args())
-			fullVersion, err := toolexec.ComputeVersion(proxyCmd)
+			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec version command")
+			fullVersion, err := toolexec.ComputeVersion(ctx.Context, proxyCmd)
 			if err != nil {
 				return err
 			}
-			log.Tracef("Complete version output: %s\n", fullVersion)
+			log.Trace().Str("version", fullVersion).Msg("Complete version output")
 			_, err = fmt.Println(fullVersion)
 			return err
 		}
 
-		log.Tracef("Toolexec original command: %q\n", proxyCmd.Args())
+		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
 		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
 
-		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompile); err != nil {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(proxyCmd, weaver.OnCompileMain); err != nil {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(proxyCmd, weaver.OnLink); err != nil {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); err != nil {
 			return err
 		}
 
-		log.Tracef("Toolexec final command:    %q\n", proxyCmd.Args())
+		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec final command")
 		if err := proxy.RunCommand(proxyCmd); err != nil {
 			// Logging as debug, as the error will likely surface back to the user anyway...
-			log.Debugf("Proxied command failed: %v\n", err)
+			log.Debug().Err(err).Msg("Proxied command failed")
 			return err
 		}
 		return nil

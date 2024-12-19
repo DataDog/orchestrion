@@ -6,21 +6,24 @@
 package goproxy
 
 import (
+	"context"
 	"os"
 	"strings"
 
-	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/rs/zerolog"
 )
 
-// ProcessDashC gets the command line arguments passed to a "go" command (without "go" itself), and processes the "-C"
+// processDashC gets the command line arguments passed to a "go" command (without "go" itself), and processes the "-C"
 // flag present at the beginning of the slice (if present), changing directories as requested, then returns the slice
 // without it.
 //
 // The "-C" flags is reuqired to be the very first argument provided to "go" commands.
-func ProcessDashC(args []string) ([]string, error) {
+func processDashC(ctx context.Context, args []string) ([]string, error) {
 	if len(args) == 0 {
 		return nil, nil
 	}
+
+	log := zerolog.Ctx(ctx)
 
 	arg0 := args[0]
 	if !strings.HasPrefix(arg0, "-C") {
@@ -29,17 +32,17 @@ func ProcessDashC(args []string) ([]string, error) {
 
 	if arg0 == "-C" && len(args) > 1 {
 		// ["-C", "directory", ...]
-		log.Tracef("Found -C %q flag, changing directory\n", args[1])
+		log.Trace().Str("-C", args[1]).Msg("Found '-C <path>' flag, changing directory")
 		return args[2:], os.Chdir(args[1])
 	}
 
 	if !strings.HasPrefix(arg0, "-C=") {
 		// Probably not the flag we're looking for... ignoring that...
-		log.Tracef("Ignoring unknown flag with -C prefix: %q\n", arg0)
+		log.Trace().Str("flag", arg0).Msg("Ignoring unknown flag with -C prefix")
 		return args, nil
 	}
 
 	// ["-C=directory", ...]
-	log.Tracef("Found %q flag, changing directory\n", arg0)
+	log.Trace().Str("-C", arg0[3:]).Msg("Found '-C=<path>' flag, changing directory")
 	return args[1:], os.Chdir(arg0[3:])
 }

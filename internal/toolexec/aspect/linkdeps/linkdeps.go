@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -224,4 +225,12 @@ func readArchiveData(archive string, entry string) (io.Reader, error) {
 	cmd = exec.Command("go", "tool", "pack", "p", archive, entry)
 	cmd.Stdout = &data
 	return &data, cmd.Run()
+}
+
+var _ zerolog.LogArrayMarshaler = (*LinkDeps)(nil)
+
+func (l *LinkDeps) MarshalZerologArray(a *zerolog.Array) {
+	for _, dep := range l.Dependencies() {
+		a.Str(dep)
+	}
 }

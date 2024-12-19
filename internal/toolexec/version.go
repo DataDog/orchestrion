@@ -15,8 +15,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
+	"github.com/rs/zerolog"
 )
 
 // ComputeVersion returns the complete version string to be produced when the toolexec is invoked
@@ -27,20 +27,22 @@ import (
 // - the orchestrion binary is different (instrumentation process may have changed)
 // - the injector configuration is different
 // - injected dependencies versions are different
-func ComputeVersion(cmd proxy.Command) (string, error) {
+func ComputeVersion(ctx context.Context, cmd proxy.Command) (string, error) {
+	log := zerolog.Ctx(ctx)
+
 	// Get the output of the raw `-V=full` invocation
 	stdout := strings.Builder{}
 	if err := proxy.RunCommand(cmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout }); err != nil {
 		return "", err
 	}
 
-	conn, err := client.FromEnvironment("")
+	conn, err := client.FromEnvironment(ctx, "")
 	if err != nil {
 		if !errors.Is(err, client.ErrNoServerAvailable) {
 			return "", err
 		}
-		log.Debugf("No job server available; starting an in-process temporary server...\n")
-		server, err := jobserver.New(&jobserver.Options{NoListener: true})
+		log.Debug().Msg("No job server available; starting an in-process temporary server...")
+		server, err := jobserver.New(ctx, &jobserver.Options{NoListener: true})
 		if err != nil {
 			return "", err
 		}

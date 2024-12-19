@@ -6,11 +6,12 @@
 package injector
 
 import (
+	"context"
 	"strings"
 	"sync"
 
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -21,14 +22,15 @@ const (
 var warnOnce sync.Once
 
 // isIgnored returns true if the node is prefixed by an `//orchestrion:ignore` (or the legacy `//dd:ignore`) directive.
-func isIgnored(node dst.Node) bool {
+func isIgnored(ctx context.Context, node dst.Node) bool {
 	for _, cmt := range node.Decorations().Start.All() {
 		if cmt == orchestrionIgnore || strings.HasPrefix(cmt, orchestrionIgnore+" ") {
 			return true
 		}
 		if cmt == ddIgnore || strings.HasPrefix(cmt, ddIgnore+" ") {
 			warnOnce.Do(func() {
-				log.Warnf("The //dd:ignore directive is deprecated and may be removed in a future release of orchestrion. Please use //orchestrion:ignore instead.")
+				log := zerolog.Ctx(ctx)
+				log.Warn().Msg("The " + ddIgnore + " directive is deprecated and may be removed in a future release of orchestrion. Please use " + orchestrionIgnore + " instead.")
 			})
 			return true
 		}

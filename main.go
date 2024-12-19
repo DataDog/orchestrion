@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -17,11 +18,13 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/DataDog/orchestrion/internal/cmd"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,18 +33,21 @@ const (
 	envVarOrchestrionLogLevel        = "ORCHESTRION_LOG_LEVEL"
 	envVarOrchestrionProfilePath     = "ORCHESTRION_PROFILE_PATH"
 	envVarOrchestrionEnabledProfiles = "ORCHESTRION_ENABLED_PROFILES"
-
-	envVarToolexecImportPath = "TOOLEXEC_IMPORTPATH"
+	envVarToolexecImportPath         = "TOOLEXEC_IMPORTPATH"
 )
 
 func main() {
 	// Setup the logger
-	log.SetContext("ORCHESTRION", version.Tag)
-	log.SetContext("PID", strconv.FormatInt(int64(os.Getpid()), 10))
-	if val := os.Getenv(envVarToolexecImportPath); val != "" {
-		log.SetContext(envVarToolexecImportPath, val)
-	}
-	defer log.Close()
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out:           os.Stderr,
+		TimeFormat:    time.RFC3339,
+		FieldsExclude: []string{"orchestrion", "pid", "ppid"},
+		FieldsOrder:   []string{envVarToolexecImportPath, "phase"},
+	})
+	log.Logger = log.Logger.Level(zerolog.Disabled)
+	log.Logger.UpdateContext(updateCommonContext)
+	zerolog.DefaultContextLogger = &log.Logger
 
 	var (
 		cpuProfile     *os.File
@@ -80,8 +86,8 @@ func main() {
 				Category: "Logging",
 				Name:     "log-level",
 				EnvVars:  []string{envVarOrchestrionLogLevel},
-				Usage:    "Set the log level (NONE, OFF, ERROR, WARN, INFO, DEBUG, TRACE)",
-				Value:    "NONE",
+				Usage:    "Set the log level (PANIC, FATAL, ERROR, WARN, INFO, DEBUG, DISABLED)",
+				Value:    "DISABLED",
 				Action:   actionSetLogLevel,
 			},
 			&cli.StringFlag{
@@ -155,13 +161,13 @@ func main() {
 			if cpuProfile != nil {
 				pprof.StopCPUProfile()
 				if err := cpuProfile.Close(); err != nil {
-					log.Warnf("Failed to close CPU profile: %v\n", err)
+					log.Warn().Err(err).Msg("Failed to close CPU profile")
 				}
 			}
 			if executionTrace != nil {
 				trace.Stop()
 				if err := executionTrace.Close(); err != nil {
-					log.Warnf("Failed to close execution trace: %v\n", err)
+					log.Warn().Err(err).Msg("Failed to close execution trace")
 				}
 			}
 			if slices.Contains(ctx.StringSlice("profile"), "heap") {
@@ -173,14 +179,14 @@ func main() {
 					return fmt.Errorf("writing heap profile: %w", err)
 				}
 				if err := f.Close(); err != nil {
-					log.Warnf("Failed to close heap profile: %v\n", err)
+					log.Warn().Err(err).Msg("Failed to close heap profile")
 				}
 			}
 			return nil
 		},
 	}
 	// Run the CLI application
-	if err := app.Run(os.Args); err != nil {
+	if err := app.RunContext(log.Logger.WithContext(context.Background()), os.Args); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
 	}
@@ -188,19 +194,24 @@ func main() {
 
 var logLevelSet bool
 
-func actionSetLogLevel(_ *cli.Context, level string) error {
-	if err := os.Setenv(envVarOrchestrionLogLevel, level); err != nil {
+func actionSetLogLevel(ctx *cli.Context, value string) error {
+	if err := os.Setenv(envVarOrchestrionLogLevel, value); err != nil {
 		return cli.Exit(fmt.Errorf("setting environment %s: %w", envVarOrchestrionLogLevel, err), 1)
 	}
-	if level, valid := log.LevelNamed(level); valid {
-		logLevelSet = true
-		log.SetLevel(level)
-		return nil
+	var level zerolog.Level
+	if err := level.UnmarshalText([]byte(value)); err != nil {
+		return cli.Exit(fmt.Errorf("invalid log level %q: %w", value, err), 1)
 	}
-	return fmt.Errorf("invalid log level specified: %q", level)
+
+	logger := zerolog.Ctx(ctx.Context).Level(level)
+	log.Logger = logger // Also update the default logger...
+	ctx.Context = logger.WithContext(ctx.Context)
+
+	logLevelSet = true
+	return nil
 }
 
-func actionSetLogFile(_ *cli.Context, path string) error {
+func actionSetLogFile(ctx *cli.Context, path string) error {
 	if !filepath.IsAbs(path) {
 		if wd, err := os.Getwd(); err == nil {
 			path = filepath.Join(wd, path)
@@ -212,7 +223,6 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 	filename := os.Expand(path, func(name string) string {
 		switch name {
 		case "PID":
-			log.SetContext("PID", "")
 			return strconv.FormatInt(int64(os.Getpid()), 10)
 		default:
 			return fmt.Sprintf("$%s", name)
@@ -225,11 +235,21 @@ func actionSetLogFile(_ *cli.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	log.SetOutput(file)
-
-	if !logLevelSet {
-		log.SetLevel(log.LevelWarn)
+	origAfter := ctx.Command.After
+	ctx.Command.After = func(ctx *cli.Context) error {
+		var err error
+		if origAfter != nil {
+			err = origAfter(ctx)
+		}
+		return errors.Join(err, file.Close())
 	}
+
+	log.Logger = zerolog.New(file).With().Timestamp().Logger()
+	if !logLevelSet {
+		log.Logger = log.Logger.Level(zerolog.WarnLevel)
+	}
+	log.Logger.UpdateContext(updateCommonContext)
+	ctx.Context = log.Logger.WithContext(ctx.Context)
 
 	return nil
 }
@@ -267,4 +287,14 @@ func startExecutionTracing(prefix string) (*os.File, error) {
 		return nil, fmt.Errorf("starting execution tracing: %w", err)
 	}
 	return f, nil
+}
+
+func updateCommonContext(c zerolog.Context) zerolog.Context {
+	c = c.Str("orchestrion", version.Tag)
+	c = c.Int("pid", os.Getpid())
+	c = c.Int("ppid", os.Getppid())
+	if val := os.Getenv(envVarToolexecImportPath); val != "" {
+		c = c.Str(envVarToolexecImportPath, val)
+	}
+	return c
 }

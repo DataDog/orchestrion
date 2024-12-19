@@ -6,6 +6,7 @@
 package toolexec
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -52,7 +53,7 @@ func Test(t *testing.T) {
 
 	// Compute the initial version string...
 	initial := inDir(t, tmp, func() string {
-		v, err := ComputeVersion(cmd)
+		v, err := ComputeVersion(context.Background(), cmd)
 		require.NoError(t, err)
 		return v
 	})
@@ -71,7 +72,7 @@ func Test(t *testing.T) {
 	runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", copyDir))
 	runGo(t, tmp, "mod", "tidy") // The hash of the dependency has changed... go list would complain...
 	updated := inDir(t, tmp, func() string {
-		v, err := ComputeVersion(cmd)
+		v, err := ComputeVersion(context.Background(), cmd)
 		require.NoError(t, err)
 		return v
 	})
@@ -81,7 +82,7 @@ func Test(t *testing.T) {
 	// Modify the beacon
 	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 1337"), 0o644))
 	final := inDir(t, tmp, func() string {
-		v, err := ComputeVersion(cmd)
+		v, err := ComputeVersion(context.Background(), cmd)
 		require.NoError(t, err)
 		return v
 	})

@@ -6,8 +6,11 @@
 package pkgs
 
 import (
+	"context"
+
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/nats-io/nats.go"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -22,12 +25,13 @@ type service struct {
 	serverURL string
 }
 
-func Subscribe(serverURL string, conn *nats.Conn, stats *common.CacheStats) error {
+func Subscribe(ctx context.Context, serverURL string, conn *nats.Conn, stats *common.CacheStats) error {
 	s := &service{
 		resolved:  common.NewCache[ResolveResponse](stats),
 		serverURL: serverURL,
 	}
 
-	_, err := conn.Subscribe(resolveSubject, common.HandleRequest(s.resolve))
+	ctx = zerolog.Ctx(ctx).With().Str("nats.subject", resolveSubject).Logger().WithContext(ctx)
+	_, err := conn.Subscribe(resolveSubject, common.HandleRequest(ctx, s.resolve))
 	return err
 }

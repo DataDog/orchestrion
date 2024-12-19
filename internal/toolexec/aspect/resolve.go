@@ -18,13 +18,13 @@ import (
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
 // to locate the archive for `importPath` and its dependencies using `go list`. If that fails, it
 // will try to resolve it using `go get`.
-func resolvePackageFiles(importPath string, workDir string) (map[string]string, error) {
+func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (map[string]string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := client.FromEnvironment(workDir)
+	conn, err := client.FromEnvironment(ctx, workDir)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@
 package injector_test
 
 import (
+	gocontext "context"
 	"fmt"
 	"io"
 	"os"
@@ -103,7 +104,7 @@ func Test(t *testing.T) {
 				Lookup:       testLookup,
 			}
 
-			res, resGoLang, err := inj.InjectFiles([]string{inputFile})
+			res, resGoLang, err := inj.InjectFiles(gocontext.Background(), []string{inputFile})
 			require.NoError(t, err, "failed to inject file")
 
 			resFile, modified := res[inputFile]

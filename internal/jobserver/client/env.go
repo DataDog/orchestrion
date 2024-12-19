@@ -16,7 +16,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/filelock"
-	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -40,13 +40,15 @@ var (
 //     job server will automatically shut itself down once it no longer has any
 //     active client for a period of time.
 //   - Otherwise, the ErrNoServerAvailable error is returned.
-func FromEnvironment(workDir string) (*Client, error) {
+func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 	if client != nil {
 		return client, nil
 	}
 
+	log := zerolog.Ctx(ctx)
+
 	if url := os.Getenv(EnvVarJobserverURL); url != "" {
-		log.Debugf("Connecting to job server at %q (from %s)\n", url, EnvVarJobserverURL)
+		log.Debug().Str(EnvVarJobserverURL, url).Msg("Connecting to job server")
 		c, err := Connect(url)
 		if err != nil {
 			return nil, err
@@ -56,11 +58,11 @@ func FromEnvironment(workDir string) (*Client, error) {
 	}
 
 	if workDir == "" {
-		log.Debugf("Unable to connect to relevant job server (no environment, no work tree)...\n")
+		log.Debug().Msg("Unable to connect to relevant job server (no environment, no work tree)...")
 		return nil, ErrNoServerAvailable
 	}
 
-	log.Debugf("Connecting to job server rooted in %q\n", workDir)
+	log.Debug().Str("workdir", workDir).Msg("Connecting to job server rooted in working directory")
 	urlFilePath := filepath.Join(workDir, urlFileName)
 
 	// Try to start a server. The server process is idempotent if the `-url-file` flag is used, so we do not check the
@@ -85,20 +87,21 @@ func FromEnvironment(workDir string) (*Client, error) {
 	}
 	// Detach the process, so it survives this one if needed...
 	if err := cmd.Process.Release(); err != nil {
-		log.Warnf("Failed to detach from job server process: %v\n", err)
+		log.Warn().Err(err).Msg("Failed to detach from job server process")
 	}
 
 	return client, nil
 }
 
-func clientFromURLFile(path string) (*Client, string, error) {
+func clientFromURLFile(ctx context.Context, path string) (*Client, string, error) {
 	mu := filelock.MutexAt(path)
 	if err := mu.RLock(); err != nil {
 		return nil, "", err
 	}
 	defer func() {
 		if err := mu.Unlock(); err != nil {
-			log.Warnf("Failed to unlock %q: %v\n", path, err)
+			log := zerolog.Ctx(ctx)
+			log.Warn().Str("url-file", path).Err(err).Msg("Failed to unlock file")
 		}
 	}()
 
@@ -117,8 +120,9 @@ func clientFromURLFile(path string) (*Client, string, error) {
 }
 
 func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd) (*Client, error) {
+	log := zerolog.Ctx(ctx)
 	for {
-		c, url, err := clientFromURLFile(path)
+		c, url, err := clientFromURLFile(ctx, path)
 		if err == nil {
 			client = c
 			// Set it in the current environment so that child processes don't have to go through the same dance again.
@@ -130,7 +134,7 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd) (*Client, e
 			_ = cmd.Process.Kill()
 			return nil, err
 		}
-		log.Tracef("Job server still not ready in %q...\n", path)
+		log.Trace().Str("url-file", path).Msg("Job server still not ready...")
 		time.Sleep(150 * time.Millisecond)
 	}
 }
