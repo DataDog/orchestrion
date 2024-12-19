@@ -35,7 +35,7 @@ func TestNewerGoVersion(t *testing.T) {
 	injector := &Injector{
 		GoVersion: fmt.Sprintf("go1.%d", versionInt+1), // +1 to always make sure we have a newer version
 		Lookup: func(_ string) (io.ReadCloser, error) {
-			return nil, nil
+			return nil, errors.ErrUnsupported
 		},
 	}
 
