@@ -14,10 +14,12 @@ import (
 	"time"
 
 	"github.com/DataDog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
+	"gopkg.in/yaml.v3"
 
 	"github.com/urfave/cli/v2"
 )
@@ -33,18 +35,31 @@ var Server = &cli.Command{
 		},
 		&cli.IntFlag{
 			Name:        "port",
-			Usage:       "Choose a port to listen on",
+			Usage:       "Choose a port to listen on.",
 			Value:       -1,
 			DefaultText: "random",
 		},
 		&cli.DurationFlag{
 			Name:  "inactivity-timeout",
-			Usage: "Automatically shut down after a period without any connected client",
+			Usage: "Automatically shut down after a period without any connected client.",
 			Value: time.Minute,
 		},
 		&cli.BoolFlag{
 			Name:  "nats-logging",
-			Usage: "Enable NATS server logging",
+			Usage: "Enable NATS server logging.",
+		},
+		&cli.StringFlag{
+			Name:        "build-flags",
+			Usage:       "Specify the 'go build' flags to use when resolving packages. This is specified as a YAML array and must start with a valid go subcommand (e.g, 'build').",
+			DefaultText: "Looked up the process hierarchy",
+			Action: func(_ *cli.Context, val string) error {
+				var args []string
+				if err := yaml.Unmarshal([]byte(val), &args); err != nil {
+					return cli.Exit(fmt.Errorf("invalid -build-flags value: %w", err), 2)
+				}
+				goflags.SetFlags(".", args)
+				return nil
+			},
 		},
 	},
 	Hidden: true,

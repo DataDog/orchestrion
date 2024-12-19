@@ -39,6 +39,7 @@ func (Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) error {
 				continue
 			}
 
+			log.Tracef("Resolving %s dependency on %q...\n", linkdeps.Filename, depPath)
 			deps, err := resolvePackageFiles(ctx, depPath, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)

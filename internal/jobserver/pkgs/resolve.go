@@ -160,8 +160,10 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 				Mode:
 				// We need the export file (the whole point of the resolution)
 				packages.NeedExportFile |
-					// We want to also resolve transitive dependencies, so we need Deps & Imports
-					packages.NeedDeps | packages.NeedImports |
+					// We want to also resolve transitive dependencies, so we need Deps & Imports. We also
+					// need CompiledGoFiles in order to see imports possibly added by the toolchain (cgo,
+					// cover, etc...)
+					packages.NeedCompiledGoFiles | packages.NeedDeps | packages.NeedImports |
 					// Finally, we need the resolved package import path
 					packages.NeedName,
 				Dir:        req.Dir,
@@ -174,6 +176,9 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		if err != nil {
 			log.Error().Str("pattern", req.Pattern).Err(err).Msg("pkgs.Resolve failed")
 			return nil, err
+		}
+		if len(pkgs) == 0 {
+			return nil, fmt.Errorf("no packages returned for pattern: %q", req.Pattern)
 		}
 
 		resp := make(ResolveResponse)

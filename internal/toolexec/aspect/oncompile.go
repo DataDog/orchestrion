@@ -184,33 +184,39 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
 		linkDeps.Add(depImportPath)
 
-		if kind == typed.ImportStatement {
-			// Imported packages need to be provided in the compilation's importcfg file
-			deps, err := resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
-			if err != nil {
-				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
-			}
-			for dep, archive := range deps {
-				deps, err := linkdeps.FromArchive(archive)
-				if err != nil {
-					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
-				}
-				log.Debug().Str("import-path", dep).Msg("Processing " + linkdeps.Filename + " dependencies")
-				for _, tDep := range deps.Dependencies() {
-					if _, found := imports.PackageFile[tDep]; !found {
-						log.Debug().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
-						linkDeps.Add(tDep)
-					}
-				}
+		if kind != typed.ImportStatement {
+			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
+			// typically used to avoid creating dependency cycles. Corrollary to this, the `link.deps`
+			// file will not contain transitive closures for these packages, so we need to resolve these
+			// at link-time.
+			continue
+		}
 
-				if _, ok := imports.PackageFile[dep]; ok {
-					// Already part of natural dependencies, nothing to do...
-					continue
-				}
-				log.Debug().Str("import-path", dep).Str("inherited-from", depImportPath).Str("archive", archive).Msg("Recording transitive dependency")
-				imports.PackageFile[dep] = archive
-				regUpdated = true
+		// Imported packages need to be provided in the compilation's importcfg file
+		deps, err := resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
+		if err != nil {
+			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
+		}
+		for dep, archive := range deps {
+			deps, err := linkdeps.FromArchive(archive)
+			if err != nil {
+				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
 			}
+			log.Debug().Str("import-path", dep).Msg("Processing " + linkdeps.Filename + " dependencies")
+			for _, tDep := range deps.Dependencies() {
+				if _, found := imports.PackageFile[tDep]; !found {
+					log.Debug().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
+					linkDeps.Add(tDep)
+				}
+			}
+
+			if _, ok := imports.PackageFile[dep]; ok {
+				// Already part of natural dependencies, nothing to do...
+				continue
+			}
+			log.Debug().Str("import-path", dep).Str("inherited-from", depImportPath).Str("archive", archive).Msg("Recording transitive dependency")
+			imports.PackageFile[dep] = archive
+			regUpdated = true
 		}
 	}
 

@@ -7,6 +7,7 @@ replace github.com/DataDog/orchestrion => ../
 require (
 	cloud.google.com/go/pubsub v1.45.1
 	github.com/99designs/gqlgen v0.17.57
+	github.com/DataDog/go-libddwaf/v3 v3.5.1
 	github.com/DataDog/orchestrion v1.0.1
 	github.com/IBM/sarama v1.43.3
 	github.com/Shopify/sarama v1.38.1
@@ -87,7 +88,6 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/log v0.59.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.59.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.5.0 // indirect
-	github.com/DataDog/go-libddwaf/v3 v3.5.1 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.3 // indirect
 	github.com/DataDog/go-sqllexer v0.0.17 // indirect
 	github.com/DataDog/go-tuf v1.1.0-0.5.2 // indirect

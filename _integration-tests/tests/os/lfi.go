@@ -18,6 +18,7 @@ import (
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
+	waf "github.com/DataDog/go-libddwaf/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/DataDog/dd-trace-go.v1/appsec/events"
@@ -32,6 +33,9 @@ type TestCase struct {
 func (tc *TestCase) Setup(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("appsec does not support Windows")
+	}
+	if ok, err := waf.Health(); !ok {
+		t.Skip("WAF is not available:", err)
 	}
 
 	t.Setenv("DD_APPSEC_RULES", "../testdata/rasp-only-rules.json")
