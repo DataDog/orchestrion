@@ -6,6 +6,7 @@
 package injector
 
 import (
+	"errors"
 	"fmt"
 	goparser "go/parser"
 	"go/token"
