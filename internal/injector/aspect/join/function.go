@@ -11,6 +11,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -27,6 +28,10 @@ type (
 		fingerprint.Hashable
 
 		impliesImported() []string
+
+		packageMayMatch(ctx *may.PackageContext) may.MatchType
+		fileMayMatch(ctx *may.FileContext) may.MatchType
+
 		evaluate(functionInformation) bool
 	}
 
@@ -46,6 +51,28 @@ func (s *functionDeclaration) ImpliesImported() (list []string) {
 		list = append(list, opt.impliesImported()...)
 	}
 	return
+}
+
+func (s *functionDeclaration) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	sum := may.Match
+	for _, candidate := range s.Options {
+		sum = sum.And(candidate.packageMayMatch(ctx))
+		if sum == may.NeverMatch {
+			return may.NeverMatch
+		}
+	}
+	return sum
+}
+
+func (s *functionDeclaration) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	sum := may.Match
+	for _, candidate := range s.Options {
+		sum = sum.And(candidate.fileMayMatch(ctx))
+		if sum == may.NeverMatch {
+			return may.NeverMatch
+		}
+	}
+	return sum
 }
 
 func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
@@ -88,6 +115,14 @@ func (functionName) impliesImported() []string {
 	return nil
 }
 
+func (functionName) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	return may.Unknown
+}
+
+func (fo functionName) fileMayMatch(ctx *may.FileContext) may.MatchType {
+	return ctx.FileContains(string(fo))
+}
+
 func (fo functionName) evaluate(info functionInformation) bool {
 	return info.Name == string(fo)
 }
@@ -105,6 +140,27 @@ type signature struct {
 // value types.
 func Signature(args []TypeName, ret []TypeName) FunctionOption {
 	return &signature{Arguments: args, Results: ret}
+}
+
+func (fo *signature) packageMayMatch(ctx *may.PackageContext) may.MatchType {
+	sum := may.Match
+	for _, candidate := range fo.Arguments {
+		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
+		if sum == may.NeverMatch {
+			return may.NeverMatch
+		}
+	}
+	for _, candidate := range fo.Results {
+		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
+		if sum == may.NeverMatch {
+			return may.NeverMatch
+		}
+	}
+	return sum
+}
+
+func (*signature) fileMayMatch(_ *may.FileContext) may.MatchType {
+	return may.Unknown
 }
 
 func (fo *signature) impliesImported() (list []string) {
@@ -169,12 +225,24 @@ func Receiver(typeName TypeName) FunctionOption {
 	return &receiver{typeName}
 }
 
+func (fo *receiver) packageMayMatch(ctx *may.PackageContext) may.MatchType {
+	if ctx.ImportPath == fo.TypeName.ImportPath() {
+		return may.Match
+	}
+
+	return may.NeverMatch
+}
+
+func (fo *receiver) fileMayMatch(ctx *may.FileContext) may.MatchType {
+	return ctx.FileContains(fo.TypeName.Name())
+}
+
 func (fo *receiver) evaluate(info functionInformation) bool {
 	return info.Receiver != nil && fo.TypeName.MatchesDefinition(info.Receiver, info.ImportPath)
 }
 
-func (*receiver) impliesImported() []string {
-	return nil
+func (fo *receiver) impliesImported() []string {
+	return []string{fo.TypeName.ImportPath()}
 }
 
 func (fo *receiver) Hash(h *fingerprint.Hasher) error {
@@ -195,6 +263,14 @@ func FunctionBody(up Point) *functionBody {
 
 func (s *functionBody) ImpliesImported() []string {
 	return s.Function.ImpliesImported()
+}
+
+func (s *functionBody) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	return s.Function.PackageMayMatch(ctx)
+}
+
+func (s *functionBody) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	return s.Function.FileMayMatch(ctx)
 }
 
 func (s *functionBody) Matches(ctx context.AspectContext) bool {

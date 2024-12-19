@@ -7,11 +7,14 @@ package injector_test
 
 import (
 	"fmt"
+	"go/parser"
+	"go/token"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -35,6 +38,7 @@ type testConfig struct {
 	SyntheticReferences map[string]typed.ReferenceKind `yaml:"syntheticReferences"`
 	GoLang              context.GoLangVersion          `yaml:"required-lang"`
 	Code                string                         `yaml:"code"`
+	ImportPath          string                         `yaml:"import-path"`
 }
 
 const testModuleName = "dummy/test/module"
@@ -96,14 +100,28 @@ func Test(t *testing.T) {
 			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
 			runGo(t, tmp, "mod", "tidy")
 
-			inj := injector.Injector{
-				Aspects:      config.Aspects,
-				ModifiedFile: func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
-				ImportPath:   testModuleName,
-				Lookup:       testLookup,
+			if config.ImportPath == "" {
+				config.ImportPath = testModuleName
 			}
 
-			res, resGoLang, err := inj.InjectFiles([]string{inputFile})
+			astFile, err := parser.ParseFile(token.NewFileSet(), inputFile, []byte(original), parser.ParseComments)
+			require.NoError(t, err, "failed to parse input file")
+
+			importMap := make(map[string]string)
+			for _, a := range astFile.Imports {
+				ax, err := strconv.Unquote(a.Path.Value)
+				require.NoError(t, err, "failed to unquote import path: %q", a.Path.Value)
+				importMap[ax] = ""
+			}
+
+			inj := injector.Injector{
+				ModifiedFile: func(path string) string { return filepath.Join(tmp, filepath.Base(path)+".edited.go") },
+				ImportPath:   config.ImportPath,
+				Lookup:       testLookup,
+				ImportMap:    importMap,
+			}
+
+			res, resGoLang, err := inj.InjectFiles([]string{inputFile}, config.Aspects)
 			require.NoError(t, err, "failed to inject file")
 
 			resFile, modified := res[inputFile]

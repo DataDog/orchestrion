@@ -11,6 +11,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -56,6 +57,14 @@ func (i *declarationOf) ImpliesImported() []string {
 	return []string{i.ImportPath}
 }
 
+func (i *declarationOf) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	return ctx.PackageImports(i.ImportPath)
+}
+
+func (i *declarationOf) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	return ctx.FileContains(i.Name)
+}
+
 func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
 	return h.Named("declaration-of", fingerprint.String(i.ImportPath), fingerprint.String(i.Name))
 }
@@ -66,6 +75,14 @@ type valueDeclaration struct {
 
 func ValueDeclaration(typeName TypeName) *valueDeclaration {
 	return &valueDeclaration{typeName}
+}
+
+func (i *valueDeclaration) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	return ctx.PackageImports(i.TypeName.ImportPath())
+}
+
+func (*valueDeclaration) FileMayMatch(_ *may.FileContext) may.MatchType {
+	return may.Unknown
 }
 
 func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
