@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -39,7 +40,7 @@ type (
 	// CommandProcessor is a function that takes a command as input and is allowed to modify it or
 	// read its data. If it returns an error, the processing chain immediately stops and no further
 	// processors will be invoked.
-	CommandProcessor[T Command] func(T) error
+	CommandProcessor[T Command] func(context.Context, T) error
 
 	// command is the default unknown command type
 	// Can be used to compose specific Command implementations
@@ -60,9 +61,9 @@ const (
 // ProcessCommand applies a processor on a command if said command matches
 // the input type of said input processor. Nothing happens if the processor does
 // not correspond to the provided command type.
-func ProcessCommand[T Command](cmd Command, p CommandProcessor[T]) error {
+func ProcessCommand[T Command](ctx context.Context, cmd Command, p CommandProcessor[T]) error {
 	if c, ok := cmd.(T); ok {
-		if err := p(c); err != nil {
+		if err := p(ctx, c); err != nil {
 			return err
 		}
 	}

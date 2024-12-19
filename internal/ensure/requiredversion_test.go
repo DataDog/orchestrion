@@ -6,6 +6,7 @@
 package ensure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/version"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
 )
@@ -28,6 +30,9 @@ func TestGoModVersion(t *testing.T) {
 		replace bool
 		err     error
 	}
+
+	log := zerolog.Nop()
+
 	for name, test := range map[string]test{
 		"happy":    {version: "v0.9.0"},
 		"replaced": {version: "v0.9.0", replace: true},
@@ -68,7 +73,7 @@ func TestGoModVersion(t *testing.T) {
 			child.Stderr = os.Stderr
 			require.NoError(t, child.Run(), "error while running 'go mod tidy'")
 
-			rVersion, rDir, err := goModVersion(tmp)
+			rVersion, rDir, err := goModVersion(&log, tmp)
 			if test.err != nil {
 				require.ErrorContains(t, err, test.err.Error())
 				return
@@ -96,7 +101,7 @@ func TestGoModVersion(t *testing.T) {
 				`), 0o644)
 
 		require.NotPanics(t, func() {
-			_, _, err := goModVersion(tmp)
+			_, _, err := goModVersion(&log, tmp)
 			require.ErrorIs(t, err, goenv.ErrNoGoMod)
 		})
 	})
@@ -156,7 +161,7 @@ func TestRequiredVersion(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			mockGoVersion := func(dir string) (string, string, error) {
+			mockGoVersion := func(_ *zerolog.Logger, dir string) (string, string, error) {
 				require.Equal(t, "", dir)
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}
@@ -177,7 +182,7 @@ func TestRequiredVersion(t *testing.T) {
 				return nil
 			}
 
-			err := requiredVersion(mockGoVersion, mockGetenv, mockSyscallExec, osArgs)
+			err := requiredVersion(context.Background(), mockGoVersion, mockGetenv, mockSyscallExec, osArgs)
 
 			if tc.expected.err != nil {
 				require.ErrorIs(t, err, tc.expected.err)

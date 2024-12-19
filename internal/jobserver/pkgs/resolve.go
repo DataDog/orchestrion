@@ -6,6 +6,7 @@
 package pkgs
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
@@ -18,7 +19,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -98,7 +99,9 @@ func (r *ResolveRequest) canonicalizeEnviron() {
 	}
 }
 
-func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
+func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResponse, error) {
+	log := zerolog.Ctx(ctx)
+
 	// Make sure all children jobs connect to THIS jobserver; this is more efficient than checking for
 	// the local file system beacon.
 	req.Env = append(req.Env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, s.serverURL))
@@ -117,7 +120,10 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 	}
 
 	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
-		log.Tracef("[JOBSERVER] pkgs.Resolve(%s in %s)\n", req.Pattern, req.Dir)
+		log := log.With().Str("pattern", req.Pattern).Logger()
+		ctx := log.WithContext(ctx)
+
+		log.Trace().Str("dir", req.Dir).Msg("pkgs.Resolve starting")
 
 		env := req.Env
 		if req.toolexecImportpath != "" {
@@ -132,10 +138,12 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 			}
 			env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
 		}
+		// Artifically limit to 2 in order to reduce scheduler contention in downstream processes...
+		env = append(env, "GOMAXPROX=2")
 
-		goFlags, err := goflags.Flags()
+		goFlags, err := goflags.Flags(ctx)
 		if err != nil {
-			log.Warnf("Failed to obtain go build flags: %v\n", err)
+			log.Warn().Err(err).Msg("Failed to obtain go build flags")
 		}
 		goFlags.Trim(
 			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
@@ -159,12 +167,12 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 				Dir:        req.Dir,
 				Env:        env,
 				BuildFlags: buildFlags,
-				Logf:       func(format string, args ...any) { log.Infof("[JOBSERVER] packages.Load -- "+format+"\n", args...) },
+				Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			},
 			req.Pattern,
 		)
 		if err != nil {
-			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, err)
+			log.Error().Str("pattern", req.Pattern).Err(err).Msg("pkgs.Resolve failed")
 			return nil, err
 		}
 
@@ -175,11 +183,11 @@ func (s *service) resolve(req *ResolveRequest) (ResolveResponse, error) {
 		}
 
 		if errs != nil {
-			log.Errorf("[JOBSERVER] pkgs.Resolve(%s) failed: %v\n", req.Pattern, errs)
+			log.Error().Str("pattern", req.Pattern).Err(errs).Msg("pkgs.Resolve failed")
 			return nil, errs
 		}
 
-		log.Tracef("[JOBSERVER] pkgs.Resolve(%s) result: %#v\n", req.Pattern, resp)
+		log.Trace().Any("result", resp).Msg("pkgs.Resolve finished")
 		return resp, nil
 	})
 	if err != nil {

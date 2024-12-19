@@ -7,6 +7,7 @@ package pin
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"go/parser"
@@ -19,10 +20,10 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector/config"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -52,7 +53,9 @@ type Options struct {
 
 // PinOrchestrion applies or update the orchestrion pin file in the current
 // working directory, according to the supplied [Options].
-func PinOrchestrion(opts Options) error {
+func PinOrchestrion(ctx context.Context, opts Options) error {
+	log := zerolog.Ctx(ctx)
+
 	goMod, err := goenv.GOMOD("")
 	if err != nil {
 		return fmt.Errorf("getting GOMOD: %w", err)
@@ -61,7 +64,7 @@ func PinOrchestrion(opts Options) error {
 	toolFile := filepath.Join(goMod, "..", config.FilenameOrchestrionToolGo)
 	dstFile, err := parseOrchestrionToolGo(toolFile)
 	if errors.Is(err, os.ErrNotExist) {
-		log.Debugf("no %q file found, creating a new one", config.FilenameOrchestrionToolGo)
+		log.Debug().Msg("no " + config.FilenameOrchestrionToolGo + " file found, creating a new one")
 		dstFile = defaultOrchestrionToolGo()
 		err = nil
 	}
@@ -97,7 +100,7 @@ func PinOrchestrion(opts Options) error {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
-	pruned, err := pruneImports(importSet, opts)
+	pruned, err := pruneImports(log, importSet, opts)
 	if err != nil {
 		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
 	}
@@ -235,7 +238,7 @@ func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
 // pruneImports removes unnecessary or invalid imports from the provided
 // [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
 // only outputs a message informing the user about uncalled-for imports.
-func pruneImports(importSet *importSet, opts Options) (bool, error) {
+func pruneImports(log *zerolog.Logger, importSet *importSet, opts Options) (bool, error) {
 	importPaths := importSet.Except(orchestrionImportPath, orchestrionInstrumentPath)
 	if len(importPaths) == 0 {
 		// Nothing to do!
@@ -244,7 +247,7 @@ func pruneImports(importSet *importSet, opts Options) (bool, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			BuildFlags: []string{"-toolexec="},
-			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			Mode:       packages.NeedName | packages.NeedFiles,
 		},
 		importPaths...,

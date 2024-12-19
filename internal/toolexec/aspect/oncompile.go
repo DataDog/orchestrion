@@ -6,6 +6,7 @@
 package aspect
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,10 +19,10 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -64,9 +65,9 @@ var weavingSpecialCase = []specialCase{
 	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
 }
 
-func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
-	log.SetContext("PHASE", "compile")
-	defer log.SetContext("PHASE", "")
+func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err error) {
+	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Logger()
+	ctx = log.WithContext(ctx)
 
 	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {
@@ -88,7 +89,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		if err != nil {
 			return
 		}
-		err = writeLinkDeps(cmd, &linkDeps, orchestrionDir)
+		err = writeLinkDeps(log, cmd, &linkDeps, orchestrionDir)
 	}()
 
 	goMod, err := goenv.GOMOD(".")
@@ -96,7 +97,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 		return fmt.Errorf("go env GOMOD: %w", err)
 	}
 	goModDir := filepath.Dir(goMod)
-	log.Tracef("Identified module directory: %s\n", goModDir)
+	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
 	cfg, err := config.NewLoader(goModDir, false).Load()
 	if err != nil {
@@ -111,11 +112,11 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 
 		switch sc.behavior {
 		case neverWeave:
-			log.Debugf("Not weaving aspects in %q to prevent circular instrumentation\n", w.ImportPath)
+			log.Debug().Str("import-path", w.ImportPath).Msg("Not weaving aspects to prevent circular instrumentation")
 			return nil
 
 		case weaveTracerInternal:
-			log.Debugf("Enabling tracer-internal mode for %q\n", w.ImportPath)
+			log.Debug().Str("import-path", w.ImportPath).Msg("Enabling tracer-internal mode")
 			aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
 				return !a.TracerInternal
 			})
@@ -145,7 +146,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 	}
 
 	goFiles := cmd.GoFiles()
-	results, goLang, err := injector.InjectFiles(goFiles)
+	results, goLang, err := injector.InjectFiles(ctx, goFiles)
 	if err != nil {
 		return err
 	}
@@ -156,7 +157,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 
 	references := typed.ReferenceMap{}
 	for gofile, modFile := range results {
-		log.Debugf("Modified source code: %q => %q\n", gofile, modFile.Filename)
+		log.Debug().Str("original", gofile).Str("updated", modFile.Filename).Msg("Replacing argument for modified source code")
 		if err := cmd.ReplaceParam(gofile, modFile.Filename); err != nil {
 			return fmt.Errorf("replacing %q with %q: %w", gofile, modFile.Filename, err)
 		}
@@ -180,12 +181,12 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 			continue
 		}
 
-		log.Debugf("Recording synthetic dependency: %q => %v\n", depImportPath, kind)
+		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
 		linkDeps.Add(depImportPath)
 
 		if kind == typed.ImportStatement {
 			// Imported packages need to be provided in the compilation's importcfg file
-			deps, err := resolvePackageFiles(depImportPath, cmd.WorkDir)
+			deps, err := resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 			}
@@ -194,10 +195,10 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 				if err != nil {
 					return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
 				}
-				log.Debugf("Processing %s dependencies from %s...\n", linkdeps.Filename, dep)
+				log.Debug().Str("import-path", dep).Msg("Processing " + linkdeps.Filename + " dependencies")
 				for _, tDep := range deps.Dependencies() {
 					if _, found := imports.PackageFile[tDep]; !found {
-						log.Debugf("Copying transitive %s dependency on %q inherited from %q via %q\n", linkdeps.Filename, tDep, depImportPath, dep)
+						log.Debug().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
 						linkDeps.Add(tDep)
 					}
 				}
@@ -206,7 +207,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 					// Already part of natural dependencies, nothing to do...
 					continue
 				}
-				log.Debugf("Recording transitive dependency of %q: %q => %q\n", depImportPath, dep, archive)
+				log.Debug().Str("import-path", dep).Str("inherited-from", depImportPath).Str("archive", archive).Msg("Recording transitive dependency")
 				imports.PackageFile[dep] = archive
 				regUpdated = true
 			}
@@ -215,7 +216,7 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 
 	if regUpdated {
 		// Creating updated version of the importcfg file, with new dependencies
-		if err := writeUpdatedImportConfig(imports, cmd.Flags.ImportCfg); err != nil {
+		if err := writeUpdatedImportConfig(log, imports, cmd.Flags.ImportCfg); err != nil {
 			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 		}
 	}
@@ -223,15 +224,15 @@ func (w Weaver) OnCompile(cmd *proxy.CompileCommand) (err error) {
 	return nil
 }
 
-func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err error) {
+func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, filename string) (err error) {
 	const dotOriginal = ".original"
 
-	log.Tracef("Backing up original %q\n", filename)
+	log.Trace().Str("path", filename).Msg("Backing up original file")
 	if err := os.Rename(filename, filename+dotOriginal); err != nil {
 		return fmt.Errorf("renaming to %q: %w", filepath.Base(filename)+dotOriginal, err)
 	}
 
-	log.Debugf("Writing updated %q\n", filename)
+	log.Debug().Str("path", filename).Msg("Writing updated file")
 	if err := reg.WriteFile(filename); err != nil {
 		return fmt.Errorf("writing: %w", err)
 	}
@@ -242,7 +243,7 @@ func writeUpdatedImportConfig(reg importcfg.ImportConfig, filename string) (err 
 // writeLinkDeps writes the [linkdeps.Filename] file into the orchestrionDir,
 // and registers it to be packed into the output archive. Does nothing if the
 // provided [linkdeps.LinkDeps] is empty.
-func writeLinkDeps(cmd *proxy.CompileCommand, linkDeps *linkdeps.LinkDeps, orchestrionDir string) error {
+func writeLinkDeps(log zerolog.Logger, cmd *proxy.CompileCommand, linkDeps *linkdeps.LinkDeps, orchestrionDir string) error {
 	if linkDeps.Empty() {
 		// Nothing to do...
 		return nil
@@ -259,7 +260,7 @@ func writeLinkDeps(cmd *proxy.CompileCommand, linkDeps *linkdeps.LinkDeps, orche
 	}
 
 	cmd.OnClose(func() error {
-		log.Debugf("Adding %s file into %q\n", linkdeps.Filename, cmd.Flags.Output)
+		log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, linkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
 		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
 		if err := child.Run(); err != nil {
 			return fmt.Errorf("running %q: %w", child.Args, err)

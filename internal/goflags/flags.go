@@ -9,6 +9,7 @@
 package goflags
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -21,7 +22,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/goflags/quoted"
-	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/rs/zerolog"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/tools/go/packages"
 )
@@ -98,7 +99,9 @@ func (f CommandFlags) Slice() []string {
 // ParseCommandFlags parses a slice representing a go command invocation
 // and returns its flags. Direct arguments to the command are ignored. The value
 // of $GOFLAGS is also included in the returned flags.
-func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
+func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFlags, error) {
+	log := zerolog.Ctx(ctx)
+
 	flags := CommandFlags{
 		Long:  make(map[string]string, len(longFlags)),
 		Short: make(map[string]struct{}, len(shortFlags)),
@@ -107,9 +110,9 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 	goflags := os.Getenv("GOFLAGS")
 	goflagsArgs, err := quoted.Split(goflags)
 	if err != nil {
-		log.Warnf("Failed to interpreted quoted strings in GOFLAGS=%q: %v\n", goflags, err)
+		log.Warn().Str("GOFLAGS", goflags).Err(err).Msg("Failed to interpret quoted strings in GOFLAGS")
 	} else {
-		log.Tracef("GOFLAGS arguments: %q\n", goflagsArgs)
+		log.Trace().Strs("GOFLAGS", goflagsArgs).Msg("GOFLAGS arguments")
 	}
 
 	// Remove any `-C` flag provided on the command line. This is required to immediately follow the `go` command, and
@@ -118,11 +121,11 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 		if arg := args[0]; strings.HasPrefix(arg, "-C") {
 			if arg == "-C" && len(args) > 1 {
 				// ["-C", "directory", ...]
-				log.Tracef("Skipping -C %q flag\n", args[1])
+				log.Trace().Strs("flag", args[:2]).Msg("Skipping '-C <dir>' flag")
 				args = args[2:]
 			} else if arg[:3] == "-C=" {
 				// ["-C=directory", ...]
-				log.Tracef("Skipping %q flag\n", arg)
+				log.Trace().Str("flag", arg).Msg("Skipping '-C=<dir>' flag")
 				args = args[1:]
 			}
 		}
@@ -131,7 +134,7 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 	// The next argument after a `-C` (if present) would be the go command name ("run", "test", "list", etc...). This is
 	// not interesting for our purposes, so we skip it.
 	if len(args) > 0 {
-		log.Tracef("The go command is %q\n", args[0])
+		log.Trace().Str("command", args[0]).Msg("Go command from arguments")
 		args = args[1:]
 	}
 
@@ -187,17 +190,17 @@ func ParseCommandFlags(wd string, args []string) (CommandFlags, error) {
 		}
 	}
 
-	if err := flags.inferCoverpkg(wd, positional); err != nil {
+	if err := flags.inferCoverpkg(log, wd, positional); err != nil {
 		return flags, err
 	}
 
-	log.Tracef("Parsed flags: %#v\n", flags)
+	log.Trace().Any("flags", flags).Msg("Parsed flags")
 	return flags, nil
 }
 
 // inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and `-coverpkg` is not, as
 // otherwise, sub-commands triggered with these flags will not apply coverage to the intended packages.
-func (f *CommandFlags) inferCoverpkg(wd string, positionalArgs []string) error {
+func (f *CommandFlags) inferCoverpkg(log *zerolog.Logger, wd string, positionalArgs []string) error {
 	if _, hasCoverpkg := f.Long["-coverpkg"]; hasCoverpkg {
 		return nil
 	}
@@ -210,7 +213,7 @@ func (f *CommandFlags) inferCoverpkg(wd string, positionalArgs []string) error {
 			Mode:       packages.NeedName,
 			Dir:        wd,
 			BuildFlags: append(f.Slice(), "-toolexec"), // Make sure we satisfy the same build constraints; but don't run -toolexec
-			Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 		},
 		positionalArgs...,
 	)
@@ -223,26 +226,27 @@ func (f *CommandFlags) inferCoverpkg(wd string, positionalArgs []string) error {
 		coverpkg[i] = pkg.PkgPath
 	}
 	val := strings.Join(coverpkg, ",")
-	log.Tracef("Inferred -coverpkg=%q from %q\n", val, positionalArgs)
+	log.Trace().Str("-coverpkg", val).Strs("positional", positionalArgs).Msg("Inferred -coverpkg flag from positional arguments")
 	f.Long["-coverpkg"] = val
 
 	return nil
 }
 
 // Flags return the top level go command flags
-func Flags() (CommandFlags, error) {
+func Flags(ctx context.Context) (CommandFlags, error) {
 	once.Do(func() {
-		flags, flagsErr = parentGoCommandFlags()
+		flags, flagsErr = parentGoCommandFlags(ctx)
 	})
 	return flags, flagsErr
 }
 
 // SetFlags sets the flags for this process to those parsed from the provided
 // slice. Does nothing if SetFlags or Flags has already been called once.
-func SetFlags(wd string, args []string) {
+func SetFlags(ctx context.Context, wd string, args []string) {
 	once.Do(func() {
-		log.Tracef("Storing provided go flags: %#v\n", args)
-		flags, flagsErr = ParseCommandFlags(wd, args)
+		log := zerolog.Ctx(ctx)
+		log.Trace().Strs("flags", args).Msg("Storing provided go flags")
+		flags, flagsErr = ParseCommandFlags(ctx, wd, args)
 	})
 }
 
@@ -258,8 +262,9 @@ func isShort(str string) bool {
 
 // parentGoCommandFlags backtracks through the process tree
 // to find a parent go command invocation and returns its arguments
-func parentGoCommandFlags() (flags CommandFlags, err error) {
-	log.Tracef("Attempting to parse parent Go command arguments\n")
+func parentGoCommandFlags(ctx context.Context) (flags CommandFlags, err error) {
+	log := zerolog.Ctx(ctx)
+	log.Trace().Msg("Attempting to parse parent Go command arguments")
 
 	goBin, err := goenv.GoBinPath()
 	if err != nil {
@@ -288,7 +293,7 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		// and is not present within the container itself (it's only on the hypervisor). In such cases,
 		// we try to resolve argv[1] instead. This can only manifest itself on amd64 + linux.
 		if errors.Is(err, fs.ErrNotExist) && runtime.GOARCH == "amd64" && runtime.GOOS == "linux" && filepath.Base(args[0]) == "rosetta" && len(args) > 1 {
-			log.Tracef("Attempting to resolve rosetta target after error resolving argv0: %v\n", err)
+			log.Trace().Err(err).Msg("Attempting to resolve rosetta target after error resolving argv0")
 			var err2 error
 			cmd, err2 = exec.LookPath(args[1])
 			if err2 != nil {
@@ -296,7 +301,7 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 			} else {
 				// The fallback was successful, we no longer have an error!
 				err = nil
-				log.Tracef("Rosetta fall-back was successful, resolved command is %q\n", cmd)
+				log.Trace().Str("command", cmd).Msg("Rosetta fall-back was successful")
 			}
 		}
 		if err != nil {
@@ -308,13 +313,13 @@ func parentGoCommandFlags() (flags CommandFlags, err error) {
 		}
 	}
 
-	log.Tracef("Found parent go command process %d: %#v\n", p.Pid, args)
+	log.Trace().Int32("go.pid", p.Pid).Strs("arguments", args).Msg("Found parent go command process")
 	wd, err := p.Cwd()
 	if err != nil {
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	return ParseCommandFlags(wd, args[1:])
+	return ParseCommandFlags(ctx, wd, args[1:])
 }
 
 var (

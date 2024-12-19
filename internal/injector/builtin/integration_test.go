@@ -7,6 +7,7 @@ package builtin_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -83,7 +84,7 @@ func Test(t *testing.T) {
 			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
 
-			results, _, err := inj.InjectFiles(files)
+			results, _, err := inj.InjectFiles(context.Background(), files)
 			require.NoError(t, err)
 
 			for _, filename := range files {

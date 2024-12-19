@@ -6,6 +6,7 @@
 package jobserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,9 +18,9 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -37,6 +38,7 @@ type (
 		server     *server.Server     // The underlying NATS server
 		CacheStats *common.CacheStats // Cache statistics
 		clientURL  string             // The client URL to use for connecting to this server
+		log        zerolog.Logger
 
 		// Tracking connected clients for automatic shutdown on inactivity...
 		clients           map[uint64]string
@@ -69,7 +71,10 @@ type (
 
 // New initializes and starts a new NATS server with the provided options. The
 // server only listens on the loopback interface.
-func New(opts *Options) (srv *Server, err error) {
+func New(ctx context.Context, opts *Options) (srv *Server, err error) {
+	log := zerolog.Ctx(ctx).With().Str("process", "server").Logger()
+	ctx = log.WithContext(ctx)
+
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -90,7 +95,7 @@ func New(opts *Options) (srv *Server, err error) {
 
 	server, err := server.NewServer(&server.Options{
 		ServerName: opts.ServerName,
-		Host:       loopback,
+		Host:       getLoopback(log),
 		Port:       port,
 		DontListen: opts.NoListener,
 		Accounts:   []*server.Account{userAccount, systemAccount},
@@ -134,7 +139,7 @@ func New(opts *Options) (srv *Server, err error) {
 		clientURL = fmt.Sprintf("nats://%s", server.Addr())
 	}
 
-	log.Tracef("[JOBSERVER] NATS Server ready for connections on %q\n", clientURL)
+	log.Trace().Str("url", clientURL).Msg("NATS Server ready for connections")
 
 	// Obtaining the local server connection
 	conn, err := nats.Connect(clientURL, nats.UserInfo(serverUsername, noPassword), nats.InProcessServer(server))
@@ -147,11 +152,12 @@ func New(opts *Options) (srv *Server, err error) {
 		server:     server,
 		CacheStats: &common.CacheStats{},
 		clientURL:  clientURL,
+		log:        log,
 	}
-	if err := buildid.Subscribe(conn, res.CacheStats); err != nil {
+	if err := buildid.Subscribe(ctx, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
-	if err := pkgs.Subscribe(clientURL, conn, res.CacheStats); err != nil {
+	if err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
 	if _, err := conn.Subscribe("clients", res.handleClients); err != nil {
@@ -220,7 +226,7 @@ func (s *Server) Shutdown() {
 // WaitForShutdown waits indefinitely for this server to have shut down.
 func (s *Server) WaitForShutdown() {
 	s.server.WaitForShutdown()
-	log.Tracef("[JOBSERVER] %s\n", s.CacheStats)
+	s.log.Trace().Msg(s.CacheStats.String())
 }
 
 func (s *Server) handleClients(msg *nats.Msg) {
@@ -241,7 +247,7 @@ func (s *Server) handleClientConnect(msg *nats.Msg) {
 
 	var event server.ConnectEventMsg
 	if err := json.Unmarshal(msg.Data, &event); err != nil {
-		log.Errorf("[JOBSERVER] Failed to unmarshal client connect event: %v\n", err)
+		s.log.Error().Err(err).Msg("Failed to unmarshal client connect event")
 		return
 	}
 
@@ -251,7 +257,7 @@ func (s *Server) handleClientConnect(msg *nats.Msg) {
 	}
 
 	s.clients[event.Client.ID] = event.Client.Name
-	log.Tracef("[JOBSERVER] NATS client %d connected: %s\n", event.Client.ID, event.Client.Name)
+	s.log.Trace().Uint64("client.id", event.Client.ID).Str("client.name", event.Client.Name).Msg("NATS client connected")
 	if s.shutdownTimer != nil {
 		s.shutdownTimer.Stop()
 		s.shutdownTimer = nil
@@ -263,7 +269,7 @@ func (s *Server) handleClientDisconnect(msg *nats.Msg) {
 
 	var event server.DisconnectEventMsg
 	if err := json.Unmarshal(msg.Data, &event); err != nil {
-		log.Errorf("[JOBSERVER] Failed to unmarshal client disconnect event: %v\n", err)
+		s.log.Error().Err(err).Msg("Failed to unmarshal client disconnect event")
 		return
 	}
 
@@ -275,10 +281,10 @@ func (s *Server) handleClientDisconnect(msg *nats.Msg) {
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
 	delete(s.clients, event.Client.ID)
-	log.Tracef("[JOBSERVER] NATS client %d disconnected: %s (reason: %s)\n", event.Client.ID, event.Client.Name, event.Reason)
+	s.log.Trace().Uint64("client.id", event.Client.ID).Str("client.name", event.Client.Name).Str("reason", event.Reason).Msg("NATS client disconnected")
 
 	if len(s.clients) == 0 && s.shutdownTimer == nil {
-		log.Tracef("[JOBSERVER] Last client disconnected, initiating shutdown timer...\n")
+		s.log.Trace().Msg("Last client disconnected, initiating shutdown timer...")
 		s.startShutdownTimer()
 	}
 }
@@ -291,26 +297,31 @@ func (s *Server) startShutdownTimer() {
 		defer s.clientsMu.Unlock()
 
 		if len(s.clients) == 0 {
-			log.Infof("No NATS client connected for %s, shutting down...\n", s.inactivityTimeout)
+			s.log.Info().Dur("timeout", s.inactivityTimeout).Msg("No NATS client connected since shutdown timer started, shutting down...")
 			s.Shutdown()
 		}
 	})
 }
 
+var getLoopbackOnce sync.Once
+
 // Tries to identify a loopback IP address from available interfaces. This is
 // done to ensure the server will work even if the host runs an IPv6-only
 // stack, as we would discover `::1` appropriately.
-func init() {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Warnf("Could not determine list of network interface addresses: %v\n", err)
-		log.Warnf("Orchestrion requires at least one loopback interface to be available.\n")
-		return
-	}
-	for _, addr := range addrs {
-		if addr, ok := addr.(*net.IPNet); ok && addr.IP.IsLoopback() {
-			loopback = addr.IP.String()
+func getLoopback(log zerolog.Logger) string {
+	getLoopbackOnce.Do(func() {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil {
+			log.Warn().Err(err).Msg("Could not determine list of network interface addresses. Orchestrion requires at least one loopback interface to be available.")
 			return
 		}
-	}
+		for _, addr := range addrs {
+			if addr, ok := addr.(*net.IPNet); ok && addr.IP.IsLoopback() {
+				loopback = addr.IP.String()
+				return
+			}
+		}
+	})
+
+	return loopback
 }

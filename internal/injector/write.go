@@ -7,24 +7,27 @@ package injector
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"go/format"
 	"os"
 	"path/filepath"
 
 	"github.com/DataDog/orchestrion/internal/injector/lineinfo"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
+	"github.com/rs/zerolog"
 )
 
 // writeModifiedFile writes the modified file to disk after having restored it to Go source code,
 // and returns the path to the modified file.
-func (i *Injector) writeModifiedFile(decorator *decorator.Decorator, file *dst.File) (string, error) {
+func (i *Injector) writeModifiedFile(ctx context.Context, decorator *decorator.Decorator, file *dst.File) (string, error) {
+	log := zerolog.Ctx(ctx)
+
 	filename := decorator.Filenames[file]
 
-	log.Tracef("writing modified file %q\n", filename)
-	canonicalizeImports(file)
+	log.Trace().Str("path", filename).Msg("Writing modified file")
+	canonicalizeImports(ctx, file)
 
 	if err := lineinfo.AnnotateMovedNodes(decorator, file, i.newRestorer); err != nil {
 		return filename, fmt.Errorf("annotating moved nodes in %q: %w", filename, err)

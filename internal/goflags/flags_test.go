@@ -6,6 +6,7 @@
 package goflags
 
 import (
+	"context"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -147,7 +148,7 @@ func TestParse(t *testing.T) {
 			}
 
 			t.Setenv("GOFLAGS", tc.goflags)
-			flags, err := ParseCommandFlags(thisDir, tc.flags)
+			flags, err := ParseCommandFlags(context.Background(), thisDir, tc.flags)
 			require.NoError(t, err)
 
 			if flags.Short == nil {

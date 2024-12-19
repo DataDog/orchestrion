@@ -22,10 +22,10 @@ var (
 		UsageText:       "orchestrion go [go command arguments...]",
 		Args:            true,
 		SkipFlagParsing: true,
-		Action: func(c *cli.Context) error {
-			pin.AutoPinOrchestrion()
+		Action: func(ctx *cli.Context) error {
+			pin.AutoPinOrchestrion(ctx.Context)
 
-			if err := goproxy.Run(c.Args().Slice(), goproxy.WithToolexec(binpath.Orchestrion, "toolexec")); err != nil {
+			if err := goproxy.Run(ctx.Context, ctx.Args().Slice(), goproxy.WithToolexec(binpath.Orchestrion, "toolexec")); err != nil {
 				var exitErr *exec.ExitError
 				if errors.As(err, &exitErr) {
 					return cli.Exit("", exitErr.ExitCode())

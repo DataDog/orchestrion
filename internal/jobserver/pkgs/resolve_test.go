@@ -17,7 +17,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,10 +25,10 @@ func Test(t *testing.T) {
 	// Force the goflags so we don't get tainted by the `go test` flags!
 	wd, err := os.Getwd()
 	require.NoError(t, err)
-	goflags.SetFlags(wd, []string{"test"})
+	goflags.SetFlags(context.Background(), wd, []string{"test"})
 
 	t.Run("Cache", func(t *testing.T) {
-		server, err := jobserver.New(nil)
+		server, err := jobserver.New(context.Background(), nil)
 		require.NoError(t, err)
 		defer server.Shutdown()
 
@@ -86,10 +85,7 @@ func Test(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		log.SetLevel(log.LevelTrace)
-		t.Cleanup(func() { log.SetLevel(log.LevelNone) })
-
-		server, err := jobserver.New(nil)
+		server, err := jobserver.New(context.Background(), nil)
 		require.NoError(t, err)
 		defer server.Shutdown()
 

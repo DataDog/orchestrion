@@ -6,6 +6,7 @@
 package pin
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,7 +25,7 @@ func TestAutoPin(t *testing.T) {
 
 		tmp := scaffold(t, make(map[string]string))
 		require.NoError(t, os.Chdir(tmp))
-		AutoPinOrchestrion()
+		AutoPinOrchestrion(context.Background())
 
 		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
 
@@ -45,7 +46,7 @@ func TestAutoPin(t *testing.T) {
 
 		t.Setenv(envVarCheckedGoMod, "true")
 
-		AutoPinOrchestrion()
+		AutoPinOrchestrion(context.Background())
 
 		assert.NoFileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.NoFileExists(t, filepath.Join(tmp, "go.sum"))
