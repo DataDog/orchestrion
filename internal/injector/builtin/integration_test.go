@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/injector"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
@@ -69,21 +70,31 @@ func Test(t *testing.T) {
 				return os.Open(file)
 			}
 
+			importMap := map[string]string{}
+			for _, a := range aspects {
+				for _, i := range a.JoinPoint.ImpliesImported() {
+					importMap[i] = ""
+				}
+			}
+
 			tmp := t.TempDir()
 			inj := injector.Injector{
-				Aspects: aspects,
 				ModifiedFile: func(filename string) string {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},
 				RootConfig: map[string]string{"httpmode": "wrap"},
 				ImportPath: fmt.Sprintf("github.com/DataDog/orchestrion/samples/%s", dir),
 				Lookup:     testLookup,
+				ImportMap:  importMap,
 			}
 
 			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
 
-			results, _, err := inj.InjectFiles(files)
+			copyAspects := make([]*aspect.Aspect, len(aspects))
+			copy(copyAspects, aspects)
+
+			results, _, err := inj.InjectFiles(files, copyAspects)
 			require.NoError(t, err)
 
 			for _, filename := range files {

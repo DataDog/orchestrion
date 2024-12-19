@@ -12,6 +12,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -20,6 +21,14 @@ type directive string
 
 func Directive(name string) directive {
 	return directive(name)
+}
+
+func (directive) PackageMayMatch(_ *may.PackageContext) may.MatchType {
+	return may.Unknown
+}
+
+func (d directive) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	return ctx.FileContains("//" + string(d))
 }
 
 func (d directive) Matches(ctx context.AspectContext) bool {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"gopkg.in/yaml.v3"
 )
@@ -26,6 +27,14 @@ func FunctionCall(importPath string, name string) *functionCall {
 
 func (i *functionCall) ImpliesImported() []string {
 	return []string{i.ImportPath}
+}
+
+func (i *functionCall) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	return ctx.PackageImports(i.ImportPath)
+}
+
+func (i *functionCall) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	return ctx.FileContains(i.Name)
 }
 
 func (i *functionCall) Matches(ctx context.AspectContext) bool {
