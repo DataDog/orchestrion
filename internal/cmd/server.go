@@ -52,12 +52,12 @@ var Server = &cli.Command{
 			Name:        "build-flags",
 			Usage:       "Specify the 'go build' flags to use when resolving packages. This is specified as a YAML array and must start with a valid go subcommand (e.g, 'build').",
 			DefaultText: "Looked up the process hierarchy",
-			Action: func(_ *cli.Context, val string) error {
+			Action: func(ctx *cli.Context, val string) error {
 				var args []string
 				if err := yaml.Unmarshal([]byte(val), &args); err != nil {
 					return cli.Exit(fmt.Errorf("invalid -build-flags value: %w", err), 2)
 				}
-				goflags.SetFlags(".", args)
+				goflags.SetFlags(ctx.Context, ".", args)
 				return nil
 			},
 		},
