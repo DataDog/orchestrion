@@ -66,5 +66,5 @@ func doRetry(
 		}
 	}
 
-	return errs
+	return errors.Join(errs, ctx.Err())
 }
