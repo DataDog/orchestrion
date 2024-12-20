@@ -88,15 +88,17 @@ func (tc *TestCase) produce(t *testing.T) {
 	err := backoff.Retry(
 		ctx,
 		backoff.NewExponentialStrategy(100*time.Millisecond, 2, 5*time.Second),
-		10,
-		func(err error, attempt int, delay time.Duration) bool {
-			if !errors.Is(err, kafka.UnknownTopicOrPartition) {
-				return false
-			}
-			t.Logf("failed to produce kafka messages, will retry in %s (attempt left: %d)", delay, 10-attempt)
-			return true
-		},
 		func() error { return tc.writer.WriteMessages(ctx, messages...) },
+		&backoff.RetryOptions{
+			MaxAttempts: 10,
+			ShouldRetry: func(err error, attempt int, delay time.Duration) bool {
+				if !errors.Is(err, kafka.UnknownTopicOrPartition) {
+					return false
+				}
+				t.Logf("failed to produce kafka messages, will retry in %s (attempt left: %d)", delay, 10-attempt)
+				return true
+			},
+		},
 	)
 	require.NoError(t, err)
 	require.NoError(t, tc.writer.Close())

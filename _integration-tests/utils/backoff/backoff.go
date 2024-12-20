@@ -13,6 +13,7 @@ package backoff
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 )
 
@@ -21,32 +22,67 @@ type Strategy interface {
 	Next() time.Duration
 }
 
-// Retry makes up to [maxAttempts] at calling the [action] function. It uses the
-// [strategy] to determine how much time to wait between attempts. The
-// [shouldRetry] functionis called with all non-[nil] errors returned by
-// [action] and the retry delay before the next attempt, and should return
-// [true] if the error is transient and should be retried, [false] if [Retry]
-// should return immediately. If [shouldRetry] is [nil], all errors are retried.
+const (
+	defaultMaxAttempts = 10
+)
+
+// RetryAllErrors is the default function used by [RetryOptions.ShouldRetry]. It
+// returns [true] regardless of its arguments.
+func RetryAllErrors(error, int, time.Duration) bool {
+	return true
+}
+
+type RetryOptions struct {
+	// MaxAttempts is the maximum number of attempts to make before giving up. If
+	// it is negative, there is no limit to the number of attempts (it will be set
+	// to [math.MaxInt]); if it is zero, the default value of 10 will be used. It
+	// is fine (although a little silly) to set [RetryOptions.MaxAttempts] to 1.
+	MaxAttempts int
+	// ShouldRetry is called with the error returned by the action, the attempt
+	// number, and the delay before the next attempt could be made. If it returns
+	// [true], the next attempt will be made; otherwise, the [Retry] function will
+	// immediately return. If [nil], the default [RetryAllErrors] function will be
+	// used.
+	ShouldRetry func(err error, attempt int, delay time.Duration) bool
+	// Sleep is the function used to wait in between attempts. It is intended to
+	// be used in testing. If [nil], the default [time.Sleep] function will be
+	// used.
+	Sleep func(time.Duration)
+}
+
+// Retry makes up to [RetryOptions.MaxAttempts] at calling the [action]
+// function. It uses the [Strategy] to determine how much time to wait between
+// attempts. The [RetryOptions.ShouldRetry] function is called with all
+// non-[nil] errors returned by [action], the attempt number, and the delay
+// before the next attempt. If it returns [true], the [RetryOptions.Sleep]
+// function is called with the delay, and the next attempt is made. Otherwise,
+// [Retry] returns immediately.
 func Retry(
 	ctx context.Context,
 	strategy Strategy,
-	maxAttempts int,
-	shouldRetry func(error, int, time.Duration) bool,
 	action func() error,
+	opts *RetryOptions,
 ) error {
-	return doRetry(ctx, strategy, maxAttempts, shouldRetry, action, time.Sleep)
-}
+	var (
+		maxAttempts = defaultMaxAttempts
+		shouldRetry = RetryAllErrors
+		sleep       = time.Sleep
+	)
+	if opts != nil {
+		if opts.MaxAttempts > 0 {
+			maxAttempts = opts.MaxAttempts
+		} else if opts.MaxAttempts < 0 {
+			maxAttempts = math.MaxInt
+		}
+		if opts.ShouldRetry != nil {
+			shouldRetry = opts.ShouldRetry
+		}
+		if opts.Sleep != nil {
+			sleep = opts.Sleep
+		}
+	}
 
-func doRetry(
-	ctx context.Context,
-	strategy Strategy,
-	maxAttempts int,
-	shouldRetry func(error, int, time.Duration) bool,
-	action func() error,
-	sleep func(time.Duration),
-) error {
 	var errs error
-
 	for attempt, delay := 0, time.Duration(0); attempt < maxAttempts && ctx.Err() == nil; attempt, delay = attempt+1, strategy.Next() {
 		if delay > 0 {
 			sleep(delay)
@@ -65,6 +101,5 @@ func doRetry(
 			break
 		}
 	}
-
 	return errors.Join(errs, ctx.Err())
 }

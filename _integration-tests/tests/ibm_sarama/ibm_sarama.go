@@ -53,8 +53,6 @@ func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	err := backoff.Retry(
 		context.Background(),
 		backoff.NewConstantStrategy(50*time.Millisecond),
-		3,
-		nil,
 		func() (err error) {
 			defer func() {
 				if r := recover(); r != nil && err == nil {
@@ -68,6 +66,7 @@ func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 			producer, err = sarama.NewSyncProducer(addrs, cfg)
 			return err
 		},
+		&backoff.RetryOptions{MaxAttempts: 3},
 	)
 
 	require.NoError(t, err, "failed to create producer")

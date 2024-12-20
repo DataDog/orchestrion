@@ -8,6 +8,7 @@ package backoff
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -47,7 +48,7 @@ func TestRetry(t *testing.T) {
 			delays = append(delays, d)
 		}
 
-		err := doRetry(ctx, strategy, maxAttempts, nil, action, timeSleep)
+		err := Retry(ctx, strategy, action, &RetryOptions{MaxAttempts: maxAttempts, Sleep: timeSleep})
 		require.Error(t, err)
 		assert.Equal(t, delaySequence, delays)
 		for _, expectedErr := range expectedErrs {
@@ -73,7 +74,7 @@ func TestRetry(t *testing.T) {
 			delays = append(delays, d)
 		}
 
-		err := doRetry(ctx, strategy, maxAttempts, shouldRetry, action, timeSleep)
+		err := Retry(ctx, strategy, action, &RetryOptions{MaxAttempts: maxAttempts, ShouldRetry: shouldRetry, Sleep: timeSleep})
 		require.Error(t, err)
 		// We hit the non-retryable error at the 3rd attempt.
 		assert.Equal(t, delaySequence[:2], delays)
@@ -108,28 +109,51 @@ func TestRetry(t *testing.T) {
 			}
 		}
 
-		err := doRetry(ctx, strategy, maxAttempts, nil, action, timeSleep)
+		err := Retry(ctx, strategy, action, &RetryOptions{MaxAttempts: maxAttempts, Sleep: timeSleep})
 		require.Error(t, err)
 		// We reach the 1 second total waited during the 4th back-off.
 		assert.Equal(t, delaySequence[:4], delays)
 		for _, expectedErr := range expectedErrs {
-			assert.ErrorIs(t, err, expectedErr)
+			require.ErrorIs(t, err, expectedErr)
 		}
-		assert.ErrorIs(t, err, context.Canceled)
+		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("unlimited retries", func(t *testing.T) {
+		ctx := context.Background()
+		strategy := NewConstantStrategy(100 * time.Millisecond)
+		var attempts int
+		action := func() error {
+			attempts++
+			// At least 20 errors, then flip a coin... but no more than 100 attempts.
+			if attempts < 20 || (attempts < 100 && rand.Int()%2 == 0) {
+				return fmt.Errorf("Error number %d", attempts)
+			}
+			return nil
+		}
+		var delayCount int
+		timeSleep := func(time.Duration) {
+			delayCount++
+		}
+
+		err := Retry(ctx, strategy, action, &RetryOptions{MaxAttempts: -1, Sleep: timeSleep})
+		require.NoError(t, err)
+		// We should have waited as many times as we attempted, except for the initial attempt.
+		assert.Equal(t, delayCount, attempts-1)
 	})
 
 	t.Run("immediate success", func(t *testing.T) {
 		ctx := context.Background()
 		strategy := NewExponentialStrategy(100*time.Millisecond, 2, 5*time.Second)
 		maxAttempts := 10
-		shouldRetry := func(err error, _ int, _ time.Duration) bool { return false }
+		shouldRetry := func(error, int, time.Duration) bool { return false }
 		action := func() error { return nil }
 		delays := make([]time.Duration, 0, maxAttempts)
 		timeSleep := func(d time.Duration) {
 			delays = append(delays, d)
 		}
 
-		err := doRetry(ctx, strategy, maxAttempts, shouldRetry, action, timeSleep)
+		err := Retry(ctx, strategy, action, &RetryOptions{MaxAttempts: maxAttempts, ShouldRetry: shouldRetry, Sleep: timeSleep})
 		require.NoError(t, err)
 		assert.Empty(t, delays)
 	})
