@@ -13,15 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils/backoff"
+	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	kafkatest "github.com/testcontainers/testcontainers-go/modules/kafka"
-
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-
-	"datadoghq.dev/orchestrion/_integration-tests/utils"
-	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
 const (
@@ -86,27 +85,21 @@ func (tc *TestCase) produce(t *testing.T) {
 			Value: []byte("Third message"),
 		},
 	}
-	const (
-		maxRetries = 10
-		retryDelay = 100 * time.Millisecond
+	err := backoff.Retry(
+		ctx,
+		backoff.NewExponentialStrategy(100*time.Millisecond, 2, 5*time.Second),
+		func() error { return tc.writer.WriteMessages(ctx, messages...) },
+		&backoff.RetryOptions{
+			MaxAttempts: 10,
+			ShouldRetry: func(err error, attempt int, delay time.Duration) bool {
+				if !errors.Is(err, kafka.UnknownTopicOrPartition) {
+					return false
+				}
+				t.Logf("failed to produce kafka messages, will retry in %s (attempt left: %d)", delay, 10-attempt)
+				return true
+			},
+		},
 	)
-	var (
-		retryCount int
-		err        error
-	)
-	for retryCount < maxRetries {
-		err = tc.writer.WriteMessages(ctx, messages...)
-		if err == nil {
-			break
-		}
-		// This error happens sometimes with brand-new topics, as there is a delay between when the topic is created
-		// on the broker, and when the topic can actually be written to.
-		if errors.Is(err, kafka.UnknownTopicOrPartition) {
-			retryCount++
-			t.Logf("failed to produce kafka messages, will retry in %s (retryCount: %d)", retryDelay, retryCount)
-			time.Sleep(retryDelay)
-		}
-	}
 	require.NoError(t, err)
 	require.NoError(t, tc.writer.Close())
 }

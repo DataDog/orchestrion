@@ -8,11 +8,14 @@
 package ibm_sarama
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils/backoff"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
@@ -46,30 +49,26 @@ func (tc *TestCase) Setup(t *testing.T) {
 func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
-	createProducer := func() (_ sarama.SyncProducer, err error) {
-		defer func() {
-			if r := recover(); r != nil && err == nil {
-				var ok bool
-				if err, ok = r.(error); !ok {
-					err = fmt.Errorf("panic: %v", r)
+	var producer sarama.SyncProducer
+	err := backoff.Retry(
+		context.Background(),
+		backoff.NewConstantStrategy(50*time.Millisecond),
+		func() (err error) {
+			defer func() {
+				if r := recover(); r != nil && err == nil {
+					var ok bool
+					if err, ok = r.(error); !ok {
+						err = errors.Join(err, fmt.Errorf("panic: %v", r))
+					}
 				}
-			}
-		}()
-		return sarama.NewSyncProducer(addrs, cfg)
-	}
+			}()
 
-	var (
-		producer sarama.SyncProducer
-		err      error
+			producer, err = sarama.NewSyncProducer(addrs, cfg)
+			return err
+		},
+		&backoff.RetryOptions{MaxAttempts: 3},
 	)
-	for attemptsLeft := 3; attemptsLeft > 0; attemptsLeft-- {
-		producer, err = createProducer()
-		if err != nil {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-		break
-	}
+
 	require.NoError(t, err, "failed to create producer")
 	defer func() { assert.NoError(t, producer.Close(), "failed to close producer") }()
 
