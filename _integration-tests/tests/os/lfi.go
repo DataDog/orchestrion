@@ -30,7 +30,7 @@ type TestCase struct {
 	*testing.T
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("appsec does not support Windows")
 	}
@@ -59,7 +59,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T, _ context.Context) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	tc.T = t
 	resp, err := http.Get(fmt.Sprintf("http://%s/?path=/etc/passwd", tc.Server.Addr))
 	require.NoError(t, err)

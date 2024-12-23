@@ -30,7 +30,7 @@ type TestCase struct {
 	*mongo.Client
 }
 
-func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	var err error
@@ -60,7 +60,7 @@ func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

@@ -27,13 +27,13 @@ type base struct {
 	port   string
 }
 
-func (b *base) setup(t *testing.T, _ context.Context) {
+func (b *base) setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	b.server, b.host, b.port = utils.StartDynamoDBTestContainer(t)
 }
 
-func (b *base) run(t *testing.T, ctx context.Context) {
+func (b *base) run(ctx context.Context, t *testing.T) {
 	ddb := dynamodb.NewFromConfig(b.cfg)
 	_, err := ddb.ListTables(ctx, nil)
 	require.NoError(t, err)

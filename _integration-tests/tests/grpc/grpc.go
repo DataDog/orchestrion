@@ -26,7 +26,7 @@ type TestCase struct {
 	addr string
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	tc.addr = lis.Addr().String()
@@ -56,7 +56,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	var (
 		interceptedDirect atomic.Bool
 		interceptedChain  atomic.Bool

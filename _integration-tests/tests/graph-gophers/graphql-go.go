@@ -41,7 +41,7 @@ func (*resolver) Hello() string {
 	return "Hello, world!"
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	schema, err := graphql.ParseSchema(schema, new(resolver))
 	require.NoError(t, err)
 
@@ -49,7 +49,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	t.Cleanup(func() { tc.server.Close() })
 }
 
-func (tc *TestCase) Run(t *testing.T, _ context.Context) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, tc.server.URL, bytes.NewReader([]byte(`{"query": "{ hello }"}`)))
 	require.NoError(t, err)
 

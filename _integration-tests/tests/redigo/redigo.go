@@ -29,7 +29,7 @@ type TestCase struct {
 	key string
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	uuid, err := uuid.NewRandom()
@@ -58,7 +58,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	t.Cleanup(func() { assert.NoError(t, tc.Pool.Close()) })
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

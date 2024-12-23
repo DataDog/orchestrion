@@ -26,7 +26,7 @@ type TestCase interface {
 	// are not satisfied by the test environment.
 	//
 	// The tracer is not yet started when Setup is executed.
-	Setup(*testing.T, context.Context)
+	Setup(context.Context, *testing.T)
 
 	// Run executes the test case after starting the tracer. This should perform
 	// the necessary calls to produce trace information from injected
@@ -34,7 +34,7 @@ type TestCase interface {
 	// is expected to be successful, database call does not error out, etc...).
 	// The tracer is shut down after the Run function returns, ensuring
 	// outstanding spans are flushed to the agent.
-	Run(*testing.T, context.Context)
+	Run(context.Context, *testing.T)
 
 	// ExpectedTraces returns a trace.Traces object describing all traces expected
 	// to be produced by the [TestCase.Run] function. There should be one entry
@@ -60,13 +60,13 @@ func RunTest(t *testing.T, tc TestCase) {
 	}
 
 	t.Log("Running setup")
-	tc.Setup(t, ctx)
+	tc.Setup(ctx, t)
 
 	sess, err := mockAgent.NewSession(t)
 	require.NoError(t, err, "failed to create a new mock agent session")
 
 	t.Log("Running test")
-	tc.Run(t, ctx)
+	tc.Run(ctx, t)
 
 	checkTraces(t, tc, sess)
 }

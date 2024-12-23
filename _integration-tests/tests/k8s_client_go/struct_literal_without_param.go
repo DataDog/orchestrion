@@ -22,8 +22,8 @@ type TestCaseStructLiteralWithoutParam struct {
 	wtCalled bool
 }
 
-func (tc *TestCaseStructLiteralWithoutParam) Setup(t *testing.T, ctx context.Context) {
-	tc.base.setup(t, ctx)
+func (tc *TestCaseStructLiteralWithoutParam) Setup(ctx context.Context, t *testing.T) {
+	tc.base.setup(ctx, t)
 
 	cfg := &rest.Config{
 		Host: tc.server.URL,
@@ -34,8 +34,8 @@ func (tc *TestCaseStructLiteralWithoutParam) Setup(t *testing.T, ctx context.Con
 	tc.base.client = client
 }
 
-func (tc *TestCaseStructLiteralWithoutParam) Run(t *testing.T, ctx context.Context) {
-	tc.base.run(t, ctx)
+func (tc *TestCaseStructLiteralWithoutParam) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseStructLiteralWithoutParam) ExpectedTraces() trace.Traces {

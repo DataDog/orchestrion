@@ -38,10 +38,10 @@ type TestCaseHandlerImplementation struct {
 	base
 }
 
-func (tc *TestCaseHandlerImplementation) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCaseHandlerImplementation) Setup(ctx context.Context, t *testing.T) {
 	tc.handler = &customHandler{
 		handleRoot: tc.handleRoot,
 		handleHit:  tc.handleHit,
 	}
-	tc.base.Setup(t, ctx)
+	tc.base.Setup(ctx, t)
 }

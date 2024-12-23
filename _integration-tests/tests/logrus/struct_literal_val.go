@@ -23,7 +23,7 @@ type TestCaseStructLiteralVal struct {
 	logs   *bytes.Buffer
 }
 
-func (tc *TestCaseStructLiteralVal) Setup(*testing.T, context.Context) {
+func (tc *TestCaseStructLiteralVal) Setup(context.Context, *testing.T) {
 	tc.logs = new(bytes.Buffer)
 	tc.logger = logrus.Logger{
 		Out:          os.Stderr,
@@ -37,8 +37,8 @@ func (tc *TestCaseStructLiteralVal) Setup(*testing.T, context.Context) {
 	tc.logger.SetOutput(tc.logs)
 }
 
-func (tc *TestCaseStructLiteralVal) Run(t *testing.T, ctx context.Context) {
-	runTest(t, ctx, tc.logs, tc.Log)
+func (tc *TestCaseStructLiteralVal) Run(ctx context.Context, t *testing.T) {
+	runTest(ctx, t, tc.logs, tc.Log)
 }
 
 func (*TestCaseStructLiteralVal) ExpectedTraces() trace.Traces {

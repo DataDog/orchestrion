@@ -34,7 +34,7 @@ type base struct {
 	client    esClient
 }
 
-func (b *base) Setup(t *testing.T, ctx context.Context, image string, newClient func(addr string, caCert []byte) (esClient, error)) {
+func (b *base) Setup(ctx context.Context, t *testing.T, image string, newClient func(addr string, caCert []byte) (esClient, error)) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	var err error
@@ -51,7 +51,7 @@ func (b *base) Setup(t *testing.T, ctx context.Context, image string, newClient 
 	require.NoError(t, err)
 }
 
-func (b *base) Run(t *testing.T, ctx context.Context, doRequest func(t *testing.T, client esClient, body io.Reader)) {
+func (b *base) Run(ctx context.Context, t *testing.T, doRequest func(t *testing.T, client esClient, body io.Reader)) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

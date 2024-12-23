@@ -17,18 +17,18 @@ type TestCaseServeMuxHandler struct {
 	base
 }
 
-func (tc *TestCaseServeMuxHandler) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCaseServeMuxHandler) Setup(ctx context.Context, t *testing.T) {
 	tc.handler = tc.serveMuxHandler()
-	tc.base.Setup(t, ctx)
+	tc.base.Setup(ctx, t)
 }
 
 type TestCaseHandlerIsNil struct {
 	base
 }
 
-func (tc *TestCaseHandlerIsNil) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCaseHandlerIsNil) Setup(ctx context.Context, t *testing.T) {
 	http.HandleFunc("/hit", tc.base.handleHit)
 	http.HandleFunc("/", tc.base.handleRoot)
 	tc.base.handler = nil // Set handler to nil to test http.DefaultServeMux
-	tc.base.Setup(t, ctx)
+	tc.base.Setup(ctx, t)
 }

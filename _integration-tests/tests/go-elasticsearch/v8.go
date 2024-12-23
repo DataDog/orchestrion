@@ -24,8 +24,8 @@ type TestCaseV8 struct {
 	base
 }
 
-func (tc *TestCaseV8) Setup(t *testing.T, ctx context.Context) {
-	tc.base.Setup(t, ctx, "docker.elastic.co/elasticsearch/elasticsearch:8.15.3", func(addr string, caCert []byte) (esClient, error) {
+func (tc *TestCaseV8) Setup(ctx context.Context, t *testing.T) {
+	tc.base.Setup(ctx, t, "docker.elastic.co/elasticsearch/elasticsearch:8.15.3", func(addr string, caCert []byte) (esClient, error) {
 		// from v8, there's a certificate configured by default.
 		// we cannot configure directly in the elasticsearch.Config type as it makes a type assertion on the underlying
 		// transport type, which fails for the *elastictrace.roundTripper type from our instrumentation package.
@@ -44,8 +44,8 @@ func (tc *TestCaseV8) Setup(t *testing.T, ctx context.Context) {
 	})
 }
 
-func (tc *TestCaseV8) Run(t *testing.T, ctx context.Context) {
-	tc.base.Run(t, ctx, func(t *testing.T, client esClient, body io.Reader) {
+func (tc *TestCaseV8) Run(ctx context.Context, t *testing.T) {
+	tc.base.Run(ctx, t, func(t *testing.T, client esClient, body io.Reader) {
 		t.Helper()
 		req := esapi.IndexRequest{
 			Index:      "test",

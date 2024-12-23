@@ -27,7 +27,7 @@ type TestCase struct {
 	untraced *sql.DB
 }
 
-func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 	const (
 		dn  = "sqlite3"
 		dsn = "file::memory:?cache=shared"
@@ -65,7 +65,7 @@ func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
 	t.Cleanup(func() { assert.NoError(t, tc.DB.Close()) })
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	_, err := tc.DB.ExecContext(ctx,
 		`INSERT INTO notes (userid, content, created) VALUES (?, ?, datetime('now'));`,
 		1337, "This is Elite!")

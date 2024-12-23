@@ -26,7 +26,7 @@ type base struct {
 	handler http.Handler
 }
 
-func (b *base) Setup(t *testing.T, _ context.Context) {
+func (b *base) Setup(_ context.Context, t *testing.T) {
 	b.srv = &http.Server{
 		Addr:         "127.0.0.1:" + utils.GetFreePort(t),
 		ReadTimeout:  5 * time.Second,
@@ -43,7 +43,7 @@ func (b *base) Setup(t *testing.T, _ context.Context) {
 	})
 }
 
-func (b *base) Run(t *testing.T, _ context.Context) {
+func (b *base) Run(_ context.Context, t *testing.T) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/", b.srv.Addr))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)

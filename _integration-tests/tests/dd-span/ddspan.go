@@ -18,9 +18,9 @@ import (
 
 type TestCase struct{}
 
-func (*TestCase) Setup(*testing.T, context.Context) {}
+func (*TestCase) Setup(context.Context, *testing.T) {}
 
-func (*TestCase) Run(t *testing.T, ctx context.Context) {
+func (*TestCase) Run(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

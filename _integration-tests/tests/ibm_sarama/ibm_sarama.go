@@ -34,7 +34,7 @@ type TestCase struct {
 	addrs  []string
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	tc.cfg = sarama.NewConfig()
@@ -46,7 +46,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	tc.addrs = []string{addr}
 }
 
-func produceMessage(t *testing.T, ctx context.Context, addrs []string, cfg *sarama.Config) {
+func produceMessage(ctx context.Context, t *testing.T, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
 	producer, err := backoff.Retry(
@@ -107,8 +107,8 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	}
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
-	produceMessage(t, ctx, tc.addrs, tc.cfg)
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	produceMessage(ctx, t, tc.addrs, tc.cfg)
 	consumeMessage(t, tc.addrs, tc.cfg)
 }
 

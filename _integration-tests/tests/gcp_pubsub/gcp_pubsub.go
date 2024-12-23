@@ -36,7 +36,7 @@ type TestCase struct {
 	messageID   string
 }
 
-func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	var err error
@@ -70,7 +70,7 @@ func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
 	require.NoError(t, err)
 }
 
-func (tc *TestCase) publishMessage(t *testing.T, ctx context.Context) {
+func (tc *TestCase) publishMessage(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	topic := tc.client.Topic(testTopic)
@@ -84,7 +84,7 @@ func (tc *TestCase) publishMessage(t *testing.T, ctx context.Context) {
 	t.Log("finished publishing result", id)
 }
 
-func (tc *TestCase) receiveMessage(t *testing.T, ctx context.Context) {
+func (tc *TestCase) receiveMessage(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	sub := tc.client.Subscription(testSubscription)
@@ -100,9 +100,9 @@ func (tc *TestCase) receiveMessage(t *testing.T, ctx context.Context) {
 	require.NotErrorIs(t, ctx.Err(), context.DeadlineExceeded)
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
-	tc.publishMessage(t, ctx)
-	tc.receiveMessage(t, ctx)
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	tc.publishMessage(ctx, t)
+	tc.receiveMessage(ctx, t)
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

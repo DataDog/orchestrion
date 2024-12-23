@@ -28,7 +28,7 @@ type base struct {
 	port      string
 }
 
-func (b *base) setup(t *testing.T, ctx context.Context) {
+func (b *base) setup(ctx context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	var err error
@@ -47,7 +47,7 @@ func (b *base) setup(t *testing.T, ctx context.Context) {
 	require.NoError(t, err)
 }
 
-func (b *base) run(t *testing.T, ctx context.Context) {
+func (b *base) run(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

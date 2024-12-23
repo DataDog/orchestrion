@@ -26,7 +26,7 @@ type TestCase struct {
 	server *httptest.Server
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
 		Query: graphql.NewObject(graphql.ObjectConfig{
 			Name: "Query",
@@ -48,7 +48,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	t.Cleanup(func() { tc.server.Close() })
 }
 
-func (tc *TestCase) Run(t *testing.T, _ context.Context) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	req, err := http.NewRequest("POST", tc.server.URL, bytes.NewReader([]byte(`{"query": "{ hello }"}`)))
 	require.NoError(t, err)
 

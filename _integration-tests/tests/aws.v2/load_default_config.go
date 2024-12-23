@@ -23,8 +23,8 @@ type TestCaseLoadDefaultConfig struct {
 	base
 }
 
-func (tc *TestCaseLoadDefaultConfig) Setup(t *testing.T, ctx context.Context) {
-	tc.setup(t, ctx)
+func (tc *TestCaseLoadDefaultConfig) Setup(ctx context.Context, t *testing.T) {
+	tc.setup(ctx, t)
 
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("test-region-1337"),
@@ -35,8 +35,8 @@ func (tc *TestCaseLoadDefaultConfig) Setup(t *testing.T, ctx context.Context) {
 	tc.cfg = cfg
 }
 
-func (tc *TestCaseLoadDefaultConfig) Run(t *testing.T, ctx context.Context) {
-	tc.base.run(t, ctx)
+func (tc *TestCaseLoadDefaultConfig) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseLoadDefaultConfig) ExpectedTraces() trace.Traces {

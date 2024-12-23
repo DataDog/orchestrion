@@ -27,7 +27,7 @@ type TestCase struct {
 	cfg    *aws.Config
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	server, host, port := utils.StartDynamoDBTestContainer(t)
@@ -40,7 +40,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	}
 }
 
-func (tc *TestCase) Run(t *testing.T, _ context.Context) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	ddb := dynamodb.New(session.Must(session.NewSession(tc.cfg)))
 	_, err := ddb.ListTables(nil)
 	require.NoError(t, err)

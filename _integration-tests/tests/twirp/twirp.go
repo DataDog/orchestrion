@@ -28,7 +28,7 @@ type TestCase struct {
 	addr   string
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
@@ -49,7 +49,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	tc.client = example.NewHaberdasherJSONClient(tc.addr, http.DefaultClient)
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	_, err := tc.client.MakeHat(ctx, &example.Size{Inches: 6})
 	require.NoError(t, err)
 }

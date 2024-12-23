@@ -24,8 +24,8 @@ type TestCaseStructLiteralWithParam struct {
 	wtCalled bool
 }
 
-func (tc *TestCaseStructLiteralWithParam) Setup(t *testing.T, ctx context.Context) {
-	tc.base.setup(t, ctx)
+func (tc *TestCaseStructLiteralWithParam) Setup(ctx context.Context, t *testing.T) {
+	tc.base.setup(ctx, t)
 
 	cfg := &rest.Config{
 		Host: tc.server.URL,
@@ -40,8 +40,8 @@ func (tc *TestCaseStructLiteralWithParam) Setup(t *testing.T, ctx context.Contex
 	tc.base.client = client
 }
 
-func (tc *TestCaseStructLiteralWithParam) Run(t *testing.T, ctx context.Context) {
-	tc.base.run(t, ctx)
+func (tc *TestCaseStructLiteralWithParam) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 	assert.True(t, tc.wtCalled, "the original WrapTransport function was not called")
 }
 

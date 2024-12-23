@@ -20,8 +20,8 @@ type TestCaseNewCluster struct {
 	base
 }
 
-func (tc *TestCaseNewCluster) Setup(t *testing.T, ctx context.Context) {
-	tc.setup(t, ctx)
+func (tc *TestCaseNewCluster) Setup(ctx context.Context, t *testing.T) {
+	tc.setup(ctx, t)
 
 	var err error
 	cluster := gocql.NewCluster(tc.hostPort)
@@ -30,8 +30,8 @@ func (tc *TestCaseNewCluster) Setup(t *testing.T, ctx context.Context) {
 	t.Cleanup(func() { tc.session.Close() })
 }
 
-func (tc *TestCaseNewCluster) Run(t *testing.T, ctx context.Context) {
-	tc.base.run(t, ctx)
+func (tc *TestCaseNewCluster) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseNewCluster) ExpectedTraces() trace.Traces {

@@ -17,7 +17,7 @@ type TestCaseFuncHandler struct {
 	base
 }
 
-func (tc *TestCaseFuncHandler) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCaseFuncHandler) Setup(ctx context.Context, t *testing.T) {
 	tc.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
@@ -34,5 +34,5 @@ func (tc *TestCaseFuncHandler) Setup(t *testing.T, ctx context.Context) {
 		}
 	})
 
-	tc.base.Setup(t, ctx)
+	tc.base.Setup(ctx, t)
 }

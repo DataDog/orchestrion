@@ -27,7 +27,7 @@ type TestCase struct {
 	*http.Server
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	router := httprouter.New()
 	router.GET("/ping", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 		w.Header().Set("Content-Type", "application/json")
@@ -50,7 +50,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T, _ context.Context) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/ping", tc.Server.Addr))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)

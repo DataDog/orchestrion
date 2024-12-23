@@ -23,7 +23,7 @@ type TestCase struct {
 	*gorm.DB
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	var err error
 	tc.DB, err = gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	}, 10).Error)
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

@@ -26,7 +26,7 @@ type TestCase struct {
 	addr string
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	tc.Echo = echo.New()
 	tc.Echo.Logger.SetOutput(io.Discard)
 
@@ -44,7 +44,7 @@ func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T, _ context.Context) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	resp, err := http.Get("http://" + tc.addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)

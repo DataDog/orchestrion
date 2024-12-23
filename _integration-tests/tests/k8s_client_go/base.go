@@ -28,7 +28,7 @@ type base struct {
 	client    *kubernetes.Clientset
 }
 
-func (b *base) setup(t *testing.T, _ context.Context) {
+func (b *base) setup(_ context.Context, t *testing.T) {
 	b.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("Hello World"))
 	}))
@@ -38,7 +38,7 @@ func (b *base) setup(t *testing.T, _ context.Context) {
 	b.serverURL = tsURL
 }
 
-func (b *base) run(t *testing.T, ctx context.Context) {
+func (b *base) run(ctx context.Context, t *testing.T) {
 	_, err := b.client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 
 	// we should get an error here since our test server handler implementation doesn't return what the k8s client expects

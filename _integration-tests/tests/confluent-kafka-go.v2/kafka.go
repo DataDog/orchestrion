@@ -33,16 +33,16 @@ type TestCase struct {
 	addr      []string
 }
 
-func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 	container, addr := utils.StartKafkaTestContainer(t)
 	tc.container = container
 	tc.addr = []string{addr}
 }
 
-func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	tc.produceMessage(t)
-	tc.consumeMessage(t, ctx)
+	tc.consumeMessage(ctx, t)
 }
 
 func (tc *TestCase) kafkaBootstrapServers() string {
@@ -76,7 +76,7 @@ func (tc *TestCase) produceMessage(t *testing.T) {
 	require.NoError(t, err, "failed to send message")
 }
 
-func (tc *TestCase) consumeMessage(t *testing.T, ctx context.Context) {
+func (tc *TestCase) consumeMessage(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	cfg := &kafka.ConfigMap{

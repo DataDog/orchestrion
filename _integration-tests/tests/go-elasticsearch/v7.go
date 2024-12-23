@@ -21,16 +21,16 @@ type TestCaseV7 struct {
 	base
 }
 
-func (tc *TestCaseV7) Setup(t *testing.T, ctx context.Context) {
-	tc.base.Setup(t, ctx, "docker.elastic.co/elasticsearch/elasticsearch:7.17.24", func(addr string, _ []byte) (esClient, error) {
+func (tc *TestCaseV7) Setup(ctx context.Context, t *testing.T) {
+	tc.base.Setup(ctx, t, "docker.elastic.co/elasticsearch/elasticsearch:7.17.24", func(addr string, _ []byte) (esClient, error) {
 		return elasticsearch.NewClient(elasticsearch.Config{
 			Addresses: []string{addr},
 		})
 	})
 }
 
-func (tc *TestCaseV7) Run(t *testing.T, ctx context.Context) {
-	tc.base.Run(t, ctx, func(t *testing.T, client esClient, body io.Reader) {
+func (tc *TestCaseV7) Run(ctx context.Context, t *testing.T) {
+	tc.base.Run(ctx, t, func(t *testing.T, client esClient, body io.Reader) {
 		t.Helper()
 		req := esapi.IndexRequest{
 			Index:      "test",

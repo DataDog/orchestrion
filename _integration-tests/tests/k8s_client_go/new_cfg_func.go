@@ -22,8 +22,8 @@ type TestCaseNewCfgFunc struct {
 	base
 }
 
-func (tc *TestCaseNewCfgFunc) Setup(t *testing.T, ctx context.Context) {
-	tc.base.setup(t, ctx)
+func (tc *TestCaseNewCfgFunc) Setup(ctx context.Context, t *testing.T) {
+	tc.base.setup(ctx, t)
 
 	// internally, this function creates a rest.Config struct literal, so it should get traced by orchestrion.
 	cfg, err := clientcmd.BuildConfigFromKubeconfigGetter(tc.server.URL, func() (*clientcmdapi.Config, error) {
@@ -36,8 +36,8 @@ func (tc *TestCaseNewCfgFunc) Setup(t *testing.T, ctx context.Context) {
 	tc.base.client = client
 }
 
-func (tc *TestCaseNewCfgFunc) Run(t *testing.T, ctx context.Context) {
-	tc.base.run(t, ctx)
+func (tc *TestCaseNewCfgFunc) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseNewCfgFunc) ExpectedTraces() trace.Traces {

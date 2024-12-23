@@ -28,7 +28,7 @@ func wrapCustomType(f func(http.ResponseWriter, *http.Request)) handlerFunc {
 	}
 }
 
-func (tc *TestCaseIssue400) Setup(t *testing.T, ctx context.Context) {
+func (tc *TestCaseIssue400) Setup(ctx context.Context, t *testing.T) {
 	handleHit := wrapCustomType(tc.handleHit)
 	handleRoot := wrapCustomType(tc.handleRoot)
 	mux := http.NewServeMux()
@@ -36,5 +36,5 @@ func (tc *TestCaseIssue400) Setup(t *testing.T, ctx context.Context) {
 	mux.HandleFunc("/", handleRoot)
 	tc.handler = mux
 
-	tc.base.Setup(t, ctx)
+	tc.base.Setup(ctx, t)
 }

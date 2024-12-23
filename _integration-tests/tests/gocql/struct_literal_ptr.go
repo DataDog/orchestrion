@@ -21,8 +21,8 @@ type TestCaseStructLiteralPtr struct {
 	base
 }
 
-func (tc *TestCaseStructLiteralPtr) Setup(t *testing.T, ctx context.Context) {
-	tc.setup(t, ctx)
+func (tc *TestCaseStructLiteralPtr) Setup(ctx context.Context, t *testing.T) {
+	tc.setup(ctx, t)
 
 	var err error
 	cluster := &gocql.ClusterConfig{
@@ -47,8 +47,8 @@ func (tc *TestCaseStructLiteralPtr) Setup(t *testing.T, ctx context.Context) {
 	t.Cleanup(func() { tc.session.Close() })
 }
 
-func (tc *TestCaseStructLiteralPtr) Run(t *testing.T, ctx context.Context) {
-	tc.base.run(t, ctx)
+func (tc *TestCaseStructLiteralPtr) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseStructLiteralPtr) ExpectedTraces() trace.Traces {
