@@ -36,13 +36,10 @@ type TestCase struct {
 	messageID   string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
-	var (
-		err error
-		ctx = context.Background()
-	)
+	var err error
 
 	tc.container, err = gcloud.RunPubsub(ctx,
 		"gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators",
@@ -61,9 +58,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	tc.client, err = pubsub.NewClient(ctx, projectID, option.WithGRPCConn(conn))
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, tc.client.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.client.Close()) })
 
 	topic, err := tc.client.CreateTopic(ctx, testTopic)
 	require.NoError(t, err)
@@ -75,26 +70,22 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (tc *TestCase) publishMessage(t *testing.T) {
+func (tc *TestCase) publishMessage(t *testing.T, ctx context.Context) {
 	t.Helper()
 
-	ctx := context.Background()
 	topic := tc.client.Topic(testTopic)
 	topic.EnableMessageOrdering = true
-	res := topic.Publish(context.Background(), &pubsub.Message{
+	res := topic.Publish(ctx, &pubsub.Message{
 		Data:        []byte("Hello, World!"),
 		OrderingKey: "ordering-key",
 	})
-	_, err := res.Get(ctx)
+	id, err := res.Get(ctx)
 	require.NoError(t, err)
-	t.Log("finished publishing result")
+	t.Log("finished publishing result", id)
 }
 
-func (tc *TestCase) receiveMessage(t *testing.T) {
+func (tc *TestCase) receiveMessage(t *testing.T, ctx context.Context) {
 	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	sub := tc.client.Subscription(testSubscription)
 	err := sub.Receive(ctx, func(_ context.Context, message *pubsub.Message) {
@@ -102,17 +93,16 @@ func (tc *TestCase) receiveMessage(t *testing.T) {
 		message.Ack()
 		tc.publishTime = message.PublishTime
 		tc.messageID = message.ID
-		cancel()
 	})
 	require.NoError(t, err)
 
-	<-ctx.Done()
+	// Ensure the context is not done yet...
 	require.NotErrorIs(t, ctx.Err(), context.DeadlineExceeded)
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	tc.publishMessage(t)
-	tc.receiveMessage(t)
+func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+	tc.publishMessage(t, ctx)
+	tc.receiveMessage(t, ctx)
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

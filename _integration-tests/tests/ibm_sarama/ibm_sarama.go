@@ -34,7 +34,7 @@ type TestCase struct {
 	addrs  []string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	tc.cfg = sarama.NewConfig()
@@ -46,25 +46,24 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.addrs = []string{addr}
 }
 
-func produceMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
+func produceMessage(t *testing.T, ctx context.Context, addrs []string, cfg *sarama.Config) {
 	t.Helper()
 
-	var producer sarama.SyncProducer
-	err := backoff.Retry(
-		context.Background(),
+	producer, err := backoff.Retry(
+		ctx,
 		backoff.NewConstantStrategy(50*time.Millisecond),
-		func() (err error) {
+		func() (_ sarama.SyncProducer, err error) {
 			defer func() {
-				if r := recover(); r != nil && err == nil {
-					var ok bool
-					if err, ok = r.(error); !ok {
+				if r := recover(); r != nil {
+					if e, ok := r.(error); ok {
+						err = errors.Join(err, fmt.Errorf("panic: %w", e))
+					} else {
 						err = errors.Join(err, fmt.Errorf("panic: %v", r))
 					}
 				}
 			}()
 
-			producer, err = sarama.NewSyncProducer(addrs, cfg)
-			return err
+			return sarama.NewSyncProducer(addrs, cfg)
 		},
 		&backoff.RetryOptions{MaxAttempts: 3},
 	)
@@ -108,8 +107,8 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	}
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	produceMessage(t, tc.addrs, tc.cfg)
+func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+	produceMessage(t, ctx, tc.addrs, tc.cfg)
 	consumeMessage(t, tc.addrs, tc.cfg)
 }
 

@@ -50,6 +50,28 @@ type RetryOptions struct {
 	Sleep func(time.Duration)
 }
 
+// RetryVoid makes up to [RetryOptions.MaxAttempts] at calling the [action]
+// function. It uses the [Strategy] to determine how much time to wait between
+// attempts. The [RetryOptions.ShouldRetry] function is called with all
+// non-[nil] errors returned by [action], the attempt number, and the delay
+// before the next attempt. If it returns [true], the [RetryOptions.Sleep]
+// function is called with the delay, and the next attempt is made. Otherwise,
+// [RetryVoid] returns immediately.
+func RetryVoid(
+	ctx context.Context,
+	strategy Strategy,
+	action func() error,
+	opts *RetryOptions,
+) error {
+	_, err := Retry(
+		ctx,
+		strategy,
+		func() (any, error) { return nil, action() },
+		opts,
+	)
+	return err
+}
+
 // Retry makes up to [RetryOptions.MaxAttempts] at calling the [action]
 // function. It uses the [Strategy] to determine how much time to wait between
 // attempts. The [RetryOptions.ShouldRetry] function is called with all
@@ -57,12 +79,12 @@ type RetryOptions struct {
 // before the next attempt. If it returns [true], the [RetryOptions.Sleep]
 // function is called with the delay, and the next attempt is made. Otherwise,
 // [Retry] returns immediately.
-func Retry(
+func Retry[T any](
 	ctx context.Context,
 	strategy Strategy,
-	action func() error,
+	action func() (T, error),
 	opts *RetryOptions,
-) error {
+) (T, error) {
 	var (
 		maxAttempts = defaultMaxAttempts
 		shouldRetry = RetryAllErrors
@@ -88,10 +110,10 @@ func Retry(
 			sleep(delay)
 		}
 
-		err := action()
+		res, err := action()
 		if err == nil {
 			// Success!
-			return nil
+			return res, nil
 		}
 
 		// Accumulate this error on top of the others we have observed so far.
@@ -101,5 +123,6 @@ func Retry(
 			break
 		}
 	}
-	return errors.Join(errs, ctx.Err())
+	var zero T
+	return zero, errors.Join(errs, ctx.Err())
 }

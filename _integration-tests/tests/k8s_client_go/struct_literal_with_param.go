@@ -8,6 +8,7 @@
 package k8sclientgo
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -23,8 +24,8 @@ type TestCaseStructLiteralWithParam struct {
 	wtCalled bool
 }
 
-func (tc *TestCaseStructLiteralWithParam) Setup(t *testing.T) {
-	tc.base.setup(t)
+func (tc *TestCaseStructLiteralWithParam) Setup(t *testing.T, ctx context.Context) {
+	tc.base.setup(t, ctx)
 
 	cfg := &rest.Config{
 		Host: tc.server.URL,
@@ -39,8 +40,8 @@ func (tc *TestCaseStructLiteralWithParam) Setup(t *testing.T) {
 	tc.base.client = client
 }
 
-func (tc *TestCaseStructLiteralWithParam) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseStructLiteralWithParam) Run(t *testing.T, ctx context.Context) {
+	tc.base.run(t, ctx)
 	assert.True(t, tc.wtCalled, "the original WrapTransport function was not called")
 }
 

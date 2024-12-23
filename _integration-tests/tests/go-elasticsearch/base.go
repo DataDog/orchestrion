@@ -34,10 +34,8 @@ type base struct {
 	client    esClient
 }
 
-func (b *base) Setup(t *testing.T, image string, newClient func(addr string, caCert []byte) (esClient, error)) {
+func (b *base) Setup(t *testing.T, ctx context.Context, image string, newClient func(addr string, caCert []byte) (esClient, error)) {
 	utils.SkipIfProviderIsNotHealthy(t)
-
-	ctx := context.Background()
 
 	var err error
 	b.container, err = testelasticsearch.Run(ctx,
@@ -53,8 +51,7 @@ func (b *base) Setup(t *testing.T, image string, newClient func(addr string, caC
 	require.NoError(t, err)
 }
 
-func (b *base) Run(t *testing.T, doRequest func(t *testing.T, client esClient, body io.Reader)) {
-	ctx := context.Background()
+func (b *base) Run(t *testing.T, ctx context.Context, doRequest func(t *testing.T, client esClient, body io.Reader)) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

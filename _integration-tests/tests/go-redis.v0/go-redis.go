@@ -28,7 +28,7 @@ type TestCase struct {
 	key string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	uuid, err := uuid.NewRandom()
@@ -39,13 +39,11 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server = container
 
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
-	t.Cleanup(func() {
-		assert.NoError(t, tc.Client.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.Client.Close()) })
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
 	require.NoError(t, tc.Client.WithContext(ctx).Set(tc.key, "test_value", 0).Err())

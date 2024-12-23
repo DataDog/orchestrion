@@ -25,10 +25,8 @@ type TestCase struct {
 	*api.Client
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, ctx context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
-
-	ctx := context.Background()
 
 	var err error
 	tc.server, err = testvault.Run(ctx,
@@ -55,8 +53,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.Client = c
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	ctx := context.Background()
+func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

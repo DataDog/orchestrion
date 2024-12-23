@@ -22,15 +22,15 @@ type TestCaseNewLogger struct {
 	logs   *bytes.Buffer
 }
 
-func (tc *TestCaseNewLogger) Setup(*testing.T) {
+func (tc *TestCaseNewLogger) Setup(*testing.T, context.Context) {
 	tc.logs = new(bytes.Buffer)
 	tc.logger = logrus.New()
 	tc.logger.SetLevel(logrus.DebugLevel)
 	tc.logger.SetOutput(tc.logs)
 }
 
-func (tc *TestCaseNewLogger) Run(t *testing.T) {
-	runTest(t, tc.logs, tc.Log)
+func (tc *TestCaseNewLogger) Run(t *testing.T, ctx context.Context) {
+	runTest(t, ctx, tc.logs, tc.Log)
 }
 
 func (*TestCaseNewLogger) ExpectedTraces() trace.Traces {

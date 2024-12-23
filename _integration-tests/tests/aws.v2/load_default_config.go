@@ -23,10 +23,10 @@ type TestCaseLoadDefaultConfig struct {
 	base
 }
 
-func (tc *TestCaseLoadDefaultConfig) Setup(t *testing.T) {
-	tc.setup(t)
+func (tc *TestCaseLoadDefaultConfig) Setup(t *testing.T, ctx context.Context) {
+	tc.setup(t, ctx)
 
-	cfg, err := config.LoadDefaultConfig(context.Background(),
+	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("test-region-1337"),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("NOTANACCESSKEY", "NOTASECRETKEY", "")),
 	)
@@ -35,8 +35,8 @@ func (tc *TestCaseLoadDefaultConfig) Setup(t *testing.T) {
 	tc.cfg = cfg
 }
 
-func (tc *TestCaseLoadDefaultConfig) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseLoadDefaultConfig) Run(t *testing.T, ctx context.Context) {
+	tc.base.run(t, ctx)
 }
 
 func (tc *TestCaseLoadDefaultConfig) ExpectedTraces() trace.Traces {

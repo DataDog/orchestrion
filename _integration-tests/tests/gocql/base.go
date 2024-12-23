@@ -11,12 +11,10 @@ import (
 	"context"
 	"net"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gocql/gocql"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	testcassandra "github.com/testcontainers/testcontainers-go/modules/cassandra"
@@ -30,10 +28,8 @@ type base struct {
 	port      string
 }
 
-func (b *base) setup(t *testing.T) {
+func (b *base) setup(t *testing.T, ctx context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
-
-	ctx := context.Background()
 
 	var err error
 	b.container, err = testcassandra.Run(ctx,
@@ -51,16 +47,8 @@ func (b *base) setup(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (b *base) teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	b.session.Close()
-	assert.NoError(t, b.container.Terminate(ctx))
-}
-
-func (b *base) run(t *testing.T) {
-	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+func (b *base) run(t *testing.T, ctx context.Context) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
 	err := b.session.

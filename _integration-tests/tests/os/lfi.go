@@ -30,7 +30,7 @@ type TestCase struct {
 	*testing.T
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	if runtime.GOOS == "windows" {
 		t.Skip("appsec does not support Windows")
 	}
@@ -52,13 +52,14 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	go func() { assert.ErrorIs(t, tc.Server.ListenAndServe(), http.ErrServerClosed) }()
 	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		// Using a new 10s-timeout context, as we may be running cleanup after the original context expired.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		require.NoError(t, tc.Server.Shutdown(ctx))
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(t *testing.T, _ context.Context) {
 	tc.T = t
 	resp, err := http.Get(fmt.Sprintf("http://%s/?path=/etc/passwd", tc.Server.Addr))
 	require.NoError(t, err)
@@ -96,12 +97,12 @@ func (*TestCase) ExpectedTraces() trace.Traces {
 	}
 }
 
-func (tc *TestCase) handleRoot(w http.ResponseWriter, _ *http.Request) {
+func (tc *TestCase) handleRoot(w http.ResponseWriter, r *http.Request) {
 	fp, err := os.Open("/etc/passwd")
 
 	assert.ErrorIs(tc.T, err, &events.BlockingSecurityEvent{})
-	if events.IsSecurityError(err) { // TODO: response writer instrumentation to not have to do that
-		span, _ := tracer.SpanFromContext(context.TODO())
+	if events.IsSecurityError(err) { // TODO: response writer instrumentation do not have to do that
+		span, _ := tracer.SpanFromContext(r.Context())
 		span.SetTag("is.security.error", true)
 		return
 	}

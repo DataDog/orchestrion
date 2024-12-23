@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -28,15 +27,13 @@ type base struct {
 	port   string
 }
 
-func (b *base) setup(t *testing.T) {
+func (b *base) setup(t *testing.T, _ context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	b.server, b.host, b.port = utils.StartDynamoDBTestContainer(t)
 }
 
-func (b *base) run(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+func (b *base) run(t *testing.T, ctx context.Context) {
 	ddb := dynamodb.NewFromConfig(b.cfg)
 	_, err := ddb.ListTables(ctx, nil)
 	require.NoError(t, err)

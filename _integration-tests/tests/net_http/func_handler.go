@@ -8,6 +8,7 @@
 package nethttp
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -16,7 +17,7 @@ type TestCaseFuncHandler struct {
 	base
 }
 
-func (tc *TestCaseFuncHandler) Setup(t *testing.T) {
+func (tc *TestCaseFuncHandler) Setup(t *testing.T, ctx context.Context) {
 	tc.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
@@ -33,5 +34,5 @@ func (tc *TestCaseFuncHandler) Setup(t *testing.T) {
 		}
 	})
 
-	tc.base.Setup(t)
+	tc.base.Setup(t, ctx)
 }

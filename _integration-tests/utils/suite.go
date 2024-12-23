@@ -6,6 +6,7 @@
 package utils
 
 import (
+	"context"
 	"testing"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils/agent"
@@ -25,7 +26,7 @@ type TestCase interface {
 	// are not satisfied by the test environment.
 	//
 	// The tracer is not yet started when Setup is executed.
-	Setup(*testing.T)
+	Setup(*testing.T, context.Context)
 
 	// Run executes the test case after starting the tracer. This should perform
 	// the necessary calls to produce trace information from injected
@@ -33,7 +34,7 @@ type TestCase interface {
 	// is expected to be successful, database call does not error out, etc...).
 	// The tracer is shut down after the Run function returns, ensuring
 	// outstanding spans are flushed to the agent.
-	Run(*testing.T)
+	Run(*testing.T, context.Context)
 
 	// ExpectedTraces returns a trace.Traces object describing all traces expected
 	// to be produced by the [TestCase.Run] function. There should be one entry
@@ -51,14 +52,21 @@ func RunTest(t *testing.T, tc TestCase) {
 	require.NoError(t, err, "failed to start mock agent")
 	defer mockAgent.Close()
 
+	ctx := context.Background()
+	if deadline, ok := t.Deadline(); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	}
+
 	t.Log("Running setup")
-	tc.Setup(t)
+	tc.Setup(t, ctx)
 
 	sess, err := mockAgent.NewSession(t)
 	require.NoError(t, err, "failed to create a new mock agent session")
 
 	t.Log("Running test")
-	tc.Run(t)
+	tc.Run(t, ctx)
 
 	checkTraces(t, tc, sess)
 }

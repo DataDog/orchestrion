@@ -8,6 +8,7 @@
 package gocql
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -20,8 +21,8 @@ type TestCaseStructLiteral struct {
 	base
 }
 
-func (tc *TestCaseStructLiteral) Setup(t *testing.T) {
-	tc.setup(t)
+func (tc *TestCaseStructLiteral) Setup(t *testing.T, ctx context.Context) {
+	tc.setup(t, ctx)
 
 	var err error
 	cluster := gocql.ClusterConfig{
@@ -43,13 +44,11 @@ func (tc *TestCaseStructLiteral) Setup(t *testing.T) {
 	}
 	tc.session, err = cluster.CreateSession()
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		tc.session.Close()
-	})
+	t.Cleanup(func() { tc.session.Close() })
 }
 
-func (tc *TestCaseStructLiteral) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseStructLiteral) Run(t *testing.T, ctx context.Context) {
+	tc.base.run(t, ctx)
 }
 
 func (tc *TestCaseStructLiteral) ExpectedTraces() trace.Traces {

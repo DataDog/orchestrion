@@ -102,7 +102,12 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	}
 
 	typeInfo, err := i.typeCheck(fset, parsedFiles)
-	if err != nil {
+	if errors.Is(err, typeCheckingError{}) {
+		// We don't want to fail here on type-checking errors... Instead do nothing and let the standard
+		// go compiler/toolchain surface the error to the user in a canonical way.
+		log.Warnf("Skipping injectrion in %s due to: %v\n", i.ImportPath, err)
+		return nil, context.GoLangVersion{}, nil
+	} else if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
 

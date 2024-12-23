@@ -24,8 +24,8 @@ type TestCaseV8 struct {
 	base
 }
 
-func (tc *TestCaseV8) Setup(t *testing.T) {
-	tc.base.Setup(t, "docker.elastic.co/elasticsearch/elasticsearch:8.15.3", func(addr string, caCert []byte) (esClient, error) {
+func (tc *TestCaseV8) Setup(t *testing.T, ctx context.Context) {
+	tc.base.Setup(t, ctx, "docker.elastic.co/elasticsearch/elasticsearch:8.15.3", func(addr string, caCert []byte) (esClient, error) {
 		// from v8, there's a certificate configured by default.
 		// we cannot configure directly in the elasticsearch.Config type as it makes a type assertion on the underlying
 		// transport type, which fails for the *elastictrace.roundTripper type from our instrumentation package.
@@ -44,8 +44,8 @@ func (tc *TestCaseV8) Setup(t *testing.T) {
 	})
 }
 
-func (tc *TestCaseV8) Run(t *testing.T) {
-	tc.base.Run(t, func(t *testing.T, client esClient, body io.Reader) {
+func (tc *TestCaseV8) Run(t *testing.T, ctx context.Context) {
+	tc.base.Run(t, ctx, func(t *testing.T, client esClient, body io.Reader) {
 		t.Helper()
 		req := esapi.IndexRequest{
 			Index:      "test",
@@ -53,7 +53,7 @@ func (tc *TestCaseV8) Run(t *testing.T) {
 			Body:       body,
 			Refresh:    "true",
 		}
-		res, err := req.Do(context.Background(), client)
+		res, err := req.Do(ctx, client)
 		require.NoError(t, err)
 		defer res.Body.Close()
 	})

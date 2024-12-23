@@ -8,6 +8,7 @@
 package k8sclientgo
 
 import (
+	"context"
 	"testing"
 
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -21,8 +22,8 @@ type TestCaseNewCfgFunc struct {
 	base
 }
 
-func (tc *TestCaseNewCfgFunc) Setup(t *testing.T) {
-	tc.base.setup(t)
+func (tc *TestCaseNewCfgFunc) Setup(t *testing.T, ctx context.Context) {
+	tc.base.setup(t, ctx)
 
 	// internally, this function creates a rest.Config struct literal, so it should get traced by orchestrion.
 	cfg, err := clientcmd.BuildConfigFromKubeconfigGetter(tc.server.URL, func() (*clientcmdapi.Config, error) {
@@ -35,8 +36,8 @@ func (tc *TestCaseNewCfgFunc) Setup(t *testing.T) {
 	tc.base.client = client
 }
 
-func (tc *TestCaseNewCfgFunc) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseNewCfgFunc) Run(t *testing.T, ctx context.Context) {
+	tc.base.run(t, ctx)
 }
 
 func (tc *TestCaseNewCfgFunc) ExpectedTraces() trace.Traces {

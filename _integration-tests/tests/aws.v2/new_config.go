@@ -8,6 +8,7 @@
 package awsv2
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,8 +21,8 @@ type TestCaseNewConfig struct {
 	base
 }
 
-func (tc *TestCaseNewConfig) Setup(t *testing.T) {
-	tc.setup(t)
+func (tc *TestCaseNewConfig) Setup(t *testing.T, ctx context.Context) {
+	tc.setup(t, ctx)
 
 	cfg := aws.NewConfig()
 	cfg.Region = "test-region-1337"
@@ -30,8 +31,8 @@ func (tc *TestCaseNewConfig) Setup(t *testing.T) {
 	tc.cfg = *cfg
 }
 
-func (tc *TestCaseNewConfig) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseNewConfig) Run(t *testing.T, ctx context.Context) {
+	tc.base.run(t, ctx)
 }
 
 func (tc *TestCaseNewConfig) ExpectedTraces() trace.Traces {

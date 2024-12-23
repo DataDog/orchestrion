@@ -8,6 +8,7 @@
 package awsv1
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -26,7 +27,7 @@ type TestCase struct {
 	cfg    *aws.Config
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	server, host, port := utils.StartDynamoDBTestContainer(t)
@@ -39,7 +40,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	}
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(t *testing.T, _ context.Context) {
 	ddb := dynamodb.New(session.Must(session.NewSession(tc.cfg)))
 	_, err := ddb.ListTables(nil)
 	require.NoError(t, err)

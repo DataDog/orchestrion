@@ -24,13 +24,11 @@ type TestCase struct {
 	*gorm.DB
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	var err error
 	tc.DB, err = gorm.Open("sqlite3", "file::memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, tc.DB.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.DB.Close()) })
 
 	require.NoError(t, tc.DB.AutoMigrate(&Note{}).Error)
 	for _, note := range []*Note{
@@ -45,8 +43,8 @@ func (tc *TestCase) Setup(t *testing.T) {
 	}
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
 	var note Note

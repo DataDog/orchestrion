@@ -14,7 +14,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/require"
@@ -29,21 +28,17 @@ type base struct {
 	client    *kubernetes.Clientset
 }
 
-func (b *base) setup(t *testing.T) {
+func (b *base) setup(t *testing.T, _ context.Context) {
 	b.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("Hello World"))
 	}))
-	t.Cleanup(func() {
-		b.server.Close()
-	})
+	t.Cleanup(func() { b.server.Close() })
 	tsURL, err := url.Parse(b.server.URL)
 	require.NoError(t, err)
 	b.serverURL = tsURL
 }
 
-func (b *base) run(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+func (b *base) run(t *testing.T, ctx context.Context) {
 	_, err := b.client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 
 	// we should get an error here since our test server handler implementation doesn't return what the k8s client expects

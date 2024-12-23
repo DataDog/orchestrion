@@ -8,6 +8,7 @@
 package nethttp
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -37,10 +38,10 @@ type TestCaseHandlerImplementation struct {
 	base
 }
 
-func (tc *TestCaseHandlerImplementation) Setup(t *testing.T) {
+func (tc *TestCaseHandlerImplementation) Setup(t *testing.T, ctx context.Context) {
 	tc.handler = &customHandler{
 		handleRoot: tc.handleRoot,
 		handleHit:  tc.handleHit,
 	}
-	tc.base.Setup(t)
+	tc.base.Setup(t, ctx)
 }

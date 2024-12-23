@@ -12,7 +12,6 @@ import (
 	"net"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +26,7 @@ type TestCase struct {
 	addr string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	tc.addr = lis.Addr().String()
@@ -57,7 +56,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(t *testing.T, ctx context.Context) {
 	var (
 		interceptedDirect atomic.Bool
 		interceptedChain  atomic.Bool
@@ -78,9 +77,6 @@ func (tc *TestCase) Run(t *testing.T) {
 	)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, conn.Close()) }()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 
 	client := helloworld.NewGreeterClient(conn)
 	resp, err := client.SayHello(ctx, &helloworld.HelloRequest{Name: "rob"})

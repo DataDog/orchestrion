@@ -26,7 +26,7 @@ type TestCase struct {
 	addr string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(t *testing.T, _ context.Context) {
 	tc.Echo = echo.New()
 	tc.Echo.Logger.SetOutput(io.Discard)
 
@@ -37,13 +37,14 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	go func() { assert.ErrorIs(t, tc.Echo.Start(tc.addr), http.ErrServerClosed) }()
 	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		// Using a new 10s-timeout context, as we may be running cleanup after the original context expired.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		require.NoError(t, tc.Echo.Shutdown(ctx))
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(t *testing.T, _ context.Context) {
 	resp, err := http.Get("http://" + tc.addr + "/ping")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
