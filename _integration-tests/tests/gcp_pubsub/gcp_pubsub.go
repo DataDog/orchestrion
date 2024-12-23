@@ -36,13 +36,10 @@ type TestCase struct {
 	messageID   string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
-	var (
-		err error
-		ctx = context.Background()
-	)
+	var err error
 
 	tc.container, err = gcloud.RunPubsub(ctx,
 		"gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators",
@@ -61,9 +58,7 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	tc.client, err = pubsub.NewClient(ctx, projectID, option.WithGRPCConn(conn))
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, tc.client.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.client.Close()) })
 
 	topic, err := tc.client.CreateTopic(ctx, testTopic)
 	require.NoError(t, err)
@@ -75,26 +70,25 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (tc *TestCase) publishMessage(t *testing.T) {
-	t.Helper()
-
-	ctx := context.Background()
+func (tc *TestCase) publishMessage(ctx context.Context, t *testing.T) {
 	topic := tc.client.Topic(testTopic)
 	topic.EnableMessageOrdering = true
-	res := topic.Publish(context.Background(), &pubsub.Message{
+	res := topic.Publish(ctx, &pubsub.Message{
 		Data:        []byte("Hello, World!"),
 		OrderingKey: "ordering-key",
 	})
-	_, err := res.Get(ctx)
+	id, err := res.Get(ctx)
 	require.NoError(t, err)
-	t.Log("finished publishing result")
+	t.Log("finished publishing result", id)
 }
 
-func (tc *TestCase) receiveMessage(t *testing.T) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func (tc *TestCase) receiveMessage(ctx context.Context, t *testing.T) {
+	// We use a cancellable context so we can stop listening for more messages as
+	// soon as we have processed one. The [pubsub.Subscription.Receive] method
+	// keeps listening until a non-retryable error occurs, or the context gets
+	// cancelled... This would effectively block the test forever!
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel() // In case the message never arrives...
 
 	sub := tc.client.Subscription(testSubscription)
 	err := sub.Receive(ctx, func(_ context.Context, message *pubsub.Message) {
@@ -102,17 +96,17 @@ func (tc *TestCase) receiveMessage(t *testing.T) {
 		message.Ack()
 		tc.publishTime = message.PublishTime
 		tc.messageID = message.ID
-		cancel()
+		cancel() // Stop waiting for more messages immediately...
 	})
 	require.NoError(t, err)
 
-	<-ctx.Done()
+	// Ensure the context is not done yet...
 	require.NotErrorIs(t, ctx.Err(), context.DeadlineExceeded)
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	tc.publishMessage(t)
-	tc.receiveMessage(t)
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	tc.publishMessage(ctx, t)
+	tc.receiveMessage(ctx, t)
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

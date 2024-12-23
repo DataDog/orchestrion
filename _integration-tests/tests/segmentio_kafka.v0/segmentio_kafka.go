@@ -35,7 +35,7 @@ type TestCase struct {
 	writer *kafka.Writer
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	tc.kafka, tc.addr = utils.StartKafkaTestContainer(t)
@@ -56,15 +56,12 @@ func (tc *TestCase) newReader(topic string) *kafka.Reader {
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	tc.produce(t)
-	tc.consume(t)
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	tc.produce(ctx, t)
+	tc.consume(ctx, t)
 }
 
-func (tc *TestCase) produce(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+func (tc *TestCase) produce(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
@@ -85,7 +82,7 @@ func (tc *TestCase) produce(t *testing.T) {
 			Value: []byte("Third message"),
 		},
 	}
-	err := backoff.Retry(
+	err := backoff.RetryVoid(
 		ctx,
 		backoff.NewExponentialStrategy(100*time.Millisecond, 2, 5*time.Second),
 		func() error { return tc.writer.WriteMessages(ctx, messages...) },
@@ -104,10 +101,7 @@ func (tc *TestCase) produce(t *testing.T) {
 	require.NoError(t, tc.writer.Close())
 }
 
-func (tc *TestCase) consume(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+func (tc *TestCase) consume(ctx context.Context, t *testing.T) {
 	readerA := tc.newReader(topicA)
 	m, err := readerA.ReadMessage(ctx)
 	require.NoError(t, err)

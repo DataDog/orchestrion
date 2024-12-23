@@ -8,6 +8,7 @@
 package k8sclientgo
 
 import (
+	"context"
 	"testing"
 
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -21,8 +22,8 @@ type TestCaseStructLiteralWithoutParam struct {
 	wtCalled bool
 }
 
-func (tc *TestCaseStructLiteralWithoutParam) Setup(t *testing.T) {
-	tc.base.setup(t)
+func (tc *TestCaseStructLiteralWithoutParam) Setup(ctx context.Context, t *testing.T) {
+	tc.base.setup(ctx, t)
 
 	cfg := &rest.Config{
 		Host: tc.server.URL,
@@ -33,8 +34,8 @@ func (tc *TestCaseStructLiteralWithoutParam) Setup(t *testing.T) {
 	tc.base.client = client
 }
 
-func (tc *TestCaseStructLiteralWithoutParam) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseStructLiteralWithoutParam) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseStructLiteralWithoutParam) ExpectedTraces() trace.Traces {

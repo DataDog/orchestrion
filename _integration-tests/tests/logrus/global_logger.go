@@ -21,14 +21,14 @@ type TestCaseGlobalLogger struct {
 	logs *bytes.Buffer
 }
 
-func (tc *TestCaseGlobalLogger) Setup(*testing.T) {
+func (tc *TestCaseGlobalLogger) Setup(context.Context, *testing.T) {
 	tc.logs = new(bytes.Buffer)
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(tc.logs)
 }
 
-func (tc *TestCaseGlobalLogger) Run(t *testing.T) {
-	runTest(t, tc.logs, tc.Log)
+func (tc *TestCaseGlobalLogger) Run(ctx context.Context, t *testing.T) {
+	runTest(ctx, t, tc.logs, tc.Log)
 }
 
 func (*TestCaseGlobalLogger) ExpectedTraces() trace.Traces {

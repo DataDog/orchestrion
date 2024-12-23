@@ -8,6 +8,7 @@
 package kafka
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 	kafkatest "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils/backoff"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
@@ -31,16 +33,16 @@ type TestCase struct {
 	addr      []string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 	container, addr := utils.StartKafkaTestContainer(t)
 	tc.container = container
 	tc.addr = []string{addr}
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	tc.produceMessage(t)
-	tc.consumeMessage(t)
+	tc.consumeMessage(ctx, t)
 }
 
 func (tc *TestCase) kafkaBootstrapServers() string {
@@ -74,7 +76,7 @@ func (tc *TestCase) produceMessage(t *testing.T) {
 	require.NoError(t, err, "failed to send message")
 }
 
-func (tc *TestCase) consumeMessage(t *testing.T) {
+func (tc *TestCase) consumeMessage(ctx context.Context, t *testing.T) {
 	t.Helper()
 
 	cfg := &kafka.ConfigMap{
@@ -94,7 +96,12 @@ func (tc *TestCase) consumeMessage(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	m, err := c.ReadMessage(3000 * time.Millisecond)
+	m, err := backoff.Retry(
+		ctx,
+		backoff.NewExponentialStrategy(100*time.Millisecond, 2, time.Second),
+		func() (*kafka.Message, error) { return c.ReadMessage(3 * time.Second) },
+		nil,
+	)
 	require.NoError(t, err)
 
 	_, err = c.CommitMessage(m)

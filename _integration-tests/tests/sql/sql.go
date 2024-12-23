@@ -27,7 +27,7 @@ type TestCase struct {
 	untraced *sql.DB
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 	const (
 		dn  = "sqlite3"
 		dsn = "file::memory:?cache=shared"
@@ -39,8 +39,6 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.untraced, err = sql.Open(dn, dsn)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, tc.untraced.Close()) })
-
-	ctx := context.Background()
 
 	_, err = tc.untraced.ExecContext(ctx,
 		`CREATE TABLE IF NOT EXISTS notes (
@@ -64,13 +62,11 @@ func (tc *TestCase) Setup(t *testing.T) {
 
 	tc.DB, err = sql.Open(dn, dsn)
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, tc.DB.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.DB.Close()) })
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	_, err := tc.DB.ExecContext(context.Background(),
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	_, err := tc.DB.ExecContext(ctx,
 		`INSERT INTO notes (userid, content, created) VALUES (?, ?, datetime('now'));`,
 		1337, "This is Elite!")
 	require.NoError(t, err)

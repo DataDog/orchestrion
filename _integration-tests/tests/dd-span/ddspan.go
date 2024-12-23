@@ -18,10 +18,10 @@ import (
 
 type TestCase struct{}
 
-func (*TestCase) Setup(*testing.T) {}
+func (*TestCase) Setup(context.Context, *testing.T) {}
 
-func (*TestCase) Run(t *testing.T) {
-	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+func (*TestCase) Run(ctx context.Context, t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:0/", nil)
