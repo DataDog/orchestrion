@@ -71,8 +71,6 @@ func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 }
 
 func (tc *TestCase) publishMessage(ctx context.Context, t *testing.T) {
-	t.Helper()
-
 	topic := tc.client.Topic(testTopic)
 	topic.EnableMessageOrdering = true
 	res := topic.Publish(ctx, &pubsub.Message{
@@ -85,7 +83,12 @@ func (tc *TestCase) publishMessage(ctx context.Context, t *testing.T) {
 }
 
 func (tc *TestCase) receiveMessage(ctx context.Context, t *testing.T) {
-	t.Helper()
+	// We use a cancellable context so we can stop listening for more messages as
+	// soon as we have processed one. The [pubsub.Subscription.Receive] method
+	// keeps listening until a non-retryable error occurs, or the context gets
+	// cancelled... This would effectively block the test forever!
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel() // In case the message never arrives...
 
 	sub := tc.client.Subscription(testSubscription)
 	err := sub.Receive(ctx, func(_ context.Context, message *pubsub.Message) {
@@ -93,6 +96,7 @@ func (tc *TestCase) receiveMessage(ctx context.Context, t *testing.T) {
 		message.Ack()
 		tc.publishTime = message.PublishTime
 		tc.messageID = message.ID
+		cancel() // Stop waiting for more messages immediately...
 	})
 	require.NoError(t, err)
 
