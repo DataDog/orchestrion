@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils/backoff"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
@@ -66,7 +67,12 @@ func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, client.Close()) }()
 
-	_, err = client.Do("SET", tc.key, "test_value")
+	_, err = backoff.Retry(
+		ctx,
+		backoff.NewExponentialStrategy(100*time.Millisecond, 2, time.Second),
+		func() (any, error) { return client.Do("SET", tc.key, "test_value") },
+		nil,
+	)
 	require.NoError(t, err)
 
 	res, err := client.Do("GET", tc.key, ctx)
