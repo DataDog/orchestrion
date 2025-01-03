@@ -6,4 +6,4 @@
 package version
 
 // Tag specifies the current release tag. It needs to be manually updated.
-const Tag = "v1.0.2"
+const Tag = "v1.0.3-rc.1"
