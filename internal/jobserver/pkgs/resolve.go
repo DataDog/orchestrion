@@ -138,8 +138,6 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 			}
 			env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
 		}
-		// Artifically limit to 2 in order to reduce scheduler contention in downstream processes...
-		env = append(env, "GOMAXPROX=2")
 
 		goFlags, err := goflags.Flags(ctx)
 		if err != nil {
