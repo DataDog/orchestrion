@@ -217,6 +217,40 @@ func (fo *signature) Hash(h *fingerprint.Hasher) error {
 	)
 }
 
+type signatureContains struct {
+	signature
+}
+
+// SignatureContains matches function declarations based on their arguments and
+// return value types in any order and does not require all arguments or return values to be present.
+func SignatureContains(args []TypeName, ret []TypeName) FunctionOption {
+	return &signatureContains{signature{Arguments: args, Results: ret}}
+}
+
+func (fo *signatureContains) Hash(h *fingerprint.Hasher) error {
+	return h.Named(
+		"signature-contains",
+		fingerprint.List[TypeName](fo.Arguments),
+		fingerprint.List[TypeName](fo.Results),
+	)
+}
+
+func (fo *signatureContains) evaluate(info functionInformation) bool {
+	for i := 0; i < len(fo.Results); i++ {
+		if fo.Results[i].Matches(info.Type.Results.List[i].Type) {
+			return true
+		}
+	}
+
+	for i := 0; i < len(fo.Arguments); i++ {
+		if fo.Arguments[i].Matches(info.Type.Params.List[i].Type) {
+			return true
+		}
+	}
+
+	return false
+}
+
 type receiver struct {
 	TypeName TypeName
 }
@@ -354,7 +388,7 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			return err
 		}
 		o.FunctionOption = Receiver(tn)
-	case "signature":
+	case "signature", "signature-contains":
 		var sig struct {
 			Extra map[string]yaml.Node `yaml:",inline"`
 			Args  []string             `yaml:"args"`
@@ -393,7 +427,12 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			}
 		}
 
-		o.FunctionOption = Signature(args, ret)
+		switch key {
+		case "signature":
+			o.FunctionOption = Signature(args, ret)
+		case "signature-contains":
+			o.FunctionOption = SignatureContains(args, ret)
+		}
 	default:
 		return fmt.Errorf("line %d: unknown FuncDeclOption name: %q", node.Content[0].Line, key)
 	}
