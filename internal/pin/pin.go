@@ -100,7 +100,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
-	pruned, err := pruneImports(log, importSet, opts)
+	pruned, err := pruneImports(ctx, importSet, opts)
 	if err != nil {
 		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
 	}
@@ -238,12 +238,14 @@ func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
 // pruneImports removes unnecessary or invalid imports from the provided
 // [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
 // only outputs a message informing the user about uncalled-for imports.
-func pruneImports(log *zerolog.Logger, importSet *importSet, opts Options) (bool, error) {
+func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool, error) {
 	importPaths := importSet.Except(orchestrionImportPath, orchestrionInstrumentPath)
 	if len(importPaths) == 0 {
 		// Nothing to do!
 		return false, nil
 	}
+
+	log := zerolog.Ctx(ctx)
 	pkgs, err := packages.Load(
 		&packages.Config{
 			BuildFlags: []string{"-toolexec="},

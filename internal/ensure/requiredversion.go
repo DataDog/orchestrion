@@ -61,14 +61,14 @@ func StartupVersion() string {
 // syscall.Exec functions as arguments to allow for easier testing. Panics if `osArgs` is 0-length.
 func requiredVersion(
 	ctx context.Context,
-	goModVersion func(*zerolog.Logger, string) (string, string, error),
+	goModVersion func(context.Context, string) (string, string, error),
 	osGetenv func(string) string,
 	syscallExec func(argv0 string, argv []string, env []string) error,
 	osArgs []string,
 ) error {
 	log := zerolog.Ctx(ctx)
 
-	rVersion, path, err := goModVersion(log, "" /* Current working directory */)
+	rVersion, path, err := goModVersion(ctx, "" /* Current working directory */)
 	if err != nil {
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
 	}
@@ -132,12 +132,13 @@ func requiredVersion(
 // required in the specified directory's "go.mod" file. If dir is blank, the process' current
 // working directory is used. The version may be blank if a replace directive is in effect; in which
 // case the path value may indicate the location of the source code that is being used instead.
-func goModVersion(log *zerolog.Logger, dir string) (moduleVersion string, moduleDir string, err error) {
+func goModVersion(ctx context.Context, dir string) (moduleVersion string, moduleDir string, err error) {
 	gomod, err := goenv.GOMOD(dir)
 	if err != nil {
 		return "", "", err
 	}
 
+	log := zerolog.Ctx(ctx)
 	cfg := &packages.Config{
 		Dir:  filepath.Dir(gomod),
 		Mode: packages.NeedModule,

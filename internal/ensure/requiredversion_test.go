@@ -161,7 +161,7 @@ func TestRequiredVersion(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			mockGoVersion := func(_ *zerolog.Logger, dir string) (string, string, error) {
+			mockGoVersion := func(_ context.Context, dir string) (string, string, error) {
 				require.Equal(t, "", dir)
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}

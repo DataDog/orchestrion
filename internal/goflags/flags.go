@@ -190,7 +190,7 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 		}
 	}
 
-	if err := flags.inferCoverpkg(log, wd, positional); err != nil {
+	if err := flags.inferCoverpkg(ctx, wd, positional); err != nil {
 		return flags, err
 	}
 
@@ -200,7 +200,7 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 
 // inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and `-coverpkg` is not, as
 // otherwise, sub-commands triggered with these flags will not apply coverage to the intended packages.
-func (f *CommandFlags) inferCoverpkg(log *zerolog.Logger, wd string, positionalArgs []string) error {
+func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalArgs []string) error {
 	if _, hasCoverpkg := f.Long["-coverpkg"]; hasCoverpkg {
 		return nil
 	}
@@ -208,6 +208,7 @@ func (f *CommandFlags) inferCoverpkg(log *zerolog.Logger, wd string, positionalA
 		return nil
 	}
 
+	log := zerolog.Ctx(ctx)
 	pkgs, err := packages.Load(
 		&packages.Config{
 			Mode:       packages.NeedName,

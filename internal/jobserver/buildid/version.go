@@ -107,7 +107,7 @@ func (s *service) versionSuffix(ctx context.Context, _ *VersionSuffixRequest) (V
 		}
 	}
 
-	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, getTagSuffix(log), fptr.Finish()))
+	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, getTagSuffix(ctx), fptr.Finish()))
 	return s.resolvedVersion, nil
 }
 
@@ -209,9 +209,10 @@ var (
 	tagSuffixOnce sync.Once
 )
 
-func getTagSuffix(log *zerolog.Logger) string {
+func getTagSuffix(ctx context.Context) string {
 	tagSuffixOnce.Do(func() {
 		const warningSuffix = " GOCACHE may need to be manually cleared in development iteration.\n"
+		log := zerolog.Ctx(ctx)
 
 		bi, ok := debug.ReadBuildInfo()
 		if !ok {
