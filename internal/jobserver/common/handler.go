@@ -8,6 +8,7 @@ package common
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/nats-io/nats.go"
@@ -65,11 +66,15 @@ func (successResponse[T]) isNatsResponse() {}
 func respond(msg *nats.Msg, val natsResponse) {
 	data, err := json.Marshal(val)
 	if err != nil {
-		log.Errorf("Failed to marshal job server response of type %T: %v\n", val, err)
+		log.Errorf("[JOBSERVER] Failed to marshal response of type %T: %v\n", val, err)
 		return
 	}
 	if err := msg.Respond(data); err != nil {
-		log.Errorf("Failed to send job server response: %v\n", err)
+		log.Errorf("[JOBSERVER] Failed to send response: %v\n%s\n", err, data)
+		data := fmt.Sprintf(`{"error": %q}`, err.Error()) // TODO: Truncate if too long?
+		if err := msg.Respond([]byte(data)); err != nil {
+			log.Errorf("[JOBSERVER] Faild to send error message: %v\n", err)
+		}
 		return
 	}
 }
