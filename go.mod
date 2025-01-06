@@ -23,7 +23,7 @@ require (
 	golang.org/x/sys v0.28.0
 	golang.org/x/term v0.27.0
 	golang.org/x/tools v0.28.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.71.0-rc.3
+	gopkg.in/DataDog/dd-trace-go.v1 v1.71.0-rc.4
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
 	k8s.io/client-go v0.31.3
