@@ -231,7 +231,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241219192143-6b3ec007d9bb // indirect
 	google.golang.org/protobuf v1.36.0 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.71.0-rc.2 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.71.0-rc.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
