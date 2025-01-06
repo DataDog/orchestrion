@@ -9,6 +9,7 @@ package graphgophers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -40,17 +41,15 @@ func (*resolver) Hello() string {
 	return "Hello, world!"
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	schema, err := graphql.ParseSchema(schema, new(resolver))
 	require.NoError(t, err)
 
 	tc.server = httptest.NewServer(&relay.Handler{Schema: schema})
-	t.Cleanup(func() {
-		tc.server.Close()
-	})
+	t.Cleanup(func() { tc.server.Close() })
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, tc.server.URL, bytes.NewReader([]byte(`{"query": "{ hello }"}`)))
 	require.NoError(t, err)
 

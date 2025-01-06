@@ -8,10 +8,23 @@ package join
 import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"gopkg.in/yaml.v3"
 )
 
 type testMain bool
+
+func (t testMain) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
+	if ctx.TestMain == bool(t) {
+		return may.Match
+	}
+
+	return may.NeverMatch
+}
+
+func (testMain) FileMayMatch(_ *may.FileContext) may.MatchType {
+	return may.Unknown
+}
 
 // TestMain matches only nodes in ASTs in files that either are (if true), or
 // are not (if false) part of a synthetic test main package.

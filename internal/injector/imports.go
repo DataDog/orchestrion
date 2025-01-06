@@ -8,12 +8,31 @@ package injector
 import (
 	"context"
 	"go/token"
+	"slices"
 	"strconv"
 
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"github.com/rs/zerolog"
 )
+
+// packageFilterAspects filters out aspects that imply imports not present in the import map and return a copy
+// of the aspect array.
+func (i *Injector) packageFilterAspects(aspects []*aspect.Aspect) []*aspect.Aspect {
+	copyAspects := make([]*aspect.Aspect, len(aspects))
+	copy(copyAspects, aspects)
+
+	ctx := &may.PackageContext{
+		ImportPath: i.ImportPath,
+		ImportMap:  i.ImportMap,
+		TestMain:   i.TestMain,
+	}
+	return slices.DeleteFunc(copyAspects, func(a *aspect.Aspect) bool {
+		return a.JoinPoint.PackageMayMatch(ctx) == may.NeverMatch
+	})
+}
 
 // canonicalizeImports works around the issue detailed in https://github.com/dave/dst/issues/45
 // where dave/dst improperly handles multiple imports of the same package with different aliases,

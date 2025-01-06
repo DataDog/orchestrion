@@ -8,6 +8,7 @@
 package shopify_sarama
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ type TestCase struct {
 	addrs  []string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	tc.cfg = sarama.NewConfig()
@@ -85,7 +86,7 @@ func consumeMessage(t *testing.T, addrs []string, cfg *sarama.Config) {
 	}
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	produceMessage(t, tc.addrs, tc.cfg)
 	consumeMessage(t, tc.addrs, tc.cfg)
 }

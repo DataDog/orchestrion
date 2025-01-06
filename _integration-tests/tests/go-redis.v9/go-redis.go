@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -29,7 +28,7 @@ type TestCase struct {
 	key string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	uuid, err := uuid.NewRandom()
@@ -40,27 +39,15 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.server = container
 
 	tc.Client = redis.NewClient(&redis.Options{Addr: addr})
-	t.Cleanup(func() {
-		assert.NoError(t, tc.Client.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.Client.Close()) })
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
 	require.NoError(t, tc.Client.Set(ctx, tc.key, "test_value", 0).Err())
 	require.NoError(t, tc.Client.Get(ctx, tc.key).Err())
-}
-
-func (tc *TestCase) Teardown(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	assert.NoError(t, tc.Client.Close())
-	if tc.server != nil && assert.NoError(t, tc.server.Terminate(ctx)) {
-		tc.server = nil
-	}
 }
 
 func (tc *TestCase) ExpectedTraces() trace.Traces {

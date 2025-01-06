@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -73,6 +74,14 @@ func respond(ctx context.Context, msg *nats.Msg, val natsResponse) {
 	}
 	if err := msg.Respond(data); err != nil {
 		log.Error().Err(err).Msg("Failed to send job server response")
+		data, err := json.Marshal(errorResponse{Error: fmt.Sprintf("internal error: %v", err)})
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to marshal job server internal error response")
+			return
+		}
+		if err := msg.Respond(data); err != nil {
+			log.Error().Err(err).Msg("Failed to send job server internal error response")
+		}
 		return
 	}
 }

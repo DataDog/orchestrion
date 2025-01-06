@@ -9,6 +9,7 @@ package graphql
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -25,7 +26,7 @@ type TestCase struct {
 	server *httptest.Server
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
 		Query: graphql.NewObject(graphql.ObjectConfig{
 			Name: "Query",
@@ -44,12 +45,10 @@ func (tc *TestCase) Setup(t *testing.T) {
 	require.NoError(t, err)
 
 	tc.server = httptest.NewServer(handler.New(&handler.Config{Schema: &schema}))
-	t.Cleanup(func() {
-		tc.server.Close()
-	})
+	t.Cleanup(func() { tc.server.Close() })
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	req, err := http.NewRequest("POST", tc.server.URL, bytes.NewReader([]byte(`{"query": "{ hello }"}`)))
 	require.NoError(t, err)
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"datadoghq.dev/orchestrion/_integration-tests/utils"
+	"datadoghq.dev/orchestrion/_integration-tests/utils/backoff"
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ type TestCase struct {
 	key string
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(_ context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
 
 	uuid, err := uuid.NewRandom()
@@ -55,20 +56,23 @@ func (tc *TestCase) Setup(t *testing.T) {
 			return err
 		},
 	}
-	t.Cleanup(func() {
-		assert.NoError(t, tc.Pool.Close())
-	})
+	t.Cleanup(func() { assert.NoError(t, tc.Pool.Close()) })
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	span, ctx := tracer.StartSpanFromContext(context.Background(), "test.root")
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 
 	client, err := tc.Pool.GetContext(ctx)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, client.Close()) }()
 
-	_, err = client.Do("SET", tc.key, "test_value")
+	_, err = backoff.Retry(
+		ctx,
+		backoff.NewExponentialStrategy(100*time.Millisecond, 2, time.Second),
+		func() (any, error) { return client.Do("SET", tc.key, "test_value") },
+		nil,
+	)
 	require.NoError(t, err)
 
 	res, err := client.Do("GET", tc.key, ctx)

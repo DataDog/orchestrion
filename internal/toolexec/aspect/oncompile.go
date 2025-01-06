@@ -134,11 +134,11 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	}
 
 	injector := injector.Injector{
-		Aspects:    aspects,
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
 		TestMain:   cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test"),
+		ImportMap:  imports.PackageFile,
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
@@ -146,7 +146,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	}
 
 	goFiles := cmd.GoFiles()
-	results, goLang, err := injector.InjectFiles(ctx, goFiles)
+	results, goLang, err := injector.InjectFiles(ctx, goFiles, aspects)
 	if err != nil {
 		return err
 	}

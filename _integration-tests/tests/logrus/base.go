@@ -20,8 +20,7 @@ import (
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
 )
 
-func runTest(t *testing.T, out *bytes.Buffer, logFn func(context.Context, logrus.Level, string)) {
-	ctx := context.Background()
+func runTest(ctx context.Context, t *testing.T, out *bytes.Buffer, logFn func(context.Context, logrus.Level, string)) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

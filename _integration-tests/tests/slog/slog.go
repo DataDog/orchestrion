@@ -24,7 +24,7 @@ type TestCase struct {
 	logs   *bytes.Buffer
 }
 
-func (tc *TestCase) Setup(*testing.T) {
+func (tc *TestCase) Setup(context.Context, *testing.T) {
 	tc.logs = new(bytes.Buffer)
 	tc.logger = slog.New(
 		slog.NewTextHandler(
@@ -39,12 +39,12 @@ func Log(ctx context.Context, f func(context.Context, string, ...any), msg strin
 	f(ctx, msg)
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	Log(context.Background(), tc.logger.DebugContext, "debug")
-	Log(context.Background(), tc.logger.InfoContext, "info")
-	Log(context.Background(), tc.logger.WarnContext, "warn")
-	Log(context.Background(), tc.logger.ErrorContext, "error")
-	Log(context.Background(), func(ctx context.Context, s string, a ...any) {
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
+	Log(ctx, tc.logger.DebugContext, "debug")
+	Log(ctx, tc.logger.InfoContext, "info")
+	Log(ctx, tc.logger.WarnContext, "warn")
+	Log(ctx, tc.logger.ErrorContext, "error")
+	Log(ctx, func(ctx context.Context, s string, a ...any) {
 		tc.logger.Log(ctx, slog.LevelInfo, s, a...)
 	}, "log")
 

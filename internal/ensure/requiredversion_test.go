@@ -19,7 +19,6 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/version"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
 )
@@ -30,8 +29,6 @@ func TestGoModVersion(t *testing.T) {
 		replace bool
 		err     error
 	}
-
-	log := zerolog.Nop()
 
 	for name, test := range map[string]test{
 		"happy":    {version: "v0.9.0"},
@@ -73,7 +70,7 @@ func TestGoModVersion(t *testing.T) {
 			child.Stderr = os.Stderr
 			require.NoError(t, child.Run(), "error while running 'go mod tidy'")
 
-			rVersion, rDir, err := goModVersion(&log, tmp)
+			rVersion, rDir, err := goModVersion(context.Background(), tmp)
 			if test.err != nil {
 				require.ErrorContains(t, err, test.err.Error())
 				return
@@ -101,7 +98,7 @@ func TestGoModVersion(t *testing.T) {
 				`), 0o644)
 
 		require.NotPanics(t, func() {
-			_, _, err := goModVersion(&log, tmp)
+			_, _, err := goModVersion(context.Background(), tmp)
 			require.ErrorIs(t, err, goenv.ErrNoGoMod)
 		})
 	})

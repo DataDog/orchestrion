@@ -8,6 +8,7 @@
 package gocql
 
 import (
+	"context"
 	"testing"
 
 	"datadoghq.dev/orchestrion/_integration-tests/validator/trace"
@@ -19,20 +20,18 @@ type TestCaseNewCluster struct {
 	base
 }
 
-func (tc *TestCaseNewCluster) Setup(t *testing.T) {
-	tc.setup(t)
+func (tc *TestCaseNewCluster) Setup(ctx context.Context, t *testing.T) {
+	tc.setup(ctx, t)
 
 	var err error
 	cluster := gocql.NewCluster(tc.hostPort)
 	tc.session, err = cluster.CreateSession()
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		tc.session.Close()
-	})
+	t.Cleanup(func() { tc.session.Close() })
 }
 
-func (tc *TestCaseNewCluster) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseNewCluster) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseNewCluster) ExpectedTraces() trace.Traces {

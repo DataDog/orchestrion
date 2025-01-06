@@ -105,6 +105,7 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 			{Username: sysUser, Password: noPassword, Account: systemAccount},
 		},
 		SystemAccount: systemAccount.Name,
+		MaxPayload:    server.MAX_PAYLOAD_MAX_SIZE,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("creating NATS server instance: %w", err)

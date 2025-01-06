@@ -24,7 +24,7 @@ type TestCaseClientError struct {
 	handler http.Handler
 }
 
-func (b *TestCaseClientError) Setup(t *testing.T) {
+func (b *TestCaseClientError) Setup(_ context.Context, t *testing.T) {
 	b.srv = &http.Server{
 		Addr:         "127.0.0.1:" + utils.GetFreePort(t),
 		ReadTimeout:  5 * time.Second,
@@ -36,13 +36,14 @@ func (b *TestCaseClientError) Setup(t *testing.T) {
 
 	go func() { assert.ErrorIs(t, b.srv.ListenAndServe(), http.ErrServerClosed) }()
 	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		// Using a new 10s-timeout context, as we may be running cleanup after the original context expired.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		assert.NoError(t, b.srv.Shutdown(ctx))
 	})
 }
 
-func (b *TestCaseClientError) Run(t *testing.T) {
+func (b *TestCaseClientError) Run(_ context.Context, t *testing.T) {
 	resp, err := http.Get(fmt.Sprintf("http://%s/", b.srv.Addr))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusTeapot, resp.StatusCode)

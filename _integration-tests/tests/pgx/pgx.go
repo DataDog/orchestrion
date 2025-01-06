@@ -28,10 +28,8 @@ type TestCase struct {
 	conn      *pgx.Conn
 }
 
-func (tc *TestCase) Setup(t *testing.T) {
+func (tc *TestCase) Setup(ctx context.Context, t *testing.T) {
 	utils.SkipIfProviderIsNotHealthy(t)
-
-	ctx := context.Background()
 
 	var err error
 	tc.container, err = testpostgres.Run(ctx,
@@ -53,14 +51,14 @@ func (tc *TestCase) Setup(t *testing.T) {
 	tc.conn, err = pgx.Connect(ctx, dbURL)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		// Using a new 10s-timeout context, as we may be running cleanup after the original context expired.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		assert.NoError(t, tc.conn.Close(ctx))
 	})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
-	ctx := context.Background()
+func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "test.root")
 	defer span.Finish()
 

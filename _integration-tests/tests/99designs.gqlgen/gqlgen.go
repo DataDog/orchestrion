@@ -8,6 +8,7 @@
 package gqlgen
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -23,13 +24,13 @@ type TestCase struct {
 	server *handler.Server
 }
 
-func (tc *TestCase) Setup(*testing.T) {
+func (tc *TestCase) Setup(context.Context, *testing.T) {
 	schema := graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}})
 	tc.server = handler.New(schema)
 	tc.server.AddTransport(transport.POST{})
 }
 
-func (tc *TestCase) Run(t *testing.T) {
+func (tc *TestCase) Run(_ context.Context, t *testing.T) {
 	c := client.New(tc.server)
 
 	const (

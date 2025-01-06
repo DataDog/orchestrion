@@ -8,6 +8,7 @@
 package awsv2
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,8 +21,8 @@ type TestCaseStructLiteralPtr struct {
 	base
 }
 
-func (tc *TestCaseStructLiteralPtr) Setup(t *testing.T) {
-	tc.setup(t)
+func (tc *TestCaseStructLiteralPtr) Setup(ctx context.Context, t *testing.T) {
+	tc.setup(ctx, t)
 
 	cfg := &aws.Config{
 		Region:       "test-region-1337",
@@ -31,8 +32,8 @@ func (tc *TestCaseStructLiteralPtr) Setup(t *testing.T) {
 	tc.cfg = *cfg
 }
 
-func (tc *TestCaseStructLiteralPtr) Run(t *testing.T) {
-	tc.base.run(t)
+func (tc *TestCaseStructLiteralPtr) Run(ctx context.Context, t *testing.T) {
+	tc.base.run(ctx, t)
 }
 
 func (tc *TestCaseStructLiteralPtr) ExpectedTraces() trace.Traces {

@@ -23,7 +23,7 @@ type TestCaseStructLiteralPtr struct {
 	logs   *bytes.Buffer
 }
 
-func (tc *TestCaseStructLiteralPtr) Setup(*testing.T) {
+func (tc *TestCaseStructLiteralPtr) Setup(context.Context, *testing.T) {
 	tc.logs = new(bytes.Buffer)
 	tc.logger = &logrus.Logger{
 		Out:          os.Stderr,
@@ -37,8 +37,8 @@ func (tc *TestCaseStructLiteralPtr) Setup(*testing.T) {
 	tc.logger.SetOutput(tc.logs)
 }
 
-func (tc *TestCaseStructLiteralPtr) Run(t *testing.T) {
-	runTest(t, tc.logs, tc.Log)
+func (tc *TestCaseStructLiteralPtr) Run(ctx context.Context, t *testing.T) {
+	runTest(ctx, t, tc.logs, tc.Log)
 }
 
 func (*TestCaseStructLiteralPtr) ExpectedTraces() trace.Traces {

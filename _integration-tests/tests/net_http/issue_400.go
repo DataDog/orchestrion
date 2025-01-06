@@ -8,6 +8,7 @@
 package nethttp
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -27,7 +28,7 @@ func wrapCustomType(f func(http.ResponseWriter, *http.Request)) handlerFunc {
 	}
 }
 
-func (tc *TestCaseIssue400) Setup(t *testing.T) {
+func (tc *TestCaseIssue400) Setup(ctx context.Context, t *testing.T) {
 	handleHit := wrapCustomType(tc.handleHit)
 	handleRoot := wrapCustomType(tc.handleRoot)
 	mux := http.NewServeMux()
@@ -35,5 +36,5 @@ func (tc *TestCaseIssue400) Setup(t *testing.T) {
 	mux.HandleFunc("/", handleRoot)
 	tc.handler = mux
 
-	tc.base.Setup(t)
+	tc.base.Setup(ctx, t)
 }
