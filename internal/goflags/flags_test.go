@@ -37,10 +37,10 @@ func TestTrim(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			tc.flags.Trim(tc.remove...)
+			flags := tc.flags.Except(tc.remove...)
 			for _, flag := range tc.remove {
-				require.NotContains(t, tc.flags.Long, flag)
-				require.NotContains(t, tc.flags.Short, flag)
+				require.NotContains(t, flags.Long, flag)
+				require.NotContains(t, flags.Short, flag)
 			}
 		})
 	}

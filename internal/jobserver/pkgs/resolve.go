@@ -143,7 +143,7 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to obtain go build flags")
 		}
-		goFlags.Trim(
+		goFlags = goFlags.Except(
 			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
 			"-toolexec", // We'll override `-toolexec` later with `orchestrion toolexec`, no need to pass multiple times...
 		)

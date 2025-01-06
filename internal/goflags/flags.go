@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -73,12 +74,29 @@ func (f CommandFlags) Get(flag string) (val string, found bool) {
 	return
 }
 
-// Trim removes the specified flags and their value from the long and short flags
-func (f CommandFlags) Trim(flags ...string) {
-	for _, flag := range flags {
-		delete(f.Long, flag)
-		delete(f.Short, flag)
+// Except returns a copy of this CommandFlags with the specified flags removed.
+// The [CommandFlags.Unknown] field is not modified, even if it is in the list
+// of flags to be removed.
+func (f CommandFlags) Except(remove ...string) CommandFlags {
+	res := CommandFlags{Unknown: f.Unknown}
+
+	res.Short = make(map[string]struct{}, len(f.Short))
+	for k, v := range f.Short {
+		if slices.Contains(remove, k) {
+			continue
+		}
+		res.Short[k] = v
 	}
+
+	res.Long = make(map[string]string, len(f.Long))
+	for k, v := range f.Long {
+		if slices.Contains(remove, k) {
+			continue
+		}
+		res.Long[k] = v
+	}
+
+	return res
 }
 
 // Slice returns the command flags as a string slice

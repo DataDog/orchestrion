@@ -71,12 +71,11 @@ func (s *service) versionSuffix(ctx context.Context, _ *VersionSuffixRequest) (V
 		if err != nil {
 			return "", err
 		}
-		flags.Trim("-toolexec")
 
 		pkgs, err = packages.Load(
 			&packages.Config{
 				Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
-				BuildFlags: append(flags.Slice(), "-toolexec="), // Explicitly disable toolexec to avoid infinite recursion
+				BuildFlags: append(flags.Except("-toolexec").Slice(), "-toolexec="), // Explicitly disable toolexec to avoid infinite recursion
 				Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			},
 			paths...,
