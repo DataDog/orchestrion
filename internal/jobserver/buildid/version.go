@@ -6,6 +6,7 @@
 package buildid
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
@@ -23,8 +24,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
+	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 )
@@ -40,9 +41,9 @@ func (*VersionSuffixRequest) Subject() string {
 
 func (VersionSuffixResponse) IsResponseTo(*VersionSuffixRequest) {}
 
-var tagSuffix string
+func (s *service) versionSuffix(ctx context.Context, _ *VersionSuffixRequest) (VersionSuffixResponse, error) {
+	log := zerolog.Ctx(ctx)
 
-func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -66,17 +67,16 @@ func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, e
 
 	var pkgs []*packages.Package
 	if paths := aspect.InjectedPaths(aspects); len(paths) != 0 {
-		flags, err := goflags.Flags()
+		flags, err := goflags.Flags(ctx)
 		if err != nil {
 			return "", err
 		}
-		flags.Trim("-toolexec")
 
 		pkgs, err = packages.Load(
 			&packages.Config{
 				Mode:       packages.NeedDeps | packages.NeedEmbedFiles | packages.NeedFiles | packages.NeedImports | packages.NeedModule,
-				BuildFlags: append(flags.Slice(), "-toolexec="), // Explicitly disable toolexec to avoid infinite recursion
-				Logf:       func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+				BuildFlags: append(flags.Except("-toolexec").Slice(), "-toolexec="), // Explicitly disable toolexec to avoid infinite recursion
+				Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			},
 			paths...,
 		)
@@ -106,7 +106,7 @@ func (s *service) versionSuffix(*VersionSuffixRequest) (VersionSuffixResponse, e
 		}
 	}
 
-	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, tagSuffix, fptr.Finish()))
+	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, getTagSuffix(ctx), fptr.Finish()))
 	return s.resolvedVersion, nil
 }
 
@@ -203,58 +203,68 @@ func (m *moduleInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(toMarshal)
 }
 
-func init() {
-	const warningSuffix = " GOCACHE may need to be manually cleared in development iteration.\n"
+var (
+	tagSuffix     string
+	tagSuffixOnce sync.Once
+)
 
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
-		log.Warnf("No debug.BuildInfo was found in executable." + warningSuffix)
-		return
-	}
+func getTagSuffix(ctx context.Context) string {
+	tagSuffixOnce.Do(func() {
+		const warningSuffix = " GOCACHE may need to be manually cleared in development iteration.\n"
+		log := zerolog.Ctx(ctx)
 
-	// If the version is "(devel)", the command was built from a development
-	// tree. It is typically empty when running test suites (via `test_main`).
-	isDev := bi.Main.Version == "(devel)" || bi.Main.Version == ""
+		bi, ok := debug.ReadBuildInfo()
+		if !ok {
+			log.Warn().Msg("No debug.BuildInfo was found in executable." + warningSuffix)
+			return
+		}
 
-	if !isDev {
-		// The build has a version... but was it from a clean tree? If not, it still
-		// is a dev build!
-		for _, setting := range bi.Settings {
-			if setting.Key == "vcs.modified" {
-				isDev = setting.Value == "true"
-				break
+		// If the version is "(devel)", the command was built from a development
+		// tree. It is typically empty when running test suites (via `test_main`).
+		isDev := bi.Main.Version == "(devel)" || bi.Main.Version == ""
+
+		if !isDev {
+			// The build has a version... but was it from a clean tree? If not, it still
+			// is a dev build!
+			for _, setting := range bi.Settings {
+				if setting.Key == "vcs.modified" {
+					isDev = setting.Value == "true"
+					break
+				}
 			}
 		}
-	}
 
-	if !isDev {
-		// At this stage we don't think this is a dev build, so we don't need a
-		// tag suffix.
-		return
-	}
+		if !isDev {
+			// At this stage we don't think this is a dev build, so we don't need a
+			// tag suffix.
+			return
+		}
 
-	// We're in a dev build, so we'll add a checksum of this executable as the tag
-	// suffix, so that development iteration isn't frustrated by needing to clear
-	// the GOCACHE over and over again.
-	path, err := os.Executable()
-	if err != nil {
-		log.Warnf("Unable to read current executable: %v."+warningSuffix, err)
-		return
-	}
+		// We're in a dev build, so we'll add a checksum of this executable as the tag
+		// suffix, so that development iteration isn't frustrated by needing to clear
+		// the GOCACHE over and over again.
+		path, err := os.Executable()
+		if err != nil {
+			log.Warn().Err(err).Msg("Unable to read current executable." + warningSuffix)
+			return
+		}
 
-	file, err := os.Open(path)
-	if err != nil {
-		log.Warnf("Unable to open %q: %v."+warningSuffix, path, err)
-		return
-	}
-	defer file.Close()
+		file, err := os.Open(path)
+		if err != nil {
+			log.Warn().Str("path", path).Err(err).Msg("Unable to open file." + warningSuffix)
+			return
+		}
+		defer file.Close()
 
-	sha := sha512.New()
-	if _, err := io.Copy(sha, file); err != nil {
-		log.Warnf("Unable to hash contents of %q: %v."+warningSuffix, path, err)
-		return
-	}
+		sha := sha512.New()
+		if _, err := io.Copy(sha, file); err != nil {
+			log.Warn().Str("path", path).Err(err).Msg("Unable to hash contents of file." + warningSuffix)
+			return
+		}
 
-	var data [sha512.Size]byte
-	tagSuffix = "+" + base64.StdEncoding.EncodeToString(sha.Sum(data[:0]))
+		var data [sha512.Size]byte
+		tagSuffix = "+" + base64.StdEncoding.EncodeToString(sha.Sum(data[:0]))
+	})
+
+	return tagSuffix
 }

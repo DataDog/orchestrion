@@ -6,18 +6,19 @@
 package aspect
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
+	"github.com/rs/zerolog"
 )
 
-func (Weaver) OnLink(cmd *proxy.LinkCommand) error {
-	log.SetContext("PHASE", "link")
-	defer log.SetContext("PHASE", "")
+func (Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) error {
+	log := zerolog.Ctx(ctx).With().Str("phase", "link").Logger()
+	ctx = log.WithContext(ctx)
 
 	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {
@@ -31,21 +32,21 @@ func (Weaver) OnLink(cmd *proxy.LinkCommand) error {
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.Filename, archiveImportPath, err)
 		}
 
-		log.Debugf("Processing %s dependencies from %s[%s]...\n", linkdeps.Filename, archiveImportPath, archive)
+		log.Debug().Str("import-path", archiveImportPath).Str("archive", archive).Msg("Processing " + linkdeps.Filename + " dependencies")
 		for _, depPath := range linkDeps.Dependencies() {
 			if arch, found := reg.PackageFile[depPath]; found {
-				log.Debugf("Already satisfied %s dependency: %q => %q\n", linkdeps.Filename, depPath, arch)
+				log.Debug().Str("import-path", depPath).Str("archive", arch).Msg("Already satisfied " + linkdeps.Filename + " dependency")
 				continue
 			}
 
-			log.Tracef("Resolving %s dependency on %q...\n", linkdeps.Filename, depPath)
-			deps, err := resolvePackageFiles(depPath, cmd.WorkDir)
+			log.Trace().Str("import-path", depPath).Msg("Resolving " + linkdeps.Filename + " dependency")
+			deps, err := resolvePackageFiles(ctx, depPath, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)
 			}
 			for p, a := range deps {
 				if _, found := reg.PackageFile[p]; !found {
-					log.Debugf("Recording resolved %s dependency: %q => %q\n", linkdeps.Filename, p, a)
+					log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
 					reg.PackageFile[p] = a
 					changed = true
 				}
@@ -57,11 +58,11 @@ func (Weaver) OnLink(cmd *proxy.LinkCommand) error {
 		return nil
 	}
 
-	log.Tracef("Backing up original %q\n", cmd.Flags.ImportCfg)
+	log.Trace().Str("path", cmd.Flags.ImportCfg).Msg("Backing up original file")
 	if err := os.Rename(cmd.Flags.ImportCfg, cmd.Flags.ImportCfg+".original"); err != nil {
 		return fmt.Errorf("renaming %q: %w", cmd.Flags.ImportCfg, err)
 	}
-	log.Tracef("Writing updated %q\n", cmd.Flags.ImportCfg)
+	log.Trace().Str("path", cmd.Flags.ImportCfg).Msg("Writing updated file")
 	if err := reg.WriteFile(cmd.Flags.ImportCfg); err != nil {
 		return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 	}

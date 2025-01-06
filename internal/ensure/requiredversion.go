@@ -6,6 +6,7 @@
 package ensure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,8 +16,8 @@ import (
 	"syscall"
 
 	"github.com/DataDog/orchestrion/internal/goenv"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
+	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -41,8 +42,8 @@ var (
 // proceed with it's intended purpose. If it returns an error, that should be presented to the user
 // before exiting with a non-0 status code. If the process was correctly substituted, this function
 // never returns control to its caller (as the process has been replaced).
-func RequiredVersion() error {
-	return requiredVersion(goModVersion, os.Getenv, syscall.Exec, os.Args)
+func RequiredVersion(ctx context.Context) error {
+	return requiredVersion(ctx, goModVersion, os.Getenv, syscall.Exec, os.Args)
 }
 
 // StartupVersion returns the version of Orchestrion that has started this process. If this is the
@@ -59,12 +60,15 @@ func StartupVersion() string {
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
 // syscall.Exec functions as arguments to allow for easier testing. Panics if `osArgs` is 0-length.
 func requiredVersion(
-	goModVersion func(string) (string, string, error),
+	ctx context.Context,
+	goModVersion func(context.Context, string) (string, string, error),
 	osGetenv func(string) string,
 	syscallExec func(argv0 string, argv []string, env []string) error,
 	osArgs []string,
 ) error {
-	rVersion, path, err := goModVersion("" /* Current working directory */)
+	log := zerolog.Ctx(ctx)
+
+	rVersion, path, err := goModVersion(ctx, "" /* Current working directory */)
 	if err != nil {
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
 	}
@@ -93,7 +97,7 @@ func requiredVersion(
 		rVersion = envValRespawnReplaced
 	}
 
-	log.Infof("Re-starting with '%s@%s' (this is %s)\n", orchestrionPkgPath, rVersion, version.Tag)
+	log.Info().Msgf("Re-starting with '%s@%s' (this is %s)", orchestrionPkgPath, rVersion, version.Tag)
 
 	goBin, err := exec.LookPath("go")
 	if err != nil {
@@ -128,16 +132,17 @@ func requiredVersion(
 // required in the specified directory's "go.mod" file. If dir is blank, the process' current
 // working directory is used. The version may be blank if a replace directive is in effect; in which
 // case the path value may indicate the location of the source code that is being used instead.
-func goModVersion(dir string) (moduleVersion string, moduleDir string, err error) {
+func goModVersion(ctx context.Context, dir string) (moduleVersion string, moduleDir string, err error) {
 	gomod, err := goenv.GOMOD(dir)
 	if err != nil {
 		return "", "", err
 	}
 
+	log := zerolog.Ctx(ctx)
 	cfg := &packages.Config{
 		Dir:  filepath.Dir(gomod),
 		Mode: packages.NeedModule,
-		Logf: func(format string, args ...any) { log.Tracef(format+"\n", args...) },
+		Logf: func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 	}
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {

@@ -6,15 +6,16 @@
 package pin
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/ensure"
 	"github.com/DataDog/orchestrion/internal/injector/config"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/rs/zerolog"
 	"golang.org/x/term"
 )
 
@@ -23,7 +24,9 @@ const envVarCheckedGoMod = "DD_ORCHESTRION_IS_GOMOD_VERSION"
 // AutoPinOrchestrion automatically runs `pinOrchestrion` if the necessary
 // requirements are not already met. It prints messages to `os.Stderr` to inform
 // the user about what is going on.
-func AutoPinOrchestrion() {
+func AutoPinOrchestrion(ctx context.Context) {
+	log := zerolog.Ctx(ctx)
+
 	if os.Getenv(envVarCheckedGoMod) == "true" {
 		// A parent process (or ourselves earlier) has already done the check
 		return
@@ -34,17 +37,13 @@ func AutoPinOrchestrion() {
 		_ = os.Setenv(envVarCheckedGoMod, "true")
 	}()
 
-	requiredVersionError := ensure.RequiredVersion()
+	requiredVersionError := ensure.RequiredVersion(ctx)
 	if requiredVersionError == nil {
 		// We're good to go
 		return
 	}
 
-	log.Tracef("Failed to detect required version of orchestrion from go.mod: %v\n", requiredVersionError)
-	if wd, err := os.Getwd(); err == nil {
-		log.Tracef("Working directory: %q\n", wd)
-	}
-	log.Tracef("GOMOD=%s\n", os.Getenv("GOMOD"))
+	log.Trace().Err(requiredVersionError).Msg("Failed to detect required version of orchestrion from go.mod")
 
 	var (
 		box       = lipgloss.NewStyle()
@@ -87,7 +86,7 @@ func AutoPinOrchestrion() {
 	message := builder.String()
 	_, _ = fmt.Fprintln(os.Stderr, box.Render(message))
 
-	if err := PinOrchestrion(Options{}); err != nil {
+	if err := PinOrchestrion(ctx, Options{}); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Failed to pin orchestrion in go.mod: %v\n", err)
 		os.Exit(1)
 	}

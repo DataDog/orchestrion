@@ -12,6 +12,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.10.24
 	github.com/nats-io/nats.go v1.38.0
 	github.com/otiai10/copy v1.14.0
+	github.com/rs/zerolog v1.33.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/sergi/go-diff v1.3.1
 	github.com/shirou/gopsutil/v3 v3.24.5

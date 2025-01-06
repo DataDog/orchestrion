@@ -9,6 +9,7 @@
 package injector
 
 import (
+	gocontext "context"
 	"errors"
 	"fmt"
 	"go/importer"
@@ -20,12 +21,12 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver"
 	"github.com/dave/dst/decorator/resolver/gotypes"
 	"github.com/dave/dst/dstutil"
+	"github.com/rs/zerolog"
 )
 
 type (
@@ -82,11 +83,12 @@ type (
 // InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
-func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[string]InjectedFile, context.GoLangVersion, error) {
+func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []*aspect.Aspect) (map[string]InjectedFile, context.GoLangVersion, error) {
 	if err := i.validate(); err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
 
+	log := zerolog.Ctx(ctx)
 	aspects = i.packageFilterAspects(aspects)
 
 	fset := token.NewFileSet()
@@ -97,7 +99,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	}
 
 	if len(parsedFiles) == 0 {
-		log.Debugf("No files to inject in %s after filtering on imports and files\n", i.ImportPath)
+		log.Debug().Str("import-path", i.ImportPath).Msg("No files to inject in package after filtering on imports and files")
 		return nil, context.GoLangVersion{}, nil
 	}
 
@@ -105,7 +107,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 	if errors.Is(err, typeCheckingError{}) {
 		// We don't want to fail here on type-checking errors... Instead do nothing and let the standard
 		// go compiler/toolchain surface the error to the user in a canonical way.
-		log.Warnf("Skipping injectrion in %s due to: %v\n", i.ImportPath, err)
+		log.Warn().Str("import-path", i.ImportPath).Err(err).Msg("Skipping injectrion due to type checking error")
 		return nil, context.GoLangVersion{}, nil
 	} else if err != nil {
 		return nil, context.GoLangVersion{}, err
@@ -134,7 +136,7 @@ func (i *Injector) InjectFiles(files []string, aspects []*aspect.Aspect) (map[st
 				return
 			}
 
-			res, err := i.injectFile(decorator, dstFile, typeInfo, parsedFile.Aspects)
+			res, err := i.injectFile(ctx, decorator, dstFile, typeInfo, parsedFile.Aspects)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -174,8 +176,8 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, typeInfo types.Info, aspects []*aspect.Aspect) (result, error) {
-	result, err := i.applyAspects(parameters{
+func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decorator, file *dst.File, typeInfo types.Info, aspects []*aspect.Aspect) (result, error) {
+	result, err := i.applyAspects(ctx, parameters{
 		Decorator: decorator,
 		File:      file,
 		TypeInfo:  typeInfo,
@@ -186,7 +188,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, ty
 	}
 
 	if result.Modified {
-		result.Filename, err = i.writeModifiedFile(decorator, file)
+		result.Filename, err = i.writeModifiedFile(ctx, decorator, file)
 		if err != nil {
 			return result, err
 		}
@@ -195,7 +197,7 @@ func (i *Injector) injectFile(decorator *decorator.Decorator, file *dst.File, ty
 	return result, nil
 }
 
-func (i *Injector) applyAspects(params parameters) (result, error) {
+func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (result, error) {
 	var (
 		chain      *context.NodeChain
 		modified   bool
@@ -204,7 +206,7 @@ func (i *Injector) applyAspects(params parameters) (result, error) {
 	)
 
 	pre := func(csor *dstutil.Cursor) bool {
-		if err != nil || csor.Node() == nil || isIgnored(csor.Node()) {
+		if err != nil || csor.Node() == nil || isIgnored(ctx, csor.Node()) {
 			return false
 		}
 

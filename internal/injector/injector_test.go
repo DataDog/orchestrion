@@ -6,6 +6,7 @@
 package injector_test
 
 import (
+	gocontext "context"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -121,7 +122,7 @@ func Test(t *testing.T) {
 				ImportMap:    importMap,
 			}
 
-			res, resGoLang, err := inj.InjectFiles([]string{inputFile}, config.Aspects)
+			res, resGoLang, err := inj.InjectFiles(gocontext.Background(), []string{inputFile}, config.Aspects)
 			require.NoError(t, err, "failed to inject file")
 
 			resFile, modified := res[inputFile]

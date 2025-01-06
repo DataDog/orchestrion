@@ -6,6 +6,7 @@
 package goproxy
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/log"
+	"github.com/rs/zerolog"
 )
 
 type config struct {
@@ -53,13 +54,15 @@ func WithToolexec(bin string, args ...string) Option {
 // Run takes a go command ("build", "install", etc...) with its arguments, and
 // applies changes specified through opts to the command before running it in a
 // different process.
-func Run(goArgs []string, opts ...Option) error {
+func Run(ctx context.Context, goArgs []string, opts ...Option) error {
+	log := zerolog.Ctx(ctx)
+
 	var cfg config
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
-	goArgs, err := ProcessDashC(goArgs)
+	goArgs, err := processDashC(ctx, goArgs)
 	if err != nil {
 		return err
 	}
@@ -84,7 +87,7 @@ func Run(goArgs []string, opts ...Option) error {
 		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
 		case "build", "clean", "get", "install", "list", "run", "test":
 			if cfg.toolexec != "" {
-				log.Debugf("Adding -toolexec=%q argument\n", cfg.toolexec)
+				log.Debug().Str("-toolexec", cfg.toolexec).Msg("Adding -toolexec argument")
 
 				oldLen := len(argv)
 				// Add two slots to the argV array
@@ -96,23 +99,23 @@ func Run(goArgs []string, opts ...Option) error {
 				argv[3] = cfg.toolexec
 
 				// We'll need a job server to support toolexec operations
-				server, err := jobserver.New(&jobserver.Options{ServerName: fmt.Sprintf("orchestrion[%d]", os.Getpid())})
+				server, err := jobserver.New(ctx, &jobserver.Options{ServerName: fmt.Sprintf("orchestrion[%d]", os.Getpid())})
 				if err != nil {
 					return err
 				}
 				defer func() {
 					server.Shutdown()
-					log.Tracef("[JOBSERVER]: %s\n", server.CacheStats.String())
+					log.Trace().Msg(server.CacheStats.String())
 				}()
 				env = append(env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, server.ClientURL()))
 
 				// Set the process' goflags, since we know them already...
-				goflags.SetFlags("", argv[1:])
+				goflags.SetFlags(ctx, "", argv[1:])
 			}
 		}
 	}
 
-	log.Tracef("exec: %q\n", argv)
+	log.Trace().Strs("command", argv).Msg("exec")
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Env = env
 	cmd.Stdin = os.Stdin
