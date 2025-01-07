@@ -14,11 +14,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
@@ -68,6 +71,23 @@ var weavingSpecialCase = []specialCase{
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err error) {
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Logger()
 	ctx = log.WithContext(ctx)
+
+	if js, err := client.FromEnvironment(ctx, cmd.WorkDir); err != nil {
+		log.Debug().Str("work-dir", cmd.WorkDir).Err(err).Msg("Failed to obtain job server client")
+	} else {
+		defer js.Close()
+		res, err := client.Request[nbt.StartRequest, *nbt.StartResponse](ctx, js, nbt.StartRequest{ImportPath: w.ImportPath})
+		if err != nil {
+			return err
+		}
+		if res.ArchivePath != "" {
+			log.Debug().Str("archive", res.ArchivePath).Msg("Using pre-built archive")
+			if err := files.LinkOrCopy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
+				return err
+			}
+			return proxy.SkipCommand
+		}
+	}
 
 	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {

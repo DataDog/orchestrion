@@ -17,6 +17,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
+	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -39,6 +40,8 @@ type (
 		CacheStats *common.CacheStats // Cache statistics
 		clientURL  string             // The client URL to use for connecting to this server
 		log        zerolog.Logger
+
+		shutdownHooks []func(context.Context) error
 
 		// Tracking connected clients for automatic shutdown on inactivity...
 		clients           map[uint64]string
@@ -161,6 +164,11 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 	if err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
+	if cleanup, err := nbt.Subscribe(ctx, conn); err != nil {
+		return nil, err
+	} else {
+		res.onShutdown(cleanup)
+	}
 	if _, err := conn.Subscribe("clients", res.handleClients); err != nil {
 		return nil, err
 	}
@@ -199,6 +207,10 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 	return &res, nil
 }
 
+func (s *Server) onShutdown(cb func(context.Context) error) {
+	s.shutdownHooks = append(s.shutdownHooks, cb)
+}
+
 // Connect returns a client using the in-process connection to the server.
 func (s *Server) Connect() (*client.Client, error) {
 	conn, err := nats.Connect(
@@ -222,12 +234,20 @@ func (s *Server) ClientURL() string {
 // Shutdown initiates the shutdown of this server.
 func (s *Server) Shutdown() {
 	s.server.Shutdown()
+	go s.WaitForShutdown()
 }
 
 // WaitForShutdown waits indefinitely for this server to have shut down.
 func (s *Server) WaitForShutdown() {
 	s.server.WaitForShutdown()
 	s.log.Trace().Msg(s.CacheStats.String())
+
+	ctx := s.log.WithContext(context.Background())
+	for _, cb := range s.shutdownHooks {
+		if err := cb(ctx); err != nil {
+			s.log.Error().Err(err).Msg("Shutdown hook error")
+		}
+	}
 }
 
 func (s *Server) handleClients(msg *nats.Msg) {
