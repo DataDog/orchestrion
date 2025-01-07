@@ -6,6 +6,7 @@
 package aspect
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -16,10 +17,10 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
+	"github.com/rs/zerolog"
 )
 
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for
@@ -28,13 +29,13 @@ import (
 // creating circular import dependencies).
 // This ensures that the relevant packages' `init` (if any) are appropriately run, and that the
 // linker automatically picks up these dependencies when creating the full binary.
-func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
+func (Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) error {
 	if cmd.Flags.Package != "main" {
 		return nil
 	}
 
-	log.SetContext("PHASE", "compile(main)")
-	defer log.SetContext("PHASE", "")
+	log := zerolog.Ctx(ctx).With().Str("phase", "compile(main)").Logger()
+	ctx = log.WithContext(ctx)
 
 	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {
@@ -55,7 +56,7 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
 	for _, linkDepPath := range newDeps {
-		deps, err := resolvePackageFiles(linkDepPath, cmd.WorkDir)
+		deps, err := resolvePackageFiles(ctx, linkDepPath, cmd.WorkDir)
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", linkDepPath, err)
 		}
@@ -63,7 +64,7 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 			if _, found := reg.PackageFile[p]; found {
 				continue
 			}
-			log.Debugf("Recording resolved %s dependency: %q => %q\n", linkdeps.Filename, p, a)
+			log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
 			reg.PackageFile[p] = a
 		}
 	}
@@ -71,12 +72,12 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 	// We back up the original ImportCfg file only if there's not already such a file (could have been created by OnCompile)
 	backupFile := cmd.Flags.ImportCfg + ".original"
 	if _, err := os.Stat(backupFile); errors.Is(err, os.ErrNotExist) {
-		log.Tracef("Backing up original %q\n", cmd.Flags.ImportCfg)
+		log.Trace().Str("path", cmd.Flags.ImportCfg).Msg("Backing up original file")
 		if err := os.Rename(cmd.Flags.ImportCfg, backupFile); err != nil {
 			return fmt.Errorf("renaming %q: %w", cmd.Flags.ImportCfg, err)
 		}
 	}
-	log.Tracef("Writing updated %q\n", cmd.Flags.ImportCfg)
+	log.Trace().Str("path", cmd.Flags.ImportCfg).Msg("Writing updated file")
 	if err := reg.WriteFile(cmd.Flags.ImportCfg); err != nil {
 		return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 	}
@@ -94,7 +95,7 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 
 	genDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion", "src", "synthetic")
 	genFile := filepath.Join(genDir, "link_deps_imports.go")
-	log.Tracef("Writing new blank imports source file %q\n", genFile)
+	log.Trace().Str("path", genFile).Msg("Writing new blank imports source file")
 	if err := os.MkdirAll(genDir, 0o755); err != nil {
 		return fmt.Errorf("creating directory %q: %w", genDir, err)
 	}
@@ -108,7 +109,7 @@ func (Weaver) OnCompileMain(cmd *proxy.CompileCommand) error {
 		return fmt.Errorf("formatting generated code for %s: %w", genFile, err)
 	}
 
-	log.Debugf("Adding synthetic source file to command: %q\n", genFile)
+	log.Debug().Str("path", genFile).Msg("Adding synthetic source file to command")
 	cmd.AddFiles([]string{genFile})
 
 	return nil

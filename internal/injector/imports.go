@@ -6,15 +6,16 @@
 package injector
 
 import (
+	"context"
 	"go/token"
 	"slices"
 	"strconv"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
+	"github.com/rs/zerolog"
 )
 
 // packageFilterAspects filters out aspects that imply imports not present in the import map and return a copy
@@ -39,8 +40,8 @@ func (i *Injector) packageFilterAspects(aspects []*aspect.Aspect) []*aspect.Aspe
 //
 // To do so, it modifies the AST file so that it only includes a single import per path, using the
 // first non-empty alias found.
-func canonicalizeImports(file *dst.File) {
-	specsByPath := importSpecsByImportPath(file.Imports)
+func canonicalizeImports(ctx context.Context, file *dst.File) {
+	specsByPath := importSpecsByImportPath(ctx, file.Imports)
 
 	retain := filterExtraneousImports(specsByPath)
 
@@ -52,13 +53,15 @@ func canonicalizeImports(file *dst.File) {
 	filterDecls(file, retain)
 }
 
-func importSpecsByImportPath(imports []*dst.ImportSpec) map[string][]*dst.ImportSpec {
+func importSpecsByImportPath(ctx context.Context, imports []*dst.ImportSpec) map[string][]*dst.ImportSpec {
+	log := zerolog.Ctx(ctx)
+
 	byPath := make(map[string][]*dst.ImportSpec, len(imports))
 
 	for _, imp := range imports {
 		path, err := strconv.Unquote(imp.Path.Value)
 		if err != nil {
-			log.Debugf("failed to unquote import path %q: %v\n", imp.Path.Value, err)
+			log.Debug().Str("import-path", imp.Path.Value).Err(err).Msg("failed to unquote import path")
 			continue
 		}
 		byPath[path] = append(byPath[path], imp)

@@ -160,7 +160,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@64418826697dcd77c93a8e4a1f7601a1942e57b5 # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@6ae615f6475d2ede5ad88bea6baa7a1d5e93ffaa # v3
 
   ##############################################################################
   # Run all unit tests with coverage enabled
@@ -185,7 +185,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p coverage
-          test_args=("-shuffle=on" "-race" "-v")
+          test_args=("-shuffle=on" "-race")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
           fi
@@ -194,7 +194,7 @@ jobs:
         shell: bash
         run: |-
           mkdir -p coverage
-          test_args=("-shuffle=on" "-race" "-v")
+          test_args=("-shuffle=on" "-race")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
           fi

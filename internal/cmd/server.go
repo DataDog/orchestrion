@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -16,8 +17,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/log"
 	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 
 	"github.com/urfave/cli/v2"
@@ -51,37 +52,37 @@ var Server = &cli.Command{
 			Name:        "build-flags",
 			Usage:       "Specify the 'go build' flags to use when resolving packages. This is specified as a YAML array and must start with a valid go subcommand (e.g, 'build').",
 			DefaultText: "Looked up the process hierarchy",
-			Action: func(_ *cli.Context, val string) error {
+			Action: func(ctx *cli.Context, val string) error {
 				var args []string
 				if err := yaml.Unmarshal([]byte(val), &args); err != nil {
 					return cli.Exit(fmt.Errorf("invalid -build-flags value: %w", err), 2)
 				}
-				goflags.SetFlags(".", args)
+				goflags.SetFlags(ctx.Context, ".", args)
 				return nil
 			},
 		},
 	},
 	Hidden: true,
-	Action: func(c *cli.Context) error {
+	Action: func(ctx *cli.Context) error {
 		opts := jobserver.Options{
 			ServerName:        "github.com/DataDog/orchestrion server",
-			Port:              c.Int("port"),
-			InactivityTimeout: c.Duration("inactivity-timeout"),
-			EnableLogging:     c.Bool("nats-logging"),
+			Port:              ctx.Int("port"),
+			InactivityTimeout: ctx.Duration("inactivity-timeout"),
+			EnableLogging:     ctx.Bool("nats-logging"),
 		}
 
-		if urlFile := c.String("url-file"); urlFile != "" {
-			return startWithURLFile(&opts, urlFile)
+		if urlFile := ctx.String("url-file"); urlFile != "" {
+			return startWithURLFile(ctx.Context, &opts, urlFile)
 		}
-		_, err := start(&opts, true)
+		_, err := start(ctx.Context, &opts, true)
 		return err
 	},
 }
 
 // start starts a new job server, and waits for it to have completely shut down if `wait` is true.
 // When `wait` is true, the server is always returned as `nil`.
-func start(opts *jobserver.Options, wait bool) (*jobserver.Server, cli.ExitCoder) {
-	server, err := jobserver.New(opts)
+func start(ctx context.Context, opts *jobserver.Options, wait bool) (*jobserver.Server, cli.ExitCoder) {
+	server, err := jobserver.New(ctx, opts)
 	if err != nil {
 		return nil, cli.Exit(fmt.Errorf("failed to start job server: %w", err), 1)
 	}
@@ -96,7 +97,7 @@ func start(opts *jobserver.Options, wait bool) (*jobserver.Server, cli.ExitCoder
 
 // startWithURLFile starts a new job server using the provided URL file (unless the file contains the URL to a still
 // running server), and waits for it to have completely shut down.
-func startWithURLFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
+func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile string) cli.ExitCoder {
 	mu := filelock.MutexAt(urlFile)
 	if err := mu.RLock(); err != nil {
 		return cli.Exit(fmt.Errorf("failed to acquire read lock on %q: %w", urlFile, err), 1)
@@ -122,12 +123,12 @@ func startWithURLFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
 	}
 
 	// This process "owns" the URL file, so it'll try had to remove it when it terminates...
-	cancelDeleteOnInterrupt := deleteOnInterrupt(urlFile)
+	cancelDeleteOnInterrupt := deleteOnInterrupt(ctx, urlFile)
 	defer cancelDeleteOnInterrupt()
 	defer os.Remove(urlFile)
 
 	// Start the server normally...
-	server, err := start(opts, false)
+	server, err := start(ctx, opts, false)
 	if err != nil {
 		return err
 	}
@@ -144,7 +145,7 @@ func startWithURLFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
 	}
 
 	// Try to watch for removal of the URL file, so we can shut down the server eagerly when that happens.
-	cancelShutdownOnRemove := shutdownOnRemove(server, urlFile)
+	cancelShutdownOnRemove := shutdownOnRemove(ctx, server, urlFile)
 	defer cancelShutdownOnRemove()
 
 	server.WaitForShutdown()
@@ -153,7 +154,7 @@ func startWithURLFile(opts *jobserver.Options, urlFile string) cli.ExitCoder {
 
 // deleteOnInterrupt attempts to deletes the provided file when an interrupt signal is received. It returns a
 // cancellation function that can be used to uninstall the signal handler.
-func deleteOnInterrupt(path string) func() {
+func deleteOnInterrupt(ctx context.Context, path string) func() {
 	sigChan := make(chan os.Signal, 1)
 	cancel := func() {
 		signal.Stop(sigChan)
@@ -167,7 +168,8 @@ func deleteOnInterrupt(path string) func() {
 		}
 		defer cancel()
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Warnf("Failed to remove %q: %v\n", path, err)
+			log := zerolog.Ctx(ctx)
+			log.Warn().Str("path", path).Err(err).Msg("os.Remove failed")
 		}
 	}()
 
@@ -199,22 +201,24 @@ func hasURLToRunningServer(urlFile string) (string, error) {
 // shutdownOnRemove shuts the server down when the designated file is removed. It returns a cancellation function that
 // can be used to cancel the file watcher. Since fsnotify support is highly dependent on platform/kernel support, this
 // function ignores any error and emits WARN log entries describing the problem.
-func shutdownOnRemove(server *jobserver.Server, urlFile string) func() error {
+func shutdownOnRemove(ctx context.Context, server *jobserver.Server, urlFile string) func() error {
+	log := zerolog.Ctx(ctx)
+
 	// noCancel is returned when there is nothing to cancel...
 	noCancel := func() error { return nil }
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Warnf("Failed to create fsnotify watcher: %v\n", err)
-		log.Warnf("The server will not automatically shut down when the URL file (%q) is removed; only when it reaches the configured inactivity timeout.", urlFile)
+		log.Warn().Err(err).Msg("Failed to create fsnotify watcher")
+		log.Warn().Str("url-file", urlFile).Msg("The server will not automatically shut down when the URL file is removed; only when it reaches the configured inactivity timeout.")
 		return noCancel
 	}
 	cancel := watcher.Close
 
 	if err := watcher.Add(urlFile); err != nil {
 		defer cancel()
-		log.Warnf("Failed to watch URL file at %q: %v\n", urlFile, err)
-		log.Warnf("The server will not automatically shut down when the URL file (%q) is removed; only when it reaches the configured inactivity timeout.", urlFile)
+		log.Warn().Str("url-file", urlFile).Err(err).Msg("Failed to watch URL file")
+		log.Warn().Str("url-file", urlFile).Msg("The server will not automatically shut down when the URL file is removed; only when it reaches the configured inactivity timeout.")
 		return noCancel
 	}
 
@@ -226,14 +230,14 @@ func shutdownOnRemove(server *jobserver.Server, urlFile string) func() error {
 					return
 				}
 				if event.Has(fsnotify.Remove) {
-					log.Tracef("URL file at %q was removed; shutting down...\n", event.Name)
+					log.Trace().Str("url-file", event.Name).Msg("URL file was removed; shutting down...")
 					server.Shutdown()
 				}
 			case err, ok := <-errors:
 				if !ok {
 					return
 				}
-				log.Warnf("File watcher produced an error: %v\n", err)
+				log.Warn().Err(err).Msg("File watcher produced an error")
 			}
 		}
 	}(watcher.Events, watcher.Errors)

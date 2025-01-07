@@ -7,6 +7,7 @@ package builtin_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -94,7 +95,7 @@ func Test(t *testing.T) {
 			copyAspects := make([]*aspect.Aspect, len(aspects))
 			copy(copyAspects, aspects)
 
-			results, _, err := inj.InjectFiles(files, copyAspects)
+			results, _, err := inj.InjectFiles(context.Background(), files, copyAspects)
 			require.NoError(t, err)
 
 			for _, filename := range files {

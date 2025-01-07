@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -16,7 +17,7 @@ import (
 // test to verify the [ensure.RequiredVersion] function behaves correctly in
 // real conditions.
 func main() {
-	if err := ensure.RequiredVersion(); err != nil {
+	if err := ensure.RequiredVersion(context.Background()); err != nil {
 		log.Fatalln(err)
 	}
 
