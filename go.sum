@@ -20,8 +20,8 @@ github.com/DataDog/datadog-go/v5 v5.6.0 h1:2oCLxjF/4htd55piM75baflj/KoE6VYS7alEU
 github.com/DataDog/datadog-go/v5 v5.6.0/go.mod h1:K9kcYBlxkcPP8tvvjZZKs/m1edNAUFzBbdpTUKfCsuw=
 github.com/DataDog/go-libddwaf/v3 v3.5.1 h1:GWA4ln4DlLxiXm+X7HA/oj0ZLcdCwOS81KQitegRTyY=
 github.com/DataDog/go-libddwaf/v3 v3.5.1/go.mod h1:n98d9nZ1gzenRSk53wz8l6d34ikxS+hs62A31Fqmyi4=
-github.com/DataDog/go-runtime-metrics-internal v0.0.3 h1:AqzLCS4rqojBoCNwEAmbpLFAkKT43e+ze/a6aFbfDpU=
-github.com/DataDog/go-runtime-metrics-internal v0.0.3/go.mod h1:quaQJ+wPN41xEC458FCpTwyROZm3MzmTZ8q8XOXQiPs=
+github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20241206090539-a14610dc22b6 h1:bpitH5JbjBhfcTG+H2RkkiUXpYa8xSuIPnyNtTaSPog=
+github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20241206090539-a14610dc22b6/go.mod h1:quaQJ+wPN41xEC458FCpTwyROZm3MzmTZ8q8XOXQiPs=
 github.com/DataDog/go-sqllexer v0.0.18 h1:ErBvoO7/srJLdA2ebwd+HPqD4g1kN++BP64A8qvmh9U=
 github.com/DataDog/go-sqllexer v0.0.18/go.mod h1:KwkYhpFEVIq+BfobkTC1vfqm4gTi65skV/DpDBXtexc=
 github.com/DataDog/go-tuf v1.1.0-0.5.2 h1:4CagiIekonLSfL8GMHRHcHudo1fQnxELS9g4tiAupQ4=
@@ -741,8 +741,8 @@ google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp0
 google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
 google.golang.org/protobuf v1.36.1 h1:yBPeRvTftaleIgM3PZ/WBIZ7XM/eEYAaEyCwvyjq/gk=
 google.golang.org/protobuf v1.36.1/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
-gopkg.in/DataDog/dd-trace-go.v1 v1.70.3-0.20250106105244-a256d2b7c7f7 h1:0BLsPMPy7CmqmUnKE+Y0j+wjEI71vZaryvNxO6iLJcE=
-gopkg.in/DataDog/dd-trace-go.v1 v1.70.3-0.20250106105244-a256d2b7c7f7/go.mod h1:CVUgctrrPGeB+OSjgyt56CNH5QxQwW3t11QU8R1LQjQ=
+gopkg.in/DataDog/dd-trace-go.v1 v1.71.0-rc.4 h1:/YqphHRVnocQjbHkNArGrAOCtWBUlhf0mjZb5iySX5E=
+gopkg.in/DataDog/dd-trace-go.v1 v1.71.0-rc.4/go.mod h1:0M7D+g0aTIlQgxqTSWrmTjssl+POsL5TVDaX2QFKk4U=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
