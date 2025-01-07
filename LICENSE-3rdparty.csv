@@ -82,7 +82,6 @@ orchestrion,github.com/yusufpapurcu/wmi,MIT,Copyright (c) 2013 Stack Exchange
 orchestrion,go.opentelemetry.io/collector/component,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/config/configtelemetry,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/pdata,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/collector/pdata/pprofile,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/semconv,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/otel,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/otel/metric,Apache-2.0,unknown
