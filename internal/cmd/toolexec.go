@@ -56,19 +56,19 @@ var Toolexec = &cli.Command{
 		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
 		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
 
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.SkipCommand) {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Info().Msg("OnCompile processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); errors.Is(err, proxy.SkipCommand) {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Info().Msg("OnCompileMain processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); errors.Is(err, proxy.SkipCommand) {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Info().Msg("OnLink processor requested command skipping...")
 			return nil
 		} else if err != nil {

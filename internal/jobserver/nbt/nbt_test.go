@@ -51,12 +51,12 @@ func Test(t *testing.T) {
 				defer wg.Done()
 
 				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				assert.Empty(t, res.FinishToken)
-				require.NotEmpty(t, res.ArchivePath)
+				assert.NotEmpty(t, res.ArchivePath)
 
 				content, err := os.ReadFile(res.ArchivePath)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				assert.Equal(t, archiveContent, string(content))
 			}()
 		}
@@ -116,7 +116,7 @@ func Test(t *testing.T) {
 				defer wg.Done()
 
 				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
-				require.ErrorContains(t, err, errorText)
+				assert.ErrorContains(t, err, errorText)
 				assert.Nil(t, res)
 			}()
 		}
@@ -147,7 +147,7 @@ func Test(t *testing.T) {
 				defer wg.Done()
 
 				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
-				require.ErrorContains(t, err, errNoArchiveNorError.Error())
+				assert.ErrorContains(t, err, errNoArchiveNorError.Error())
 				assert.Nil(t, res)
 			}()
 		}
@@ -180,7 +180,7 @@ func Test(t *testing.T) {
 				defer wg.Done()
 
 				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
-				require.ErrorContains(t, err, archive)
+				assert.ErrorContains(t, err, archive)
 				assert.Nil(t, res)
 			}()
 		}

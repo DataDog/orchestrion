@@ -85,7 +85,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 			if err := files.LinkOrCopy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
 				return err
 			}
-			return proxy.SkipCommand
+			return proxy.ErrSkipCommand
 		}
 	}
 

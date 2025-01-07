@@ -164,11 +164,11 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 	if err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
-	if cleanup, err := nbt.Subscribe(ctx, conn); err != nil {
+	cleanup, err := nbt.Subscribe(ctx, conn)
+	if err != nil {
 		return nil, err
-	} else {
-		res.onShutdown(cleanup)
 	}
+	res.onShutdown(cleanup)
 	if _, err := conn.Subscribe("clients", res.handleClients); err != nil {
 		return nil, err
 	}
