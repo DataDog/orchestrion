@@ -24,14 +24,14 @@ var Toolexec = &cli.Command{
 	UsageText:       "orchestrion toolexec [tool] [tool args...]",
 	Args:            true,
 	SkipFlagParsing: true,
-	Action: func(ctx *cli.Context) error {
+	Action: func(ctx *cli.Context) (resErr error) {
 		log := zerolog.Ctx(ctx.Context)
 
 		proxyCmd, err := proxy.ParseCommand(ctx.Args().Slice())
 		if err != nil {
 			return err
 		}
-		defer proxyCmd.Close()
+		defer func() { proxyCmd.Close(resErr) }()
 
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do

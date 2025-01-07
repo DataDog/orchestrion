@@ -7,6 +7,7 @@ package aspect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -75,18 +76,36 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	if js, err := client.FromEnvironment(ctx, cmd.WorkDir); err != nil {
 		log.Debug().Str("work-dir", cmd.WorkDir).Err(err).Msg("Failed to obtain job server client")
 	} else {
-		defer js.Close()
 		res, err := client.Request[nbt.StartRequest, *nbt.StartResponse](ctx, js, nbt.StartRequest{ImportPath: w.ImportPath})
 		if err != nil {
+			js.Close()
 			return err
 		}
 		if res.ArchivePath != "" {
+			defer js.Close()
 			log.Debug().Str("archive", res.ArchivePath).Msg("Using pre-built archive")
 			if err := files.LinkOrCopy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
 				return err
 			}
 			return proxy.ErrSkipCommand
 		}
+
+		cmd.OnClose(func(exitErr error) error {
+			defer js.Close()
+
+			var error *string
+			if err != nil {
+				msg := errors.Join(exitErr, err).Error()
+				error = &msg
+			}
+			_, err := client.Request[nbt.FinishRequest, *nbt.FinishResponse](ctx, js, nbt.FinishRequest{
+				ImportPath:  w.ImportPath,
+				FinishToken: res.FinishToken,
+				ArchivePath: cmd.Flags.Output,
+				Error:       error,
+			})
+			return err
+		})
 	}
 
 	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
@@ -285,7 +304,12 @@ func writeLinkDeps(log zerolog.Logger, cmd *proxy.CompileCommand, linkDeps *link
 		return fmt.Errorf("writing %s file: %w", linkdeps.Filename, err)
 	}
 
-	cmd.OnClose(func() error {
+	cmd.OnClose(func(err error) error {
+		if err != nil {
+			// Don't try to add to the archive if the compilation failed!
+			return nil
+		}
+
 		log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, linkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
 		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
 		if err := child.Run(); err != nil {
