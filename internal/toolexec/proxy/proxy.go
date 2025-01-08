@@ -91,7 +91,9 @@ func (cmd *command) OnClose(cb func(error) error) {
 }
 
 func (cmd *command) Close(err error) error {
-	for _, cb := range cmd.onClose {
+	// Run these in reverse order, so it behaves like "defer".
+	for idx := len(cmd.onClose) - 1; idx >= 0; idx-- {
+		cb := cmd.onClose[idx]
 		if err := cb(err); err != nil {
 			return err
 		}

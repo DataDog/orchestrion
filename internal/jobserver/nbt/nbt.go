@@ -35,6 +35,7 @@ type (
 	}
 	buildState struct {
 		initOnce sync.Once
+		buildID  string
 		token    string          // Finalization token
 		onDone   func()          // Called once the original task has completed
 		done     <-chan struct{} // Blocks until the original task has completed
@@ -88,7 +89,8 @@ type (
 	// StartRequest informs the job server that the caller is starting a new
 	// compilation task for the specified [StartRequest.ImportPath].
 	StartRequest struct {
-		ImportPath string
+		ImportPath string `json:"importPath"`
+		BuildID    string `json:"buildID"`
 	}
 	// StartResponse informs the caller about what should be done with the
 	// compilation task. If a [*StartResponse.FinishToken] is present, the caller
@@ -99,12 +101,12 @@ type (
 		// FinishToken is the token to be forwarded to the [FinishRequest] to inform
 		// the job server about the outcome of the build. It cannot be blank unless
 		// [*StartResponse.ArchivePath] is not blank.
-		FinishToken string `json:",omitempty"`
+		FinishToken string `json:"token,omitempty"`
 		// ArchivePath is the path of the archive produced for the same
 		// [StartRequest.ImportPath] by another task. That archive must be re-used
 		// instead of creating a new one. It cannot be blank unless
 		// [*StartResponse.FinishToken] is not blank.
-		ArchivePath string `json:",omitempty"`
+		ArchivePath string `json:"archivePath,omitempty"`
 	}
 )
 
@@ -112,7 +114,11 @@ func (StartRequest) Subject() string             { return startSubject }
 func (*StartResponse) IsResponseTo(StartRequest) {}
 
 func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, error) {
-	rawState, reused := s.state.LoadOrStore(req.ImportPath, &buildState{})
+	if req.ImportPath == "" || req.BuildID == "" {
+		return nil, fmt.Errorf("invalid request: %#v", req)
+	}
+
+	rawState, reused := s.state.LoadOrStore(req.ImportPath, &buildState{buildID: req.BuildID})
 	state, _ := rawState.(*buildState)
 
 	// Initialize the build state.
@@ -126,6 +132,10 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 
 	// If the build state is re-used, wait for the original to complete...
 	if reused {
+		if state.buildID != req.BuildID {
+			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
+		}
+
 		<-state.done
 		if state.error != nil {
 			return nil, state.error
@@ -134,6 +144,7 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 	}
 
 	// Otherwise, return a finalization token, etc...
+	zerolog.Ctx(ctx).Debug().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Compile task started")
 	return &StartResponse{FinishToken: state.token}, nil
 }
 
@@ -142,19 +153,19 @@ type (
 	// task.
 	FinishRequest struct {
 		// ImportPath is the import path of the package that was built.
-		ImportPath string
+		ImportPath string `json:"importPath"`
 		// FinishToken is forwarded from [*StartResponse.FinishToken], and cannot be
 		// blank.
-		FinishToken string
+		FinishToken string `json:"token"`
 		// ArchivePath is the path to the archive produced by the compilation task.
 		// It must not be blank unless [FinishRequest.Error] is not nil. If present,
 		// the file must exist on disk, and will be hard-linked (or copied) into a
 		// temporary directory so it can be re-used by subsequent [StartRequest] for
 		// the same [FinishRequest.ImportPath].
-		ArchivePath string `json:",omitempty"`
+		ArchivePath string `json:"archivePath,omitempty"`
 		// Error is the error that occurred as a result of this compilation task, if
 		// any.
-		Error *string `json:",omitempty"`
+		Error *string `json:"error,omitempty"`
 	}
 	FinishResponse struct {
 		/* unused */
@@ -167,31 +178,39 @@ func (*FinishResponse) IsResponseTo(FinishRequest) {}
 var errNoArchiveNorError = errors.New("missing archive path, and no error reported")
 
 func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishResponse, error) {
+	if req.ImportPath == "" || req.FinishToken == "" {
+		return nil, fmt.Errorf("invalid request: %#v", req)
+	}
+
 	rawState, found := s.state.Load(req.ImportPath)
 	if !found {
 		return nil, fmt.Errorf("no build started for %q", req.ImportPath)
 	}
 
-	log := zerolog.Ctx(ctx)
+	log := zerolog.Ctx(ctx).With().
+		Str("import-path", req.ImportPath).
+		Logger()
+	ctx = log.WithContext(ctx)
 
 	state, _ := rawState.(*buildState)
 	if state.token != req.FinishToken {
 		log.Warn().
 			Str("expected", state.token).
 			Str("actual", req.FinishToken).
-			Str("import-path", req.ImportPath).
 			Msg("Invalid finish token")
 		return nil, fmt.Errorf("invalid finish token for %q: %q", req.ImportPath, req.FinishToken)
 	}
 
 	if !state.isDone.CompareAndSwap(false, true) {
-		log.Info().
-			Str("import-path", req.ImportPath).
-			Msg("Task was already completed (concurrent retry?)")
+		log.Info().Msg("Task was already completed (concurrent retry?)")
 		return &FinishResponse{}, nil
 	}
 
 	defer state.onDone()
+	log.Debug().
+		Str("archive-path", req.ArchivePath).
+		Any("error", req.Error).
+		Msg("Compile task finished")
 
 	if req.Error != nil {
 		state.error = errors.New(*req.Error)
@@ -208,17 +227,13 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 	return &FinishResponse{}, nil
 }
 
-var ns = uuid.New()
+var ns = uuid.MustParse("4BFB6F4B-212C-43A0-A581-A29C8B3D3BE4")
 
 func (s *service) persist(ctx context.Context, name string, path string) (string, error) {
-	if err := os.MkdirAll(s.dir, 0o755); err != nil {
-		return "", fmt.Errorf("mkdir %q: %w", s.dir, err)
-	}
-
 	guid := uuid.NewSHA1(ns, []byte(name)).String()
 	res := filepath.Join(s.dir, guid)
 
-	if err := files.LinkOrCopy(ctx, path, res); err != nil {
+	if err := files.Copy(ctx, path, res); err != nil {
 		return "", err
 	}
 	return res, nil

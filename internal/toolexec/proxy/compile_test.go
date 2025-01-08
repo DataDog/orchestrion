@@ -34,6 +34,17 @@ func TestParseCompile(t *testing.T) {
 				Lang:      "go1.42",
 			},
 		},
+		"buildid": {
+			input:   []string{"/path/compile", "-o", "$WORK/b019/_pkg_.a", "-trimpath", "$WORK=>", "-p", "internal/profilerecord", "-lang=go1.23", "-std", "-complete", "-buildid", "58eel3bXIltdLxQE0aV1/58eel3bXIltdLxQE0aV1", "-goversion", "go1.23.4", "-c=4", "-shared", "-nolocalimports", "-importcfg", "$WORK/b019/importcfg", "-pack", "/go/src/internal/profilerecord/profilerecord.go"},
+			goFiles: []string{"/go/src/internal/profilerecord/profilerecord.go"},
+			flags: compileFlagSet{
+				Package:   "internal/profilerecord",
+				ImportCfg: "$WORK/b019/importcfg",
+				Output:    "$WORK/b019/_pkg_.a",
+				Lang:      "go1.23",
+				BuildID:   "58eel3bXIltdLxQE0aV1/58eel3bXIltdLxQE0aV1",
+			},
+		},
 		"nats.go": {
 			input:   []string{"/path/compile", "-o", "/buildDir/b002/a.out", "-p", "github.com/nats-io/nats.go", "-complete", "/path/to/source/file.go"},
 			goFiles: []string{"/path/to/source/file.go"},
@@ -48,9 +59,6 @@ func TestParseCompile(t *testing.T) {
 			tc.goFiles = make([]string, 0)
 		}
 
-		if name != "nats.go" {
-			continue
-		}
 		t.Run(name, func(t *testing.T) {
 			cmd, err := parseCompileCommand(tc.input)
 			require.NoError(t, err)

@@ -69,22 +69,27 @@ var weavingSpecialCase = []specialCase{
 	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
 }
 
-func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err error) {
-	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Logger()
+func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
+	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
 	if js, err := client.FromEnvironment(ctx, cmd.WorkDir); err != nil {
 		log.Debug().Str("work-dir", cmd.WorkDir).Err(err).Msg("Failed to obtain job server client")
 	} else {
-		res, err := client.Request[nbt.StartRequest, *nbt.StartResponse](ctx, js, nbt.StartRequest{ImportPath: w.ImportPath})
+		res, err := client.Request[nbt.StartRequest, *nbt.StartResponse](ctx, js, nbt.StartRequest{ImportPath: w.ImportPath, BuildID: cmd.Flags.BuildID})
 		if err != nil {
+			log.Error().Err(err).Msg("Never-build-twice start request failed")
 			js.Close()
 			return err
 		}
 		if res.ArchivePath != "" {
 			defer js.Close()
-			log.Debug().Str("archive", res.ArchivePath).Msg("Using pre-built archive")
-			if err := files.LinkOrCopy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
+			log.Info().Str("archive", res.ArchivePath).Msg("Using previously-built archive")
+			if err := files.Copy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
+				return err
+			}
+			// We place a "reused" marker next to the output archive to identify that it was re-used.
+			if err := os.WriteFile(cmd.Flags.Output+".reused", nil, 0o644); err != nil {
 				return err
 			}
 			return proxy.ErrSkipCommand
@@ -93,29 +98,36 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 		cmd.OnClose(func(exitErr error) error {
 			defer js.Close()
 
-			var error *string
-			if err != nil {
-				msg := errors.Join(exitErr, err).Error()
+			log.Info().Msg("Reporting compile task result to job server")
+
+			var (
+				error       *string
+				archivePath string
+			)
+			if resErr != nil || exitErr != nil {
+				msg := errors.Join(exitErr, resErr).Error()
 				error = &msg
+			} else {
+				archivePath = cmd.Flags.Output
 			}
 			_, err := client.Request[nbt.FinishRequest, *nbt.FinishResponse](ctx, js, nbt.FinishRequest{
 				ImportPath:  w.ImportPath,
 				FinishToken: res.FinishToken,
-				ArchivePath: cmd.Flags.Output,
+				ArchivePath: archivePath,
 				Error:       error,
 			})
 			return err
 		})
 	}
 
-	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
-	if err != nil {
-		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+	imports, resErr := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	if resErr != nil {
+		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, resErr)
 	}
 
-	linkDeps, err := linkdeps.FromImportConfig(&imports)
-	if err != nil {
-		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
+	linkDeps, resErr := linkdeps.FromImportConfig(&imports)
+	if resErr != nil {
+		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, resErr)
 	}
 
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
@@ -125,22 +137,22 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	// an archive's [linkdeps.Filename] must represent all transitive link-time
 	// dependencies.
 	defer func() {
-		if err != nil {
+		if resErr != nil {
 			return
 		}
-		err = writeLinkDeps(log, cmd, &linkDeps, orchestrionDir)
+		resErr = writeLinkDeps(log, cmd, &linkDeps, orchestrionDir)
 	}()
 
-	goMod, err := goenv.GOMOD(".")
-	if err != nil {
-		return fmt.Errorf("go env GOMOD: %w", err)
+	goMod, resErr := goenv.GOMOD(".")
+	if resErr != nil {
+		return fmt.Errorf("go env GOMOD: %w", resErr)
 	}
 	goModDir := filepath.Dir(goMod)
 	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
-	cfg, err := config.NewLoader(goModDir, false).Load()
-	if err != nil {
-		return fmt.Errorf("loading injector configuration: %w", err)
+	cfg, resErr := config.NewLoader(goModDir, false).Load()
+	if resErr != nil {
+		return fmt.Errorf("loading injector configuration: %w", resErr)
 	}
 
 	aspects := cfg.Aspects()
@@ -185,9 +197,9 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	}
 
 	goFiles := cmd.GoFiles()
-	results, goLang, err := injector.InjectFiles(ctx, goFiles, aspects)
-	if err != nil {
-		return err
+	results, goLang, resErr := injector.InjectFiles(ctx, goFiles, aspects)
+	if resErr != nil {
+		return resErr
 	}
 
 	if err := cmd.SetLang(goLang); err != nil {
@@ -310,7 +322,7 @@ func writeLinkDeps(log zerolog.Logger, cmd *proxy.CompileCommand, linkDeps *link
 			return nil
 		}
 
-		log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, linkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
+		log.Info().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, linkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
 		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
 		if err := child.Run(); err != nil {
 			return fmt.Errorf("running %q: %w", child.Args, err)

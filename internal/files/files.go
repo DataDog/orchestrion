@@ -14,20 +14,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func LinkOrCopy(ctx context.Context, oldname string, newname string) error {
-	err := os.Link(oldname, newname)
-	if err == nil {
-		return nil
-	}
-	log := zerolog.Ctx(ctx)
-	log.Info().
+// Copy creates a copy of `oldname` at `newname`.
+func Copy(ctx context.Context, oldname string, newname string) error {
+	log := zerolog.Ctx(ctx).With().
 		Str("oldname", oldname).
 		Str("newname", newname).
-		Err(err).
-		Msg("Could not hard link archive; attempting a copy instead...")
+		Logger()
 
-		// Hard link can fail (e.g, if the original file & storage dir are not on the
-	// same file system). In those cases, we create a full copy of the file.
 	in, err := os.Open(oldname)
 	if err != nil {
 		return fmt.Errorf("open %q: %w", oldname, err)
@@ -40,9 +33,14 @@ func LinkOrCopy(ctx context.Context, oldname string, newname string) error {
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, in); err != nil {
+	bytes, err := io.Copy(out, in)
+	if err != nil {
 		return fmt.Errorf("copy %q to %q: %w", oldname, newname, err)
 	}
+
+	log.Trace().
+		Int64("size", bytes).
+		Msg("Successfully copied file over")
 
 	return nil
 }

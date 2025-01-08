@@ -36,6 +36,7 @@ var Toolexec = &cli.Command{
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do
 			// any kind of processing on these...
+			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec fast-forward command")
 			return proxy.RunCommand(proxyCmd)
 		}
 
@@ -53,32 +54,32 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
+		log.Info().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
 		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
 
 		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
-			log.Info().Msg("OnCompile processor requested command skipping...")
+			log.Trace().Msg("OnCompile processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
 		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); errors.Is(err, proxy.ErrSkipCommand) {
-			log.Info().Msg("OnCompileMain processor requested command skipping...")
+			log.Trace().Msg("OnCompileMain processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
 		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); errors.Is(err, proxy.ErrSkipCommand) {
-			log.Info().Msg("OnLink processor requested command skipping...")
+			log.Trace().Msg("OnLink processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
 
-		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec final command")
+		log.Debug().Strs("command", proxyCmd.Args()).Msg("Toolexec final command")
 		if err := proxy.RunCommand(proxyCmd); err != nil {
 			// Logging as debug, as the error will likely surface back to the user anyway...
-			log.Debug().Err(err).Msg("Proxied command failed")
+			log.Error().Strs("command", proxyCmd.Args()).Err(err).Msg("Proxied command failed")
 			return err
 		}
 		return nil

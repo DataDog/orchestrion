@@ -17,6 +17,7 @@ import (
 
 type compileFlagSet struct {
 	Package     string `ddflag:"-p"`
+	BuildID     string `ddflag:"-buildid"`
 	ImportCfg   string `ddflag:"-importcfg"`
 	Output      string `ddflag:"-o"`
 	Lang        string `ddflag:"-lang"`

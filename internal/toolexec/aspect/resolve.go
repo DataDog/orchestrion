@@ -48,7 +48,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	var found bool
 	for ip, arch := range archives {
 		if arch == "" {
-			return nil, fmt.Errorf("failed to resolve archive for %q", ip)
+			return nil, fmt.Errorf("no archive found for %q", ip)
 		}
 		if ip == importPath {
 			found = true

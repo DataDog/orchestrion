@@ -31,7 +31,7 @@ func (f *compileFlagSet) parse(args []string) ([]string, error) {
 	flagSet.String("asmhdr", "", "write assembly header to file")
 	flagSet.String("bench", "", "append benchmark times to file")
 	flagSet.String("blockprofile", "", "write block profile to file")
-	flagSet.String("buildid", "", "record id as the build id in the export metadata")
+	flagSet.StringVar(&f.BuildID, "buildid", "", "record id as the build id in the export metadata")
 	flagSet.Int("c", 0, "concurrency during compilation (1 means no concurrency)")
 	flagSet.Bool("clobberdead", false, "clobber dead stack slots (for debugging)")
 	flagSet.Bool("clobberdeadreg", false, "clobber dead registers (for debugging)")
