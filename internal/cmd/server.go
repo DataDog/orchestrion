@@ -61,6 +61,14 @@ var Server = &cli.Command{
 				return nil
 			},
 		},
+		&cli.IntFlag{
+			Name:        "parent-pid",
+			Usage:       "Specify which process created this server. This is useful when the server is started as a daemon, as it needs to be able to resolve the top-level go command line.",
+			DefaultText: "This process' parent (may be inaccurate if the process is daemonized)",
+			Action: func(ctx *cli.Context, val int) error {
+				return goflags.SetFlagsFromPid(ctx.Context, val)
+			},
+		},
 	},
 	Hidden: true,
 	Action: func(ctx *cli.Context) error {

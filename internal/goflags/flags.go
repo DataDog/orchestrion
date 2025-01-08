@@ -254,9 +254,22 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 // Flags return the top level go command flags
 func Flags(ctx context.Context) (CommandFlags, error) {
 	once.Do(func() {
-		flags, flagsErr = parentGoCommandFlags(ctx)
+		flags, flagsErr = parentGoCommandFlags(ctx, os.Getpid())
 	})
 	return flags, flagsErr
+}
+
+// SetFlagsFromPid sets the top level go command flags by looking up the process
+// tree from the specified PID. This is used by the job server when it is
+// started as a daemon (and hence cannot crawl it's own process tree to find
+// this information).
+func SetFlagsFromPid(ctx context.Context, pid int) error {
+	once.Do(func() {
+		log := zerolog.Ctx(ctx)
+		log.Trace().Int("process.pid", pid).Msg("Looking up parent go command flags from user-provided PID")
+		flags, flagsErr = parentGoCommandFlags(ctx, pid)
+	})
+	return flagsErr
 }
 
 // SetFlags sets the flags for this process to those parsed from the provided
@@ -281,7 +294,7 @@ func isShort(str string) bool {
 
 // parentGoCommandFlags backtracks through the process tree
 // to find a parent go command invocation and returns its arguments
-func parentGoCommandFlags(ctx context.Context) (flags CommandFlags, err error) {
+func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err error) {
 	log := zerolog.Ctx(ctx)
 	log.Trace().Msg("Attempting to parse parent Go command arguments")
 
@@ -291,9 +304,9 @@ func parentGoCommandFlags(ctx context.Context) (flags CommandFlags, err error) {
 	}
 	log.Trace().Str("go.bin", goBin).Msg("Resolved go command path")
 
-	p, err := process.NewProcess(int32(os.Getpid()))
+	p, err := process.NewProcess(int32(pid))
 	if err != nil {
-		return flags, fmt.Errorf("failed to get handle of the current process: %w", err)
+		return flags, fmt.Errorf("failed to get handle of the process with pid %d: %w", pid, err)
 	}
 
 	// Backtrack through the process stack until we find the parent Go command
