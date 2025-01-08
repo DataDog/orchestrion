@@ -36,8 +36,15 @@ var Toolexec = &cli.Command{
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do
 			// any kind of processing on these...
-			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec fast-forward command")
-			return proxy.RunCommand(proxyCmd)
+			err := proxy.RunCommand(proxyCmd)
+			var event *zerolog.Event
+			if err != nil {
+				event = log.Error().Err(err)
+			} else {
+				event = log.Trace()
+			}
+			event.Strs("command", proxyCmd.Args()).Msg("Toolexec fast-forward command")
+			return err
 		}
 
 		// Ensure Orchestrion is properly pinned
