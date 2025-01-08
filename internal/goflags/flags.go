@@ -289,6 +289,7 @@ func parentGoCommandFlags(ctx context.Context) (flags CommandFlags, err error) {
 	if err != nil {
 		return flags, fmt.Errorf("failed to resolve go command path: %w", err)
 	}
+	log.Trace().Str("go.bin", goBin).Msg("Resolved go command path")
 
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
@@ -330,6 +331,8 @@ func parentGoCommandFlags(ctx context.Context) (flags CommandFlags, err error) {
 		if cmd == goBin {
 			break
 		}
+
+		log.Trace().Int32("process.pid", p.Pid).Strs("args", args).Msg("Not a go command process, continuing backtracking")
 	}
 
 	log.Trace().Int32("go.pid", p.Pid).Strs("arguments", args).Msg("Found parent go command process")
