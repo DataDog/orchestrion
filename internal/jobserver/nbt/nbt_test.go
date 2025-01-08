@@ -25,18 +25,20 @@ func Test(t *testing.T) {
 		defer cancel()
 	}
 
+	const importPath = "github.com/DataDog/orchestrion.test"
+	buildID := uuid.NewString()
+
 	t.Run("not-started", func(t *testing.T) {
 		subject := &service{dir: t.TempDir()}
-		res, err := subject.finish(ctx, FinishRequest{})
+		res, err := subject.finish(ctx, FinishRequest{ImportPath: importPath, FinishToken: "bazinga"})
 		require.ErrorContains(t, err, "no build started")
 		require.Nil(t, res)
 	})
 
 	t.Run("start-reuse-finish", func(t *testing.T) {
-		const importPath = "github.com/DataDog/orchestrion.test"
 		subject := &service{dir: t.TempDir()}
 
-		start, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
 		assert.Empty(t, start.ArchivePath)
@@ -50,7 +52,7 @@ func Test(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 				assert.NoError(t, err)
 				assert.Empty(t, res.FinishToken)
 				assert.NotEmpty(t, res.ArchivePath)
@@ -73,11 +75,46 @@ func Test(t *testing.T) {
 		require.NotNil(t, res)
 	})
 
+	t.Run("start-conflict-finish", func(t *testing.T) {
+		subject := &service{dir: t.TempDir()}
+
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
+		require.NoError(t, err)
+		require.NotEmpty(t, start.FinishToken)
+		assert.Empty(t, start.ArchivePath)
+
+		archiveContent := uuid.NewString()
+
+		var wg sync.WaitGroup
+		defer wg.Wait()
+		for range 10 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID + "-alt"})
+				assert.ErrorContains(t, err, buildID)
+				assert.Nil(t, res)
+			}()
+		}
+
+		archive := filepath.Join(t.TempDir(), "_pkg_.a")
+		require.NoError(t, os.WriteFile(archive, []byte(archiveContent), 0o644))
+
+		res, err := subject.finish(ctx, FinishRequest{
+			ImportPath:  importPath,
+			FinishToken: start.FinishToken,
+			ArchivePath: archive,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+	})
+
 	t.Run("start-finish-finish", func(t *testing.T) {
 		const importPath = "github.com/DataDog/orchestrion.test"
 		subject := &service{dir: t.TempDir()}
 
-		start, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
 		assert.Empty(t, start.ArchivePath)
@@ -97,11 +134,43 @@ func Test(t *testing.T) {
 		}
 	})
 
+	t.Run("start-badtoken-finish", func(t *testing.T) {
+		const importPath = "github.com/DataDog/orchestrion.test"
+		subject := &service{dir: t.TempDir()}
+
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
+		require.NoError(t, err)
+		require.NotEmpty(t, start.FinishToken)
+		assert.Empty(t, start.ArchivePath)
+
+		archiveContent := uuid.NewString()
+		archive := filepath.Join(t.TempDir(), "_pkg_.a")
+		require.NoError(t, os.WriteFile(archive, []byte(archiveContent), 0o644))
+
+		for range 10 {
+			res, err := subject.finish(ctx, FinishRequest{
+				ImportPath:  importPath,
+				FinishToken: uuid.NewString(),
+				ArchivePath: archive,
+			})
+			require.Error(t, err, "invalid finish token")
+			require.Nil(t, res)
+		}
+
+		res, err := subject.finish(ctx, FinishRequest{
+			ImportPath:  importPath,
+			FinishToken: start.FinishToken,
+			ArchivePath: archive,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+	})
+
 	t.Run("start-reuse-error", func(t *testing.T) {
 		const importPath = "github.com/DataDog/orchestrion.test"
 		subject := &service{dir: t.TempDir()}
 
-		start, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
 		assert.Empty(t, start.ArchivePath)
@@ -115,7 +184,7 @@ func Test(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 				assert.ErrorContains(t, err, errorText)
 				assert.Nil(t, res)
 			}()
@@ -134,7 +203,7 @@ func Test(t *testing.T) {
 		const importPath = "github.com/DataDog/orchestrion.test"
 		subject := &service{dir: t.TempDir()}
 
-		start, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
 		assert.Empty(t, start.ArchivePath)
@@ -146,7 +215,7 @@ func Test(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 				assert.ErrorContains(t, err, errNoArchiveNorError.Error())
 				assert.Nil(t, res)
 			}()
@@ -164,7 +233,7 @@ func Test(t *testing.T) {
 		const importPath = "github.com/DataDog/orchestrion.test"
 		subject := &service{dir: t.TempDir()}
 
-		start, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
 		assert.Empty(t, start.ArchivePath)
@@ -179,7 +248,7 @@ func Test(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				res, err := subject.start(ctx, StartRequest{ImportPath: importPath})
+				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 				assert.ErrorContains(t, err, archive)
 				assert.Nil(t, res)
 			}()
