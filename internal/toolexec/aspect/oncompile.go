@@ -49,6 +49,10 @@ const (
 	// weaveTracerInternal limits weaving to only aspects that have the
 	// `tracer-internal` flag set.
 	weaveTracerInternal
+
+	// labelAsmhdr is used to identify objects produced by the compiler when the
+	// -asmhdr flag is provided.
+	labelAsmhdr nbt.Label = "go_asm.h"
 )
 
 // matches returns true if the importPath is matched by this special case.
@@ -84,10 +88,25 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		}
 		if res.ArchivePath != "" {
 			defer js.Close()
+
+			// We always have an archive to re-use...
 			log.Info().Str("archive", res.ArchivePath).Msg("Using previously-built archive")
 			if err := files.Copy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
 				return err
 			}
+
+			if cmd.Flags.Asmhdr != "" {
+				// If the -asmhdr flag was present, we must have a corresponding header file to re-use...
+				filename := res.AdditionalFiles[labelAsmhdr]
+				if filename == "" {
+					return fmt.Errorf("missing re-usable artifact for %q", labelAsmhdr)
+				}
+				log.Info().Str("-asmhdr", filename).Msg("Using previously-built -asmhdr file")
+				if err := files.Copy(ctx, filename, cmd.Flags.Asmhdr); err != nil {
+					return err
+				}
+			}
+
 			// We place a "reused" marker next to the output archive to identify that it was re-used.
 			if err := os.WriteFile(cmd.Flags.Output+".reused", nil, 0o644); err != nil {
 				return err
@@ -110,11 +129,16 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			} else {
 				archivePath = cmd.Flags.Output
 			}
+			var additionalFiles map[nbt.Label]string
+			if cmd.Flags.Asmhdr != "" {
+				additionalFiles = map[nbt.Label]string{labelAsmhdr: cmd.Flags.Asmhdr}
+			}
 			_, err := client.Request[nbt.FinishRequest, *nbt.FinishResponse](ctx, js, nbt.FinishRequest{
-				ImportPath:  w.ImportPath,
-				FinishToken: res.FinishToken,
-				ArchivePath: archivePath,
-				Error:       error,
+				ImportPath:      w.ImportPath,
+				FinishToken:     res.FinishToken,
+				ArchivePath:     archivePath,
+				AdditionalFiles: additionalFiles,
+				Error:           error,
 			})
 			return err
 		})

@@ -28,7 +28,7 @@ func (f *compileFlagSet) parse(args []string) ([]string, error) {
 	})
 	flagSet.Bool("W", false, "debug parse tree after type checking")
 	flagSet.Bool("asan", false, "build code compatible with C/C++ address sanitizer")
-	flagSet.String("asmhdr", "", "write assembly header to file")
+	flagSet.StringVar(&f.Asmhdr, "asmhdr", "", "write assembly header to file")
 	flagSet.String("bench", "", "append benchmark times to file")
 	flagSet.String("blockprofile", "", "write block profile to file")
 	flagSet.StringVar(&f.BuildID, "buildid", "", "record id as the build id in the export metadata")

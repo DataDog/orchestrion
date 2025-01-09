@@ -16,11 +16,12 @@ import (
 //go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile
 
 type compileFlagSet struct {
-	Package     string `ddflag:"-p"`
+	Asmhdr      string `ddflag:"-asmhdr"`
 	BuildID     string `ddflag:"-buildid"`
 	ImportCfg   string `ddflag:"-importcfg"`
-	Output      string `ddflag:"-o"`
 	Lang        string `ddflag:"-lang"`
+	Output      string `ddflag:"-o"`
+	Package     string `ddflag:"-p"`
 	ShowVersion bool   `ddflag:"-V"`
 }
 

@@ -40,9 +40,10 @@ type (
 		onDone   func()          // Called once the original task has completed
 		done     <-chan struct{} // Blocks until the original task has completed
 
-		isDone  atomic.Bool // Whether the original task has completed yet.
-		archive string      // Path to the archive produced by the original task. Available once done.
-		error   error       // Error from the original task. Available once done.
+		isDone          atomic.Bool      // Whether the original task has completed yet.
+		archive         string           // Path to the archive produced by the original task. Available once done.
+		additionalFiles map[Label]string // Additional files produced by the original task. Available once done.
+		error           error            // Error from the original task. Available once done.
 	}
 )
 
@@ -107,7 +108,14 @@ type (
 		// instead of creating a new one. It cannot be blank unless
 		// [*StartResponse.FinishToken] is not blank.
 		ArchivePath string `json:"archivePath,omitempty"`
+		// AdditionalFiles is the set of additional files produced by the original
+		// task, by label. These files must be re-used instead of re-created. Always
+		// blank if [*StartResponse.FinishToken] is not blank.
+		AdditionalFiles map[Label]string `json:"extra,omitempty"`
 	}
+	// Label is a label identifying an additional object produced by a task. It
+	// must be a valid part of a file name.
+	Label string
 )
 
 func (StartRequest) Subject() string             { return startSubject }
@@ -140,7 +148,14 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		if state.error != nil {
 			return nil, state.error
 		}
-		return &StartResponse{ArchivePath: state.archive}, nil
+
+		if state.archive == "" {
+			// The context has expired or the upstream context has been canceled.
+			// We'll return this as [context.Canceled] either way.
+			return nil, context.Canceled
+		}
+
+		return &StartResponse{ArchivePath: state.archive, AdditionalFiles: state.additionalFiles}, nil
 	}
 
 	// Otherwise, return a finalization token, etc...
@@ -163,6 +178,9 @@ type (
 		// temporary directory so it can be re-used by subsequent [StartRequest] for
 		// the same [FinishRequest.ImportPath].
 		ArchivePath string `json:"archivePath,omitempty"`
+		// AdditionalFiles is a list of additional files produced by the compilation
+		// task, associated to a user-defined label.
+		AdditionalFiles map[Label]string `json:"extra,omitempty"`
 		// Error is the error that occurred as a result of this compilation task, if
 		// any.
 		Error *string `json:"error,omitempty"`
@@ -209,32 +227,46 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 	defer state.onDone()
 	log.Debug().
 		Str("archive-path", req.ArchivePath).
+		Any("additional-files", req.AdditionalFiles).
 		Any("error", req.Error).
 		Msg("Compile task finished")
 
 	if req.Error != nil {
 		state.error = errors.New(*req.Error)
-	} else if req.ArchivePath == "" {
+		return &FinishResponse{}, nil
+	}
+
+	if req.ArchivePath == "" {
 		state.error = errNoArchiveNorError
 		return nil, state.error
-	} else if file, err := s.persist(ctx, req.ImportPath, req.ArchivePath); err != nil {
+	}
+
+	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(req.ImportPath)).String())
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		state.error = fmt.Errorf("creating storage directory: %w", err)
+		return nil, state.error
+	}
+
+	state.additionalFiles = make(map[Label]string, len(req.AdditionalFiles))
+	for label, path := range req.AdditionalFiles {
+		filename := filepath.Join(dir, string(label))
+		if err := files.Copy(ctx, path, filename); err != nil {
+			state.additionalFiles = nil
+			state.error = fmt.Errorf("persisting additional file %q (%q): %w", path, label, err)
+			return nil, state.error
+		}
+		state.additionalFiles[label] = filename
+	}
+
+	state.archive = filepath.Join(dir, filepath.Base(req.ArchivePath))
+	if err := files.Copy(ctx, req.ArchivePath, state.archive); err != nil {
+		state.additionalFiles = nil
+		state.archive = ""
 		state.error = fmt.Errorf("persisting archive %q: %w", req.ArchivePath, err)
 		return nil, state.error
-	} else {
-		state.archive = file
 	}
 
 	return &FinishResponse{}, nil
 }
 
 var ns = uuid.MustParse("4BFB6F4B-212C-43A0-A581-A29C8B3D3BE4")
-
-func (s *service) persist(ctx context.Context, name string, path string) (string, error) {
-	guid := uuid.NewSHA1(ns, []byte(name)).String()
-	res := filepath.Join(s.dir, guid)
-
-	if err := files.Copy(ctx, path, res); err != nil {
-		return "", err
-	}
-	return res, nil
-}

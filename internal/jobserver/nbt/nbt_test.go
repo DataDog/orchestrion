@@ -44,6 +44,8 @@ func Test(t *testing.T) {
 		assert.Empty(t, start.ArchivePath)
 
 		archiveContent := uuid.NewString()
+		extraFileContent := uuid.NewString()
+		const label Label = "extra.file"
 
 		var wg sync.WaitGroup
 		defer wg.Wait()
@@ -60,16 +62,27 @@ func Test(t *testing.T) {
 				content, err := os.ReadFile(res.ArchivePath)
 				assert.NoError(t, err)
 				assert.Equal(t, archiveContent, string(content))
+
+				assert.Len(t, res.AdditionalFiles, 1)
+				path, ok := res.AdditionalFiles[label]
+				assert.True(t, ok)
+				content, err = os.ReadFile(path)
+				assert.NoError(t, err)
+				assert.Equal(t, extraFileContent, string(content))
 			}()
 		}
 
 		archive := filepath.Join(t.TempDir(), "_pkg_.a")
 		require.NoError(t, os.WriteFile(archive, []byte(archiveContent), 0o644))
 
+		extraFile := filepath.Join(t.TempDir(), "extra.file")
+		require.NoError(t, os.WriteFile(extraFile, []byte(extraFileContent), 0o644))
+
 		res, err := subject.finish(ctx, FinishRequest{
-			ImportPath:  importPath,
-			FinishToken: start.FinishToken,
-			ArchivePath: archive,
+			ImportPath:      importPath,
+			FinishToken:     start.FinishToken,
+			ArchivePath:     archive,
+			AdditionalFiles: map[Label]string{label: extraFile},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -229,7 +242,7 @@ func Test(t *testing.T) {
 		require.Nil(t, res)
 	})
 
-	t.Run("start-reuse-fail", func(t *testing.T) {
+	t.Run("start-reuse-missing.archive.file", func(t *testing.T) {
 		const importPath = "github.com/DataDog/orchestrion.test"
 		subject := &service{dir: t.TempDir()}
 
@@ -260,6 +273,45 @@ func Test(t *testing.T) {
 			ArchivePath: archive,
 		})
 		require.ErrorContains(t, err, archive)
+		require.Nil(t, res)
+	})
+
+	t.Run("start-reuse-missing.extra.file", func(t *testing.T) {
+		const importPath = "github.com/DataDog/orchestrion.test"
+		subject := &service{dir: t.TempDir()}
+
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
+		require.NoError(t, err)
+		require.NotEmpty(t, start.FinishToken)
+		assert.Empty(t, start.ArchivePath)
+
+		label := Label(uuid.NewString())
+		// Deliberately non-existent!
+		extraFile := filepath.Join(t.TempDir(), "deliberately-missing", "extra.file")
+
+		var wg sync.WaitGroup
+		defer wg.Wait()
+		for range 10 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
+				assert.ErrorContains(t, err, extraFile)
+				assert.Nil(t, res)
+			}()
+		}
+
+		archive := filepath.Join(t.TempDir(), "_pkg_.a")
+		require.NoError(t, os.WriteFile(archive, []byte(uuid.NewString()), 0o644))
+
+		res, err := subject.finish(ctx, FinishRequest{
+			ImportPath:      importPath,
+			FinishToken:     start.FinishToken,
+			ArchivePath:     archive,
+			AdditionalFiles: map[Label]string{label: extraFile},
+		})
+		require.ErrorContains(t, err, extraFile)
 		require.Nil(t, res)
 	})
 }
