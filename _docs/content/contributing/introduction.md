@@ -68,7 +68,7 @@ modify the source code about to be compiled. In particular:
 - The `compile` command is provided all `.go` files that are compiled into the
   final executable; which `orchestrion` will modify to insert instrumentation
   code at all relevant places;
-- The `link` command builds the ifnal executable by linking together all the Go
+- The `link` command builds the final executable by linking together all the Go
   packages that contribute to the `main` entry point; to which `orchestrion`
   adds any library required by injected code that was not already present in the
   dependency tree.
