@@ -22,7 +22,7 @@ type (
 	Command interface {
 		// Close invokes all registered OnClose callbacks and releases any resources associated with the
 		// command.
-		Close() error
+		Close(context.Context) error
 
 		// Args are all the command arguments, starting from the Go tool command
 		Args() []string
@@ -48,7 +48,6 @@ type (
 		args []string
 		// paramPos is the index in args of the *value* provided for the parameter stored in the key
 		paramPos map[string]int
-		onClose  []func() error
 	}
 )
 
@@ -84,18 +83,7 @@ func NewCommand(args []string) command {
 	return cmd
 }
 
-// OnClose registers a callback to be invoked when the command is closed, usually after it has run,
-// unless skipping was requested by the integration.
-func (cmd *command) OnClose(cb func() error) {
-	cmd.onClose = append(cmd.onClose, cb)
-}
-
-func (cmd *command) Close() error {
-	for _, cb := range cmd.onClose {
-		if err := cb(); err != nil {
-			return err
-		}
-	}
+func (*command) Close(context.Context) error {
 	return nil
 }
 

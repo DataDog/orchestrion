@@ -30,7 +30,7 @@ var Toolexec = &cli.Command{
 		if err != nil {
 			return err
 		}
-		defer proxyCmd.Close()
+		defer proxyCmd.Close(ctx.Context)
 
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do

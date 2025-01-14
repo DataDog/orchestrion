@@ -205,8 +205,10 @@ func readArchiveData(archive string, entry string) (io.Reader, error) {
 	var list, data bytes.Buffer
 	cmd := exec.Command("go", "tool", "pack", "t", archive)
 	cmd.Stdout = &list
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("running `go tool pack t %q`: %w", archive, err)
+		return nil, fmt.Errorf("running `go tool pack t %q`: %w\n%s", archive, err, stderr.String())
 	}
 	for {
 		line, err := list.ReadString('\n')
