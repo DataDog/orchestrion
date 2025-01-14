@@ -55,17 +55,38 @@ func (Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) erro
 	newDeps := linkDeps.Dependencies()
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
-	for _, linkDepPath := range newDeps {
+	stack := append(make([]string, 0, len(newDeps)), newDeps...)
+	for len(stack) > 0 {
+		// Pop from the stack of things to process...
+		linkDepPath := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
 		deps, err := resolvePackageFiles(ctx, linkDepPath, cmd.WorkDir)
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", linkDepPath, err)
 		}
+
 		for p, a := range deps {
 			if _, found := reg.PackageFile[p]; found {
 				continue
 			}
 			log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
 			reg.PackageFile[p] = a
+
+			// The package may have its own link-time dependencies we need to resolve
+			tDeps, err := linkdeps.FromArchive(a)
+			if err != nil {
+				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, a, err)
+			}
+			for _, tDep := range tDeps.Dependencies() {
+				if reg.PackageFile[tDep] != "" || slices.Contains(stack, tDep) {
+					// Already resolved, or already going to be resolved...
+					continue
+				}
+				stack = append(stack, tDep)     // Push it to the stack
+				newDeps = append(newDeps, tDep) // Record it as asynthetic import to add
+				cmd.LinkDeps.Add(tDep)          // Record it as a link-time dependency
+			}
 		}
 	}
 
