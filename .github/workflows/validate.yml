@@ -185,10 +185,9 @@ jobs:
           mkdir -p coverage
           test_args=("-shuffle=on" "-race")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
           fi
-          go               test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.out"            ./...
-          go -C instrument test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.instrument.out" ./...
+          go test "${test_args[@]}" ./...
       - name: Determine simple go version
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
@@ -201,9 +200,7 @@ jobs:
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
         with:
           name: coverage-unit+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
-          path: |-
-            ./coverage/unit.out
-            ./coverage/unit.instrument.out
+          path: ./coverage/unit.out
 
   ##############################################################################
   # Run all benchmarks and generate report
