@@ -1,15 +1,5 @@
 pkgpath: github.com/DataDog/orchestrion/instrument
 imports:
-  - pkgpath: github.com/DataDog/orchestrion
-    imports:
-      - pkgpath: github.com/DataDog/orchestrion/internal/injector/builtin
-        yaml:
-          name: orchestrion.yml
-          extends:
-            - name: ./yaml/directive/orchestrion-enabled.yml
-              aspects:
-                - Initialize to true
-    yaml: null
   - pkgpath: gopkg.in/DataDog/dd-trace-go.v1
     imports:
       - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen

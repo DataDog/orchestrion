@@ -27,10 +27,7 @@ func TestBuildFromModuleSubdirectory(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 
 	run.exec(t, "go", "mod", "init", "github.com/DataDog/orchestrion.testing")
-	run.exec(t, "go", "mod", "edit",
-		fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
-		fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
-	)
+	run.exec(t, "go", "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir))
 	require.NoError(t, os.Mkdir(filepath.Join(run.dir, "cmd"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(run.dir, "cmd", "main.go"), []byte(`package main
 
@@ -108,10 +105,7 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 
 		tc.gitCloneGithub(b, owner, repo, tag)
 		tc.exec(b, "go", "mod", "download")
-		tc.exec(b, "go", "mod", "edit",
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
-		)
+		tc.exec(b, "go", "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir))
 		if stat, err := os.Stat(filepath.Join(tc.dir, "vendor")); err == nil && stat.IsDir() {
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")

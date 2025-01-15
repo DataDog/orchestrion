@@ -52,7 +52,7 @@ func TestPin(t *testing.T) {
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", "v0.9.3"})
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
@@ -112,7 +112,6 @@ go {{ .GoVersion }}
 
 replace (
 	github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
-	github.com/DataDog/orchestrion/instrument {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}{{ .PathSep }}instrument
 )
 
 require (

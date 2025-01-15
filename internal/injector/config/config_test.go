@@ -190,7 +190,7 @@ func TestLoad(t *testing.T) {
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
-	t.Run("instrument.yml", func(t *testing.T) {
+	t.Run("instrument", func(t *testing.T) {
 		loader := NewLoader(filepath.Join(repoRoot, "instrument"), true)
 		cfg, err := loader.Load()
 		require.NoError(t, err)
@@ -201,14 +201,14 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 116)
+		assert.Len(t, cfg.Aspects(), 115)
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 
 	t.Run("recursive", func(t *testing.T) {
 		tmp := t.TempDir()
 		runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-		runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", repoRoot))
+		runGo(t, tmp, "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", repoRoot))
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, FilenameOrchestrionToolGo), []byte(`
 			//go:build tools
 			package tools

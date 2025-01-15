@@ -71,11 +71,7 @@ func Test(t *testing.T) {
 
 			testLookup := func(path string) (io.ReadCloser, error) {
 				pkgs, err := packages.Load(
-					&packages.Config{
-						Mode: packages.NeedExportFile,
-						Dir:  tmp,
-						Logf: t.Logf,
-					},
+					&packages.Config{Mode: packages.NeedExportFile, Dir: tmp},
 					path,
 				)
 				if err != nil {

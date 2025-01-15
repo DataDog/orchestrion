@@ -7,8 +7,8 @@
 meta:
   name: github.com/DataDog/orchestrion/instrument
   description: |-
-    Built-in instrumentation from orchestrion. This will eventually be moved to
-    the gopkg.in/DataDog/dd-trace-go.v1 package.
+    Built-in instrumentation from orchestrion. These provide essential features
+    necessary for correct operation of orchestrion.
 
 extends:
   - ./yaml/directive/orchestrion-enabled.yml
