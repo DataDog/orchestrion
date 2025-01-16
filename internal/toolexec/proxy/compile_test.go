@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	gocontext "context"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
@@ -60,7 +61,7 @@ func TestParseCompile(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
-			cmd, err := parseCompileCommand(tc.input)
+			cmd, err := parseCompileCommand(gocontext.Background(), tc.input)
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeCompile, cmd.Type())
 			require.Equal(t, tc.flags, cmd.Flags)
@@ -71,7 +72,7 @@ func TestParseCompile(t *testing.T) {
 
 func TestSetLang(t *testing.T) {
 	t.Run("-lang go1.13", func(t *testing.T) {
-		cmd, err := parseCompileCommand([]string{
+		cmd, err := parseCompileCommand(gocontext.Background(), []string{
 			"/path/to/compile",
 			"-o", "/buildDir/b002/a.out",
 			"-lang", "go1.13",
@@ -88,7 +89,7 @@ func TestSetLang(t *testing.T) {
 	})
 
 	t.Run("-lang go1.23", func(t *testing.T) {
-		cmd, err := parseCompileCommand([]string{
+		cmd, err := parseCompileCommand(gocontext.Background(), []string{
 			"/path/to/compile",
 			"-o", "/buildDir/b002/a.out",
 			"-lang", "go1.23",
@@ -105,7 +106,7 @@ func TestSetLang(t *testing.T) {
 	})
 
 	t.Run("-lang=go1.13", func(t *testing.T) {
-		cmd, err := parseCompileCommand([]string{
+		cmd, err := parseCompileCommand(gocontext.Background(), []string{
 			"/path/to/compile",
 			"-o", "/buildDir/b002/a.out",
 			"-lang=go1.13",
@@ -127,7 +128,7 @@ func TestSetLang(t *testing.T) {
 			"source/file.go",
 		}
 
-		cmd, err := parseCompileCommand(args)
+		cmd, err := parseCompileCommand(gocontext.Background(), args)
 		require.NoError(t, err)
 
 		require.NoError(t, cmd.SetLang(context.GoLangVersion{}))

@@ -6,11 +6,17 @@
 package proxy
 
 import (
+	gocontext "context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
+	"github.com/rs/zerolog"
 )
 
 //go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile
@@ -28,10 +34,12 @@ type compileFlagSet struct {
 // CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
-	Flags compileFlagSet
 	Files []string
+	Flags compileFlagSet
 	// WorkDir is the $WORK directory managed by the go toolchain.
-	WorkDir string
+	WorkDir     string
+	importPath  string
+	finishToken string
 }
 
 func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
@@ -107,23 +115,66 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
-func parseCompileCommand(args []string) (*CompileCommand, error) {
+// parseCompileCommand parses a [*CompileCommand] from the provided arguments.
+// It sends an [nbt.StartRequest] to the job server to determine whether a
+// previous execution of the same command has produced re-usable artifacts;
+// in which case it copies them into place and returns nil.
+func parseCompileCommand(ctx gocontext.Context, importPath string, args []string) (*CompileCommand, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")
 	}
-	cmd := CompileCommand{command: NewCommand(args)}
+	cmd := &CompileCommand{command: NewCommand(args), importPath: importPath}
 	pos, err := cmd.Flags.parse(args[1:])
 	if err != nil {
 		return nil, err
 	}
 	cmd.Files = pos
 
-	if cmd.Flags.ImportCfg != "" {
-		// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.
-		cmd.WorkDir = filepath.Dir(filepath.Dir(cmd.Flags.ImportCfg))
+	if cmd.Flags.ImportCfg == "" {
+		return cmd, nil
 	}
 
-	return &cmd, nil
+	// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.
+	cmd.WorkDir = filepath.Dir(filepath.Dir(cmd.Flags.ImportCfg))
+
+	jobs, err := client.FromEnvironment(ctx, cmd.WorkDir)
+	if err != nil {
+		return nil, err
+	}
+	defer jobs.Close()
+
+	res, err := client.Request(ctx, jobs, nbt.StartRequest{ImportPath: importPath, BuildID: cmd.Flags.BuildID})
+	if err != nil {
+		return nil, err
+	}
+
+	if res.FinishToken != "" {
+		cmd.finishToken = res.FinishToken
+		return cmd, nil
+	}
+
+	if outputFile := cmd.Flags.Output; outputFile != "" {
+		filename := res.Files[nbt.LabelArchive]
+		if filename == "" {
+			return nil, fmt.Errorf("missing %q object in re-usable artifacts", nbt.LabelArchive)
+		}
+		if err := files.Copy(ctx, filename, outputFile); err != nil {
+			return nil, fmt.Errorf("re-using %q object: %w", nbt.LabelArchive, err)
+		}
+	}
+
+	if outputFile := cmd.Flags.Asmhdr; outputFile != "" {
+		filename := res.Files[nbt.LabelAsmhdr]
+		if filename == "" {
+			return nil, fmt.Errorf("missing %q object in re-usable artifacts", nbt.LabelAsmhdr)
+		}
+		if err := files.Copy(ctx, filename, outputFile); err != nil {
+			return nil, fmt.Errorf("re-using %q object: %w", nbt.LabelAsmhdr, err)
+		}
+	}
+
+	zerolog.Ctx(ctx).Info().Msg("Re-used previously built artifacts from compile command. Returning a nil *CompileCommand.")
+	return nil, nil
 }
 
 var _ Command = (*CompileCommand)(nil)

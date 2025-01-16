@@ -26,9 +26,11 @@ var Toolexec = &cli.Command{
 	SkipFlagParsing: true,
 	Action: func(ctx *cli.Context) (resErr error) {
 		log := zerolog.Ctx(ctx.Context)
+		importPath := os.Getenv("TOOLEXEC_IMPORTPATH")
 
-		proxyCmd, err := proxy.ParseCommand(ctx.Args().Slice())
-		if err != nil {
+		proxyCmd, err := proxy.ParseCommand(ctx.Context, importPath, ctx.Args().Slice())
+		if err != nil || proxyCmd == nil {
+			// An error occurred, or we have been instructed to skip this command.
 			return err
 		}
 		defer func() { proxyCmd.Close(resErr) }()
@@ -62,7 +64,7 @@ var Toolexec = &cli.Command{
 		}
 
 		log.Info().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
-		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
+		weaver := aspect.Weaver{ImportPath: importPath}
 
 		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Trace().Msg("OnCompile processor requested command skipping...")
