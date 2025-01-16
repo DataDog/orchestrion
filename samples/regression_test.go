@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package builtin_test
+package samples_test
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ var (
 	updateSnapshots bool
 )
 
-func Test(t *testing.T) {
+func TestSamples(t *testing.T) {
 	t.Parallel()
 
 	config, err := config.NewLoader(samplesDir, true).Load()
@@ -42,7 +42,7 @@ func Test(t *testing.T) {
 	dirs, err := os.ReadDir(samplesDir)
 	require.NoError(t, err)
 	for _, dir := range dirs {
-		if !dir.IsDir() {
+		if !dir.IsDir() || dir.Name() == "testdata" {
 			continue
 		}
 
@@ -54,11 +54,7 @@ func Test(t *testing.T) {
 
 			testLookup := func(path string) (io.ReadCloser, error) {
 				pkgs, err := packages.Load(
-					&packages.Config{
-						Mode: packages.NeedExportFile,
-						Dir:  pkgDir,
-						Logf: t.Logf,
-					},
+					&packages.Config{Mode: packages.NeedExportFile, Dir: pkgDir},
 					path,
 				)
 				if err != nil {
@@ -134,8 +130,8 @@ func Test(t *testing.T) {
 
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
-	samplesDir = filepath.Join(filename, "..", "..", "..", "..", "samples")
-	referenceDir = filepath.Join(filename, "..", "testdata")
+	samplesDir = filepath.Join(filename, "..")
+	referenceDir = filepath.Join(samplesDir, "testdata")
 
 	flag.BoolVar(&updateSnapshots, "update", os.Getenv("UPDATE_SNAPSHOTS") != "", "update snapshots")
 }
