@@ -9,6 +9,7 @@ package redigo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -70,7 +71,17 @@ func (tc *TestCase) Run(ctx context.Context, t *testing.T) {
 	_, err = backoff.Retry(
 		ctx,
 		backoff.NewExponentialStrategy(100*time.Millisecond, 2, time.Second),
-		func() (any, error) { return client.Do("SET", tc.key, "test_value") },
+		func() (any, error) {
+			res, err := client.Do("SET", tc.key, "test_value")
+			if err != nil {
+				// If there was an error, replace the client with a new one...
+				err = errors.Join(err, client.Close()) // Close the old clien
+				newC, newE := tc.Pool.GetContext(ctx)
+				client = newC
+				err = errors.Join(err, newE)
+			}
+			return res, err
+		},
 		nil,
 	)
 	require.NoError(t, err)

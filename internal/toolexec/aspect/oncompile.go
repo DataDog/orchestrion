@@ -7,22 +7,17 @@ package aspect
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
-	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
@@ -73,102 +68,15 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
-	if js, err := client.FromEnvironment(ctx, cmd.WorkDir); err != nil {
-		log.Debug().Str("work-dir", cmd.WorkDir).Err(err).Msg("Failed to obtain job server client")
-	} else {
-		res, err := client.Request(ctx, js, nbt.StartRequest{ImportPath: w.ImportPath, BuildID: cmd.Flags.BuildID})
-		if err != nil {
-			log.Error().Err(err).Msg("Never-build-twice start request failed")
-			js.Close()
-			return err
-		}
-		if len(res.Files) != 0 {
-			defer js.Close()
-
-			// We always have an filename to re-use...
-			filename := res.Files[nbt.LabelArchive]
-			if filename == "" {
-				return fmt.Errorf("missing re-usable artifact for %q", nbt.LabelArchive)
-			}
-			log.Info().Str("archive", filename).Msg("Using previously-built archive")
-			if err := files.Copy(ctx, filename, cmd.Flags.Output); err != nil {
-				return err
-			}
-
-			if cmd.Flags.Asmhdr != "" {
-				// If the -asmhdr flag was present, we must have a corresponding header file to re-use...
-				filename := res.Files[nbt.LabelAsmhdr]
-				if filename == "" {
-					return fmt.Errorf("missing re-usable artifact for %q", nbt.LabelAsmhdr)
-				}
-				log.Info().Str("-asmhdr", filename).Msg("Using previously-built -asmhdr file")
-				if err := files.Copy(ctx, filename, cmd.Flags.Asmhdr); err != nil {
-					return err
-				}
-			}
-
-			// We place a "reused" marker next to the output archive to identify that it was re-used.
-			if err := os.WriteFile(cmd.Flags.Output+".reused", nil, 0o644); err != nil {
-				return err
-			}
-			return proxy.ErrSkipCommand
-		}
-
-		cmd.OnClose(func(exitErr error) error {
-			defer js.Close()
-
-			log.Info().Msg("Reporting compile task result to job server")
-
-			var (
-				error *string
-				files map[nbt.Label]string
-			)
-			if resErr != nil || exitErr != nil {
-				msg := errors.Join(exitErr, resErr).Error()
-				error = &msg
-			} else {
-				files = make(map[nbt.Label]string, 2)
-				files[nbt.LabelArchive] = cmd.Flags.Output
-				if asmhdr := cmd.Flags.Asmhdr; asmhdr != "" {
-					files[nbt.LabelAsmhdr] = asmhdr
-				}
-			}
-			_, err := client.Request(ctx, js, nbt.FinishRequest{
-				ImportPath:  w.ImportPath,
-				FinishToken: res.FinishToken,
-				Files:       files,
-				Error:       error,
-			})
-			return err
-		})
-	}
-
-	imports, resErr := importcfg.ParseFile(cmd.Flags.ImportCfg)
-	if resErr != nil {
-		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, resErr)
-	}
-
-	linkDeps, resErr := linkdeps.FromImportConfig(&imports)
-	if resErr != nil {
-		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, resErr)
-	}
-
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
+	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	if err != nil {
+		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+	}
 
-	// Ensure we correctly register the [linkdeps.Filename] into the output
-	// archive upon returning, even if we made no changes. The contract is that
-	// an archive's [linkdeps.Filename] must represent all transitive link-time
-	// dependencies.
-	defer func() {
-		if resErr != nil {
-			return
-		}
-		resErr = writeLinkDeps(log, cmd, &linkDeps, orchestrionDir)
-	}()
-
-	goMod, resErr := goenv.GOMOD(".")
-	if resErr != nil {
-		return fmt.Errorf("go env GOMOD: %w", resErr)
+	goMod, err := goenv.GOMOD(".")
+	if err != nil {
+		return fmt.Errorf("go env GOMOD: %w", err)
 	}
 	goModDir := filepath.Dir(goMod)
 	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
@@ -256,13 +164,15 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		}
 
 		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
-		linkDeps.Add(depImportPath)
+		cmd.LinkDeps.Add(depImportPath)
 
-		if kind != typed.ImportStatement {
+		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
 			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
 			// typically used to avoid creating dependency cycles. Corrollary to this, the `link.deps`
 			// file will not contain transitive closures for these packages, so we need to resolve these
-			// at link-time.
+			// at link-time. If the package being built is "main", then we can ignore this, as we are at
+			// the top-level of a dependency tree anyway, and if we cannot resolve a dependency, then we
+			// will not be able to link the final binary.
 			continue
 		}
 
@@ -280,7 +190,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			for _, tDep := range deps.Dependencies() {
 				if _, found := imports.PackageFile[tDep]; !found {
 					log.Debug().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
-					linkDeps.Add(tDep)
+					cmd.LinkDeps.Add(tDep)
 				}
 			}
 
@@ -316,42 +226,6 @@ func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, fi
 	if err := reg.WriteFile(filename); err != nil {
 		return fmt.Errorf("writing: %w", err)
 	}
-
-	return nil
-}
-
-// writeLinkDeps writes the [linkdeps.Filename] file into the orchestrionDir,
-// and registers it to be packed into the output archive. Does nothing if the
-// provided [linkdeps.LinkDeps] is empty.
-func writeLinkDeps(log zerolog.Logger, cmd *proxy.CompileCommand, linkDeps *linkdeps.LinkDeps, orchestrionDir string) error {
-	if linkDeps.Empty() {
-		// Nothing to do...
-		return nil
-	}
-
-	// Write the link.deps file and add it to the output object once the compilation has completed.
-	if err := os.MkdirAll(orchestrionDir, 0o755); err != nil {
-		return fmt.Errorf("making directory %s: %w", orchestrionDir, err)
-	}
-
-	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.Filename)
-	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
-		return fmt.Errorf("writing %s file: %w", linkdeps.Filename, err)
-	}
-
-	cmd.OnClose(func(err error) error {
-		if err != nil {
-			// Don't try to add to the archive if the compilation failed!
-			return nil
-		}
-
-		log.Info().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, linkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
-		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
-		if err := child.Run(); err != nil {
-			return fmt.Errorf("running %q: %w", child.Args, err)
-		}
-		return nil
-	})
 
 	return nil
 }

@@ -48,7 +48,7 @@ func Test(t *testing.T) {
 	runGo(t, tmp, "mod", "tidy")
 
 	// "Fake" proxy command.
-	cmd, err := proxy.ParseCommand(context.Background(), []string{"go", "tool", "compile", "-V=full"})
+	cmd, err := proxy.ParseCommand(context.Background(), "github.com/DataDog/phony/package", []string{"go", "tool", "compile", "-V=full"})
 	require.NoError(t, err)
 
 	// Compute the initial version string...

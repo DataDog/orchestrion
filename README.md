@@ -229,6 +229,7 @@ diagnosing issues.
 ## More information
 
 Datadog's user guide for Orchestrion can be found on [docs.datadoghq.com][dd-doc].
+
 [dd-doc]: https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/go/?tab=compiletimeinstrumentation
 
 Orchestrion's project documentation can be found at [datadoghq.dev/orchestrion](https://datadoghq.dev/orchestrion); in

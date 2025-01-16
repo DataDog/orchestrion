@@ -214,7 +214,7 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 
 	if !state.isDone.CompareAndSwap(false, true) {
 		log.Info().Msg("Task was already completed (concurrent retry?)")
-		return nil, nil
+		return &FinishResponse{}, nil
 	}
 
 	defer state.onDone()
