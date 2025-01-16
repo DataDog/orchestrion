@@ -35,7 +35,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 		// and the root work tree contains all child work trees involved in resolutions.
 		req.TempDir = filepath.Join(workDir, "__tmp__")
 	}
-	archives, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+	archives, err := client.Request(
 		context.Background(),
 		conn,
 		req,

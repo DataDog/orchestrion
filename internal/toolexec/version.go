@@ -53,7 +53,7 @@ func ComputeVersion(ctx context.Context, cmd proxy.Command) (string, error) {
 	}
 	defer conn.Close()
 
-	res, err := client.Request[*buildid.VersionSuffixRequest, buildid.VersionSuffixResponse](context.Background(), conn, nil)
+	res, err := client.Request(context.Background(), conn, buildid.VersionSuffixRequest{})
 	if err != nil {
 		return "", err
 	}

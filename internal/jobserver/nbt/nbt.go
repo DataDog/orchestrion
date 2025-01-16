@@ -117,8 +117,8 @@ const (
 	LabelAsmhdr  Label = "go_asm.h"
 )
 
-func (StartRequest) Subject() string             { return startSubject }
-func (*StartResponse) IsResponseTo(StartRequest) {}
+func (StartRequest) Subject() string           { return startSubject }
+func (StartRequest) ResponseIs(*StartResponse) {}
 
 func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, error) {
 	if req.ImportPath == "" || req.BuildID == "" {
@@ -183,8 +183,8 @@ type (
 	}
 )
 
-func (FinishRequest) Subject() string              { return finishSubject }
-func (*FinishResponse) IsResponseTo(FinishRequest) {}
+func (FinishRequest) Subject() string            { return finishSubject }
+func (FinishRequest) ResponseIs(*FinishResponse) {}
 
 var errNoFilesNorError = errors.New("missing files, and no error reported")
 
@@ -214,7 +214,7 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 
 	if !state.isDone.CompareAndSwap(false, true) {
 		log.Info().Msg("Task was already completed (concurrent retry?)")
-		return &FinishResponse{}, nil
+		return nil, nil
 	}
 
 	defer state.onDone()

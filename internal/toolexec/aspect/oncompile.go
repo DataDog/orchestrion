@@ -76,7 +76,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	if js, err := client.FromEnvironment(ctx, cmd.WorkDir); err != nil {
 		log.Debug().Str("work-dir", cmd.WorkDir).Err(err).Msg("Failed to obtain job server client")
 	} else {
-		res, err := client.Request[nbt.StartRequest, *nbt.StartResponse](ctx, js, nbt.StartRequest{ImportPath: w.ImportPath, BuildID: cmd.Flags.BuildID})
+		res, err := client.Request(ctx, js, nbt.StartRequest{ImportPath: w.ImportPath, BuildID: cmd.Flags.BuildID})
 		if err != nil {
 			log.Error().Err(err).Msg("Never-build-twice start request failed")
 			js.Close()
@@ -133,7 +133,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 					files[nbt.LabelAsmhdr] = asmhdr
 				}
 			}
-			_, err := client.Request[nbt.FinishRequest, *nbt.FinishResponse](ctx, js, nbt.FinishRequest{
+			_, err := client.Request(ctx, js, nbt.FinishRequest{
 				ImportPath:  w.ImportPath,
 				FinishToken: res.FinishToken,
 				Files:       files,
