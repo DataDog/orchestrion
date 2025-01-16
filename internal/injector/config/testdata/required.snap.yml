@@ -1,10 +1,5 @@
 pkgpath: github.com/DataDog/orchestrion
-imports:
-  - pkgpath: github.com/DataDog/orchestrion/internal/injector/builtin
-    yaml:
-      name: orchestrion.yml
-      extends:
-        - name: ./yaml/directive/orchestrion-enabled.yml
-          aspects:
-            - Initialize to true
-yaml: null
+yaml:
+  name: orchestrion.yml
+  aspects:
+    - Initialize to true
