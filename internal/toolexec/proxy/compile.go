@@ -6,11 +6,18 @@
 package proxy
 
 import (
+	gocontext "context"
 	"errors"
+	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/rs/zerolog"
 )
 
 //go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile
@@ -30,6 +37,11 @@ type CompileCommand struct {
 	Files []string
 	// WorkDir is the $WORK directory managed by the go toolchain.
 	WorkDir string
+
+	// Link-time dependencies that must be honored to link a dependent of the
+	// built package. If not blank, this is written to disk, then appended to the
+	// archive output.
+	LinkDeps linkdeps.LinkDeps
 }
 
 func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
@@ -105,6 +117,40 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
+func (cmd *CompileCommand) Close(ctx gocontext.Context) (err error) {
+	defer func() { err = errors.Join(err, cmd.command.Close(ctx)) }()
+
+	if cmd.LinkDeps.Empty() {
+		return nil
+	}
+
+	if _, err := os.Stat(cmd.Flags.Output); errors.Is(err, os.ErrNotExist) {
+		// Already failing, not doing anything...
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	orchestrionDir := filepath.Join(cmd.Flags.Output, "..", "orchestrion")
+	if err := os.MkdirAll(orchestrionDir, 0o755); err != nil {
+		return fmt.Errorf("mkdir %q: %w", orchestrionDir, err)
+	}
+
+	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.Filename)
+	if err := cmd.LinkDeps.WriteFile(linkDepsFile); err != nil {
+		return fmt.Errorf("writing %s file: %w", linkdeps.Filename, err)
+	}
+
+	log := zerolog.Ctx(ctx)
+	log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, &cmd.LinkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
+
+	child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
+	if err := child.Run(); err != nil {
+		return fmt.Errorf("running %q: %w", child.Args, err)
+	}
+	return nil
+}
+
 func parseCompileCommand(args []string) (*CompileCommand, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")
@@ -119,6 +165,16 @@ func parseCompileCommand(args []string) (*CompileCommand, error) {
 	if cmd.Flags.ImportCfg != "" {
 		// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.
 		cmd.WorkDir = filepath.Dir(filepath.Dir(cmd.Flags.ImportCfg))
+
+		imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+		if err != nil {
+			return nil, fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+		}
+
+		cmd.LinkDeps, err = linkdeps.FromImportConfig(&imports)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
+		}
 	}
 
 	return &cmd, nil

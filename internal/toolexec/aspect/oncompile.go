@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -74,23 +73,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	linkDeps, err := linkdeps.FromImportConfig(&imports)
-	if err != nil {
-		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
-	}
-
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
-
-	// Ensure we correctly register the [linkdeps.Filename] into the output
-	// archive upon returning, even if we made no changes. The contract is that
-	// an archive's [linkdeps.Filename] must represent all transitive link-time
-	// dependencies.
-	defer func() {
-		if err != nil {
-			return
-		}
-		err = writeLinkDeps(log, cmd, &linkDeps, orchestrionDir)
-	}()
 
 	goMod, err := goenv.GOMOD(".")
 	if err != nil {
@@ -182,13 +165,15 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 		}
 
 		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
-		linkDeps.Add(depImportPath)
+		cmd.LinkDeps.Add(depImportPath)
 
-		if kind != typed.ImportStatement {
+		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
 			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
 			// typically used to avoid creating dependency cycles. Corrollary to this, the `link.deps`
 			// file will not contain transitive closures for these packages, so we need to resolve these
-			// at link-time.
+			// at link-time. If the package being built is "main", then we can ignore this, as we are at
+			// the top-level of a dependency tree anyway, and if we cannot resolve a dependency, then we
+			// will not be able to link the final binary.
 			continue
 		}
 
@@ -206,7 +191,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 			for _, tDep := range deps.Dependencies() {
 				if _, found := imports.PackageFile[tDep]; !found {
 					log.Debug().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
-					linkDeps.Add(tDep)
+					cmd.LinkDeps.Add(tDep)
 				}
 			}
 
@@ -242,37 +227,6 @@ func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, fi
 	if err := reg.WriteFile(filename); err != nil {
 		return fmt.Errorf("writing: %w", err)
 	}
-
-	return nil
-}
-
-// writeLinkDeps writes the [linkdeps.Filename] file into the orchestrionDir,
-// and registers it to be packed into the output archive. Does nothing if the
-// provided [linkdeps.LinkDeps] is empty.
-func writeLinkDeps(log zerolog.Logger, cmd *proxy.CompileCommand, linkDeps *linkdeps.LinkDeps, orchestrionDir string) error {
-	if linkDeps.Empty() {
-		// Nothing to do...
-		return nil
-	}
-
-	// Write the link.deps file and add it to the output object once the compilation has completed.
-	if err := os.MkdirAll(orchestrionDir, 0o755); err != nil {
-		return fmt.Errorf("making directory %s: %w", orchestrionDir, err)
-	}
-
-	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.Filename)
-	if err := linkDeps.WriteFile(linkDepsFile); err != nil {
-		return fmt.Errorf("writing %s file: %w", linkdeps.Filename, err)
-	}
-
-	cmd.OnClose(func() error {
-		log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, linkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
-		child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
-		if err := child.Run(); err != nil {
-			return fmt.Errorf("running %q: %w", child.Args, err)
-		}
-		return nil
-	})
 
 	return nil
 }
