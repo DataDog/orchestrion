@@ -49,10 +49,6 @@ const (
 	// weaveTracerInternal limits weaving to only aspects that have the
 	// `tracer-internal` flag set.
 	weaveTracerInternal
-
-	// labelAsmhdr is used to identify objects produced by the compiler when the
-	// -asmhdr flag is provided.
-	labelAsmhdr nbt.Label = "go_asm.h"
 )
 
 // matches returns true if the importPath is matched by this special case.
@@ -86,20 +82,24 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			js.Close()
 			return err
 		}
-		if res.ArchivePath != "" {
+		if len(res.Files) != 0 {
 			defer js.Close()
 
-			// We always have an archive to re-use...
-			log.Info().Str("archive", res.ArchivePath).Msg("Using previously-built archive")
-			if err := files.Copy(ctx, res.ArchivePath, cmd.Flags.Output); err != nil {
+			// We always have an filename to re-use...
+			filename := res.Files[nbt.LabelArchive]
+			if filename == "" {
+				return fmt.Errorf("missing re-usable artifact for %q", nbt.LabelArchive)
+			}
+			log.Info().Str("archive", filename).Msg("Using previously-built archive")
+			if err := files.Copy(ctx, filename, cmd.Flags.Output); err != nil {
 				return err
 			}
 
 			if cmd.Flags.Asmhdr != "" {
 				// If the -asmhdr flag was present, we must have a corresponding header file to re-use...
-				filename := res.AdditionalFiles[labelAsmhdr]
+				filename := res.Files[nbt.LabelAsmhdr]
 				if filename == "" {
-					return fmt.Errorf("missing re-usable artifact for %q", labelAsmhdr)
+					return fmt.Errorf("missing re-usable artifact for %q", nbt.LabelAsmhdr)
 				}
 				log.Info().Str("-asmhdr", filename).Msg("Using previously-built -asmhdr file")
 				if err := files.Copy(ctx, filename, cmd.Flags.Asmhdr); err != nil {
@@ -120,25 +120,24 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			log.Info().Msg("Reporting compile task result to job server")
 
 			var (
-				error       *string
-				archivePath string
+				error *string
+				files map[nbt.Label]string
 			)
 			if resErr != nil || exitErr != nil {
 				msg := errors.Join(exitErr, resErr).Error()
 				error = &msg
 			} else {
-				archivePath = cmd.Flags.Output
-			}
-			var additionalFiles map[nbt.Label]string
-			if cmd.Flags.Asmhdr != "" {
-				additionalFiles = map[nbt.Label]string{labelAsmhdr: cmd.Flags.Asmhdr}
+				files = make(map[nbt.Label]string, 2)
+				files[nbt.LabelArchive] = cmd.Flags.Output
+				if asmhdr := cmd.Flags.Asmhdr; asmhdr != "" {
+					files[nbt.LabelAsmhdr] = asmhdr
+				}
 			}
 			_, err := client.Request[nbt.FinishRequest, *nbt.FinishResponse](ctx, js, nbt.FinishRequest{
-				ImportPath:      w.ImportPath,
-				FinishToken:     res.FinishToken,
-				ArchivePath:     archivePath,
-				AdditionalFiles: additionalFiles,
-				Error:           error,
+				ImportPath:  w.ImportPath,
+				FinishToken: res.FinishToken,
+				Files:       files,
+				Error:       error,
 			})
 			return err
 		})

@@ -41,7 +41,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		archiveContent := uuid.NewString()
 		extraFileContent := uuid.NewString()
@@ -57,15 +57,17 @@ func Test(t *testing.T) {
 				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 				assert.NoError(t, err)
 				assert.Empty(t, res.FinishToken)
-				assert.NotEmpty(t, res.ArchivePath)
+				assert.NotEmpty(t, res.Files)
+				assert.Len(t, res.Files, 2)
 
-				content, err := os.ReadFile(res.ArchivePath)
+				path, ok := res.Files[LabelArchive]
+				assert.True(t, ok, "no file returned for %s", LabelArchive)
+				content, err := os.ReadFile(path)
 				assert.NoError(t, err)
 				assert.Equal(t, archiveContent, string(content))
 
-				assert.Len(t, res.AdditionalFiles, 1)
-				path, ok := res.AdditionalFiles[label]
-				assert.True(t, ok)
+				path, ok = res.Files[label]
+				assert.True(t, ok, "no file returned for %s", label)
 				content, err = os.ReadFile(path)
 				assert.NoError(t, err)
 				assert.Equal(t, extraFileContent, string(content))
@@ -79,10 +81,9 @@ func Test(t *testing.T) {
 		require.NoError(t, os.WriteFile(extraFile, []byte(extraFileContent), 0o644))
 
 		res, err := subject.finish(ctx, FinishRequest{
-			ImportPath:      importPath,
-			FinishToken:     start.FinishToken,
-			ArchivePath:     archive,
-			AdditionalFiles: map[Label]string{label: extraFile},
+			ImportPath:  importPath,
+			FinishToken: start.FinishToken,
+			Files:       map[Label]string{LabelArchive: archive, label: extraFile},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -94,7 +95,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		archiveContent := uuid.NewString()
 
@@ -117,7 +118,7 @@ func Test(t *testing.T) {
 		res, err := subject.finish(ctx, FinishRequest{
 			ImportPath:  importPath,
 			FinishToken: start.FinishToken,
-			ArchivePath: archive,
+			Files:       map[Label]string{LabelArchive: archive},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -130,7 +131,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		archiveContent := uuid.NewString()
 		archive := filepath.Join(t.TempDir(), "_pkg_.a")
@@ -140,7 +141,7 @@ func Test(t *testing.T) {
 			res, err := subject.finish(ctx, FinishRequest{
 				ImportPath:  importPath,
 				FinishToken: start.FinishToken,
-				ArchivePath: archive,
+				Files:       map[Label]string{LabelArchive: archive},
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res)
@@ -154,7 +155,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		archiveContent := uuid.NewString()
 		archive := filepath.Join(t.TempDir(), "_pkg_.a")
@@ -164,7 +165,7 @@ func Test(t *testing.T) {
 			res, err := subject.finish(ctx, FinishRequest{
 				ImportPath:  importPath,
 				FinishToken: uuid.NewString(),
-				ArchivePath: archive,
+				Files:       map[Label]string{LabelArchive: archive},
 			})
 			require.Error(t, err, "invalid finish token")
 			require.Nil(t, res)
@@ -173,7 +174,7 @@ func Test(t *testing.T) {
 		res, err := subject.finish(ctx, FinishRequest{
 			ImportPath:  importPath,
 			FinishToken: start.FinishToken,
-			ArchivePath: archive,
+			Files:       map[Label]string{LabelArchive: archive},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
@@ -186,7 +187,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		errorText := "simulated failure"
 
@@ -219,7 +220,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		var wg sync.WaitGroup
 		defer wg.Wait()
@@ -229,7 +230,7 @@ func Test(t *testing.T) {
 				defer wg.Done()
 
 				res, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
-				assert.ErrorContains(t, err, errNoArchiveNorError.Error())
+				assert.ErrorContains(t, err, errNoFilesNorError.Error())
 				assert.Nil(t, res)
 			}()
 		}
@@ -238,7 +239,7 @@ func Test(t *testing.T) {
 			ImportPath:  importPath,
 			FinishToken: start.FinishToken,
 		})
-		require.ErrorIs(t, err, errNoArchiveNorError)
+		require.ErrorIs(t, err, errNoFilesNorError)
 		require.Nil(t, res)
 	})
 
@@ -249,7 +250,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		// Deliberately non-existent!
 		archive := filepath.Join(t.TempDir(), "deliberately-missing", "_pkg_.a")
@@ -270,7 +271,7 @@ func Test(t *testing.T) {
 		res, err := subject.finish(ctx, FinishRequest{
 			ImportPath:  importPath,
 			FinishToken: start.FinishToken,
-			ArchivePath: archive,
+			Files:       map[Label]string{LabelArchive: archive},
 		})
 		require.ErrorContains(t, err, archive)
 		require.Nil(t, res)
@@ -283,7 +284,7 @@ func Test(t *testing.T) {
 		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
 		require.NoError(t, err)
 		require.NotEmpty(t, start.FinishToken)
-		assert.Empty(t, start.ArchivePath)
+		assert.Empty(t, start.Files)
 
 		label := Label(uuid.NewString())
 		// Deliberately non-existent!
@@ -306,10 +307,9 @@ func Test(t *testing.T) {
 		require.NoError(t, os.WriteFile(archive, []byte(uuid.NewString()), 0o644))
 
 		res, err := subject.finish(ctx, FinishRequest{
-			ImportPath:      importPath,
-			FinishToken:     start.FinishToken,
-			ArchivePath:     archive,
-			AdditionalFiles: map[Label]string{label: extraFile},
+			ImportPath:  importPath,
+			FinishToken: start.FinishToken,
+			Files:       map[Label]string{LabelArchive: archive, label: extraFile},
 		})
 		require.ErrorContains(t, err, extraFile)
 		require.Nil(t, res)

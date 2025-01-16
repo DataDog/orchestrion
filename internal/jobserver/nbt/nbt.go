@@ -40,10 +40,9 @@ type (
 		onDone   func()          // Called once the original task has completed
 		done     <-chan struct{} // Blocks until the original task has completed
 
-		isDone          atomic.Bool      // Whether the original task has completed yet.
-		archive         string           // Path to the archive produced by the original task. Available once done.
-		additionalFiles map[Label]string // Additional files produced by the original task. Available once done.
-		error           error            // Error from the original task. Available once done.
+		isDone atomic.Bool      // Whether the original task has completed yet.
+		files  map[Label]string // Additional files produced by the original task. Available once done.
+		error  error            // Error from the original task. Available once done.
 	}
 )
 
@@ -103,19 +102,19 @@ type (
 		// the job server about the outcome of the build. It cannot be blank unless
 		// [*StartResponse.ArchivePath] is not blank.
 		FinishToken string `json:"token,omitempty"`
-		// ArchivePath is the path of the archive produced for the same
-		// [StartRequest.ImportPath] by another task. That archive must be re-used
-		// instead of creating a new one. It cannot be blank unless
+		// Files is the set of files produced by the original task, by label. These
+		// files must be re-used instead of re-created. Always blank if
 		// [*StartResponse.FinishToken] is not blank.
-		ArchivePath string `json:"archivePath,omitempty"`
-		// AdditionalFiles is the set of additional files produced by the original
-		// task, by label. These files must be re-used instead of re-created. Always
-		// blank if [*StartResponse.FinishToken] is not blank.
-		AdditionalFiles map[Label]string `json:"extra,omitempty"`
+		Files map[Label]string `json:"extra,omitempty"`
 	}
 	// Label is a label identifying an additional object produced by a task. It
 	// must be a valid part of a file name.
 	Label string
+)
+
+const (
+	LabelArchive Label = "_pkg_.a"
+	LabelAsmhdr  Label = "go_asm.h"
 )
 
 func (StartRequest) Subject() string             { return startSubject }
@@ -149,13 +148,13 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 			return nil, state.error
 		}
 
-		if state.archive == "" {
+		if len(state.files) == 0 {
 			// The context has expired or the upstream context has been canceled.
 			// We'll return this as [context.Canceled] either way.
 			return nil, context.Canceled
 		}
 
-		return &StartResponse{ArchivePath: state.archive, AdditionalFiles: state.additionalFiles}, nil
+		return &StartResponse{Files: state.files}, nil
 	}
 
 	// Otherwise, return a finalization token, etc...
@@ -172,15 +171,9 @@ type (
 		// FinishToken is forwarded from [*StartResponse.FinishToken], and cannot be
 		// blank.
 		FinishToken string `json:"token"`
-		// ArchivePath is the path to the archive produced by the compilation task.
-		// It must not be blank unless [FinishRequest.Error] is not nil. If present,
-		// the file must exist on disk, and will be hard-linked (or copied) into a
-		// temporary directory so it can be re-used by subsequent [StartRequest] for
-		// the same [FinishRequest.ImportPath].
-		ArchivePath string `json:"archivePath,omitempty"`
-		// AdditionalFiles is a list of additional files produced by the compilation
-		// task, associated to a user-defined label.
-		AdditionalFiles map[Label]string `json:"extra,omitempty"`
+		// Files is a list of files produced by the compilation task, associated to
+		// a user-defined label.
+		Files map[Label]string `json:"extra,omitempty"`
 		// Error is the error that occurred as a result of this compilation task, if
 		// any.
 		Error *string `json:"error,omitempty"`
@@ -193,7 +186,7 @@ type (
 func (FinishRequest) Subject() string              { return finishSubject }
 func (*FinishResponse) IsResponseTo(FinishRequest) {}
 
-var errNoArchiveNorError = errors.New("missing archive path, and no error reported")
+var errNoFilesNorError = errors.New("missing files, and no error reported")
 
 func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishResponse, error) {
 	if req.ImportPath == "" || req.FinishToken == "" {
@@ -226,8 +219,7 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 
 	defer state.onDone()
 	log.Debug().
-		Str("archive-path", req.ArchivePath).
-		Any("additional-files", req.AdditionalFiles).
+		Any("files", req.Files).
 		Any("error", req.Error).
 		Msg("Compile task finished")
 
@@ -236,8 +228,8 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return &FinishResponse{}, nil
 	}
 
-	if req.ArchivePath == "" {
-		state.error = errNoArchiveNorError
+	if len(req.Files) == 0 {
+		state.error = errNoFilesNorError
 		return nil, state.error
 	}
 
@@ -247,26 +239,20 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return nil, state.error
 	}
 
-	state.additionalFiles = make(map[Label]string, len(req.AdditionalFiles))
-	for label, path := range req.AdditionalFiles {
+	state.files = make(map[Label]string, len(req.Files))
+	for label, path := range req.Files {
 		filename := filepath.Join(dir, string(label))
 		if err := files.Copy(ctx, path, filename); err != nil {
-			state.additionalFiles = nil
+			state.files = nil
 			state.error = fmt.Errorf("persisting additional file %q (%q): %w", path, label, err)
 			return nil, state.error
 		}
-		state.additionalFiles[label] = filename
-	}
-
-	state.archive = filepath.Join(dir, filepath.Base(req.ArchivePath))
-	if err := files.Copy(ctx, req.ArchivePath, state.archive); err != nil {
-		state.additionalFiles = nil
-		state.archive = ""
-		state.error = fmt.Errorf("persisting archive %q: %w", req.ArchivePath, err)
-		return nil, state.error
+		state.files[label] = filename
 	}
 
 	return &FinishResponse{}, nil
 }
 
+// ns is an arbitrary UUID used as a namespace for hashing import paths when storing artifacts in
+// the temporary storage location.
 var ns = uuid.MustParse("4BFB6F4B-212C-43A0-A581-A29C8B3D3BE4")
