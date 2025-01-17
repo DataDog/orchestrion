@@ -6,6 +6,7 @@
 package proxy
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -33,7 +34,7 @@ func TestParseLink(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			cmd, err := parseLinkCommand(tc.input)
+			cmd, err := parseLinkCommand(context.Background(), tc.input)
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeLink, cmd.Type())
 			c := cmd.(*LinkCommand)

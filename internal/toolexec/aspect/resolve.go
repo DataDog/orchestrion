@@ -35,7 +35,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 		// and the root work tree contains all child work trees involved in resolutions.
 		req.TempDir = filepath.Join(workDir, "__tmp__")
 	}
-	archives, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+	archives, err := client.Request(
 		context.Background(),
 		conn,
 		req,
@@ -48,7 +48,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	var found bool
 	for ip, arch := range archives {
 		if arch == "" {
-			return nil, fmt.Errorf("failed to resolve archive for %q", ip)
+			return nil, fmt.Errorf("no archive found for %q", ip)
 		}
 		if ip == importPath {
 			found = true

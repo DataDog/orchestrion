@@ -60,19 +60,16 @@ type (
 	ResolveResponse map[string]string
 )
 
-func NewResolveRequest(dir string, pattern string) *ResolveRequest {
-	return &ResolveRequest{
+func NewResolveRequest(dir string, pattern string) ResolveRequest {
+	return ResolveRequest{
 		Dir:     dir,
 		Env:     os.Environ(),
 		Pattern: pattern,
 	}
 }
 
-func (*ResolveRequest) Subject() string {
-	return resolveSubject
-}
-
-func (ResolveResponse) IsResponseTo(*ResolveRequest) {}
+func (ResolveRequest) Subject() string            { return resolveSubject }
+func (ResolveRequest) ResponseIs(ResolveResponse) {}
 
 func (r *ResolveRequest) canonicalizeEnviron() {
 	named := make(map[string]string, len(r.Env))

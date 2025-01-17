@@ -35,13 +35,10 @@ type (
 	VersionSuffixResponse string
 )
 
-func (*VersionSuffixRequest) Subject() string {
-	return versionSubject
-}
+func (VersionSuffixRequest) Subject() string                  { return versionSubject }
+func (VersionSuffixRequest) ResponseIs(VersionSuffixResponse) {}
 
-func (VersionSuffixResponse) IsResponseTo(*VersionSuffixRequest) {}
-
-func (s *service) versionSuffix(ctx context.Context, _ *VersionSuffixRequest) (VersionSuffixResponse, error) {
+func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (VersionSuffixResponse, error) {
 	log := zerolog.Ctx(ctx)
 
 	s.mu.Lock()

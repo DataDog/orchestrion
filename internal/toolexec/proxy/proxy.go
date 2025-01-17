@@ -21,8 +21,8 @@ type (
 	// Command represents a Go compilation command
 	Command interface {
 		// Close invokes all registered OnClose callbacks and releases any resources associated with the
-		// command.
-		Close(context.Context) error
+		// command. If the command failed, the error is provided as an argument.
+		Close(context.Context, error) error
 
 		// Args are all the command arguments, starting from the Go tool command
 		Args() []string
@@ -83,7 +83,8 @@ func NewCommand(args []string) command {
 	return cmd
 }
 
-func (*command) Close(context.Context) error {
+func (*command) Close(context.Context, error) error {
+	// Nothing to do...
 	return nil
 }
 

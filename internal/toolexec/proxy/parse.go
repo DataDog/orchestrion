@@ -6,13 +6,15 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 )
 
-// ParseCommand parses the Go tool call and its arguments and returns it as a Command.
-// The go tool call path should be the first element of args
-func ParseCommand(args []string) (Command, error) {
+// ParseCommand parses the Go tool call and its arguments and returns it as a [Command]. The go tool
+// call path should be the first element of args. A nil [Command] may be returned if the command is
+// to be ignored (as the result of re-using a previous identical command's side effects).
+func ParseCommand(ctx context.Context, importPath string, args []string) (Command, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected empty command arguments")
 	}
@@ -26,9 +28,14 @@ func ParseCommand(args []string) (Command, error) {
 
 	switch cmdType {
 	case CommandTypeCompile:
-		return parseCompileCommand(args)
+		cmd, err := parseCompileCommand(ctx, importPath, args)
+		if cmd == nil || err != nil {
+			// There was an error, or we re-used command outputs.
+			return nil, err
+		}
+		return cmd, err
 	case CommandTypeLink:
-		return parseLinkCommand(args)
+		return parseLinkCommand(ctx, args)
 	// We currently don't need to inject other tool calls, so we parse them as generic unsupported commands
 	default:
 		return &command{args: args}, nil
@@ -36,8 +43,8 @@ func ParseCommand(args []string) (Command, error) {
 }
 
 // MustParseCommand calls ParseCommand and exits on error
-func MustParseCommand(args []string) Command {
-	cmd, err := ParseCommand(args)
+func MustParseCommand(ctx context.Context, importPath string, args []string) Command {
+	cmd, err := ParseCommand(ctx, importPath, args)
 	if err != nil {
 		panic(err)
 	}

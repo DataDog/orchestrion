@@ -7,6 +7,7 @@ require (
 	github.com/dave/dst v0.27.3
 	github.com/dave/jennifer v1.7.1
 	github.com/fsnotify/fsnotify v1.8.0
+	github.com/google/uuid v1.6.0
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/nats-io/nats-server/v2 v2.10.24
 	github.com/nats-io/nats.go v1.38.0

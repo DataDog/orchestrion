@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -23,19 +24,29 @@ var Toolexec = &cli.Command{
 	UsageText:       "orchestrion toolexec [tool] [tool args...]",
 	Args:            true,
 	SkipFlagParsing: true,
-	Action: func(ctx *cli.Context) error {
+	Action: func(ctx *cli.Context) (resErr error) {
 		log := zerolog.Ctx(ctx.Context)
+		importPath := os.Getenv("TOOLEXEC_IMPORTPATH")
 
-		proxyCmd, err := proxy.ParseCommand(ctx.Args().Slice())
-		if err != nil {
+		proxyCmd, err := proxy.ParseCommand(ctx.Context, importPath, ctx.Args().Slice())
+		if err != nil || proxyCmd == nil {
+			// An error occurred, or we have been instructed to skip this command.
 			return err
 		}
-		defer proxyCmd.Close(ctx.Context)
+		defer func() { proxyCmd.Close(ctx.Context, resErr) }()
 
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do
 			// any kind of processing on these...
-			return proxy.RunCommand(proxyCmd)
+			err := proxy.RunCommand(proxyCmd)
+			var event *zerolog.Event
+			if err != nil {
+				event = log.Error().Err(err)
+			} else {
+				event = log.Trace()
+			}
+			event.Strs("command", proxyCmd.Args()).Msg("Toolexec fast-forward command")
+			return err
 		}
 
 		// Ensure Orchestrion is properly pinned
@@ -52,23 +63,32 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
-		weaver := aspect.Weaver{ImportPath: os.Getenv("TOOLEXEC_IMPORTPATH")}
+		log.Info().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
+		weaver := aspect.Weaver{ImportPath: importPath}
 
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); err != nil {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
+			log.Trace().Msg("OnCompile processor requested command skipping...")
+			return nil
+		} else if err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); err != nil {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); errors.Is(err, proxy.ErrSkipCommand) {
+			log.Trace().Msg("OnCompileMain processor requested command skipping...")
+			return nil
+		} else if err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); err != nil {
+		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); errors.Is(err, proxy.ErrSkipCommand) {
+			log.Trace().Msg("OnLink processor requested command skipping...")
+			return nil
+		} else if err != nil {
 			return err
 		}
 
-		log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec final command")
+		log.Debug().Strs("command", proxyCmd.Args()).Msg("Toolexec final command")
 		if err := proxy.RunCommand(proxyCmd); err != nil {
 			// Logging as debug, as the error will likely surface back to the user anyway...
-			log.Debug().Err(err).Msg("Proxied command failed")
+			log.Error().Strs("command", proxyCmd.Args()).Err(err).Msg("Proxied command failed")
 			return err
 		}
 		return nil
