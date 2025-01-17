@@ -3,7 +3,7 @@
   "$id": "https://datadoghq.dev/orchestrion/schema.json",
   "type": "object",
   "required": [ "meta"],
-  "oneOf": [
+  "anyOf": [
     {"required": ["aspects"]},
     {"required": ["extends"]}
   ],

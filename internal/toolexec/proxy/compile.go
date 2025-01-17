@@ -41,13 +41,19 @@ type CompileCommand struct {
 	Files []string
 	Flags compileFlagSet
 	// WorkDir is the $WORK directory managed by the go toolchain.
-	WorkDir     string
-	importPath  string
-	finishToken string
-	// Link-time dependencies that must be honored to link a dependent of the
-	// built package. If not blank, this is written to disk, then appended to the
-	// archive output.
+	WorkDir string
+
+	// LinkDeps lists all link-time dependencies that must be honored to link a
+	// dependent of the built package. If not blank, this is written to disk, then
+	// appended to the archive output.
 	LinkDeps linkdeps.LinkDeps
+
+	// importPath is the import path of the package being built.
+	importPath string
+	// finishToken is the token returned by the job server in response to the
+	// [nbt.StartRequest] when the operation needs to continue, and that is then
+	// forwarded to the [nbt.FinishRequest].
+	finishToken string
 }
 
 func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
@@ -123,10 +129,6 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
-// parseCompileCommand parses a [*CompileCommand] from the provided arguments.
-// It sends an [nbt.StartRequest] to the job server to determine whether a
-// previous execution of the same command has produced re-usable artifacts;
-// in which case it copies them into place and returns nil.
 func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error) {
 	defer func() { err = errors.Join(err, cmd.command.Close(ctx, cmdErr)) }()
 
@@ -207,6 +209,10 @@ func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) 
 	return err
 }
 
+// parseCompileCommand parses a [*CompileCommand] from the provided arguments.
+// It sends an [nbt.StartRequest] to the job server to determine whether a
+// previous execution of the same command has produced re-usable artifacts;
+// in which case it copies them into place and returns nil.
 func parseCompileCommand(ctx gocontext.Context, importPath string, args []string) (*CompileCommand, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")

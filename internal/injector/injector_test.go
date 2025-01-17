@@ -71,11 +71,7 @@ func Test(t *testing.T) {
 
 			testLookup := func(path string) (io.ReadCloser, error) {
 				pkgs, err := packages.Load(
-					&packages.Config{
-						Mode: packages.NeedExportFile,
-						Dir:  tmp,
-						Logf: t.Logf,
-					},
+					&packages.Config{Mode: packages.NeedExportFile, Dir: tmp},
 					path,
 				)
 				if err != nil {
@@ -94,7 +90,10 @@ func Test(t *testing.T) {
 			require.NoError(t, yaml.Unmarshal(data, &config), "failed to parse test configuration")
 
 			runGo(t, tmp, "mod", "init", testModuleName)
-			runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", rootDir))
+			runGo(t, tmp, "mod", "edit",
+				fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
+				fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+			)
 
 			inputFile := filepath.Join(tmp, "input.go")
 			original := strings.TrimSpace(config.Code) + "\n"

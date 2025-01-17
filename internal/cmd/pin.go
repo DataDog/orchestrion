@@ -22,7 +22,7 @@ var Pin = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:  "prune",
-			Usage: "Remove imports from " + config.FilenameOrchestrionToolGo + " that do not contain a valid " + config.FilenameOrchestrionYML + " file declaring integrations.",
+			Usage: "Remove imports from " + config.FilenameOrchestrionToolGo + " that do not contain any orchestrion integrations.",
 			Value: true,
 		},
 		&cli.BoolFlag{

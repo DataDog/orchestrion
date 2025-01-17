@@ -1,0 +1,95 @@
+//line samples/client/main.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+//line <generated>:1
+	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
+	__orchestrion_log "log"
+)
+
+//dd:span
+//line samples/client/main.go:19
+func main() {
+//line <generated>:1
+	{
+		defer __orchestrion_profiler.Stop()
+	}
+	{
+		ctx := context.TODO()
+		var span __orchestrion_tracer.Span
+		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "main",
+			__orchestrion_tracer.Tag("function-name", "main"),
+		)
+
+		defer span.Finish()
+	}
+	{
+		defer __orchestrion_tracer.Stop()
+	}
+//line samples/client/main.go:20
+	if len(os.Args) < 2 {
+		return
+	}
+	client := &http.Client{
+		Timeout: time.Second,
+	}
+	req, err := http.NewRequestWithContext(context.Background(),
+		http.MethodPost, "http://localhost:8080",
+		strings.NewReader(os.Args[1]))
+	if err != nil {
+		panic(err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(resp.Status)
+	if resp.Body == nil {
+		return
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
+}
+
+//line <generated>:1
+func init() {
+	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
+}
+func init() {
+	switch os.Getenv("DD_PROFILING_ENABLED") {
+	case "1", "true", "auto":
+		// The "auto" value can be set if profiling is enabled via the
+		// Datadog Admission Controller. We always turn on the profiler in
+		// the "auto" case since we only send profiles after at least a
+		// minute, and we assume anything running that long is worth
+		// profiling.
+		err := __orchestrion_profiler.Start(
+			__orchestrion_profiler.WithProfileTypes(__orchestrion_profiler.CPUProfile, __orchestrion_profiler.HeapProfile, __orchestrion_profiler.GoroutineProfile, __orchestrion_profiler.MutexProfile),
+			__orchestrion_profiler.WithTags("orchestrion:true"),
+		)
+		if err != nil {
+			// TODO: is there a better reporting mechanism?
+			// The tracer and profiler already use the stdlib logger, so
+			// we're not adding anything new. But users might be using a
+			// different logger.
+			__orchestrion_log.Printf("failed to start profiling: %s", err)
+		}
+	}
+}

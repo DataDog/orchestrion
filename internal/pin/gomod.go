@@ -72,6 +72,18 @@ func (m *goMod) requires(path string) bool {
 	return false
 }
 
+// runGoGet executes the `go get <modSpecs...>` subcommand with the provided
+// module specifications on the designated `go.mod` file.
+func runGoGet(modfile string, modSpecs ...string) error {
+	cmd := exec.Command("go", "get", "-modfile", modfile)
+	cmd.Args = append(cmd.Args, modSpecs...)
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
 // runGoMod executes the `go mod <command> <args...>` subcommand with the
 // provided arguments on the designated `go.mod` file, sending standard output
 // to the provided writer.

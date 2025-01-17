@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	orchestrionImportPath     = "github.com/DataDog/orchestrion"
-	orchestrionInstrumentPath = orchestrionImportPath + "/instrument"
+	orchestrionImportPath = "github.com/DataDog/orchestrion"
+	datadogTracerV1       = "gopkg.in/DataDog/dd-trace-go.v1"
 )
 
 type Options struct {
@@ -73,7 +73,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	updateGoGenerateDirective(opts.NoGenerate, dstFile)
+	updateGoGenerateDirective(opts, dstFile)
 
 	importSet, err := updateToolFile(dstFile)
 	if err != nil {
@@ -90,12 +90,23 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
+
+	if !curMod.requires(datadogTracerV1) {
+		// TODO: Replace `@hash` with `@latest`.
+		log.Info().Msg("Installing " + datadogTracerV1)
+		if err := runGoGet(goMod, datadogTracerV1+"@02f0df46da0f7a3511d879ba11f680f06b9aa8fa"); err != nil {
+			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
+		}
+	}
+
 	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.22.0") < 0 {
+		log.Info().Msg("Setting go directive to 1.22.0")
 		edits = append(edits, goModVersion("1.22.0"))
 	}
-	if !curMod.requires(orchestrionImportPath) {
-		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag})
-	}
+
+	log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
+	edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag})
+
 	if err := runGoModEdit(goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
@@ -166,38 +177,41 @@ func defaultOrchestrionToolGo() *dst.File {
 func updateToolFile(file *dst.File) (*importSet, error) {
 	importSet := importSetFrom(file)
 
-	if spec, isNew := importSet.Add(orchestrionImportPath); isNew {
+	spec, isNew := importSet.Add(orchestrionImportPath)
+	if isNew {
 		spec.Decs.Before = dst.NewLine
 		spec.Decs.Start.Append(
 			"// Ensures `orchestrion` is present in `go.mod` so that builds are repeatable.",
 			"// Do not remove.",
 		)
-		spec.Decs.After = dst.NewLine
-	}
-
-	spec, isNew := importSet.Add(orchestrionInstrumentPath)
-	if isNew {
-		spec.Decs.Before = dst.NewLine
-		spec.Decs.Start.Append(
-			"// Provides integrations for essential `orchestrion` features. Most users",
-			"// should not remove this integration.",
-		)
-		spec.Decs.After = dst.NewLine
+		spec.Decs.After = dst.EmptyLine
 	}
 	spec.Decs.End.Replace("// integration")
+
+	spec, _ = importSet.Add(datadogTracerV1)
+	spec.Decs.Before = dst.EmptyLine
+	spec.Decs.End.Replace("// integration")
+
+	// We auto-imported from dd-trace-go, so we can remove the legacy `/instrument` import if present.
+	importSet.Remove(orchestrionImportPath + "/instrument")
 
 	return importSet, nil
 }
 
 // updateGoGenerateDirective adds, updates, or removes the `//go:generate`
 // directive from the [*dst.File] according to the receiving [*Options].
-func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
+func updateGoGenerateDirective(opts Options, file *dst.File) {
 	const prefix = "//go:generate go run github.com/DataDog/orchestrion pin"
 
 	newDirective := ""
-	if !noGenerate {
-		newDirective = prefix
-		// TODO: Add additional CLI arguments here
+	if !opts.NoGenerate {
+		newDirective = prefix + " -generate"
+		if opts.NoPrune {
+			newDirective += " -prune=false"
+		}
+		if opts.Validate {
+			newDirective += " -validate"
+		}
 	}
 
 	found := false
@@ -239,7 +253,7 @@ func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
 // [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
 // only outputs a message informing the user about uncalled-for imports.
 func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool, error) {
-	importPaths := importSet.Except(orchestrionImportPath, orchestrionInstrumentPath)
+	importPaths := importSet.Except(orchestrionImportPath)
 	if len(importPaths) == 0 {
 		// Nothing to do!
 		return false, nil

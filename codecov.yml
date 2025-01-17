@@ -47,8 +47,5 @@ component_management:
     - component_id: jobserver
       name: Job Server
       paths: [internal/jobserver/**]
-    - component_id: integration-tests
-      name: Integration Test Suite
-      paths: [_integration-tests/**]
     - component_id: other
       name: Other

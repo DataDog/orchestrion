@@ -1,18 +1,12 @@
 --- input.go
 +++ output.go
-@@ -1,16 +1,27 @@
+@@ -1,3 +1,4 @@
 +//line input.go:1:1
  package main
  
  import (
-   "io"
-   "log"
-   "net/http"
-+//line <generated>:1
-+  __orchestrion_instrument "github.com/DataDog/orchestrion/instrument"
- )
+@@ -8,9 +9,14 @@
  
-+//line input.go:9
  func main() {
    s := &http.Server{
 -    Addr:    ":8085",
@@ -20,10 +14,8 @@
 +    Addr: ":8085",
 +    Handler:
 +    //dd:startwrap
-+//line <generated>:1
-+    __orchestrion_instrument.WrapHandler(
 +//line input.go:12
-+      http.HandlerFunc(handle)),
++    http.HandlerFunc(handle),
 +    //dd:endwrap
    }
 +//line input.go:14
