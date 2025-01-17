@@ -43,12 +43,13 @@ func (c *Client) Close() {
 }
 
 type (
-	request interface {
+	request[Res any] interface {
 		Subject() string
+		common.Request[Res]
 	}
 )
 
-func Request[Req request, Res common.ResponseTo[Req]](ctx context.Context, client *Client, req Req) (Res, error) {
+func Request[Res any, Req request[Res]](ctx context.Context, client *Client, req Req) (Res, error) {
 	reqData, err := json.Marshal(req)
 	if err != nil {
 		var zero Res

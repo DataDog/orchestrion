@@ -335,6 +335,14 @@ jobs:
         env:
           GOCOVERDIR: ${{ github.workspace }}/coverage/raw
           GOFLAGS: ${{ matrix.runs-on == 'ubuntu' && '-p=4' || ''}} -tags=githubci,integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
+          ORCHESTRION_LOG_LEVEL: trace
+          ORCHESTRION_LOG_FILE: ${{ runner.temp }}/orchestrion.log
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        with:
+          name: integration+${{ matrix.build-mode }}+go@${{ matrix.go-version }}+${{ runner.os }}+${{ runner.arch }}.orchestrion.log
+          path: ${{ runner.temp }}/orchestrion.log
       - name: Consolidate coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out

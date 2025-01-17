@@ -192,7 +192,10 @@ func main() {
 	}
 }
 
-var logLevelSet bool
+var (
+	logLevelSet bool
+	logLevel    = zerolog.Disabled
+)
 
 func actionSetLogLevel(ctx *cli.Context, value string) error {
 	if err := os.Setenv(envVarOrchestrionLogLevel, value); err != nil {
@@ -208,6 +211,7 @@ func actionSetLogLevel(ctx *cli.Context, value string) error {
 	ctx.Context = logger.WithContext(ctx.Context)
 
 	logLevelSet = true
+	logLevel = level
 	return nil
 }
 
@@ -247,6 +251,8 @@ func actionSetLogFile(ctx *cli.Context, path string) error {
 	log.Logger = zerolog.New(file).With().Timestamp().Logger()
 	if !logLevelSet {
 		log.Logger = log.Logger.Level(zerolog.WarnLevel)
+	} else {
+		log.Logger = log.Logger.Level(logLevel)
 	}
 	log.Logger.UpdateContext(updateCommonContext)
 	ctx.Context = log.Logger.WithContext(ctx.Context)

@@ -6,6 +6,7 @@
 package proxy_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -69,7 +70,7 @@ func TestParseCommand(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			cmd := proxy.MustParseCommand(tc.input)
+			cmd := proxy.MustParseCommand(context.Background(), "github.com/DataDog/orchestrion.test", tc.input)
 			require.Equal(t, tc.expectedType, cmd.Type())
 			require.True(t, reflect.DeepEqual(tc.input, cmd.Args()))
 		})

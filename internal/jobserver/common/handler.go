@@ -16,19 +16,19 @@ import (
 )
 
 type (
-	ResponseTo[Request any] interface {
-		IsResponseTo(Request)
+	Request[Res any] interface {
+		ResponseIs(Res)
 	}
 	// RequestHandler is a function that processes a request of a given type, and returns a response or an error to be
 	// sent back to the client.
-	RequestHandler[Request any, Response ResponseTo[Request]] func(context.Context, Request) (Response, error)
+	RequestHandler[Res any, Req Request[Res]] func(context.Context, Req) (Res, error)
 )
 
 // HandleRequest returns a NATS subscription target that calls the provided request handler in a new goroutine if the
 // NATS message payload can be parsed into the specified request type, and responds to the client appropriately.
-func HandleRequest[Request any, Response ResponseTo[Request]](ctx context.Context, handler RequestHandler[Request, Response]) func(*nats.Msg) {
+func HandleRequest[Res any, Req Request[Res]](ctx context.Context, handler RequestHandler[Res, Req]) func(*nats.Msg) {
 	return func(msg *nats.Msg) {
-		var req Request
+		var req Req
 		if err := json.Unmarshal(msg.Data, &req); err != nil {
 			respond(ctx, msg, errorResponse{Error: err.Error()})
 			return
@@ -41,7 +41,7 @@ func HandleRequest[Request any, Response ResponseTo[Request]](ctx context.Contex
 				respond(ctx, msg, errorResponse{Error: err.Error()})
 				return
 			}
-			respond(ctx, msg, successResponse[Response]{Result: resp})
+			respond(ctx, msg, successResponse[Res]{Result: resp})
 		}()
 	}
 }

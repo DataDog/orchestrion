@@ -14,7 +14,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/rs/zerolog"
@@ -23,21 +26,24 @@ import (
 //go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile
 
 type compileFlagSet struct {
-	Package     string `ddflag:"-p"`
+	Asmhdr      string `ddflag:"-asmhdr"`
+	BuildID     string `ddflag:"-buildid"`
 	ImportCfg   string `ddflag:"-importcfg"`
-	Output      string `ddflag:"-o"`
 	Lang        string `ddflag:"-lang"`
+	Output      string `ddflag:"-o"`
+	Package     string `ddflag:"-p"`
 	ShowVersion bool   `ddflag:"-V"`
 }
 
 // CompileCommand represents a go tool `compile` invocation
 type CompileCommand struct {
 	command
-	Flags compileFlagSet
 	Files []string
+	Flags compileFlagSet
 	// WorkDir is the $WORK directory managed by the go toolchain.
-	WorkDir string
-
+	WorkDir     string
+	importPath  string
+	finishToken string
 	// Link-time dependencies that must be honored to link a dependent of the
 	// built package. If not blank, this is written to disk, then appended to the
 	// archive output.
@@ -117,9 +123,25 @@ func (cmd *CompileCommand) AddFiles(files []string) {
 	}
 }
 
-func (cmd *CompileCommand) Close(ctx gocontext.Context) (err error) {
-	defer func() { err = errors.Join(err, cmd.command.Close(ctx)) }()
+// parseCompileCommand parses a [*CompileCommand] from the provided arguments.
+// It sends an [nbt.StartRequest] to the job server to determine whether a
+// previous execution of the same command has produced re-usable artifacts;
+// in which case it copies them into place and returns nil.
+func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error) {
+	defer func() { err = errors.Join(err, cmd.command.Close(ctx, cmdErr)) }()
 
+	if cmdErr == nil {
+		// Success so far, we attach link-time dependencies...
+		err = cmd.attachLinkDeps(ctx)
+	}
+
+	// Notify the job server of the status of the command, and combine with the previous error if any...
+	err = errors.Join(err, cmd.notifyJobServer(ctx, errors.Join(cmdErr, err)))
+
+	return err
+}
+
+func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
 	if cmd.LinkDeps.Empty() {
 		return nil
 	}
@@ -148,23 +170,73 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context) (err error) {
 	if err := child.Run(); err != nil {
 		return fmt.Errorf("running %q: %w", child.Args, err)
 	}
+
 	return nil
 }
 
-func parseCompileCommand(args []string) (*CompileCommand, error) {
+func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) error {
+	jobs, err := client.FromEnvironment(ctx, cmd.WorkDir)
+	if err != nil {
+		return err
+	}
+
+	var (
+		errorMessage *string
+		files        map[nbt.Label]string
+	)
+	if cmdErr != nil {
+		msg := cmdErr.Error()
+		errorMessage = &msg
+	} else {
+		files = make(map[nbt.Label]string, 2)
+		if filename := cmd.Flags.Output; filename != "" {
+			files[nbt.LabelArchive] = filename
+		}
+		if filename := cmd.Flags.Asmhdr; filename != "" {
+			files[nbt.LabelAsmhdr] = filename
+		}
+	}
+
+	_, err = client.Request(ctx, jobs, nbt.FinishRequest{
+		ImportPath:  cmd.importPath,
+		FinishToken: cmd.finishToken,
+		Files:       files,
+		Error:       errorMessage,
+	})
+
+	return err
+}
+
+func parseCompileCommand(ctx gocontext.Context, importPath string, args []string) (*CompileCommand, error) {
 	if len(args) == 0 {
 		return nil, errors.New("unexpected number of command arguments")
 	}
-	cmd := CompileCommand{command: NewCommand(args)}
+	cmd := &CompileCommand{command: NewCommand(args), importPath: importPath}
 	pos, err := cmd.Flags.parse(args[1:])
 	if err != nil {
 		return nil, err
 	}
 	cmd.Files = pos
 
-	if cmd.Flags.ImportCfg != "" {
-		// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.
-		cmd.WorkDir = filepath.Dir(filepath.Dir(cmd.Flags.ImportCfg))
+	if cmd.Flags.ImportCfg == "" {
+		return cmd, nil
+	}
+
+	// The WorkDir is the parent of the stage directory, which is where the importcfg file is located.
+	cmd.WorkDir = filepath.Dir(filepath.Dir(cmd.Flags.ImportCfg))
+
+	jobs, err := client.FromEnvironment(ctx, cmd.WorkDir)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := client.Request(ctx, jobs, nbt.StartRequest{ImportPath: importPath, BuildID: cmd.Flags.BuildID})
+	if err != nil {
+		return nil, fmt.Errorf("sending never-build-twice request: %w", err)
+	}
+
+	if res.FinishToken != "" {
+		cmd.finishToken = res.FinishToken
 
 		imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 		if err != nil {
@@ -175,9 +247,40 @@ func parseCompileCommand(args []string) (*CompileCommand, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 		}
+
+		return cmd, nil
 	}
 
-	return &cmd, nil
+	if outputFile := cmd.Flags.Output; outputFile != "" {
+		filename := res.Files[nbt.LabelArchive]
+		if filename == "" {
+			return nil, fmt.Errorf("missing %q object in re-usable artifacts", nbt.LabelArchive)
+		}
+		if err := files.Copy(ctx, filename, outputFile); err != nil {
+			return nil, fmt.Errorf("re-using %q object: %w", nbt.LabelArchive, err)
+		}
+		// We place a "reused" marker next to the output file to identify that it was re-used.
+		if err := os.WriteFile(filename+".reused", nil, 0o644); err != nil {
+			return nil, fmt.Errorf("creating re-used marker for %s: %w", filename, err)
+		}
+	}
+
+	if outputFile := cmd.Flags.Asmhdr; outputFile != "" {
+		filename := res.Files[nbt.LabelAsmhdr]
+		if filename == "" {
+			return nil, fmt.Errorf("missing %q object in re-usable artifacts", nbt.LabelAsmhdr)
+		}
+		if err := files.Copy(ctx, filename, outputFile); err != nil {
+			return nil, fmt.Errorf("re-using %q object: %w", nbt.LabelAsmhdr, err)
+		}
+		// We place a "reused" marker next to the output file to identify that it was re-used.
+		if err := os.WriteFile(filename+".reused", nil, 0o644); err != nil {
+			return nil, fmt.Errorf("creating re-used marker for %s: %w", filename, err)
+		}
+	}
+
+	zerolog.Ctx(ctx).Info().Msg("Re-used previously built artifacts from compile command. Returning a nil *CompileCommand.")
+	return nil, nil
 }
 
 var _ Command = (*CompileCommand)(nil)

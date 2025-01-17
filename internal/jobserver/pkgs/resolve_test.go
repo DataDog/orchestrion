@@ -39,7 +39,7 @@ func Test(t *testing.T) {
 		env := os.Environ()
 
 		// First request is expected to always be a cache miss
-		resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		resp, err := client.Request(
 			context.Background(),
 			conn,
 			&pkgs.ResolveRequest{
@@ -56,7 +56,7 @@ func Test(t *testing.T) {
 		// of entries in `env` is also shuffled, which should have no impact on the
 		// cache hitting or missing.
 		rand.Shuffle(len(env), func(i, j int) { env[i], env[j] = env[j], env[i] })
-		resp, err = client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		resp, err = client.Request(
 			context.Background(),
 			conn,
 			&pkgs.ResolveRequest{
@@ -70,7 +70,7 @@ func Test(t *testing.T) {
 		assert.EqualValues(t, 1, server.CacheStats.Hits())
 
 		// Third request is different, should result in a cache miss again
-		resp, err = client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		resp, err = client.Request(
 			context.Background(),
 			conn,
 			&pkgs.ResolveRequest{
@@ -93,7 +93,7 @@ func Test(t *testing.T) {
 		require.NoError(t, err)
 		defer conn.Close()
 
-		resp, err := client.Request[*pkgs.ResolveRequest, pkgs.ResolveResponse](
+		resp, err := client.Request(
 			context.Background(),
 			conn,
 			&pkgs.ResolveRequest{Pattern: "definitely.not/a@valid\x01package"},

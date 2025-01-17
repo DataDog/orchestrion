@@ -64,16 +64,15 @@ var weavingSpecialCase = []specialCase{
 	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
 }
 
-func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err error) {
-	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Logger()
+func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
+	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
+	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
-
-	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 
 	goMod, err := goenv.GOMOD(".")
 	if err != nil {
@@ -82,9 +81,9 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	goModDir := filepath.Dir(goMod)
 	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
-	cfg, err := config.NewLoader(goModDir, false).Load()
-	if err != nil {
-		return fmt.Errorf("loading injector configuration: %w", err)
+	cfg, resErr := config.NewLoader(goModDir, false).Load()
+	if resErr != nil {
+		return fmt.Errorf("loading injector configuration: %w", resErr)
 	}
 
 	aspects := cfg.Aspects()
@@ -129,9 +128,9 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (err e
 	}
 
 	goFiles := cmd.GoFiles()
-	results, goLang, err := injector.InjectFiles(ctx, goFiles, aspects)
-	if err != nil {
-		return err
+	results, goLang, resErr := injector.InjectFiles(ctx, goFiles, aspects)
+	if resErr != nil {
+		return resErr
 	}
 
 	if err := cmd.SetLang(goLang); err != nil {

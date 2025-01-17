@@ -67,7 +67,11 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 
 	// Try to start a server. The server process is idempotent if the `-url-file` flag is used, so we do not check the
 	// command's exit status, because another process might act as our server down the line.
-	cmd := exec.Command(binpath.Orchestrion, "server", "-inactivity-timeout=15m", fmt.Sprintf("-url-file=%s", urlFilePath))
+	cmd := exec.Command(binpath.Orchestrion, "server",
+		"-inactivity-timeout=15m",
+		fmt.Sprintf("-url-file=%s", urlFilePath),
+		fmt.Sprintf("-parent-pid=%d", os.Getpid()),
+	)
 	cmd.SysProcAttr = &sysProcAttrDaemon                   // Make sure go doesn't wait for this to exit...
 	cmd.Env = append(os.Environ(), "TOOLEXEC_IMPORTPATH=") // Suppress the TOOLEXEC_IMPORTPATH variable if it's set.
 	cmd.Stdin = nil                                        // Connect to `os.DevNull`
