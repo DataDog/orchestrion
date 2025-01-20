@@ -30,7 +30,7 @@ type Template struct {
 }
 
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
-	"Version": func() string { return version.Tag },
+	"Version": version.Tag,
 }).Parse(
 	`
 {{- define "_statements_" -}}

@@ -54,10 +54,10 @@ func Test(t *testing.T) {
 		"none":     {fails: true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if !test.replaces && semver.Compare(test.version, version.Tag) >= 0 {
+			if !test.replaces && semver.Compare(test.version, version.Tag()) >= 0 {
 				// Tests w/o replace can't run if the "happy" version has not been released yet. v0.9.0 includes a module path
 				// re-capitalization which forces us to skip temporarily at least until that is released.
-				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag)
+				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag())
 			}
 
 			wd := filepath.Join(tmp, name)

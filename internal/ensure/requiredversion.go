@@ -54,7 +54,7 @@ func StartupVersion() string {
 	if env := os.Getenv(envVarStartupVersion); env != "" {
 		return env
 	}
-	return version.Tag
+	return version.Tag()
 }
 
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
@@ -73,7 +73,8 @@ func requiredVersion(
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
 	}
 
-	if rVersion == version.Tag || (rVersion == "" && path == orchestrionSrcDir) {
+	rawTag, _ := version.TagInfo()
+	if rVersion == rawTag || rVersion == version.Tag() || (rVersion == "" && path == orchestrionSrcDir) {
 		// This is the correct version already, so we can proceed without further ado.
 		return nil
 	}
@@ -86,7 +87,7 @@ func requiredVersion(
 			"%w (wanted %s, got %s, already respawning for %s)",
 			errRespawnLoop,
 			rVersion,
-			version.Tag,
+			version.Tag(),
 			respawn,
 		)
 	}
@@ -97,7 +98,7 @@ func requiredVersion(
 		rVersion = envValRespawnReplaced
 	}
 
-	log.Info().Msgf("Re-starting with '%s@%s' (this is %s)", orchestrionPkgPath, rVersion, version.Tag)
+	log.Info().Msgf("Re-starting with '%s@%s' (this is %s)", orchestrionPkgPath, rVersion, version.Tag())
 
 	goBin, err := exec.LookPath("go")
 	if err != nil {
@@ -118,7 +119,7 @@ func requiredVersion(
 	env = append(
 		env,
 		fmt.Sprintf("%s=%s", envVarRespawnedFor, rVersion),
-		fmt.Sprintf("%s=%s", envVarStartupVersion, version.Tag),
+		fmt.Sprintf("%s=%s", envVarStartupVersion, version.Tag()),
 	)
 
 	runtime.LockOSThread()

@@ -105,7 +105,8 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	}
 
 	log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
-	edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag})
+	rawTag, _ := version.TagInfo()
+	edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: rawTag})
 
 	if err := runGoModEdit(goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)

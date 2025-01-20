@@ -5,5 +5,52 @@
 
 package version
 
-// Tag specifies the current release tag. It needs to be manually updated.
-const Tag = "v1.0.3-rc.1"
+import "runtime/debug"
+
+const (
+	// tag specifies the current release tag. It needs to be manually updated.
+	tag       = "v1.0.3-rc.1"
+	devSuffix = "+devel"
+)
+
+var (
+	buildInfoVersion string
+	buildInfoIsDev   bool
+)
+
+// Tag returns the version tag for this orchestrion build.
+func Tag() string {
+	if buildInfoVersion != "" {
+		return buildInfoVersion
+	}
+	return tag
+}
+
+// TagInfo returns the static tag and a boolean determining whether this is a
+// development build.
+func TagInfo() (staticTag string, isDev bool) {
+	return tag, buildInfoIsDev
+}
+
+func init() {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	if bi.Main.Replace != nil {
+		if bi.Main.Replace.Version != "" {
+			buildInfoVersion = bi.Main.Replace.Version
+		}
+		return
+	}
+	switch bi.Main.Version {
+	case "", "(devel)":
+		// In tests, the [debug.BuildInfo.Main] has an empty version; and in builds
+		// of the command, it has a "(devel)" version.
+		buildInfoVersion = tag + devSuffix
+		buildInfoIsDev = true
+	default:
+		buildInfoVersion = bi.Main.Version
+	}
+}

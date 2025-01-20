@@ -32,7 +32,8 @@ func TestPin(t *testing.T) {
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
+		rawTag, _ := version.TagInfo()
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
@@ -52,7 +53,8 @@ func TestPin(t *testing.T) {
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
+		rawTag, _ := version.TagInfo()
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
@@ -133,6 +135,7 @@ func scaffold(t *testing.T, requires map[string]string) string {
 
 	defer goMod.Close()
 
+	rawTag, _ := version.TagInfo()
 	require.NoError(t, goModTemplate.Execute(goMod, struct {
 		GoVersion          string
 		OrchestrionVersion string
@@ -141,7 +144,7 @@ func scaffold(t *testing.T, requires map[string]string) string {
 		Require            map[string]string
 	}{
 		GoVersion:          runtime.Version()[2:6],
-		OrchestrionVersion: version.Tag,
+		OrchestrionVersion: rawTag,
 		OrchestrionPath:    rootDir,
 		PathSep:            string(filepath.Separator),
 		Require:            requires,

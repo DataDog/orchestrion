@@ -103,7 +103,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 		}
 	}
 
-	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, getTagSuffix(ctx), fptr.Finish()))
+	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag(), getTagSuffix(ctx), fptr.Finish()))
 	return s.resolvedVersion, nil
 }
 
