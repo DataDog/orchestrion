@@ -111,7 +111,7 @@ func TestSamples(t *testing.T) {
 				require.NoError(t, err)
 
 				data = bytes.ReplaceAll(data, []byte(samplesDir), []byte("samples"))
-				data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag)), []byte("\"<version.Tag>\""))
+				data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag())), []byte("\"<version.Tag>\""))
 
 				reference, err := os.ReadFile(referenceFile)
 				if updateSnapshots && errors.Is(err, os.ErrNotExist) {
