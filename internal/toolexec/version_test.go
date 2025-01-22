@@ -56,7 +56,9 @@ func Test(t *testing.T) {
 	cmd, err := proxy.ParseCommand(context.Background(), "github.com/DataDog/phony/package", []string{"go", "tool", "compile", "-V=full"})
 	require.NoError(t, err)
 
-	ctx := zerolog.New(zerolog.MultiLevelWriter(zerolog.NewTestWriter(t))).WithContext(context.Background())
+	ctx := zerolog.New(zerolog.MultiLevelWriter(zerolog.NewTestWriter(t))).
+		Level(zerolog.InfoLevel).
+		WithContext(context.Background())
 
 	// Artificailly set goflags as this is needed for the test to run....
 	goflags.SetFlags(ctx, tmp, []string{"test", "./..."})
@@ -77,6 +79,12 @@ func Test(t *testing.T) {
 	}))
 	beaconFile := filepath.Join(copyDir, "instrument", "beacon___.go")
 	require.NoError(t, os.WriteFile(beaconFile, []byte("package instrument\nconst BEACON = 42"), 0o644))
+	// Add an aspect that looks like it may inject github.com/DataDog/orchestrion/instrument
+	require.NoError(t, os.WriteFile(
+		filepath.Join(copyDir, "instrument", config.FilenameOrchestrionYML),
+		[]byte(`aspects: [{join-point: {test-main: true}, advice: [{inject-declarations: {imports: {i: 'github.com/DataDog/orchestrion/instrument'}}}]}]`),
+		0o644,
+	))
 
 	// Replace the orchestrion package with the copy we just made...
 	runGo(t, tmp, "mod", "edit",

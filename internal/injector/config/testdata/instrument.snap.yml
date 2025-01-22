@@ -260,7 +260,7 @@ imports:
         yaml:
           name: orchestrion.yml
           extends:
-            - name: ../../internal/orchestrion/_.orchestrion.yml
+            - name: ../../internal/orchestrion/gls.orchestrion.yml
               aspects:
                 - __dd_gls
                 - goexit1
