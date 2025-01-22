@@ -47,8 +47,8 @@ require (
 require (
 	cloud.google.com/go v0.112.1 // indirect
 	cloud.google.com/go/compute/metadata v0.5.2 // indirect
-	cloud.google.com/go/iam v1.1.6 // indirect
-	cloud.google.com/go/pubsub v1.36.1 // indirect
+	cloud.google.com/go/iam v1.1.7 // indirect
+	cloud.google.com/go/pubsub v1.37.0 // indirect
 	github.com/DataDog/appsec-internal-go v1.9.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.60.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/proto v0.60.1 // indirect
@@ -100,7 +100,7 @@ require (
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
-	github.com/confluentinc/confluent-kafka-go/v2 v2.2.0 // indirect
+	github.com/confluentinc/confluent-kafka-go/v2 v2.4.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/dave/dst v0.27.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/graph-gophers/graphql-go v1.5.0 // indirect
 	github.com/graphql-go/graphql v0.8.1 // indirect
@@ -253,17 +253,17 @@ require (
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.169.0 // indirect
-	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
+	google.golang.org/genproto v0.0.0-20240325203815-454cdb8f5daa // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20250113141848-e0d5d08aaf81 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.72.0-dev.0.0.20250122091557-753f98ca6dea // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.25.5 // indirect
-	k8s.io/client-go v0.25.5 // indirect
+	k8s.io/apimachinery v0.26.7 // indirect
+	k8s.io/client-go v0.26.7 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect

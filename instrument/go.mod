@@ -2,13 +2,13 @@ module github.com/DataDog/orchestrion/instrument
 
 go 1.22.10
 
-require gopkg.in/DataDog/dd-trace-go.v1 v1.39.0-alpha.1.0.20250113141848-e0d5d08aaf81
+require gopkg.in/DataDog/dd-trace-go.v1 v1.72.0-dev.0.0.20250122091557-753f98ca6dea
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
 	cloud.google.com/go/compute/metadata v0.5.2 // indirect
-	cloud.google.com/go/iam v1.1.6 // indirect
-	cloud.google.com/go/pubsub v1.36.1 // indirect
+	cloud.google.com/go/iam v1.1.7 // indirect
+	cloud.google.com/go/pubsub v1.37.0 // indirect
 	github.com/99designs/gqlgen v0.17.62 // indirect
 	github.com/DataDog/appsec-internal-go v1.9.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.60.1 // indirect
@@ -56,7 +56,7 @@ require (
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
-	github.com/confluentinc/confluent-kafka-go/v2 v2.2.0 // indirect
+	github.com/confluentinc/confluent-kafka-go/v2 v2.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -95,7 +95,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/graph-gophers/graphql-go v1.5.0 // indirect
 	github.com/graphql-go/graphql v0.8.1 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -111,7 +111,6 @@ require (
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api v1.15.0 // indirect
 	github.com/hashicorp/vault/sdk v0.14.0 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.2 // indirect
@@ -199,7 +198,7 @@ require (
 	golang.org/x/tools v0.28.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.169.0 // indirect
-	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
+	google.golang.org/genproto v0.0.0-20240325203815-454cdb8f5daa // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
 	google.golang.org/grpc v1.69.2 // indirect
@@ -209,8 +208,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.25.12 // indirect
-	k8s.io/apimachinery v0.25.5 // indirect
-	k8s.io/client-go v0.25.5 // indirect
-	k8s.io/klog/v2 v2.80.1 // indirect
+	k8s.io/apimachinery v0.26.7 // indirect
+	k8s.io/client-go v0.26.7 // indirect
+	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 )
