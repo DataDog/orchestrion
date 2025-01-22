@@ -46,12 +46,12 @@ func AutoPinOrchestrion(ctx context.Context) {
 		}
 	} else {
 		log.Trace().Msg("Skipping ensure.RequiredVersion because this is a development build")
-		if _, err := os.Stat(config.FilenameOrchestrionToolGo); err == nil {
+		_, err := os.Stat(config.FilenameOrchestrionToolGo)
+		if err == nil {
 			log.Trace().Msg("Found " + config.FilenameOrchestrionToolGo + " file, no automatic pinning required")
 			return
-		} else {
-			requiredVersionError = fmt.Errorf("stat %s: %w", config.FilenameOrchestrionToolGo, err)
 		}
+		requiredVersionError = fmt.Errorf("stat %s: %w", config.FilenameOrchestrionToolGo, err)
 	}
 
 	log.Trace().Err(requiredVersionError).Msg("Failed to detect required version of orchestrion from go.mod")

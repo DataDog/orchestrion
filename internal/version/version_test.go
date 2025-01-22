@@ -13,5 +13,5 @@ import (
 
 func TestBuildInfoVersion(t *testing.T) {
 	assert.True(t, buildInfoIsDev)
-	assert.Equal(t, buildInfoVersion, tag+"+devel")
+	assert.Equal(t, tag+"+devel", buildInfoVersion)
 }
