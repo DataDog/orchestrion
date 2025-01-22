@@ -1,5 +1,5 @@
 ---
-title: "Getting Started"
+title: "Uninstall"
 weight: 999
 
 prev: /troubleshooting
