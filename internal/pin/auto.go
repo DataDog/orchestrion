@@ -37,10 +37,21 @@ func AutoPinOrchestrion(ctx context.Context) {
 		_ = os.Setenv(envVarCheckedGoMod, "true")
 	}()
 
-	requiredVersionError := ensure.RequiredVersion(ctx)
-	if requiredVersionError == nil {
-		// We're good to go
-		return
+	var requiredVersionError error
+	if _, isDev := version.TagInfo(); !isDev {
+		requiredVersionError = ensure.RequiredVersion(ctx)
+		if requiredVersionError == nil {
+			// We're good to go
+			return
+		}
+	} else {
+		log.Trace().Msg("Skipping ensure.RequiredVersion because this is a development build")
+		_, err := os.Stat(config.FilenameOrchestrionToolGo)
+		if err == nil {
+			log.Trace().Msg("Found " + config.FilenameOrchestrionToolGo + " file, no automatic pinning required")
+			return
+		}
+		requiredVersionError = fmt.Errorf("stat %s: %w", config.FilenameOrchestrionToolGo, err)
 	}
 
 	log.Trace().Err(requiredVersionError).Msg("Failed to detect required version of orchestrion from go.mod")
@@ -78,7 +89,8 @@ func AutoPinOrchestrion(ctx context.Context) {
 	_, _ = builder.WriteString(" file by:\n\n\t1. creating a new file named ")
 	_, _ = builder.WriteString(styleFile.Render(config.FilenameOrchestrionToolGo))
 	_, _ = builder.WriteString("\n\t2. running ")
-	_, _ = builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, version.Tag)))
+	rawTag, _ := version.TagInfo()
+	_, _ = builder.WriteString(styleCmd.Render(fmt.Sprintf("go get %s@%s", orchestrionImportPath, rawTag)))
 	_, _ = builder.WriteString("\n\t3. running ")
 	_, _ = builder.WriteString(styleCmd.Render("go mod tidy"))
 	_, _ = builder.WriteString("\n\nYou should commit the resulting changes into your source control system.")

@@ -276,15 +276,13 @@ func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, 
 		}
 		for idx, act := range inj.Advice {
 			var changed bool
-			changed, err = act.Apply(ctx)
-			if changed {
-				mod = true
-			}
+			changed, err := act.Apply(ctx)
+			mod = mod || changed
 			if err != nil {
 				return mod, fmt.Errorf("%q[%d]: %w", inj.ID, idx, err)
 			}
 		}
 	}
 
-	return
+	return mod, nil
 }

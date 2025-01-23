@@ -32,7 +32,8 @@ func TestPin(t *testing.T) {
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", version.Tag})
+		rawTag, _ := version.TagInfo()
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
@@ -52,7 +53,8 @@ func TestPin(t *testing.T) {
 		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", "v0.9.3"})
+		rawTag, _ := version.TagInfo()
+		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
@@ -110,12 +112,15 @@ var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.co
 
 go {{ .GoVersion }}
 
-replace github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
+replace (
+	github.com/DataDog/orchestrion {{ .OrchestrionVersion }} => {{ .OrchestrionPath }}
+)
 
-{{ range $path, $version := .Require }}
-require	{{ $path }} {{ $version }}
-{{ end }}
-
+require (
+{{- range $path, $version := .Require }}
+	{{ $path }} {{ $version }}
+{{- end }}
+)
 `))
 
 func scaffold(t *testing.T, requires map[string]string) string {
@@ -130,15 +135,18 @@ func scaffold(t *testing.T, requires map[string]string) string {
 
 	defer goMod.Close()
 
+	rawTag, _ := version.TagInfo()
 	require.NoError(t, goModTemplate.Execute(goMod, struct {
 		GoVersion          string
 		OrchestrionVersion string
 		OrchestrionPath    string
+		PathSep            string
 		Require            map[string]string
 	}{
 		GoVersion:          runtime.Version()[2:6],
-		OrchestrionVersion: version.Tag,
+		OrchestrionVersion: rawTag,
 		OrchestrionPath:    rootDir,
+		PathSep:            string(filepath.Separator),
 		Require:            requires,
 	}))
 

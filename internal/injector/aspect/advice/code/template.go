@@ -30,7 +30,7 @@ type Template struct {
 }
 
 var wrapper = template.Must(template.New("code.Template").Funcs(template.FuncMap{
-	"Version": func() string { return version.Tag },
+	"Version": version.Tag,
 }).Parse(
 	`
 {{- define "_statements_" -}}
@@ -80,7 +80,11 @@ func (t *Template) CompileBlock(ctx context.AdviceContext) (*dst.BlockStmt, erro
 // CompileDeclarations generates new source based on this Template and extracts
 // all produced declarations.
 func (t *Template) CompileDeclarations(ctx context.AdviceContext) ([]dst.Decl, error) {
-	return t.compileTemplate(ctx, "_declarations_")
+	res, err := t.compileTemplate(ctx, "_declarations_")
+	if err != nil {
+		return nil, fmt.Errorf("CompileDeclarations: %w", err)
+	}
+	return res, nil
 }
 
 // CompileExpression generates new source based on this Template and extracts
@@ -91,7 +95,7 @@ func (t *Template) CompileDeclarations(ctx context.AdviceContext) ([]dst.Decl, e
 func (t *Template) CompileExpression(ctx context.AdviceContext) (dst.Expr, error) {
 	stmts, err := t.compile(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CompileExpression: %w", err)
 	}
 
 	if len(stmts) != 1 {
@@ -128,7 +132,7 @@ func (t *Template) compileTemplate(ctx context.AdviceContext, name string) ([]ds
 	buf := bytes.NewBuffer(nil)
 	dot := &dot{context: ctx}
 	if err := tmpl.ExecuteTemplate(buf, name, dot); err != nil {
-		return nil, fmt.Errorf("while executing template: %w", err)
+		return nil, err
 	}
 
 	file, err := ctx.ParseSource(buf.Bytes())

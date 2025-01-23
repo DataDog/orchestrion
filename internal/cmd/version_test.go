@@ -29,7 +29,7 @@ func TestVersion(t *testing.T) {
 		ctx := cli.NewContext(&cli.App{Writer: &output}, &set, nil)
 
 		require.NoError(t, cmd.Version.Action(ctx))
-		require.Equal(t, fmt.Sprintf("orchestrion %s\n", version.Tag), output.String())
+		require.Equal(t, fmt.Sprintf("orchestrion %s\n", version.Tag()), output.String())
 	})
 
 	t.Run("standard with respawn", func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestVersion(t *testing.T) {
 		ctx := cli.NewContext(&cli.App{Writer: &output}, &set, nil)
 
 		require.NoError(t, cmd.Version.Action(ctx))
-		require.Equal(t, fmt.Sprintf("orchestrion %s\n", version.Tag), output.String())
+		require.Equal(t, fmt.Sprintf("orchestrion %s\n", version.Tag()), output.String())
 	})
 
 	t.Run("verbose", func(t *testing.T) {
@@ -50,7 +50,7 @@ func TestVersion(t *testing.T) {
 		ctx := cli.NewContext(&cli.App{Writer: &output}, &set, nil)
 
 		require.NoError(t, cmd.Version.Action(ctx))
-		require.Equal(t, fmt.Sprintf("orchestrion %s built with %s (%s/%s)\n", version.Tag, runtime.Version(), runtime.GOOS, runtime.GOARCH), output.String())
+		require.Equal(t, fmt.Sprintf("orchestrion %s built with %s (%s/%s)\n", version.Tag(), runtime.Version(), runtime.GOOS, runtime.GOARCH), output.String())
 	})
 
 	t.Run("verbose with respawn", func(t *testing.T) {
@@ -61,6 +61,6 @@ func TestVersion(t *testing.T) {
 		ctx := cli.NewContext(&cli.App{Writer: &output}, &set, nil)
 
 		require.NoError(t, cmd.Version.Action(ctx))
-		require.Equal(t, fmt.Sprintf("orchestrion %s (started as v0.0.0) built with %s (%s/%s)\n", version.Tag, runtime.Version(), runtime.GOOS, runtime.GOARCH), output.String())
+		require.Equal(t, fmt.Sprintf("orchestrion %s (started as v0.0.0) built with %s (%s/%s)\n", version.Tag(), runtime.Version(), runtime.GOOS, runtime.GOARCH), output.String())
 	})
 }

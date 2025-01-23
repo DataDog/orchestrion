@@ -36,10 +36,10 @@ func TestGoModVersion(t *testing.T) {
 		"missing":  {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag) >= 0 {
+			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag()) >= 0 {
 				// Tests w/o replace can't run if the "happy" version has not been released yet. v0.9.0 includes a module path
 				// re-capitalization which forces us to skip temporarily at least until that is released.
-				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag)
+				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag())
 			}
 
 			tmp, err := os.MkdirTemp("", "ensure-*")
@@ -126,9 +126,10 @@ func TestRequiredVersion(t *testing.T) {
 		expected        expectedOutcome
 	}
 
+	rawTag, _ := version.TagInfo()
 	for name, tc := range map[string]testCase{
 		"happy path": {
-			goModVersion: goModVersionResult{version: version.Tag},
+			goModVersion: goModVersionResult{version: rawTag},
 			expected:     expectedOutcome{err: nil, respawns: false},
 		},
 		"happy path, replaced to this": {
