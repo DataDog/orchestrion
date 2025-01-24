@@ -17,7 +17,10 @@ import (
 // Config represents an injector's configuration. It can be obtained using
 // [Loader.Load].
 type Config interface {
+	// Aspects returns all aspects defined in this configuration in a single list.
 	Aspects() []*aspect.Aspect
+
+	visit(Visitor, string) error
 }
 
 // HasConfig determines whether the specified package contains injector

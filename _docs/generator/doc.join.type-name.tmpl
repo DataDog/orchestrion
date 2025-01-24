@@ -1,0 +1,7 @@
+{{- "{{" -}}
+<godoc {{ with .ImportPath -}}
+  import-path="{{ . }}" package="{{ packageName . }}"
+  {{- end }} name="{{ .Name }}"
+  {{- if .Pointer }} prefix="*"{{ end -}}
+>
+{{- "}}" -}}
