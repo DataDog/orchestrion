@@ -30,12 +30,12 @@ const (
 
 type (
 	service struct {
+		// state is a map of import path to a [sync.Map] of build ID to buildState.
 		state sync.Map
 		dir   string
 	}
 	buildState struct {
 		initOnce sync.Once
-		buildID  string
 		token    string          // Finalization token
 		onDone   func()          // Called once the original task has completed
 		done     <-chan struct{} // Blocks until the original task has completed
@@ -125,7 +125,10 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		return nil, fmt.Errorf("invalid request: %#v", req)
 	}
 
-	rawState, reused := s.state.LoadOrStore(req.ImportPath, &buildState{buildID: req.BuildID})
+	rawPkgMap, _ := s.state.LoadOrStore(req.ImportPath, &sync.Map{})
+	pkgMap, _ := rawPkgMap.(*sync.Map)
+
+	rawState, reused := pkgMap.LoadOrStore(req.ImportPath, &buildState{})
 	state, _ := rawState.(*buildState)
 
 	// Initialize the build state.
@@ -139,10 +142,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 
 	// If the build state is re-used, wait for the original to complete...
 	if reused {
-		if state.buildID != req.BuildID {
-			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
-		}
-
 		<-state.done
 		if state.error != nil {
 			return nil, state.error
@@ -168,6 +167,8 @@ type (
 	FinishRequest struct {
 		// ImportPath is the import path of the package that was built.
 		ImportPath string `json:"importPath"`
+		// BuildID is the build ID for the package being built.
+		BuildID string `json:"buildID"`
 		// FinishToken is forwarded from [*StartResponse.FinishToken], and cannot be
 		// blank.
 		FinishToken string `json:"token"`
@@ -193,9 +194,15 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return nil, fmt.Errorf("invalid request: %#v", req)
 	}
 
-	rawState, found := s.state.Load(req.ImportPath)
+	rawPkgMap, found := s.state.Load(req.ImportPath)
 	if !found {
 		return nil, fmt.Errorf("no build started for %q", req.ImportPath)
+	}
+	pkgMap, _ := rawPkgMap.(*sync.Map)
+
+	rawState, found := pkgMap.Load(req.ImportPath)
+	if !found {
+		return nil, fmt.Errorf("no build started for %q with build ID %q", req.ImportPath, req.BuildID)
 	}
 
 	log := zerolog.Ctx(ctx).With().
@@ -233,8 +240,8 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return nil, state.error
 	}
 
-	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(req.ImportPath)).String())
-	if err := os.Mkdir(dir, 0o755); err != nil {
+	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(req.ImportPath)).String(), uuid.NewSHA1(ns, []byte(req.BuildID)).String())
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		state.error = fmt.Errorf("creating storage directory: %w", err)
 		return nil, state.error
 	}
