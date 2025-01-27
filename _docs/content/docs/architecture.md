@@ -12,6 +12,7 @@ invocations to specific tools of the toolchain as part of the build:
 2. Invocations of `go tool link`
 
 ```mermaid
+%%{init: {'theme':'forest'}}%%
 sequenceDiagram
   autonumber
 
