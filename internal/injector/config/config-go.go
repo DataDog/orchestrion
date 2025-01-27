@@ -129,6 +129,20 @@ func (c *configGo) Aspects() []*aspect.Aspect {
 	return res
 }
 
+func (c *configGo) visit(v Visitor, _ string) error {
+	if err := c.yaml.visit(v, c.pkgPath); err != nil {
+		return err
+	}
+
+	for _, imp := range c.imports {
+		if err := imp.visit(v, c.pkgPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *configGo) empty() bool {
 	return c == nil || (len(c.imports) == 0 && c.yaml.empty())
 }
