@@ -129,7 +129,7 @@ func (c *configGo) Aspects() []*aspect.Aspect {
 	return res
 }
 
-func (c *configGo) visit(v Visitor, pkgPath string) error {
+func (c *configGo) visit(v Visitor, _ string) error {
 	if err := c.yaml.visit(v, c.pkgPath); err != nil {
 		return err
 	}
