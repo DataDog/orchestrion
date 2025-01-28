@@ -35,18 +35,12 @@ jobs:
           version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions gopkg.in/DataDog/dd-trace-go.v1 | grep -v -E '^v1\.999\.' | tail -n 1)
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
-      - name: Determine simple go version
-        id: go
-        run: |-
-          set -euo pipefail
-          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
-
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
       # does not support that specific go release.
       - name: Update dependencies
-        run: find . -name go.mod -execdir go get -t -u "go@${{ steps.go.outputs.version }}.0" gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... \;
+        run: find . -name go.mod -execdir go get -t -u "go@$(go mod edit -json | jq .Go)" gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... \;
       - name: Run go mod tidy
-        run: find . -name go.mod -execdir go mod tidy -go="${{ steps.go.outputs.version }}.0" \;
+        run: find . -name go.mod -execdir go mod tidy -go="$(go mod edit -json | jq .Go)" \;
       - name: Ensure no toolchain directive
         run: find . -name go.mod -execdir go mod edit -toolchain=none \;
 
