@@ -11,7 +11,7 @@ runs:
     - name: Setup Python
       uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
       with:
-        python-version: '3.x'
+        python-version: '3.12'
         cache-dependency-path: ${{ github.action_path }}/requirements-dev.txt
 
     - name: Setup Rust

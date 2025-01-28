@@ -38,13 +38,12 @@ func init() {
 		return
 	}
 
+	version := bi.Main.Version
 	if bi.Main.Replace != nil {
-		if bi.Main.Replace.Version != "" {
-			buildInfoVersion = bi.Main.Replace.Version
-		}
-		return
+		version = bi.Main.Replace.Version
 	}
-	switch bi.Main.Version {
+
+	switch version {
 	case "", "(devel)":
 		// In tests, the [debug.BuildInfo.Main] has an empty version; and in builds
 		// of the command, it has a "(devel)" version.

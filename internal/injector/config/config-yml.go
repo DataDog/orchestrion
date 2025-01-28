@@ -83,17 +83,20 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 	return cfg, nil
 }
 
-type configYML struct {
-	extends []Config
-	aspects []*aspect.Aspect
-	name    string
-	meta    struct {
+type (
+	configYML struct {
+		extends []Config
+		aspects []*aspect.Aspect
+		name    string
+		meta    configYMLMeta
+	}
+	configYMLMeta struct {
 		name        string
 		description string
 		icon        string
 		caveats     string
 	}
-}
+)
 
 func (c *configYML) Aspects() []*aspect.Aspect {
 	if c == nil {
