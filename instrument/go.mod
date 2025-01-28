@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/instrument
 
-go 1.22.10
+go 1.22.0
 
 replace github.com/DataDog/orchestrion => ..
 
@@ -13,7 +13,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.5.2 // indirect
 	cloud.google.com/go/iam v1.2.2 // indirect
 	cloud.google.com/go/pubsub v1.45.1 // indirect
-	github.com/99designs/gqlgen v0.17.62 // indirect
+	github.com/99designs/gqlgen v0.17.49 // indirect
 	github.com/DataDog/appsec-internal-go v1.9.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.60.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/proto v0.60.1 // indirect

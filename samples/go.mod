@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/samples
 
-go 1.22.10
+go 1.22.0
 
 replace (
 	github.com/DataDog/orchestrion => ..
@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/99designs/gqlgen v0.17.63
+	github.com/99designs/gqlgen v0.17.49
 	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/DataDog/orchestrion/instrument v0.0.0-00010101000000-000000000000
 	github.com/IBM/sarama v1.45.0
@@ -126,7 +126,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.24.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
