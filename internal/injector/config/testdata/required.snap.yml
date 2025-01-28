@@ -1,5 +1,5 @@
 pkgpath: github.com/DataDog/orchestrion
 yaml:
-  name: orchestrion.yml
+  name: <built-in>
   aspects:
-    - Initialize to true
+    - built.WithOrchestrion
