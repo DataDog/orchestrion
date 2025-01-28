@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/instrument
 
-go 1.22.10
+go 1.22.5
 
 replace github.com/DataDog/orchestrion => ..
 

@@ -24,6 +24,7 @@ import (
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/rs/zerolog"
+	"golang.org/x/mod/semver"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -91,10 +92,10 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
 
-	if !curMod.requires(datadogTracerV1) {
-		// TODO: Replace `@hash` with `@latest`.
+	if _, found := curMod.requires(datadogTracerV1); !found {
 		log.Info().Msg("Installing " + datadogTracerV1)
-		if err := runGoGet(goMod, datadogTracerV1+"@02f0df46da0f7a3511d879ba11f680f06b9aa8fa"); err != nil {
+		// TODO: Replace `@main` with `@latest`.
+		if err := runGoGet(goMod, datadogTracerV1+"@main"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
 		}
 	}
@@ -104,9 +105,10 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		edits = append(edits, goModVersion("1.22.0"))
 	}
 
-	log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
-	rawTag, _ := version.TagInfo()
-	edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: rawTag})
+	if ver, found := curMod.requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {
+		log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
+		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag()})
+	}
 
 	if err := runGoModEdit(goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)

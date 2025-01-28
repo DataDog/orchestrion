@@ -33,7 +33,7 @@ jobs:
         id: setup-go
         uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
-          go-version: stable
+          go-version: oldstable
           cache-dependency-path: '**/go.mod'
 
       - name: Run 'go generate ./...'
@@ -61,7 +61,7 @@ jobs:
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
-        run: find . -name go.mod -execdir go mod tidy \;
+        run: find . -name go.mod -execdir go mod tidy -go="$(go mod edit -json | jq .Go)" \;
 
       - name: Refresh LICENSE-3rdparty.csv
         run: ./_tools/make-licenses.sh

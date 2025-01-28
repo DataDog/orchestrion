@@ -25,6 +25,12 @@ var ErrInvalidGoPackage = errors.New("no .go files in package")
 
 // loadGoPackage loads configuration from the specified go package.
 func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
+	// Special-case the `github.com/DataDog/orchestrion` package, we need not
+	// parse this one, and should always use the built-in object.
+	if pkg.PkgPath == builtIn.pkgPath {
+		return &builtIn, nil
+	}
+
 	root := packageRoot(pkg)
 	if root == "" {
 		// This might be explained by a package-level loading error... We only check

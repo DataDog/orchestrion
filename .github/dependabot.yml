@@ -9,6 +9,7 @@ updates:
     groups:
       GitHub Actions:
         applies-to: version-updates
+        dependency-type: production
 
   - package-ecosystem: pip
     directory: /.github/actions/codecov-cli
@@ -18,3 +19,4 @@ updates:
     groups:
       Python Dependencies:
         applies-to: version-updates
+        dependency-type: development

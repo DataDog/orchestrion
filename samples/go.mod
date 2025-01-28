@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/samples
 
-go 1.22.10
+go 1.22.5
 
 replace (
 	github.com/DataDog/orchestrion => ..
@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/99designs/gqlgen v0.17.63
+	github.com/99designs/gqlgen v0.17.62
 	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
 	github.com/DataDog/orchestrion/instrument v0.0.0-00010101000000-000000000000
 	github.com/IBM/sarama v1.45.0
