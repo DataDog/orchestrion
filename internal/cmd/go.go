@@ -23,7 +23,9 @@ var (
 		Args:            true,
 		SkipFlagParsing: true,
 		Action: func(ctx *cli.Context) error {
-			pin.AutoPinOrchestrion(ctx.Context)
+			if err := pin.AutoPinOrchestrion(ctx.Context, ctx.App.Writer, ctx.App.ErrWriter); err != nil {
+				return cli.Exit(err, -1)
+			}
 
 			if err := goproxy.Run(ctx.Context, ctx.Args().Slice(), goproxy.WithToolexec(binpath.Orchestrion, "toolexec")); err != nil {
 				var exitErr *exec.ExitError

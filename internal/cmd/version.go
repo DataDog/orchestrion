@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/DataDog/orchestrion/internal/ensure"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/urfave/cli/v2"
 )
@@ -40,11 +39,6 @@ var Version = &cli.Command{
 		}
 
 		if c.Bool("verbose") {
-			if startupVersion := ensure.StartupVersion(); startupVersion != version.Tag() {
-				if _, err := fmt.Fprintf(c.App.Writer, " (started as %s)", startupVersion); err != nil {
-					return err
-				}
-			}
 			if _, err := fmt.Fprintf(c.App.Writer, " built with %s (%s/%s)", runtime.Version(), runtime.GOOS, runtime.GOARCH); err != nil {
 				return err
 			}
