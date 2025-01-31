@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/version"
@@ -61,6 +62,19 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("getting GOMOD: %w", err)
 	}
+
+	// Acquire an advisory lock on the `go.mod` file, so that in `-toolexec` mode,
+	// multiple attempts to auto-pin don't try to modify the files at the same
+	// time.
+	flock := filelock.MutexAt(goMod)
+	if err := flock.Lock(); err != nil {
+		return fmt.Errorf("failed to acquire lock on %q: %w", goMod, err)
+	}
+	defer func() {
+		if err := flock.Unlock(); err != nil {
+			log.Error().Err(err).Str("lock-file", goMod).Msg("Failed to release file lock")
+		}
+	}()
 
 	toolFile := filepath.Join(goMod, "..", config.FilenameOrchestrionToolGo)
 	dstFile, err := parseOrchestrionToolGo(toolFile)
