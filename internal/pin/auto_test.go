@@ -18,6 +18,13 @@ import (
 )
 
 func TestAutoPin(t *testing.T) {
+	ctx := context.Background()
+	if d, ok := t.Deadline(); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, d)
+		defer cancel()
+	}
+
 	t.Run("simple", func(t *testing.T) {
 		if cwd, err := os.Getwd(); err == nil {
 			defer require.NoError(t, os.Chdir(cwd))
@@ -32,7 +39,7 @@ func TestAutoPin(t *testing.T) {
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
-		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
@@ -47,7 +54,7 @@ func TestAutoPin(t *testing.T) {
 
 		t.Setenv(envVarCheckedGoMod, "true")
 
-		AutoPinOrchestrion(context.Background())
+		AutoPinOrchestrion(ctx)
 
 		assert.NoFileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.NoFileExists(t, filepath.Join(tmp, "go.sum"))

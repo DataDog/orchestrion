@@ -20,16 +20,23 @@ import (
 )
 
 func TestPin(t *testing.T) {
+	ctx := context.Background()
+	if d, ok := t.Deadline(); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, d)
+		defer cancel()
+	}
+
 	t.Run("simple", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
 		require.NoError(t, os.Chdir(tmp))
 
-		require.NoError(t, PinOrchestrion(context.Background(), Options{}))
+		require.NoError(t, PinOrchestrion(ctx, Options{}))
 
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
-		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
@@ -45,12 +52,12 @@ func TestPin(t *testing.T) {
 		tmp := scaffold(t, map[string]string{"github.com/DataDog/orchestrion": "v0.9.3"})
 		require.NoError(t, os.Chdir(tmp))
 
-		require.NoError(t, PinOrchestrion(context.Background(), Options{}))
+		require.NoError(t, PinOrchestrion(ctx, Options{}))
 
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
-		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
@@ -61,7 +68,7 @@ func TestPin(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
 		require.NoError(t, os.Chdir(tmp))
 
-		require.NoError(t, PinOrchestrion(context.Background(), Options{NoGenerate: true}))
+		require.NoError(t, PinOrchestrion(ctx, Options{NoGenerate: true}))
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
@@ -73,9 +80,9 @@ func TestPin(t *testing.T) {
 		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
 		require.NoError(t, os.Chdir(tmp))
 
-		require.NoError(t, PinOrchestrion(context.Background(), Options{NoGenerate: true}))
+		require.NoError(t, PinOrchestrion(ctx, Options{NoGenerate: true}))
 
-		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
@@ -88,9 +95,9 @@ func TestPin(t *testing.T) {
 		})
 		require.NoError(t, os.Chdir(tmp))
 
-		require.NoError(t, PinOrchestrion(context.Background(), Options{NoGenerate: true}))
+		require.NoError(t, PinOrchestrion(ctx, Options{NoGenerate: true}))
 
-		data, err := parseGoMod(filepath.Join(tmp, "go.mod"))
+		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
@@ -104,7 +111,7 @@ func TestPin(t *testing.T) {
 		toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
 		require.NoError(t, os.WriteFile(toolDotGo, nil, 0644))
 
-		require.ErrorContains(t, PinOrchestrion(context.Background(), Options{}), "expected 'package', found 'EOF'")
+		require.ErrorContains(t, PinOrchestrion(ctx, Options{}), "expected 'package', found 'EOF'")
 	})
 }
 

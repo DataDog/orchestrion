@@ -8,6 +8,8 @@ package pin
 import (
 	"bytes"
 	"context"
+	"crypto/sha512"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"go/parser"
@@ -65,8 +67,11 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	// Acquire an advisory lock on the `go.mod` file, so that in `-toolexec` mode,
 	// multiple attempts to auto-pin don't try to modify the files at the same
-	// time.
-	flock := filelock.MutexAt(goMod)
+	// time. The `go mod tidy` command takes an advisory write-lock on `go.mod`,
+	// so we are using a separate file under [os.TempDir] to avoid deadlocking.
+	sha := sha512.Sum512([]byte(goMod))
+	flockname := filepath.Join(os.TempDir(), "orchestrion-pin_"+base64.URLEncoding.EncodeToString(sha[:])+"_go.mod.lock")
+	flock := filelock.MutexAt(flockname)
 	if err := flock.Lock(); err != nil {
 		return fmt.Errorf("failed to acquire lock on %q: %w", goMod, err)
 	}
@@ -101,7 +106,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	// Add the current version of orchestrion to the `go.mod` file.
 	var edits []goModEdit
-	curMod, err := parseGoMod(goMod)
+	curMod, err := parseGoMod(ctx, goMod)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
@@ -109,7 +114,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	if _, found := curMod.requires(datadogTracerV1); !found {
 		log.Info().Msg("Installing " + datadogTracerV1)
 		// TODO: Replace `@main` with `@latest`.
-		if err := runGoGet(goMod, datadogTracerV1+"@main"); err != nil {
+		if err := runGoGet(ctx, goMod, datadogTracerV1+"@main"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
 		}
 	}
@@ -124,7 +129,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag()})
 	}
 
-	if err := runGoModEdit(goMod, edits...); err != nil {
+	if err := runGoModEdit(ctx, goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
@@ -135,13 +140,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
-		if err := runGoMod("tidy", goMod, nil); err != nil {
+		if err := runGoMod(ctx, "tidy", goMod, nil); err != nil {
 			return fmt.Errorf("running `go mod tidy`: %w", err)
 		}
 	}
 
 	// Restore the previous toolchain directive if `go mod tidy` had the nerve to touch it...
-	if err := runGoModEdit(goMod, curMod.Toolchain); err != nil {
+	if err := runGoModEdit(ctx, goMod, curMod.Toolchain); err != nil {
 		return fmt.Errorf("restoring toolchain directive: %w", err)
 	}
 

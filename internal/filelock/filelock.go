@@ -19,8 +19,8 @@ import (
 // It is not intended for in-process synchronization, and should not be shared
 // between goroutines without being appropriately guarded by a sync.Mutex.
 type Mutex struct {
-	path string
 	file *os.File
+	path string
 }
 
 // MutexAt returns a new Mutex instance that will use the given path as the lock

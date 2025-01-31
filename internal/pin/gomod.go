@@ -7,6 +7,7 @@ package pin
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,9 +48,9 @@ type (
 
 // parseGoMod processes the contents of the designated `go.mod` file using
 // `go mod edit -json` and returns the corresponding parsed [goMod].
-func parseGoMod(modfile string) (goMod, error) {
+func parseGoMod(ctx context.Context, modfile string) (goMod, error) {
 	var stdout bytes.Buffer
-	if err := runGoMod("edit", modfile, &stdout, "-json"); err != nil {
+	if err := runGoMod(ctx, "edit", modfile, &stdout, "-json"); err != nil {
 		return goMod{}, fmt.Errorf("running `go mod edit -json`: %w", err)
 	}
 
@@ -74,8 +75,8 @@ func (m *goMod) requires(path string) (string, bool) {
 
 // runGoGet executes the `go get <modSpecs...>` subcommand with the provided
 // module specifications on the designated `go.mod` file.
-func runGoGet(modfile string, modSpecs ...string) error {
-	cmd := exec.Command("go", "get", "-modfile", modfile)
+func runGoGet(ctx context.Context, modfile string, modSpecs ...string) error {
+	cmd := exec.CommandContext(ctx, "go", "get", "-modfile", modfile)
 	cmd.Args = append(cmd.Args, modSpecs...)
 	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
 	cmd.Stdin = os.Stdin
@@ -87,8 +88,8 @@ func runGoGet(modfile string, modSpecs ...string) error {
 // runGoMod executes the `go mod <command> <args...>` subcommand with the
 // provided arguments on the designated `go.mod` file, sending standard output
 // to the provided writer.
-func runGoMod(command string, modfile string, stdout io.Writer, args ...string) error {
-	cmd := exec.Command("go", "mod", command, "-modfile", modfile)
+func runGoMod(ctx context.Context, command string, modfile string, stdout io.Writer, args ...string) error {
+	cmd := exec.CommandContext(ctx, "go", "mod", command, "-modfile", modfile)
 	cmd.Args = append(cmd.Args, args...)
 	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
 	cmd.Stdin = os.Stdin
@@ -99,7 +100,7 @@ func runGoMod(command string, modfile string, stdout io.Writer, args ...string) 
 
 // runGoModEdit makes the specified changes to the `go.mod` file, then runs `go mod tidy` if needed.
 // If there is a `vendor` directory, it also runs `go mod vendor` before returning.
-func runGoModEdit(modfile string, edits ...goModEdit) error {
+func runGoModEdit(ctx context.Context, modfile string, edits ...goModEdit) error {
 	if len(edits) == 0 {
 		// Nothing to do.
 		return nil
@@ -109,11 +110,11 @@ func runGoModEdit(modfile string, edits ...goModEdit) error {
 	for i, edit := range edits {
 		editFlags[i] = edit.goModEditFlag()
 	}
-	if err := runGoMod("edit", modfile, os.Stdout, editFlags...); err != nil {
+	if err := runGoMod(ctx, "edit", modfile, os.Stdout, editFlags...); err != nil {
 		return fmt.Errorf("running `go mod edit %s`: %w", editFlags, err)
 	}
 
-	if err := runGoMod("tidy", modfile, os.Stdout); err != nil {
+	if err := runGoMod(ctx, "tidy", modfile, os.Stdout); err != nil {
 		return fmt.Errorf("running `go mod tidy`: %w", err)
 	}
 
@@ -127,7 +128,7 @@ func runGoModEdit(modfile string, edits ...goModEdit) error {
 		return fmt.Errorf("checking for vendor directory %q: %w", vendorDir, err)
 	}
 
-	if err := runGoMod("vendor", modfile, os.Stdout); err != nil {
+	if err := runGoMod(ctx, "vendor", modfile, os.Stdout); err != nil {
 		return fmt.Errorf("running `go mod vendor`: %w", err)
 	}
 
