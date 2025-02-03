@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/_docs
 
-go 1.22.0
+go 1.22.6
 
 replace github.com/DataDog/orchestrion => ..
 
