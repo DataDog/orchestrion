@@ -107,9 +107,9 @@ func TestParse(t *testing.T) {
 		},
 		"cover-with-coverpkg": {
 			flags:   []string{"run", "-cover", "-covermode=atomic", "--", "-some.go"},
-			goflags: "-coverpkg=std",
+			goflags: "-coverpkg=std,./...",
 			expected: CommandFlags{
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "std"},
+				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "std,github.com/DataDog/orchestrion/internal/goflags,github.com/DataDog/orchestrion/internal/goflags/quoted"},
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},

@@ -219,7 +219,71 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 // inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and `-coverpkg` is not, as
 // otherwise, sub-commands triggered with these flags will not apply coverage to the intended packages.
 func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalArgs []string) error {
-	if _, hasCoverpkg := f.Long["-coverpkg"]; hasCoverpkg {
+	log := zerolog.Ctx(ctx)
+
+	// Make sure we satisfy the same build constraints; but don't run -toolexec
+	childBuildFlags := append(f.Slice(), "-toolexec=")
+	childBuildLogf := func(format string, args ...any) {
+		log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
+	}
+
+	if val, hasCoverpkg := f.Long["-coverpkg"]; hasCoverpkg {
+		if val == "" {
+			// Blank specified, not trying to expand it...
+			return nil
+		}
+
+		// We have patterns, we need to make sure they are expressed in absolute terms.
+		var newValBuf strings.Builder
+		newValBuf.Grow(len(val))
+
+		for idx, pattern := range strings.Split(val, ",") {
+			if idx > 0 {
+				newValBuf.WriteByte(',')
+			}
+			if !strings.HasPrefix(pattern, "./") && !strings.HasPrefix(pattern, ".\\") {
+				// If the pattern is not relative, so we're good.
+				newValBuf.WriteString(pattern)
+				continue
+			}
+
+			log.Debug().
+				Str("-coverpkg.entry", pattern).
+				Msg("Resolving relative -coverpkg entry")
+			pkgs, err := packages.Load(&packages.Config{
+				Mode:       packages.NeedName,
+				Dir:        wd,
+				BuildFlags: childBuildFlags,
+				Logf:       childBuildLogf,
+			}, pattern)
+			if err != nil {
+				return fmt.Errorf("resolving -coverpkg entry %q: %w", pattern, err)
+			}
+			for idx, pkg := range pkgs {
+				if len(pkg.Errors) != 0 {
+					var err error
+					for _, pkgErr := range pkg.Errors {
+						err = errors.Join(err, pkgErr)
+					}
+					log.Warn().
+						Err(err).
+						Str("pkg.ID", pkg.ID).
+						Str("-coverpkg.entry", pattern).
+						Msg("Error when resolving -coverpkg entry")
+				}
+
+				if idx > 0 {
+					newValBuf.WriteByte(',')
+				}
+				newValBuf.WriteString(pkg.PkgPath)
+			}
+		}
+
+		newVal := newValBuf.String()
+		f.Long["-coverpkg"] = newVal
+		log.Debug().
+			Str("-coverpkg", newVal).
+			Msg("Finalized -coverpkg value")
 		return nil
 	}
 
@@ -232,13 +296,12 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 		return nil
 	}
 
-	log := zerolog.Ctx(ctx)
 	pkgs, err := packages.Load(
 		&packages.Config{
 			Mode:       packages.NeedName,
 			Dir:        wd,
-			BuildFlags: append(f.Slice(), "-toolexec"), // Make sure we satisfy the same build constraints; but don't run -toolexec
-			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
+			BuildFlags: childBuildFlags,
+			Logf:       childBuildLogf,
 		},
 		positionalArgs...,
 	)
