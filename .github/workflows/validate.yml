@@ -115,7 +115,7 @@ jobs:
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        uses: planetscale/ghcommit-action@8b5326f64dc06b38a4d0f69d34b4ea931ad2cf66 # v0.2.4
+        uses: planetscale/ghcommit-action@73c7d0fefec75e06673b9de4fb62f1d45561e098 # v0.2.5
         with:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
