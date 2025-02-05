@@ -116,7 +116,8 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	if ver, found := curMod.requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {
 		log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
-		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag()})
+		version, _, _ := strings.Cut(version.Tag(), "+")
+		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version})
 	}
 
 	if err := runGoModEdit(goMod, edits...); err != nil {
