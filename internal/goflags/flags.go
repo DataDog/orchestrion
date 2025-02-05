@@ -216,8 +216,12 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 	return flags, nil
 }
 
-// inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and `-coverpkg` is not, as
-// otherwise, sub-commands triggered with these flags will not apply coverage to the intended packages.
+// inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and
+// `-coverpkg` is not, as otherwise, sub-commands triggered with these flags will not apply coverage
+// to the intended packages.
+// If `-coverpkg` is present, it will expand any relative paths (recognized by a `./` prefix) into
+// absolute package names, so that child builds do not interpret these relative to a different
+// package root.
 func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalArgs []string) error {
 	log := zerolog.Ctx(ctx)
 
