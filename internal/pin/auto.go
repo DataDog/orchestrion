@@ -45,7 +45,8 @@ func AutoPinOrchestrion(ctx context.Context, stdout io.Writer, stderr io.Writer)
 			// There is already a required version, but we're not running that one!
 			log.Trace().Err(err).Msg("Orchestrion is already in go.mod, but we are not running the correct one; returning an error")
 			return err
-		} else if err == nil {
+		}
+		if err == nil {
 			// We're good to go
 			log.Trace().Msg("Orchestrion is already in go.mod, and we are running the correct version, no automatic pinning required")
 			return nil
@@ -57,8 +58,9 @@ func AutoPinOrchestrion(ctx context.Context, stdout io.Writer, stderr io.Writer)
 		if err == nil {
 			log.Trace().Msg("Found " + config.FilenameOrchestrionToolGo + " file, no automatic pinning required")
 			return nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			log.Trace().Msg("Failed to stat " + config.FilenameOrchestrionToolGo + ", returning error")
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Trace().Err(err).Msg("Failed to stat " + config.FilenameOrchestrionToolGo + ", returning error")
 			return err
 		}
 		log.Trace().Msg("No " + config.FilenameOrchestrionToolGo + " file found, will attempt automatic pinning")
