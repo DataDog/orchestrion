@@ -9,11 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/version"
@@ -21,40 +18,38 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const (
-	orchestrionPkgPath    = "github.com/DataDog/orchestrion"
-	envVarRespawnedFor    = "DD_ORCHESTRION_RESPAWNED_FOR"
-	envVarStartupVersion  = "DD_ORCHESTRION_STARTUP_VERSION"
-	envValRespawnReplaced = "<replaced>"
-)
+const orchestrionPkgPath = "github.com/DataDog/orchestrion"
 
-var (
-	errRespawnLoop    = errors.New("re-spawn loop detected")
-	orchestrionSrcDir string
-)
+var orchestrionSrcDir string
 
-// RequiredVersion makes sure the version of the tool currently running is the same as the one
-// required in the current working directory's "go.mod" file by calling `syscall.Exec` with the
-// relevant `go run` command if necessary to replace the current process with one using the required
-// version.
-//
-// If this returns `nil`, the current process is running the correct version of the tool and can
-// proceed with it's intended purpose. If it returns an error, that should be presented to the user
-// before exiting with a non-0 status code. If the process was correctly substituted, this function
-// never returns control to its caller (as the process has been replaced).
-func RequiredVersion(ctx context.Context) error {
-	return requiredVersion(ctx, goModVersion, os.Getenv, syscall.Exec, os.Args)
+// IncorrectVersionError is returned by [RequiredVersion] when the version of orchestrion running
+// does not match the one required by `go.mod`.
+type IncorrectVersionError struct {
+	// RequiredVersion is the version declared in `go.mod`, or a blank string if a `replace` directive
+	// for "github.com/DataDog/orchestrion" is present in `go.mod`.
+	RequiredVersion string
 }
 
-// StartupVersion returns the version of Orchestrion that has started this process. If this is the
-// same as version.Tag, this process hasn't needed to be re-started. This is useful to provide
-// complete information about proxied executions (e.g: in the output of `orchestrion version`),
-// in cases where a "globally" installed binary substituted itself for a version from `go.mod`.
-func StartupVersion() string {
-	if env := os.Getenv(envVarStartupVersion); env != "" {
-		return env
+// RequiredVersion makes sure the version of the tool currently running is the same as the one
+// required in the current working directory's "go.mod" file.
+//
+// If this returns `nil`, the current process is running the correct version of the tool and can
+// proceed with it's intended purpose. If it returns an [IncorrectVersionError], the caller should
+// determine whether to print a warning or exit in error, presenting the returned error to the user.
+func RequiredVersion(ctx context.Context) error {
+	return requiredVersion(ctx, goModVersion)
+}
+
+func (e IncorrectVersionError) Error() string {
+	const useMessage = "use `go run github.com/DataDog/orchestrion` instead of just `orchestrion`"
+	if e.RequiredVersion == "" {
+		return "orchestrion is diverted by a replace directive; please " + useMessage
 	}
-	return version.Tag()
+	return fmt.Sprintf(
+		"orchestrion@%s is required by `go.mod`, but this is orchestrion@%s - please run `go install github.com/DataDog/orchestrion@%[1]s` or "+useMessage,
+		e.RequiredVersion,
+		version.Tag(),
+	)
 }
 
 // requiredVersion is the internal implementation of RequiredVersion, and takes the goModVersion and
@@ -62,12 +57,7 @@ func StartupVersion() string {
 func requiredVersion(
 	ctx context.Context,
 	goModVersion func(context.Context, string) (string, string, error),
-	osGetenv func(string) string,
-	syscallExec func(argv0 string, argv []string, env []string) error,
-	osArgs []string,
 ) error {
-	log := zerolog.Ctx(ctx)
-
 	rVersion, path, err := goModVersion(ctx, "" /* Current working directory */)
 	if err != nil {
 		return fmt.Errorf("failed to determine go.mod requirement for %q: %w", orchestrionPkgPath, err)
@@ -79,54 +69,7 @@ func requiredVersion(
 		return nil
 	}
 
-	if respawn := osGetenv(envVarRespawnedFor); respawn != "" && respawn != envValRespawnReplaced {
-		// We're already re-spawning for a non-local version, so we should not be re-spawning again...
-		// If that were the case, we'd likely end up in an infinite loop of re-spawning, which is very
-		// much undesirable.
-		return fmt.Errorf(
-			"%w (wanted %s, got %s, already respawning for %s)",
-			errRespawnLoop,
-			rVersion,
-			version.Tag(),
-			respawn,
-		)
-	}
-
-	if rVersion == "" {
-		// If there is no required version, it means a replace directive is in use, and it does not
-		// macth the running process' original source tree, so we will unconditionally re-spawn.
-		rVersion = envValRespawnReplaced
-	}
-
-	log.Info().Msgf("Re-starting with '%s@%s' (this is %s)", orchestrionPkgPath, rVersion, version.Tag())
-
-	goBin, err := exec.LookPath("go")
-	if err != nil {
-		return fmt.Errorf("failed to resolve go from PATH: %w", err)
-	}
-
-	if len(osArgs) == 0 {
-		panic("received 0-length osArgs, which is not supposed to happen")
-	}
-
-	args := make([]string, len(osArgs)+2)
-	args[0] = goBin
-	args[1] = "run"
-	args[2] = orchestrionPkgPath
-	copy(args[3:], osArgs[1:])
-
-	env := os.Environ()
-	env = append(
-		env,
-		fmt.Sprintf("%s=%s", envVarRespawnedFor, rVersion),
-		fmt.Sprintf("%s=%s", envVarStartupVersion, version.Tag()),
-	)
-
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	// Won't return control if successful, never returns a `nil` error value.
-	return syscallExec(goBin, args, env)
+	return IncorrectVersionError{RequiredVersion: rVersion}
 }
 
 // goModVersion returns the version and path of the "github.com/DataDog/orchestrion" module that is
@@ -175,6 +118,6 @@ func goModVersion(ctx context.Context, dir string) (moduleVersion string, module
 }
 
 func init() {
-	_, file, _, _ := runtime.Caller(0)
-	orchestrionSrcDir = filepath.Dir(filepath.Dir(filepath.Dir(file)))
+	_, thisFile, _, _ := runtime.Caller(0)
+	orchestrionSrcDir = filepath.Join(thisFile, "..", "..", "..")
 }
