@@ -34,9 +34,10 @@ const (
 )
 
 type Options struct {
-	// Writer is the writer to send output of the command to.
+	// Writer is the writer to send output of the command to. Defaults to
+	// [os.Stdout].
 	Writer io.Writer
-	// ErrWriter is the writer to send error messages to.
+	// ErrWriter is the writer to send error messages to. Defaults to [os.Stderr].
 	ErrWriter io.Writer
 
 	// Validate checks the contents of all [orchestrionDotYML] files encountered
@@ -55,6 +56,14 @@ type Options struct {
 // PinOrchestrion applies or update the orchestrion pin file in the current
 // working directory, according to the supplied [Options].
 func PinOrchestrion(ctx context.Context, opts Options) error {
+	// Ensure we have an [Options.Writer] and [Options.ErrWriter] set.
+	if opts.Writer == nil {
+		opts.Writer = os.Stdout
+	}
+	if opts.ErrWriter == nil {
+		opts.ErrWriter = os.Stderr
+	}
+
 	log := zerolog.Ctx(ctx)
 
 	goMod, err := goenv.GOMOD("")
