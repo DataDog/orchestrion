@@ -102,7 +102,7 @@ func TestParse(t *testing.T) {
 			flags: []string{"run", "-covermode=count"},
 			expected: CommandFlags{
 				Long:  map[string]string{"-covermode": "count", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
-				Short: map[string]struct{}{},
+				Short: nil,
 			},
 		},
 		"cover-with-coverpkg": {

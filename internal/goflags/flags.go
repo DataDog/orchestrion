@@ -243,11 +243,11 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 
 		for idx, pattern := range strings.Split(val, ",") {
 			if idx > 0 {
-				newValBuf.WriteByte(',')
+				_ = newValBuf.WriteByte(',')
 			}
 			if !strings.HasPrefix(pattern, "./") && !strings.HasPrefix(pattern, ".\\") {
 				// If the pattern is not relative, so we're good.
-				newValBuf.WriteString(pattern)
+				_, _ = newValBuf.WriteString(pattern)
 				continue
 			}
 
@@ -277,9 +277,9 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 				}
 
 				if idx > 0 {
-					newValBuf.WriteByte(',')
+					_ = newValBuf.WriteByte(',')
 				}
-				newValBuf.WriteString(pkg.PkgPath)
+				_, _ = newValBuf.WriteString(pkg.PkgPath)
 			}
 		}
 
