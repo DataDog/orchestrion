@@ -2,7 +2,7 @@
 title: "Uninstall"
 weight: 999
 
-prev: /troubleshooting
+prev: /docs/troubleshooting
 ---
 
 ## Removing Orchestrion

@@ -1,8 +1,8 @@
 ---
 title: Trace Customization
-weight: 20
-prev: /docs/features
-next: /docs/built-in
+weight: 30
+prev: /docs/dd-trace-go/features
+next: /docs/troubleshooting
 ---
 
 Orchestrion offers serveral ways to control the traces produced by instrumented
@@ -67,10 +67,15 @@ is the case for:
 - `github.com/gorilla/mux`
 - `github.com/julienschmidt/httprouter`
 - `github.com/segmentio/kafka-go`
-- `net/http` client instrumentation
+- `net/http` client and server instrumentation
 {{</callout>}}
 
 ## Creating custom trace spans
+
+{{<callout type="info">}}
+This feature is provided by the core tracer integration:
+- [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../integrations/ddtrace-tracer)
+{{</callout>}}
 
 Any function annotated with the `//dd:span` directive will result in a trace
 span being created around the function's execution. The directive can optionally

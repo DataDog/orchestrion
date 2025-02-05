@@ -1,12 +1,17 @@
 ---
 title: Feature Activation
-weight: 10
+weight: 20
 
-prev: /getting-started
-next: /custom-trace
+prev: /docs/dd-trace-go/integrations
+next: /docs/dd-trace-go/custom-trace
 ---
 
 ## Custom Go Tracer start-up
+
+{{<callout type="info">}}
+The core tracer integration is provided by:
+- [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../integrations/ddtrace-tracer)
+{{</callout>}}
 
 All applications built using `orchestrion` automatically start the Datadog
 tracer at the beginning of the `main` function using the tracer library's
@@ -24,6 +29,11 @@ with your preferred configuration options.
 
 ## Enabling the Go Profiler
 
+{{<callout type="info">}}
+The Go continuous profiler integration is provided by:
+- [`gopkg.in/DataDog/dd-trace-go.v1/profiler`](../integrations/profiler)
+{{</callout>}}
+
 All applications built using `orchestrion` automatically start the Datadog
 continuous profiler if the `DD_PROFILING_ENABLED` environment variable is set
 to `1` or `true`. If profiling is enabled via the
@@ -39,6 +49,14 @@ When enabled, the continuous profiler will activate the following profiles:
 [dd-adm-controller]: https://docs.datadoghq.com/containers/cluster_agent/admission_controller/?tab=datadogoperator
 
 ## Enabling Application Security features
+
+{{<callout type="info">}}
+The Application Security (ASM) features are supported by the core tracer
+integrations, and baked into the various supported library integrations. As a
+result, ASM requires you enable:
+- [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../integrations/ddtrace-tracer)
+- Integrations for supported libraries you want monitoring and/or protection for
+{{</callout>}}
 
 Datadog Application Security (ASM) features are built into the tracer library,
 but need to be enabled at run-time. The [Enabling ASM for Go][asm-for-go]
