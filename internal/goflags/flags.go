@@ -222,7 +222,13 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 	if _, hasCoverpkg := f.Long["-coverpkg"]; hasCoverpkg {
 		return nil
 	}
-	if _, isCover := f.Short["-cover"]; !isCover {
+
+	_, isCover := f.Short["-cover"]
+	if !isCover {
+		// -covermode implies -cover
+		_, isCover = f.Short["-covermode"]
+	}
+	if !isCover {
 		return nil
 	}
 
