@@ -8,7 +8,10 @@ following `import` in the project's `orchestrion.tool.go` file:
 
 ```go
 import (
-	_ "{{ .PkgPath }}"
+	_ "github.com/DataDog/orchestrion"
+
+	_ "{{ .PkgPath }}" // integration
+	//...
 )
 ```
 

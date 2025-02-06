@@ -2,7 +2,7 @@ name: Documentation Site
 on:
   pull_request:
     branches: ['**']
-    paths: [docs/**]
+    paths: [_docs/**]
   merge_group:
     branches: [main]
   push:

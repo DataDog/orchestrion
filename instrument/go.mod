@@ -4,7 +4,7 @@ go 1.22.5
 
 replace github.com/DataDog/orchestrion => ..
 
-require gopkg.in/DataDog/dd-trace-go.v1 v1.72.0-dev.0.0.20250122091557-753f98ca6dea
+require gopkg.in/DataDog/dd-trace-go.v1 v1.72.0-rc.1
 
 require (
 	cloud.google.com/go v0.116.0 // indirect

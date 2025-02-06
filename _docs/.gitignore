@@ -1,6 +1,4 @@
 /.hugo_build.lock
-/content/docs/built-in/
-!/content/docs/built-in/_index.md
 /content/contributing/aspects/advice/
 /content/contributing/aspects/join-points/
 /public/

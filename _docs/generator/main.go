@@ -16,7 +16,7 @@ import (
 func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
 	gen := Generator{
-		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "built-in"),
+		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "integrations"),
 		ConfigSource: filepath.Join(thisFile, "..", "..", "..", "instrument"),
 	}
 	if err := gen.Generate(); err != nil {
