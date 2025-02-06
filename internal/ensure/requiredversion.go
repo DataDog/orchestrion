@@ -41,12 +41,11 @@ func RequiredVersion(ctx context.Context) error {
 }
 
 func (e IncorrectVersionError) Error() string {
-	const useMessage = "use `go run github.com/DataDog/orchestrion` instead of just `orchestrion`"
 	if e.RequiredVersion == "" {
-		return "orchestrion is diverted by a replace directive; please " + useMessage
+		return "orchestrion is diverted by a replace directive; please run `go install github.com/DataDog/orchestrion` before trying again"
 	}
 	return fmt.Sprintf(
-		"orchestrion@%s is required by `go.mod`, but this is orchestrion@%s - please run `go install github.com/DataDog/orchestrion@%[1]s` or "+useMessage,
+		"orchestrion@%s is required by `go.mod`, but this is orchestrion@%s - please run `go install github.com/DataDog/orchestrion@%[1]s` before trying again",
 		e.RequiredVersion,
 		version.Tag(),
 	)
