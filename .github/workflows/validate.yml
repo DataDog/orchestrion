@@ -164,12 +164,15 @@ jobs:
   # Run all unit tests with coverage enabled
   unit-tests:
     needs: generate
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
+        # Not running unit tests on macOS, because it's UNIX-like and the only
+        # os-specific code paths are UNIX vs. Windows.
+        runs-on: [ubuntu-latest, windows-latest]
         go-version: [oldstable, stable]
-    name: Unit tests (go ${{ matrix.go-version }})
+    name: Unit tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
