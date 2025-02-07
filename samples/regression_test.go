@@ -112,6 +112,8 @@ func TestSamples(t *testing.T) {
 
 				data = bytes.ReplaceAll(data, []byte(samplesDir), []byte("samples"))
 				data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag())), []byte("\"<version.Tag>\""))
+				// Normalize CRLF back to LF so Windows behaves the same as Unix.
+				data = bytes.ReplaceAll(data, []byte{'\r', '\n'}, []byte{'\n'})
 
 				reference, err := os.ReadFile(referenceFile)
 				if updateSnapshots && errors.Is(err, os.ErrNotExist) {

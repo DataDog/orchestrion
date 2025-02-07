@@ -23,10 +23,6 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
-	"github.com/hexops/gotextdiff"
-	"github.com/hexops/gotextdiff/myers"
-	"github.com/hexops/gotextdiff/span"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
@@ -46,9 +42,6 @@ const testModuleName = "dummy/test/module"
 
 func Test(t *testing.T) {
 	t.Parallel()
-
-	differ := diffmatchpatch.New()
-	differ.PatchMargin = 5
 
 	_, thisFile, _, _ := runtime.Caller(0)
 	dirName := "injector"
@@ -126,7 +119,7 @@ func Test(t *testing.T) {
 
 			resFile, modified := res[inputFile]
 			if !modified {
-				golden.Assert(t, "", filepath.Join(dirName, testName, "expected.diff"))
+				golden.Assert(t, "<no changes>", filepath.Join(dirName, testName, "modified.go.snap"))
 				return
 			}
 
@@ -138,9 +131,7 @@ func Test(t *testing.T) {
 			require.NoError(t, err, "failed to read modified file")
 			normalized := normalize(modifiedData, inputFile)
 
-			edits := myers.ComputeEdits(span.URIFromPath("input.go"), original, normalized)
-			diff := gotextdiff.ToUnified("input.go", "output.go", original, edits)
-			golden.Assert(t, fmt.Sprint(diff), filepath.Join(dirName, testName, "expected.diff"))
+			golden.Assert(t, normalized, filepath.Join(dirName, testName, "modified.go.snap"))
 
 			// Verify that the modified code compiles...
 			os.Rename(resFile.Filename, inputFile)
@@ -166,7 +157,5 @@ func runGo(t *testing.T, dir string, args ...string) {
 func normalize(in []byte, filename string) string {
 	res := strings.ReplaceAll(string(in), "\t", "  ")
 	res = strings.ReplaceAll(res, fmt.Sprintf("//line %s:", filename), "//line input.go:")
-	// Canonicalize CRLF back into LF, so that Windows looks uniform.
-	res = strings.ReplaceAll(res, "\r\n", "\n")
 	return res
 }
