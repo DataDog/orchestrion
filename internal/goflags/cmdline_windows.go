@@ -25,6 +25,10 @@ func CmdlineSlice(ctx context.Context, proc *process.Process) ([]string, error) 
 		return nil, err
 	}
 
+	return commandLineToArgv(cmdline)
+}
+
+func commandLineToArgv(cmdline string) ([]string, error) {
 	cmdlineptr, err := windows.UTF16PtrFromString(cmdline)
 	if err != nil {
 		return nil, fmt.Errorf("encoding cmdline as UTF-16: %w", err)
