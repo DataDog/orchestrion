@@ -187,6 +187,9 @@ jobs:
         run: |-
           mkdir -p coverage
           test_args=("-shuffle=on" "-race")
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            test_args+=("-timeout=30m")
+          fi
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
           fi
