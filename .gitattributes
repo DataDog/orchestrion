@@ -1,0 +1,3 @@
+# Golden snapshots are LF-normalized, always.
+*.snap     text=auto eol=lf
+*.snap.yml text=auto eol=lf
