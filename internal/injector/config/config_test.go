@@ -175,6 +175,15 @@ func TestLoad(t *testing.T) {
 	_, thisFile, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(thisFile, "..", "..", "..", "..")
 
+	t.Run("no go files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		goMod := filepath.Join(tmpDir, "go.mod")
+		require.NoError(t, os.WriteFile(goMod, []byte("module test\n"), 0o644))
+		loader := NewLoader(tmpDir, true)
+		_, err := loader.Load()
+		require.ErrorContains(t, err, "no Go files found, was expecting at least orchestrion.tool.go")
+	})
+
 	t.Run("required.yml", func(t *testing.T) {
 		loader := NewLoader(repoRoot, true)
 		cfg, err := loader.Load()
