@@ -10,7 +10,6 @@ package goflags
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +17,6 @@ func TestCommandLineToArgv(t *testing.T) {
 	type testCase struct {
 		input          string
 		expectedOutput []string
-		expectedErr    string
 	}
 
 	testCases := map[string]testCase{
@@ -31,20 +29,17 @@ func TestCommandLineToArgv(t *testing.T) {
 			expectedOutput: []string{`C:\Program Files\go.exe`, "go", "test", "./..."},
 		},
 		"missing-end-quote": {
-			input:       `"C:\Program Files\go.exe go test ./...`,
-			expectedErr: "TBD?",
+			// You'd have expected this to result in an error? You'd be wrong. Windows' CommandLineToArgvW
+			// function is extremely lax and will happily parse this as if there was an end quote at the
+			// end of the input... Yay...?
+			input:          `"C:\Program Files\go.exe go test ./...`,
+			expectedOutput: []string{`C:\Program Files\go.exe go test ./...`},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			actual, err := commandLineToArgv(tc.input)
-			if tc.expectedErr != "" {
-				assert.Nil(t, actual)
-				require.ErrorContains(t, err, tc.expectedErr)
-				return
-			}
-
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedOutput, actual)
 		})
