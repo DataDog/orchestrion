@@ -193,14 +193,21 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd) (*Client, e
 var jobserverStartTimeout = 5 * time.Second
 
 func init() {
-	val := os.Getenv("ORCHESTRION_JOB_SERVER_START_TIMEOUT_SECONDS")
+	const envVarName = "ORCHESTRION_JOB_SERVER_START_TIMEOUT_SECONDS"
+	val := os.Getenv(envVarName)
 	if val == "" {
 		return
 	}
 
 	sec, err := strconv.Atoi(val)
 	if err != nil {
-		// We got an invalid value, we'll silently ignore this because we can't ensure the logger has been initialized yet.
+		_, _ = fmt.Fprintf(
+			os.Stderr,
+			"Warning: unable to parse value of "+envVarName+"=%q due to %v, will use default value of %s instead\n",
+			val,
+			err,
+			jobserverStartTimeout,
+		)
 		return
 	}
 
