@@ -11,5 +11,6 @@ package instrument
 // package. This is only present as a way to ease migrations of the integrations
 // to the `dd-trace-go` package.
 import (
+	_ "github.com/DataDog/orchestrion"  // integration
 	_ "gopkg.in/DataDog/dd-trace-go.v1" // integration
 )
