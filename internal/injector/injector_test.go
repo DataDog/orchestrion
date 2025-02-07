@@ -140,7 +140,7 @@ func Test(t *testing.T) {
 
 			edits := myers.ComputeEdits(span.URIFromPath("input.go"), original, normalized)
 			diff := gotextdiff.ToUnified("input.go", "output.go", original, edits)
-			golden.Assert(t, normalizeLineEndings(fmt.Sprint(diff)), filepath.Join(dirName, testName, "expected.diff"))
+			golden.Assert(t, fmt.Sprint(diff), filepath.Join(dirName, testName, "expected.diff"))
 
 			// Verify that the modified code compiles...
 			os.Rename(resFile.Filename, inputFile)
@@ -167,9 +167,4 @@ func normalize(in []byte, filename string) string {
 	res := strings.ReplaceAll(string(in), "\t", "  ")
 	res = strings.ReplaceAll(res, fmt.Sprintf("//line %s:", filename), "//line input.go:")
 	return res
-}
-
-func normalizeLineEndings(in string) string {
-	// Normalize line endings so running tests on Windows produces expected results.
-	return strings.ReplaceAll(in, "\n\r", "\n")
 }
