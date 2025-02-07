@@ -166,5 +166,7 @@ func runGo(t *testing.T, dir string, args ...string) {
 func normalize(in []byte, filename string) string {
 	res := strings.ReplaceAll(string(in), "\t", "  ")
 	res = strings.ReplaceAll(res, fmt.Sprintf("//line %s:", filename), "//line input.go:")
+	// Canonicalize CRLF back into LF, so that Windows looks uniform.
+	res = strings.ReplaceAll(res, "\r\n", "\n")
 	return res
 }
