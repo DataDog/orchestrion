@@ -12,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/DataDog/orchestrion/internal/binpath"
@@ -74,19 +76,31 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 	)
 	cmd.SysProcAttr = &sysProcAttrDaemon                   // Make sure go doesn't wait for this to exit...
 	cmd.Env = append(os.Environ(), "TOOLEXEC_IMPORTPATH=") // Suppress the TOOLEXEC_IMPORTPATH variable if it's set.
-	cmd.Stdin = nil                                        // Connect to `os.DevNull`
+	cmd.WaitDelay = jobserverStartTimeout
+	cmd.Stdin = nil // Connect to `os.DevNull`
 	cmd.Stderr, _ = os.Create(urlFilePath + ".stderr.log")
 	cmd.Stdout, _ = os.Create(urlFilePath + ".stdout.log")
+	log.Trace().
+		Strs("args", cmd.Args).
+		Msg("Starting deamonized jobserver process...")
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 
 	// Wait for the URL file to exist...
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	log.Trace().
+		Str("url-file", urlFilePath).
+		Stringer("timeout", jobserverStartTimeout).
+		Msg("Waiting for job server to come online...")
+	ctx, cancel := context.WithTimeout(context.Background(), jobserverStartTimeout)
 	defer cancel()
 	client, err := waitForURLFile(ctx, urlFilePath, cmd)
 	if err != nil {
 		err = errors.Join(err, cmd.Process.Kill()) // Kill the process if it's still running...
+		log.Warn().
+			Err(err).
+			Str("url-file", urlFilePath).
+			Msg("Job server could not come online, aborting")
 		return nil, err
 	}
 	// Detach the process, so it survives this one if needed...
@@ -98,13 +112,14 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 }
 
 func clientFromURLFile(ctx context.Context, path string) (*Client, string, error) {
+	log := zerolog.Ctx(ctx)
+
 	mu := filelock.MutexAt(path)
 	if err := mu.RLock(); err != nil {
 		return nil, "", err
 	}
 	defer func() {
 		if err := mu.Unlock(); err != nil {
-			log := zerolog.Ctx(ctx)
 			log.Warn().Str("url-file", path).Err(err).Msg("Failed to unlock file")
 		}
 	}()
@@ -120,25 +135,74 @@ func clientFromURLFile(ctx context.Context, path string) (*Client, string, error
 
 	url := string(urlBytes)
 	client, err := Connect(url)
+	log.Trace().
+		Err(err).
+		Str("url-file", path).
+		Str("url", url).
+		Msg("Connected to job server from URL file")
 	return client, url, err
 }
 
 func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd) (*Client, error) {
 	log := zerolog.Ctx(ctx)
 	for {
+		// First, try to connect to the client from the URL file.
 		c, url, err := clientFromURLFile(ctx, path)
-		if err == nil {
-			client = c
-			// Set it in the current environment so that child processes don't have to go through the same dance again.
-			_ = os.Setenv(EnvVarJobserverURL, url)
-			return c, nil
+		if err != nil {
+			// Check whether the child process is still alive by sending it signal 0. This returns an
+			// error if the process is dead, and does nothing if it's alive.
+			if cmd.Process.Signal(syscall.Signal(0)) != nil {
+				// The process died, so we can call [exec.Cmd.Wait] on it to clean up associated resources.
+				waitErr := cmd.Wait()
+				log.Warn().
+					Err(err).
+					Stringer("state", cmd.ProcessState).
+					Str("url-file", path).
+					Msg("Job server process has exited")
+				return nil, errors.Join(
+					err,
+					waitErr,
+					fmt.Errorf("job server process has exited: %v", cmd.ProcessState),
+				)
+			}
+
+			// The process has not died, so no we'll check whether the context has been cancelled/expired.
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				log.Warn().
+					Err(ctxErr).
+					Str("url-file", path).
+					Msg("Context aborted while waiting for url-file")
+				// Attempt to kill the process if it hasn't died by itself...
+				return nil, errors.Join(err, ctxErr, cmd.Process.Kill())
+			}
+
+			// The process has not died, and the context has not expired yet, so we'll wait and retry...
+			log.Trace().Err(err).Str("url-file", path).Msg("Job server still not ready...")
+			time.Sleep(150 * time.Millisecond)
+			continue
 		}
-		if cmd.ProcessState != nil || ctx.Err() != nil {
-			// Attempt to kill the process if it hasn't died by itself...
-			_ = cmd.Process.Kill()
-			return nil, err
-		}
-		log.Trace().Str("url-file", path).Msg("Job server still not ready...")
-		time.Sleep(150 * time.Millisecond)
+
+		// There was no error, so we are good to go!
+		client = c
+		// Set it in the current environment so that child processes don't have to go through the same dance again.
+		_ = os.Setenv(EnvVarJobserverURL, url)
+		return c, nil
 	}
+}
+
+var jobserverStartTimeout = 5 * time.Second
+
+func init() {
+	val := os.Getenv("ORCHESTRION_JOB_SERVER_START_TIMEOUT_SECONDS")
+	if val == "" {
+		return
+	}
+
+	sec, err := strconv.Atoi(val)
+	if err != nil {
+		// We got an invalid value, we'll silently ignore this because we can't ensure the logger has been initialized yet.
+		return
+	}
+
+	jobserverStartTimeout = time.Duration(sec) * time.Second
 }
