@@ -183,7 +183,7 @@ func (v *visitor) pre(cursor *dstutil.Cursor) bool {
 	return true
 }
 
-func (v *visitor) post(cursor *dstutil.Cursor) bool {
+func (v *visitor) post(*dstutil.Cursor) bool {
 	if v.pragma.matchesChain(v.node) {
 		v.matches = append(v.matches, v.node)
 	}
