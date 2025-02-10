@@ -111,6 +111,7 @@ func TestSamples(t *testing.T) {
 				require.NoError(t, err)
 
 				data = bytes.ReplaceAll(data, []byte(samplesDir), []byte("samples"))
+				data = replacePathBackslashes(data)
 				data = bytes.ReplaceAll(data, []byte(fmt.Sprintf("%q", version.Tag())), []byte("\"<version.Tag>\""))
 				// Normalize CRLF back to LF so Windows behaves the same as Unix.
 				data = bytes.ReplaceAll(data, []byte{'\r', '\n'}, []byte{'\n'})
@@ -128,6 +129,43 @@ func TestSamples(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReplaceBackslashes(t *testing.T) {
+	require.Equal(t,
+		`//line this/is/a/test.go:1
+	fmt.Printf("This is a test\n")`,
+		string(replacePathBackslashes([]byte(`//line this\is\a\test.go:1
+	fmt.Printf("This is a test\n")`))))
+}
+
+// replacePathBackslashes replaces backslashes found in line directives only with forward slashes,
+// so that Windows has identical reference files to UNIXes.
+func replacePathBackslashes(data []byte) []byte {
+	var (
+		rest        = data
+		inPragma    bool
+		pragmaStart = []byte("//line ")
+		pragmaEnd   = []byte(".go:")
+	)
+	for len(rest) != 0 {
+		if bytes.HasPrefix(rest, pragmaStart) {
+			inPragma = true
+			rest = rest[len(pragmaStart):]
+			continue
+		}
+		if bytes.HasPrefix(rest, pragmaEnd) {
+			inPragma = false
+			rest = rest[len(pragmaEnd):]
+			continue
+		}
+		if inPragma && rest[0] == '\\' {
+			rest[0] = '/'
+		}
+		rest = rest[1:]
+	}
+
+	return data
 }
 
 func init() {
