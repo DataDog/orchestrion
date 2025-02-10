@@ -20,12 +20,9 @@ import (
 
 func TestAutoPin(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
-		if cwd, err := os.Getwd(); err == nil {
-			defer require.NoError(t, os.Chdir(cwd))
-		}
-
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
+
 		AutoPinOrchestrion(context.Background(), io.Discard, io.Discard)
 
 		assert.NotEmpty(t, os.Getenv(envVarCheckedGoMod))
@@ -42,7 +39,7 @@ func TestAutoPin(t *testing.T) {
 
 	t.Run("already-checked", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		require.NoError(t, os.Remove("go.mod"))
 

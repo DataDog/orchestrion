@@ -22,7 +22,7 @@ import (
 func TestPin(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		require.NoError(t, PinOrchestrion(context.Background(), Options{}))
 
@@ -43,7 +43,7 @@ func TestPin(t *testing.T) {
 
 	t.Run("another-version", func(t *testing.T) {
 		tmp := scaffold(t, map[string]string{"github.com/DataDog/orchestrion": "v0.9.3"})
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		require.NoError(t, PinOrchestrion(context.Background(), Options{}))
 
@@ -59,7 +59,7 @@ func TestPin(t *testing.T) {
 
 	t.Run("no-generate", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		require.NoError(t, PinOrchestrion(context.Background(), Options{NoGenerate: true}))
 
@@ -71,7 +71,7 @@ func TestPin(t *testing.T) {
 
 	t.Run("prune", func(t *testing.T) {
 		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		require.NoError(t, PinOrchestrion(context.Background(), Options{NoGenerate: true}))
 
@@ -86,7 +86,7 @@ func TestPin(t *testing.T) {
 			"github.com/digitalocean/sample-golang":  "v0.0.0-20240904143939-1e058723dcf4",
 			"github.com/skyrocknroll/go-mod-example": "v0.0.0-20190130140558-29b3c92445e5",
 		})
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		require.NoError(t, PinOrchestrion(context.Background(), Options{NoGenerate: true}))
 
@@ -99,7 +99,7 @@ func TestPin(t *testing.T) {
 
 	t.Run("empty-tool-dot-go", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
 		require.NoError(t, os.WriteFile(toolDotGo, nil, 0644))
@@ -122,6 +122,16 @@ require (
 {{- end }}
 )
 `))
+
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+
+	oldwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() { require.NoError(t, os.Chdir(oldwd)) })
+}
 
 func scaffold(t *testing.T, requires map[string]string) string {
 	t.Helper()
