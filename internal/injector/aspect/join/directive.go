@@ -49,10 +49,14 @@ func (d directive) matchesChain(chain *context.NodeChain) bool {
 		}
 	}
 
-	// If the parent is an assignment statement, so we also check it for directives.
 	if parent := chain.Parent(); parent != nil {
-		if _, isAssign := parent.Node().(*dst.AssignStmt); isAssign && d.matchesChain(parent) {
-			return true
+		switch parent.Node().(type) {
+		// Also check whether the parent carries the directive if it's one of the node types that would
+		// typically carry directives that applies to its nested node.
+		case *dst.AssignStmt, *dst.CallExpr, *dst.DeferStmt, *dst.ExprStmt, *dst.GoStmt, *dst.LabeledStmt, *dst.ReturnStmt, *dst.SendStmt:
+			if d.matchesChain(parent) {
+				return true
+			}
 		}
 	}
 
