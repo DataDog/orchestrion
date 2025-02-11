@@ -1,5 +1,10 @@
 pkgpath: github.com/DataDog/orchestrion/instrument
 imports:
+  - pkgpath: github.com/DataDog/orchestrion
+    yaml:
+      name: <built-in>
+      aspects:
+        - built.WithOrchestrion
   - pkgpath: gopkg.in/DataDog/dd-trace-go.v1
     imports:
       - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen

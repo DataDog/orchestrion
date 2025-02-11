@@ -1,0 +1,33 @@
+//line input.go:1:1
+package main
+
+import (
+  "io"
+  "log"
+  "net/http"
+)
+
+func main() {
+  s := &http.Server{
+    Addr: ":8085",
+    Handler:
+    //dd:startwrap
+//line input.go:12
+    http.HandlerFunc(handle),
+    //dd:endwrap
+  }
+//line input.go:14
+  log.Printf("Server shut down: %v", s.ListenAndServe())
+}
+
+func handle(w http.ResponseWriter, r *http.Request) {
+  data, err := io.ReadAll(r.Body)
+  if err != nil {
+    w.WriteHeader(http.StatusBadRequest)
+    w.Write([]byte(err.Error()))
+    return
+  }
+  defer r.Body.Close()
+  w.WriteHeader(http.StatusOK)
+  w.Write(data)
+}

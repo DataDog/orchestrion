@@ -1,0 +1,77 @@
+//line input.go:1:1
+package test
+
+import (
+  "time"
+
+  "github.com/gomodule/redigo/redis"
+//line <generated>:1
+  __orchestrion_redigotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
+)
+
+//line input.go:9
+func dial1(net, address string) error {
+  c, err :=
+//line <generated>:1
+    func() (redis.Conn, error) {
+      return __orchestrion_redigotrace.Dial(
+//line input.go:10
+        net, address)
+    }()
+//line input.go:11
+  if err != nil {
+    return err
+  }
+  defer c.Close()
+  return use(c)
+}
+
+func dial2(net, address string) error {
+  c, err :=
+//line <generated>:1
+    func() (redis.Conn, error) {
+      return __orchestrion_redigotrace.Dial(
+//line input.go:19
+        net, address, redis.DialConnectTimeout(5*time.Second), redis.DialConnectTimeout(time.Minute))
+    }()
+//line input.go:20
+  if err != nil {
+    return err
+  }
+  defer c.Close()
+  return use(c)
+}
+
+func dial3(net, address string) error {
+  options := []redis.DialOption{
+    redis.DialConnectTimeout(5 * time.Second),
+  }
+  c, err :=
+//line <generated>:1
+    func() (redis.Conn, error) {
+      opts :=
+//line input.go:31
+        options
+//line <generated>:1
+      anyOpts := make([]interface{}, len(opts))
+      for i, v := range opts {
+        anyOpts[i] = v
+      }
+      return __orchestrion_redigotrace.Dial(
+//line input.go:31
+        net, address,
+//line <generated>:1
+        anyOpts...)
+    }()
+//line input.go:32
+  if err != nil {
+    return err
+  }
+  defer c.Close()
+  return use(c)
+}
+
+func use(c redis.Conn) error {
+  _, err := c.Do("SET", "test", "success")
+  return err
+}
