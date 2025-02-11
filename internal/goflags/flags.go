@@ -24,7 +24,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/goflags/quoted"
 	"github.com/rs/zerolog"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/shirou/gopsutil/v4/process"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -377,7 +377,7 @@ func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err
 	}
 	log.Trace().Str("go.bin", goBin).Msg("Resolved go command path")
 
-	p, err := process.NewProcess(int32(pid))
+	p, err := process.NewProcessWithContext(ctx, int32(pid))
 	if err != nil {
 		return flags, fmt.Errorf("failed to get handle of the process with pid %d: %w", pid, err)
 	}
@@ -385,14 +385,15 @@ func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err
 	// Backtrack through the process stack until we find the parent Go command
 	var args []string
 	for {
-		p, err = p.Parent()
+		p, err = p.ParentWithContext(ctx)
 		if err != nil {
 			return flags, fmt.Errorf("failed to find parent process of %d: %w", p.Pid, err)
 		}
-		args, err = p.CmdlineSlice()
+		args, err = p.CmdlineSliceWithContext(ctx)
 		if err != nil {
 			return flags, fmt.Errorf("failed to get command line of %d: %w", p.Pid, err)
 		}
+
 		cmd, err := exec.LookPath(args[0])
 		// When running in containers using on macOS VZ+rosetta, the reported command line may be led by
 		// the registered rosetta binfmt handler. In such cases, the argv0 has a leaf name of "rosetta"
@@ -413,6 +414,7 @@ func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err
 		if err != nil {
 			return flags, fmt.Errorf("failed to resolve argv0 (%q) of %d: %w", args[0], p.Pid, err)
 		}
+
 		// Found the go command process, break out of backtracking
 		if cmd == goBin {
 			break

@@ -23,7 +23,7 @@ func TestTemplate(t *testing.T) {
 		stmt, err := tmpl.CompileBlock(mockAdviceContext{t})
 		require.Nil(t, stmt)
 		require.Error(t, err)
-		golden.Assert(t, err.Error(), "parse_error.txt")
+		golden.Assert(t, err.Error(), "parse_error.snap")
 	})
 }
 

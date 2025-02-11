@@ -38,3 +38,26 @@ func unlock(f *os.File) error {
 	var overlapped windows.Overlapped
 	return windows.UnlockFileEx(windows.Handle(f.Fd()), reserved, allBytes, allBytes, &overlapped)
 }
+
+// beforeLockChange is called before the lock state is changed. On Windows, one
+// must release the lock before changing it, as attempting to lock an
+// segment of a file on which a lock is already held (including by the current
+// process) will block indefinitely. It returns `false` if the desired lock is
+// the currently held lock (idempotent success).
+func (m *Mutex) beforeLockChange(to lockState) (cont bool, err error) {
+	if m.locked == lockStateUnlocked {
+		// No-op, the file is not currently locked by this process.
+		return true, nil
+	}
+	if m.locked == to {
+		// No-op, the currently held lock is already the expected lock type.
+		return false, nil
+	}
+
+	// We need to unlock before acquiring the new lock.
+	if err := m.unlock(); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

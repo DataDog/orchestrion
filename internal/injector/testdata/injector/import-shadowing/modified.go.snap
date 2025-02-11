@@ -1,0 +1,34 @@
+//line input.go:1:1
+package test
+
+import (
+  "database/sql"
+//line <generated>:1
+  __orchestrion_driver "database/sql/driver"
+  __orchestrion_sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+)
+
+//line input.go:8
+var conn __orchestrion_driver.Connector
+
+func main() {
+  var driver string // shadowing import
+//line <generated>:1
+  func(driverName string, driver __orchestrion_driver.Driver) {
+    sql.Register(driverName, driver)
+    __orchestrion_sqltrace.Register(driverName, driver)
+  }(
+//line input.go:12
+    "foo", nil)
+
+  db1, err := sql.Open("foo", "bar")
+  if err != nil {
+    panic(err)
+  }
+  defer db1.Close()
+
+  println(driver)
+
+  db2 := sql.OpenDB(conn)
+  defer db2.Close()
+}

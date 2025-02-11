@@ -6,6 +6,7 @@ orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracele
 orchestrion,github.com/cpuguy83/go-md2man/v2/md2man,MIT,Copyright (c) 2014 Brian Goff
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
+orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
 orchestrion,github.com/fsnotify/fsnotify,BSD-3-Clause,Copyright © 2012 The Go Authors. All rights reserved.
 orchestrion,github.com/go-ole/go-ole,MIT,"Copyright © 2013-2017 Yasuhiro Matsumoto, <mattn.jp@gmail.com>"
 orchestrion,github.com/google/uuid,BSD-3-Clause,"Copyright (c) 2009,2014 Google Inc. All rights reserved."
@@ -26,8 +27,7 @@ orchestrion,github.com/nats-io/nuid,Apache-2.0,unknown
 orchestrion,github.com/rivo/uniseg,MIT,Copyright (c) 2019 Oliver Kuederle
 orchestrion,github.com/rs/zerolog,MIT,Copyright (c) 2017 Olivier Poitrey
 orchestrion,github.com/russross/blackfriday/v2,BSD-2-Clause,unknown
-orchestrion,github.com/shirou/gopsutil/v3,BSD-3-Clause,"Copyright (c) 2014, WAKAYAMA Shirou | Copyright (c) 2009 The Go Authors. All rights reserved."
-orchestrion,github.com/shoenig/go-m1cpu,MPL-2.0,unknown
+orchestrion,github.com/shirou/gopsutil/v4,BSD-3-Clause,"Copyright (c) 2014, WAKAYAMA Shirou | Copyright (c) 2009 The Go Authors. All rights reserved."
 orchestrion,github.com/tklauser/go-sysconf,BSD-3-Clause,"Copyright (c) 2018-2022, Tobias Klauser"
 orchestrion,github.com/tklauser/numcpus,Apache-2.0,unknown
 orchestrion,github.com/urfave/cli/v2,MIT,Copyright (c) 2022 urfave/cli maintainers
