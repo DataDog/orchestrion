@@ -37,9 +37,10 @@ const (
 )
 
 type Options struct {
-	// Writer is the writer to send output of the command to.
+	// Writer is the writer to send output of the command to. Defaults to
+	// [os.Stdout].
 	Writer io.Writer
-	// ErrWriter is the writer to send error messages to.
+	// ErrWriter is the writer to send error messages to. Defaults to [os.Stderr].
 	ErrWriter io.Writer
 
 	// Validate checks the contents of all [orchestrionDotYML] files encountered
@@ -58,6 +59,14 @@ type Options struct {
 // PinOrchestrion applies or update the orchestrion pin file in the current
 // working directory, according to the supplied [Options].
 func PinOrchestrion(ctx context.Context, opts Options) error {
+	// Ensure we have an [Options.Writer] and [Options.ErrWriter] set.
+	if opts.Writer == nil {
+		opts.Writer = os.Stdout
+	}
+	if opts.ErrWriter == nil {
+		opts.ErrWriter = os.Stderr
+	}
+
 	log := zerolog.Ctx(ctx)
 
 	goMod, err := goenv.GOMOD("")
@@ -111,10 +120,9 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
 
-	if _, found := curMod.requires(datadogTracerV1); !found {
-		log.Info().Msg("Installing " + datadogTracerV1)
-		// TODO: Replace `@main` with `@latest`.
-		if err := runGoGet(ctx, goMod, datadogTracerV1+"@main"); err != nil {
+	if ver, found := curMod.requires(datadogTracerV1); !found || semver.Compare(ver, "v1.72.0-rc.1") < 0 {
+		log.Info().Msg("Installing or upgrading " + datadogTracerV1)
+		if err := runGoGet(ctx, goMod, datadogTracerV1+"@>=v1.72.0-rc.1"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
 		}
 	}
@@ -126,7 +134,8 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	if ver, found := curMod.requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {
 		log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
-		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag()})
+		version, _, _ := strings.Cut(version.Tag(), "+")
+		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version})
 	}
 
 	if err := runGoModEdit(ctx, goMod, edits...); err != nil {

@@ -50,7 +50,9 @@ var Toolexec = &cli.Command{
 		}
 
 		// Ensure Orchestrion is properly pinned
-		pin.AutoPinOrchestrion(ctx.Context)
+		if err := pin.AutoPinOrchestrion(ctx.Context, ctx.App.Writer, ctx.App.ErrWriter); err != nil {
+			return cli.Exit(err, -1)
+		}
 
 		if proxyCmd.ShowVersion() {
 			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec version command")

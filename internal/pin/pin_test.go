@@ -7,6 +7,7 @@ package pin
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -29,9 +30,9 @@ func TestPin(t *testing.T) {
 
 	t.Run("simple", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
-		require.NoError(t, PinOrchestrion(ctx, Options{}))
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
 
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
@@ -50,9 +51,9 @@ func TestPin(t *testing.T) {
 
 	t.Run("another-version", func(t *testing.T) {
 		tmp := scaffold(t, map[string]string{"github.com/DataDog/orchestrion": "v0.9.3"})
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
-		require.NoError(t, PinOrchestrion(ctx, Options{}))
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
 
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
@@ -66,9 +67,9 @@ func TestPin(t *testing.T) {
 
 	t.Run("no-generate", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
-		require.NoError(t, PinOrchestrion(ctx, Options{NoGenerate: true}))
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
@@ -78,9 +79,9 @@ func TestPin(t *testing.T) {
 
 	t.Run("prune", func(t *testing.T) {
 		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
-		require.NoError(t, PinOrchestrion(ctx, Options{NoGenerate: true}))
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
 
 		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
@@ -93,9 +94,9 @@ func TestPin(t *testing.T) {
 			"github.com/digitalocean/sample-golang":  "v0.0.0-20240904143939-1e058723dcf4",
 			"github.com/skyrocknroll/go-mod-example": "v0.0.0-20190130140558-29b3c92445e5",
 		})
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
-		require.NoError(t, PinOrchestrion(ctx, Options{NoGenerate: true}))
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
 
 		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
@@ -106,12 +107,12 @@ func TestPin(t *testing.T) {
 
 	t.Run("empty-tool-dot-go", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
-		require.NoError(t, os.Chdir(tmp))
+		chdir(t, tmp)
 
 		toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
 		require.NoError(t, os.WriteFile(toolDotGo, nil, 0644))
 
-		require.ErrorContains(t, PinOrchestrion(ctx, Options{}), "expected 'package', found 'EOF'")
+		require.ErrorContains(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}), "expected 'package', found 'EOF'")
 	})
 }
 
@@ -129,6 +130,16 @@ require (
 {{- end }}
 )
 `))
+
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+
+	oldwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	require.NoError(t, os.Chdir(dir))
+	t.Cleanup(func() { require.NoError(t, os.Chdir(oldwd)) })
+}
 
 func scaffold(t *testing.T, requires map[string]string) string {
 	t.Helper()

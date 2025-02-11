@@ -106,10 +106,15 @@ func start(ctx context.Context, opts *jobserver.Options, wait bool) (*jobserver.
 // startWithURLFile starts a new job server using the provided URL file (unless the file contains the URL to a still
 // running server), and waits for it to have completely shut down.
 func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile string) cli.ExitCoder {
+	log := zerolog.Ctx(ctx)
+
 	mu := filelock.MutexAt(urlFile)
 	if err := mu.RLock(); err != nil {
 		return cli.Exit(fmt.Errorf("failed to acquire read lock on %q: %w", urlFile, err), 1)
 	}
+	log.Trace().
+		Str("url-file", urlFile).
+		Msg("Acquired read lock on URL file")
 
 	// Check if there is already a server running...
 	if url, err := hasURLToRunningServer(urlFile); err != nil {
@@ -122,6 +127,9 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 	if err := mu.Lock(); err != nil {
 		return cli.Exit(fmt.Errorf("failed to upgrade to write lock on %q: %w", urlFile, err), 1)
 	}
+	log.Trace().
+		Str("url-file", urlFile).
+		Msg("Upgraded lock on URL file to write lock")
 
 	// Check again whether there is a running server; as a concurrent process might have acquired the write lock first.
 	if url, err := hasURLToRunningServer(urlFile); err != nil {
@@ -140,17 +148,31 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 	if err != nil {
 		return err
 	}
+	clientURL := server.ClientURL()
+	log.Trace().
+		Str("url-file", urlFile).
+		Str("url", clientURL).
+		Msg("Server component successfully started")
 
 	// Write the ClientURL into the urlFile
-	if err := os.WriteFile(urlFile, []byte(server.ClientURL()), 0o644); err != nil {
+	if err := os.WriteFile(urlFile, []byte(clientURL), 0o644); err != nil {
 		return cli.Exit(fmt.Errorf("failed to write URL file at %q: %w", urlFile, err), 1)
 	}
+	log.Trace().
+		Str("url-file", urlFile).
+		Str("url", clientURL).
+		Msg("Populated URL file with server URL")
+
 	// Release the URL File lock
 	if err := mu.Unlock(); err != nil {
 		// Shut the server down, as we won't actually be returning it...
 		server.Shutdown()
 		return cli.Exit(fmt.Errorf("failed to release lock on %q: %w", urlFile, err), 1)
 	}
+	log.Trace().
+		Str("url-file", urlFile).
+		Str("url", clientURL).
+		Msg("Released lock on URL file")
 
 	// Try to watch for removal of the URL file, so we can shut down the server eagerly when that happens.
 	cancelShutdownOnRemove := shutdownOnRemove(ctx, server, urlFile)

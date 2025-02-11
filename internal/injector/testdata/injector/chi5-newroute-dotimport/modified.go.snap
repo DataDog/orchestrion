@@ -1,0 +1,34 @@
+//line input.go:1:1
+package main
+
+import (
+  "log"
+  "net/http"
+
+  . "github.com/go-chi/chi/v5"
+//line <generated>:1
+  __orchestrion_chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
+)
+
+//line input.go:10
+func main() {
+  router :=
+//line <generated>:1
+    func() *Mux {
+      mux :=
+//line input.go:11
+        NewRouter()
+//line <generated>:1
+      mux.Use(__orchestrion_chitrace.Middleware())
+      return mux
+    }()
+//line input.go:12
+  router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+    w.Write([]byte("Hello World!"))
+  })
+  s := &http.Server{
+    Addr:    ":8080",
+    Handler: router,
+  }
+  log.Print(s.ListenAndServe())
+}

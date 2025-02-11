@@ -3,6 +3,8 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
+// This file is generated; DO NOT EDIT.
+
 //go:build tools
 
 package main

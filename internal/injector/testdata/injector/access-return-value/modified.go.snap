@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+import (
+  "errors"
+  "log"
+)
+
+func test() (_ interface{}, __result__1 error) {
+//line <generated>:1
+  {
+    defer func() {
+      if __result__1 != nil {
+        log.Println("error in test:", __result__1)
+      }
+    }()
+  }
+//line input.go:9
+  log.Println("Running test function...")
+  return nil, errors.ErrUnsupported
+}

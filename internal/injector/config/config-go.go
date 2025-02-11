@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
@@ -39,7 +40,11 @@ func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
 		if pkg.Errors != nil {
 			var err error
 			for _, e := range pkg.Errors {
-				err = errors.Join(err, e)
+				var innerErr error = e
+				if e.Kind == packages.ListError && strings.Contains(e.Msg, "no Go files in") { // Workaround poor error typing in packages.Load
+					innerErr = fmt.Errorf("no Go files found, was expecting at least orchestrion.tool.go: %w", e)
+				}
+				err = errors.Join(err, innerErr)
 			}
 			return nil, fmt.Errorf("in %q: %w", pkg.ID, err)
 		}

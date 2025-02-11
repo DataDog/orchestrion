@@ -2,7 +2,7 @@ name: Documentation Site
 on:
   pull_request:
     branches: ['**']
-    paths: [docs/**]
+    paths: [_docs/**]
   merge_group:
     branches: [main]
   push:
@@ -27,8 +27,8 @@ jobs:
         uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           cache-dependency-path: '**/go.mod'
-      - name: Run go generate (builtin)
-        run: go generate ./internal/injector/builtin
+      - name: Run doc generator
+        run: go -C _docs run ./generator
       - name: Build Site
         # Set environment to anything other than "production", as the theme we use adds SRI attributes to all CSS files,
         # but datadoghq.dev is behind CloudFlare with auto-minify enabled; which breaks SRI if its minification is not

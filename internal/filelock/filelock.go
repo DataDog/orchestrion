@@ -18,10 +18,22 @@ import (
 //
 // It is not intended for in-process synchronization, and should not be shared
 // between goroutines without being appropriately guarded by a sync.Mutex.
+//
+// Upgrading a read-lock to a write lock, or vice-versa, is not guaranteed to
+// happen atomically (on Windows, it is guaranteed not to be atomic).
 type Mutex struct {
-	file *os.File
-	path string
+	file   *os.File
+	path   string
+	locked lockState
 }
+
+type lockState int
+
+const (
+	lockStateUnlocked lockState = iota
+	lockStateRLocked
+	lockStateWLocked
+)
 
 // MutexAt returns a new Mutex instance that will use the given path as the lock
 // file.
@@ -40,7 +52,20 @@ func (m *Mutex) RLock() error {
 		}
 		m.file = f
 	}
-	return rlock(m.file)
+
+	if cont, err := m.beforeLockChange(lockStateRLocked); err != nil {
+		return err
+	} else if !cont {
+		// Idempotent success!
+		return nil
+	}
+
+	if err := rlock(m.file); err != nil {
+		return err
+	}
+
+	m.locked = lockStateRLocked
+	return nil
 }
 
 // Lock attempts to lock the file for reading & writing. It blocks until the
@@ -54,7 +79,20 @@ func (m *Mutex) Lock() error {
 		}
 		m.file = f
 	}
-	return lock(m.file)
+
+	if cont, err := m.beforeLockChange(lockStateWLocked); err != nil {
+		return err
+	} else if !cont {
+		// Idempotent success!
+		return nil
+	}
+
+	if err := lock(m.file); err != nil {
+		return err
+	}
+
+	m.locked = lockStateWLocked
+	return nil
 }
 
 // Unlock releases any lock acquired on the file.
@@ -63,14 +101,27 @@ func (m *Mutex) Unlock() error {
 		return nil
 	}
 
-	if err := unlock(m.file); err != nil {
+	if err := m.unlock(); err != nil {
 		return err
 	}
+
 	err := m.file.Close()
 	if err == nil {
 		m.file = nil
 	}
 	return err
+}
+
+// unlock releases the lock currently held on the file, but does not close it. This function is only
+// safe to call if `m.file` is not `nil` (after [Mutex.open] was called, but before [Mutex.Unlock]
+// is).
+func (m *Mutex) unlock() error {
+	if err := unlock(m.file); err != nil {
+		return err
+	}
+
+	m.locked = lockStateUnlocked
+	return nil
 }
 
 func (m *Mutex) open() (*os.File, error) {
