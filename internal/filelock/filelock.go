@@ -22,8 +22,8 @@ import (
 // Upgrading a read-lock to a write lock, or vice-versa, is not guaranteed to
 // happen atomically (on Windows, it is guaranteed not to be atomic).
 type Mutex struct {
-	path   string
 	file   *os.File
+	path   string
 	locked lockState
 }
 

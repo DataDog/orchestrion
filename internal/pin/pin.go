@@ -8,6 +8,8 @@ package pin
 import (
 	"bytes"
 	"context"
+	"crypto/sha512"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"go/parser"
@@ -18,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/version"
@@ -71,6 +74,22 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("getting GOMOD: %w", err)
 	}
 
+	// Acquire an advisory lock on the `go.mod` file, so that in `-toolexec` mode,
+	// multiple attempts to auto-pin don't try to modify the files at the same
+	// time. The `go mod tidy` command takes an advisory write-lock on `go.mod`,
+	// so we are using a separate file under [os.TempDir] to avoid deadlocking.
+	sha := sha512.Sum512([]byte(goMod))
+	flockname := filepath.Join(os.TempDir(), "orchestrion-pin_"+base64.URLEncoding.EncodeToString(sha[:])+"_go.mod.lock")
+	flock := filelock.MutexAt(flockname)
+	if err := flock.Lock(); err != nil {
+		return fmt.Errorf("failed to acquire lock on %q: %w", goMod, err)
+	}
+	defer func() {
+		if err := flock.Unlock(); err != nil {
+			log.Error().Err(err).Str("lock-file", goMod).Msg("Failed to release file lock")
+		}
+	}()
+
 	toolFile := filepath.Join(goMod, "..", config.FilenameOrchestrionToolGo)
 	dstFile, err := parseOrchestrionToolGo(toolFile)
 	if errors.Is(err, os.ErrNotExist) {
@@ -96,14 +115,14 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	// Add the current version of orchestrion to the `go.mod` file.
 	var edits []goModEdit
-	curMod, err := parseGoMod(goMod)
+	curMod, err := parseGoMod(ctx, goMod)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
 
 	if ver, found := curMod.requires(datadogTracerV1); !found || semver.Compare(ver, "v1.72.0-rc.1") < 0 {
 		log.Info().Msg("Installing or upgrading " + datadogTracerV1)
-		if err := runGoGet(goMod, datadogTracerV1+"@>=v1.72.0-rc.1"); err != nil {
+		if err := runGoGet(ctx, goMod, datadogTracerV1+"@>=v1.72.0-rc.1"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
 		}
 	}
@@ -119,7 +138,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version})
 	}
 
-	if err := runGoModEdit(goMod, edits...); err != nil {
+	if err := runGoModEdit(ctx, goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
@@ -130,13 +149,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
-		if err := runGoMod("tidy", goMod, nil); err != nil {
+		if err := runGoMod(ctx, "tidy", goMod, nil); err != nil {
 			return fmt.Errorf("running `go mod tidy`: %w", err)
 		}
 	}
 
 	// Restore the previous toolchain directive if `go mod tidy` had the nerve to touch it...
-	if err := runGoModEdit(goMod, curMod.Toolchain); err != nil {
+	if err := runGoModEdit(ctx, goMod, curMod.Toolchain); err != nil {
 		return fmt.Errorf("restoring toolchain directive: %w", err)
 	}
 
