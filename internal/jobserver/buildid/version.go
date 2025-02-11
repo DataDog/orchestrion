@@ -59,7 +59,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 	fptr := fingerprint.New()
 	defer fptr.Close()
 	if err := fptr.Named("aspects", fingerprint.List[*aspect.Aspect](aspects)); err != nil {
-		return "", fmt.Errorf("compiting injector configuration fingerprint: %w", err)
+		return "", fmt.Errorf("computing injector configuration fingerprint: %w", err)
 	}
 
 	var pkgs []*packages.Package
@@ -103,7 +103,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 		}
 	}
 
-	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag, getTagSuffix(ctx), fptr.Finish()))
+	s.resolvedVersion = VersionSuffixResponse(fmt.Sprintf("orchestrion@%s%s;%s", version.Tag(), getTagSuffix(ctx), fptr.Finish()))
 	return s.resolvedVersion, nil
 }
 

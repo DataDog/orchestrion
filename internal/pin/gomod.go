@@ -63,13 +63,25 @@ func parseGoMod(modfile string) (goMod, error) {
 
 // requires returns true if the `go.mod` file contains a require directive for
 // the designated module path.
-func (m *goMod) requires(path string) bool {
+func (m *goMod) requires(path string) (string, bool) {
 	for _, r := range m.Require {
 		if r.Path == path {
-			return true
+			return r.Version, true
 		}
 	}
-	return false
+	return "", false
+}
+
+// runGoGet executes the `go get <modSpecs...>` subcommand with the provided
+// module specifications on the designated `go.mod` file.
+func runGoGet(modfile string, modSpecs ...string) error {
+	cmd := exec.Command("go", "get", "-modfile", modfile)
+	cmd.Args = append(cmd.Args, modSpecs...)
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // runGoMod executes the `go mod <command> <args...>` subcommand with the

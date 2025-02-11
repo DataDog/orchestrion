@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
@@ -25,6 +26,12 @@ var ErrInvalidGoPackage = errors.New("no .go files in package")
 
 // loadGoPackage loads configuration from the specified go package.
 func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
+	// Special-case the `github.com/DataDog/orchestrion` package, we need not
+	// parse this one, and should always use the built-in object.
+	if pkg.PkgPath == builtIn.pkgPath {
+		return &builtIn, nil
+	}
+
 	root := packageRoot(pkg)
 	if root == "" {
 		// This might be explained by a package-level loading error... We only check
@@ -33,7 +40,11 @@ func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
 		if pkg.Errors != nil {
 			var err error
 			for _, e := range pkg.Errors {
-				err = errors.Join(err, e)
+				var innerErr error = e
+				if e.Kind == packages.ListError && strings.Contains(e.Msg, "no Go files in") { // Workaround poor error typing in packages.Load
+					innerErr = fmt.Errorf("no Go files found, was expecting at least orchestrion.tool.go: %w", e)
+				}
+				err = errors.Join(err, innerErr)
 			}
 			return nil, fmt.Errorf("in %q: %w", pkg.ID, err)
 		}
@@ -127,6 +138,20 @@ func (c *configGo) Aspects() []*aspect.Aspect {
 	}
 
 	return res
+}
+
+func (c *configGo) visit(v Visitor, _ string) error {
+	if err := c.yaml.visit(v, c.pkgPath); err != nil {
+		return err
+	}
+
+	for _, imp := range c.imports {
+		if err := imp.visit(v, c.pkgPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *configGo) empty() bool {

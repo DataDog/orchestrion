@@ -31,9 +31,9 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
-          go-version: stable
+          go-version: oldstable
           cache-dependency-path: '**/go.mod'
 
       - name: Run 'go generate ./...'
@@ -54,14 +54,14 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: coverage-generators+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
           path: ./coverage/generator.out
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
-        run: find . -name go.mod -execdir go mod tidy \;
+        run: find . -name go.mod -execdir go mod tidy -go="$(go mod edit -json | jq .Go)" \;
 
       - name: Refresh LICENSE-3rdparty.csv
         run: ./_tools/make-licenses.sh
@@ -79,7 +79,7 @@ jobs:
           git diff --staged --patch --exit-code > .repo.patch || echo 'result=true' >> "${GITHUB_OUTPUT}"
       - name: Upload patch
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           if-no-files-found: error
           include-hidden-files: true
@@ -115,7 +115,7 @@ jobs:
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        uses: planetscale/ghcommit-action@d4176bfacef926cc2db351eab20398dfc2f593b5 # v0.2.0
+        uses: planetscale/ghcommit-action@73c7d0fefec75e06673b9de4fb62f1d45561e098 # v0.2.5
         with:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
@@ -133,19 +133,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Lint main module
-        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6
+        uses: golangci/golangci-lint-action@051d91933864810ecd5e2ea2cfd98f6a5bca5347 # v6
         with:
           version: v1.60.3
-      - name: Lint integration tests
-        uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6
-        with:
-          version: v1.60.3
-          working-directory: _integration-tests
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: vet
@@ -160,7 +155,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@6ae615f6475d2ede5ad88bea6baa7a1d5e93ffaa # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@6eb1abde32fed00453b0d03497f4ba4fecba146d # v3
+        with:
+          allowlist:
+            DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
 
   ##############################################################################
   # Run all unit tests with coverage enabled
@@ -177,7 +175,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup Go
         id: setup-go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
@@ -187,18 +185,10 @@ jobs:
           mkdir -p coverage
           test_args=("-shuffle=on" "-race")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/unit.out")
+            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
           fi
-          go test "${test_args[@]}" ./...
-      - name: Run integraton suite unit tests
-        shell: bash
-        run: |-
-          mkdir -p coverage
-          test_args=("-shuffle=on" "-race")
-          if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/..." "-coverprofile=${{ github.workspace }}/coverage/integration.out")
-          fi
-          go -C _integration-tests test "${test_args[@]}" ./...
+          go            test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.out" ./...
+          go -C samples test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/samples.out" ./...
       - name: Determine simple go version
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
@@ -208,12 +198,12 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: coverage-unit+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
           path: |-
             ./coverage/unit.out
-            ./coverage/integration.out
+            ./coverage/samples.out
 
   ##############################################################################
   # Run all benchmarks and generate report
@@ -226,7 +216,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -237,7 +227,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload benchmark report (raw)
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           if-no-files-found: error
           name: Benchmark Report
@@ -259,108 +249,12 @@ jobs:
   ##############################################################################
   # Run all integration tests and gather extensive coverage
   integration-tests:
+    name: Integration Tests
     needs: generate
-    strategy:
-      fail-fast: ${{ github.event_name == 'merge_group' }}
-      matrix:
-        runs-on:
-          - macos
-          - ubuntu
-          - windows
-        go-version: [oldstable, stable, '~1.24.0-rc.1']
-        build-mode: [DRIVER]
-        include:
-          # Alternate build modes (only on ubuntu, latest go; to save CI time)
-          - runs-on: ubuntu
-            go-version: oldstable
-            build-mode: TOOLEXEC
-          - runs-on: ubuntu
-            go-version: oldstable
-            build-mode: GOFLAGS
-    runs-on: ${{ matrix.runs-on == 'ubuntu' && fromJson('{"labels":"ubuntu-16-core-latest","group":"Large Runner Shared Public"}') || (matrix.runs-on == 'windows' && fromJson('{"labels":"windows-shared-8core","group":"LARGE WINDOWS SHARED"}')) || format('{0}-latest', matrix.runs-on) }}
-    env:
-      # Ryuk is problematic with concurrent executions, and unnecessary in ephemeral environments like GHA.
-      TESTCONTAINERS_RYUK_DISABLED: true
-    name: Integration tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }}, ${{ matrix.build-mode }})
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Setup go
-        id: setup-go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5
-        with:
-          go-version: ${{ matrix.go-version }}
-          cache-dependency-path: "**/go.mod"
-      - name: Setup python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5
-        with:
-          python-version: 3.x
-          cache: pip
-          cache-dependency-path: _integration-tests/utils/agent/requirements-dev.txt
-      - name: Install python dependencies
-        run: pip install -r _integration-tests/utils/agent/requirements-dev.txt
-      - name: Build orchestrion binary
-        shell: bash
-        run: |-
-          build_args=()
-          if [ "${{ github.event_name }}" != "merge_group" ]; then
-            build_args+=("-cover" "-covermode=atomic" "-coverpkg=./...")
-          fi
-          go build ${build_args[@]+"${build_args[@]}"} -o="bin/orchestrion.exe" .
-      - name: Run Integration Tests
-        shell: bash
-        run: |-
-          mkdir -p "${GOCOVERDIR}"
-          test_args=("-shuffle=on")
-          if [ "${{ github.event_name }}" != "merge_group" ]; then
-            test_args+=("-coverpkg=./...,github.com/DataDog/orchestrion/..." "-covermode=atomic" "-cover" "-coverprofile=${{ github.workspace }}/coverage/integration.run.out")
-          fi
-
-          case "${{ matrix.build-mode }}" in
-          "DRIVER")
-            bin/orchestrion.exe -C=_integration-tests go test "${test_args[@]}" -a ./...
-            ;;
-          "TOOLEXEC")
-            go -C=_integration-tests test "${test_args[@]}" -toolexec="${{ github.workspace }}/bin/orchestrion.exe toolexec" ./...
-            ;;
-          "GOFLAGS")
-            export GOFLAGS="'-toolexec=${{ github.workspace }}/bin/orchestrion.exe toolexec' ${GOFLAGS}"
-            go -C=_integration-tests test "${test_args[@]}" ./...
-            ;;
-          *)
-            echo "Unknown build mode: ${{ matrix.build-mode }}"
-            exit 1
-            ;;
-          esac
-        env:
-          GOCOVERDIR: ${{ github.workspace }}/coverage/raw
-          GOFLAGS: ${{ matrix.runs-on == 'ubuntu' && '-p=4' || ''}} -tags=githubci,integration,buildtag # Globally set build tags (buildtag is used by the dd-span test)
-          ORCHESTRION_LOG_LEVEL: trace
-          ORCHESTRION_LOG_FILE: ${{ runner.temp }}/orchestrion.log
-      - name: Upload logs
-        if: failure()
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
-        with:
-          name: integration+${{ matrix.build-mode }}+go@${{ matrix.go-version }}+${{ runner.os }}+${{ runner.arch }}.orchestrion.log
-          path: ${{ runner.temp }}/orchestrion.log
-      - name: Consolidate coverage report
-        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        run: go tool covdata textfmt -i ./coverage/raw -o ./coverage/integration.out
-      - name: Determine go minor version
-        id: go
-        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        shell: bash
-        run: |-
-          set -euo pipefail
-          echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
-      - name: Upload coverage report
-        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
-        with:
-          name: coverage-integration+${{ matrix.build-mode }}+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
-          path: |-
-            ./coverage/integration.out
-            ./coverage/integration.run.out
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    with:
+      collect-coverage: ${{ github.event_name != 'merge_group' }}
+      orchestrion-version: ${{ github.sha }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
@@ -455,7 +349,7 @@ jobs:
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
       - name: Setup Node
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4
         with:
           node-version: latest
       - name: Download Artifacts
@@ -578,3 +472,4 @@ jobs:
             --token="${CODECOV_TOKEN}"                                          \
             --slug=${{ github.repository }}
           echo "::endgroup::"
+

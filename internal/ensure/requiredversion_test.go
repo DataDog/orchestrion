@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/goenv"
@@ -36,10 +35,10 @@ func TestGoModVersion(t *testing.T) {
 		"missing":  {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag) >= 0 {
+			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag()) >= 0 {
 				// Tests w/o replace can't run if the "happy" version has not been released yet. v0.9.0 includes a module path
 				// re-capitalization which forces us to skip temporarily at least until that is released.
-				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag)
+				t.Skipf("Skipping test because version %s is newer than the current version (%s)", test.version, version.Tag())
 			}
 
 			tmp, err := os.MkdirTemp("", "ensure-*")
@@ -105,56 +104,44 @@ func TestGoModVersion(t *testing.T) {
 }
 
 func TestRequiredVersion(t *testing.T) {
-	goBin, err := goenv.GoBinPath()
-	require.NoError(t, err, "could not resolve go command path")
-
 	testError := errors.New("simulated failure")
-	osArgs := []string{"/path/to/go/compile", "-a", "./..."}
 
 	type goModVersionResult struct {
 		version string
 		path    string
 		err     error
 	}
-	type expectedOutcome struct {
-		err      error
-		respawns bool
-	}
+	type expectedOutcome = error
 	type testCase struct {
-		goModVersion    goModVersionResult
-		envVarRespawned string
-		expected        expectedOutcome
+		goModVersion goModVersionResult
+		expected     expectedOutcome
 	}
 
+	rawTag, _ := version.TagInfo()
 	for name, tc := range map[string]testCase{
 		"happy path": {
-			goModVersion: goModVersionResult{version: version.Tag},
-			expected:     expectedOutcome{err: nil, respawns: false},
+			goModVersion: goModVersionResult{version: rawTag},
+			expected:     nil,
 		},
 		"happy path, replaced to this": {
 			goModVersion: goModVersionResult{path: orchestrionSrcDir},
-			expected:     expectedOutcome{err: nil, respawns: false},
+			expected:     nil,
 		},
 		"go.mod failure": {
 			goModVersion: goModVersionResult{err: testError},
-			expected:     expectedOutcome{err: testError},
+			expected:     testError,
 		},
-		"respawn needed (requires different version)": {
+		"different version required": {
 			goModVersion: goModVersionResult{version: "v1337.42.0-phony.0"},
-			expected:     expectedOutcome{respawns: true},
+			expected:     IncorrectVersionError{RequiredVersion: "v1337.42.0-phony.0"},
 		},
-		"respawn needed (blank required version, blank path)": {
+		"blank version and directory": { // This might never happen in the wild
 			goModVersion: goModVersionResult{},
-			expected:     expectedOutcome{respawns: true},
+			expected:     IncorrectVersionError{RequiredVersion: ""},
 		},
-		"respawn needed (blank required version, mismatched path)": {
+		"replaced to a different path": {
 			goModVersion: goModVersionResult{path: "/phony/orchestrion/path"},
-			expected:     expectedOutcome{respawns: true},
-		},
-		"respawn loop": {
-			goModVersion:    goModVersionResult{version: "v1337.42.0-phony.0"},
-			envVarRespawned: "v1.2.3-example.1",
-			expected:        expectedOutcome{err: errRespawnLoop},
+			expected:     IncorrectVersionError{RequiredVersion: ""},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -162,31 +149,10 @@ func TestRequiredVersion(t *testing.T) {
 				require.Equal(t, "", dir)
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}
-			mockGetenv := func(name string) string {
-				require.Equal(t, envVarRespawnedFor, name)
-				return tc.envVarRespawned
-			}
-			var syscallExecCalled atomic.Bool
-			mockSyscallExec := func(arg0 string, args []string, _ []string) error {
-				t.Helper()
-				syscallExecCalled.Store(true)
 
-				require.Equal(t, goBin, arg0)
-				require.GreaterOrEqual(t, len(args), 3)
-				require.Equal(t, []string{goBin, "run", orchestrionPkgPath}, args[:3])
-				require.Equal(t, osArgs[1:], args[3:])
+			err := requiredVersion(context.Background(), mockGoVersion)
 
-				return nil
-			}
-
-			err := requiredVersion(context.Background(), mockGoVersion, mockGetenv, mockSyscallExec, osArgs)
-
-			if tc.expected.err != nil {
-				require.ErrorIs(t, err, tc.expected.err)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, tc.expected.respawns, syscallExecCalled.Load())
+			require.ErrorIs(t, err, tc.expected)
 		})
 	}
 }

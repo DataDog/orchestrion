@@ -24,18 +24,20 @@ import (
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/rs/zerolog"
+	"golang.org/x/mod/semver"
 	"golang.org/x/tools/go/packages"
 )
 
 const (
-	orchestrionImportPath     = "github.com/DataDog/orchestrion"
-	orchestrionInstrumentPath = orchestrionImportPath + "/instrument"
+	orchestrionImportPath = "github.com/DataDog/orchestrion"
+	datadogTracerV1       = "gopkg.in/DataDog/dd-trace-go.v1"
 )
 
 type Options struct {
-	// Writer is the writer to send output of the command to.
+	// Writer is the writer to send output of the command to. Defaults to
+	// [os.Stdout].
 	Writer io.Writer
-	// ErrWriter is the writer to send error messages to.
+	// ErrWriter is the writer to send error messages to. Defaults to [os.Stderr].
 	ErrWriter io.Writer
 
 	// Validate checks the contents of all [orchestrionDotYML] files encountered
@@ -54,6 +56,14 @@ type Options struct {
 // PinOrchestrion applies or update the orchestrion pin file in the current
 // working directory, according to the supplied [Options].
 func PinOrchestrion(ctx context.Context, opts Options) error {
+	// Ensure we have an [Options.Writer] and [Options.ErrWriter] set.
+	if opts.Writer == nil {
+		opts.Writer = os.Stdout
+	}
+	if opts.ErrWriter == nil {
+		opts.ErrWriter = os.Stderr
+	}
+
 	log := zerolog.Ctx(ctx)
 
 	goMod, err := goenv.GOMOD("")
@@ -73,7 +83,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	updateGoGenerateDirective(opts.NoGenerate, dstFile)
+	updateGoGenerateDirective(opts, dstFile)
 
 	importSet, err := updateToolFile(dstFile)
 	if err != nil {
@@ -90,12 +100,25 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
+
+	if ver, found := curMod.requires(datadogTracerV1); !found || semver.Compare(ver, "v1.72.0-rc.1") < 0 {
+		log.Info().Msg("Installing or upgrading " + datadogTracerV1)
+		if err := runGoGet(goMod, datadogTracerV1+"@>=v1.72.0-rc.1"); err != nil {
+			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
+		}
+	}
+
 	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.22.0") < 0 {
+		log.Info().Msg("Setting go directive to 1.22.0")
 		edits = append(edits, goModVersion("1.22.0"))
 	}
-	if !curMod.requires(orchestrionImportPath) {
-		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version.Tag})
+
+	if ver, found := curMod.requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {
+		log.Info().Msg("Adding/updating require entry for " + orchestrionImportPath)
+		version, _, _ := strings.Cut(version.Tag(), "+")
+		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version})
 	}
+
 	if err := runGoModEdit(goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
@@ -166,38 +189,41 @@ func defaultOrchestrionToolGo() *dst.File {
 func updateToolFile(file *dst.File) (*importSet, error) {
 	importSet := importSetFrom(file)
 
-	if spec, isNew := importSet.Add(orchestrionImportPath); isNew {
+	spec, isNew := importSet.Add(orchestrionImportPath)
+	if isNew {
 		spec.Decs.Before = dst.NewLine
 		spec.Decs.Start.Append(
 			"// Ensures `orchestrion` is present in `go.mod` so that builds are repeatable.",
 			"// Do not remove.",
 		)
-		spec.Decs.After = dst.NewLine
-	}
-
-	spec, isNew := importSet.Add(orchestrionInstrumentPath)
-	if isNew {
-		spec.Decs.Before = dst.NewLine
-		spec.Decs.Start.Append(
-			"// Provides integrations for essential `orchestrion` features. Most users",
-			"// should not remove this integration.",
-		)
-		spec.Decs.After = dst.NewLine
+		spec.Decs.After = dst.EmptyLine
 	}
 	spec.Decs.End.Replace("// integration")
+
+	spec, _ = importSet.Add(datadogTracerV1)
+	spec.Decs.Before = dst.EmptyLine
+	spec.Decs.End.Replace("// integration")
+
+	// We auto-imported from dd-trace-go, so we can remove the legacy `/instrument` import if present.
+	importSet.Remove(orchestrionImportPath + "/instrument")
 
 	return importSet, nil
 }
 
 // updateGoGenerateDirective adds, updates, or removes the `//go:generate`
 // directive from the [*dst.File] according to the receiving [*Options].
-func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
+func updateGoGenerateDirective(opts Options, file *dst.File) {
 	const prefix = "//go:generate go run github.com/DataDog/orchestrion pin"
 
 	newDirective := ""
-	if !noGenerate {
-		newDirective = prefix
-		// TODO: Add additional CLI arguments here
+	if !opts.NoGenerate {
+		newDirective = prefix + " -generate"
+		if opts.NoPrune {
+			newDirective += " -prune=false"
+		}
+		if opts.Validate {
+			newDirective += " -validate"
+		}
 	}
 
 	found := false
@@ -239,7 +265,7 @@ func updateGoGenerateDirective(noGenerate bool, file *dst.File) {
 // [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
 // only outputs a message informing the user about uncalled-for imports.
 func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool, error) {
-	importPaths := importSet.Except(orchestrionImportPath, orchestrionInstrumentPath)
+	importPaths := importSet.Except(orchestrionImportPath)
 	if len(importPaths) == 0 {
 		// Nothing to do!
 		return false, nil

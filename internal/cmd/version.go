@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/DataDog/orchestrion/internal/ensure"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/urfave/cli/v2"
 )
@@ -19,6 +18,11 @@ var Version = &cli.Command{
 	Usage: "Displays this command's version information",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
+			Name:   "static",
+			Usage:  "only display the static version tag, ignoring build information baked into the binary",
+			Hidden: true,
+		},
+		&cli.BoolFlag{
 			Name:    "verbose",
 			Aliases: []string{"v"},
 			Usage:   "display the version of the orchestrion binary that started this command (if different from the current)",
@@ -26,16 +30,15 @@ var Version = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
-		if _, err := fmt.Fprintf(c.App.Writer, "orchestrion %s", version.Tag); err != nil {
+		tag := version.Tag()
+		if c.Bool("static") {
+			tag, _ = version.TagInfo()
+		}
+		if _, err := fmt.Fprintf(c.App.Writer, "orchestrion %s", tag); err != nil {
 			return err
 		}
 
 		if c.Bool("verbose") {
-			if startupVersion := ensure.StartupVersion(); startupVersion != version.Tag {
-				if _, err := fmt.Fprintf(c.App.Writer, " (started as %s)", startupVersion); err != nil {
-					return err
-				}
-			}
 			if _, err := fmt.Fprintf(c.App.Writer, " built with %s (%s/%s)", runtime.Version(), runtime.GOOS, runtime.GOARCH); err != nil {
 				return err
 			}

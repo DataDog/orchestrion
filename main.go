@@ -296,7 +296,7 @@ func startExecutionTracing(prefix string) (*os.File, error) {
 }
 
 func updateCommonContext(c zerolog.Context) zerolog.Context {
-	c = c.Str("orchestrion", version.Tag)
+	c = c.Str("orchestrion", version.Tag())
 	c = c.Int("pid", os.Getpid())
 	c = c.Int("ppid", os.Getppid())
 	if val := os.Getenv(envVarToolexecImportPath); val != "" {

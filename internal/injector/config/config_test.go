@@ -175,6 +175,15 @@ func TestLoad(t *testing.T) {
 	_, thisFile, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(thisFile, "..", "..", "..", "..")
 
+	t.Run("no go files", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		goMod := filepath.Join(tmpDir, "go.mod")
+		require.NoError(t, os.WriteFile(goMod, []byte("module test\n"), 0o644))
+		loader := NewLoader(tmpDir, true)
+		_, err := loader.Load()
+		require.ErrorContains(t, err, "no Go files found, was expecting at least orchestrion.tool.go")
+	})
+
 	t.Run("required.yml", func(t *testing.T) {
 		loader := NewLoader(repoRoot, true)
 		cfg, err := loader.Load()
@@ -186,11 +195,11 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 4)
+		assert.Len(t, cfg.Aspects(), 1) // Just the orchestrion:enabled aspect
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
-	t.Run("instrument.yml", func(t *testing.T) {
+	t.Run("instrument", func(t *testing.T) {
 		loader := NewLoader(filepath.Join(repoRoot, "instrument"), true)
 		cfg, err := loader.Load()
 		require.NoError(t, err)
@@ -201,14 +210,14 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 106)
+		assert.Len(t, cfg.Aspects(), 115)
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 
 	t.Run("recursive", func(t *testing.T) {
 		tmp := t.TempDir()
 		runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-		runGo(t, tmp, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", repoRoot))
+		runGo(t, tmp, "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", repoRoot))
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, FilenameOrchestrionToolGo), []byte(`
 			//go:build tools
 			package tools
@@ -232,7 +241,7 @@ func TestLoad(t *testing.T) {
 		loader := NewLoader(tmp, false)
 		cfg, err := loader.Load()
 		require.NoError(t, err)
-		require.Len(t, cfg.Aspects(), 5)
+		require.Len(t, cfg.Aspects(), 2)
 	})
 }
 

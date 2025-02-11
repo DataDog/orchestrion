@@ -74,14 +74,29 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 		extends = append(extends, cfg)
 	}
 
-	return &configYML{name: name, extends: extends, aspects: yml.Aspects}, nil
+	cfg := &configYML{name: name, extends: extends, aspects: yml.Aspects}
+	cfg.meta.name = yml.Meta.Name
+	cfg.meta.description = yml.Meta.Description
+	cfg.meta.icon = yml.Meta.Icon
+	cfg.meta.caveats = yml.Meta.Caveats
+
+	return cfg, nil
 }
 
-type configYML struct {
-	extends []Config
-	aspects []*aspect.Aspect
-	name    string
-}
+type (
+	configYML struct {
+		extends []Config
+		aspects []*aspect.Aspect
+		name    string
+		meta    configYMLMeta
+	}
+	configYMLMeta struct {
+		name        string
+		description string
+		icon        string
+		caveats     string
+	}
+)
 
 func (c *configYML) Aspects() []*aspect.Aspect {
 	if c == nil {
@@ -97,6 +112,24 @@ func (c *configYML) Aspects() []*aspect.Aspect {
 	return res
 }
 
+func (c *configYML) visit(v Visitor, pkgPath string) error {
+	if c == nil {
+		return nil
+	}
+
+	if err := v(c, pkgPath); err != nil {
+		return err
+	}
+
+	for _, ext := range c.extends {
+		if err := ext.visit(v, pkgPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *configYML) empty() bool {
 	return c == nil || (len(c.extends) == 0 && len(c.aspects) == 0)
 }
@@ -104,6 +137,12 @@ func (c *configYML) empty() bool {
 type ymlFile struct {
 	Aspects []*aspect.Aspect
 	Extends []string
+	Meta    struct {
+		Name        string
+		Description string
+		Icon        string // Optional
+		Caveats     string // Optional
+	}
 }
 
 func (l *Loader) parseYMLFile(filename string) (*ymlFile, error) {

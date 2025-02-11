@@ -7,18 +7,13 @@ aspects:
         field: Handler
     advice:
       - wrap-expression:
-          imports:
-            instrument: github.com/DataDog/orchestrion/instrument
           lang: go1.18 # Completely artificial!
           template: |-
             //dd:startwrap
-            instrument.WrapHandler({{ . }})
+            {{ . }}
             //dd:endwrap
 
 required-lang: go1.18
-
-syntheticReferences:
-  github.com/DataDog/orchestrion/instrument: true
 
 code: |-
   package main

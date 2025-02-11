@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 weight: 99
-prev: /docs/built-in
+prev: /docs/dd-trace-go
 ---
 
 ## Introduction
