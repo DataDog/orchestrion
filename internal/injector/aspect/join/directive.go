@@ -60,28 +60,40 @@ func (d directive) matchesChain(chain *context.NodeChain) bool {
 		}
 	}
 
-	if parent := chain.Parent(); parent != nil {
-		switch node := parent.Node().(type) {
-		// Also check whether the parent carries the directive if it's one of the node types that would
-		// typically carry directives that applies to its nested node.
-		case *dst.AssignStmt:
-			checkParent := chain.PropertyName() == "Rhs"
-			checkParent = checkParent || (node.Tok == token.DEFINE && chain.PropertyName() == "Lhs")
-			if checkParent && d.matchesChain(parent) {
-				return true
-			}
-		case *dst.CallExpr:
-			if chain.PropertyName() == "Fun" && d.matchesChain(parent) {
-				return true
-			}
-		case *dst.SendStmt:
-			if chain.PropertyName() == "Value" && d.matchesChain(parent) {
-				return true
-			}
-		case *dst.DeferStmt, *dst.ExprStmt, *dst.GoStmt, *dst.ReturnStmt:
-			if d.matchesChain(parent) {
-				return true
-			}
+	parent := chain.Parent()
+	if parent == nil {
+		return false
+	}
+
+	switch node := parent.Node().(type) {
+	// Also check whether the parent carries the directive if it's one of the node types that would
+	// typically carry directives that applies to its nested node.
+	case *dst.AssignStmt:
+		// For assignments, the directive only applies downwards to the RHS, unless it's a declaration,
+		// then it also applies to any declared identifier.
+		checkParent := chain.PropertyName() == "Rhs"
+		checkParent = checkParent || (node.Tok == token.DEFINE && chain.PropertyName() == "Lhs")
+		if checkParent && d.matchesChain(parent) {
+			return true
+		}
+	case *dst.CallExpr:
+		// For call expressions, the directive only applies to the called function, not its type
+		// signature or arguments list.
+		if chain.PropertyName() == "Fun" && d.matchesChain(parent) {
+			return true
+		}
+	case *dst.SendStmt:
+		// For chanel send statements, the directive only applies to the value being sent, not to the
+		// receiving channel.
+		if chain.PropertyName() == "Value" && d.matchesChain(parent) {
+			return true
+		}
+	case *dst.DeferStmt, *dst.ExprStmt, *dst.GoStmt, *dst.ReturnStmt:
+		// Defer statements, go statements, and return statements all forward the directive to the
+		// value(s); and expression statements are just wrappers of expressions, so naturally directives
+		// that apply to the statement also apply to the expression.
+		if d.matchesChain(parent) {
+			return true
 		}
 	}
 
