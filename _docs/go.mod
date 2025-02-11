@@ -2,16 +2,17 @@ module github.com/DataDog/orchestrion/_docs
 
 go 1.22.6
 
-replace github.com/DataDog/orchestrion => ..
-
-replace github.com/DataDog/orchestrion/instrument => ../instrument
+replace (
+	github.com/DataDog/orchestrion => ..
+	github.com/DataDog/orchestrion/instrument => ../instrument
+)
 
 require (
 	cloud.google.com/go v0.118.0
 	cloud.google.com/go/pubsub v1.45.3
 	github.com/99designs/gqlgen v0.17.62
-	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
-	github.com/DataDog/orchestrion/instrument v0.0.0-00010101000000-000000000000
+	github.com/DataDog/orchestrion v1.1.0-rc.1
+	github.com/DataDog/orchestrion/instrument v1.1.0-rc.1
 	github.com/IBM/sarama v1.44.0
 	github.com/Shopify/sarama v1.38.1
 	github.com/aws/aws-sdk-go v1.55.6
