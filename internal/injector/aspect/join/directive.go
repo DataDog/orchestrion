@@ -6,6 +6,7 @@
 package join
 
 import (
+	"go/token"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -19,6 +20,16 @@ import (
 
 type directive string
 
+// Directive matches nodes that are prefaced by a special pragma comment, which
+// is a single-line style comment without any blanks between the leading // and
+// the directive name. Directives apply to the node they are directly attached
+// to, but also to certain nested nodes:
+//   - For assignments, it applies to the RHS only; unless it's a delcaration
+//     assignment (the := token), in which case it also applies to the LHS,
+//   - For call expressions, it applies only to the function part (not the
+//     arguments)n
+//   - For channel send operations, it only applies to the value being sent,
+//   - For defer, go, and return statements, it applies to the value side.
 func Directive(name string) directive {
 	return directive(name)
 }
@@ -49,9 +60,39 @@ func (d directive) matchesChain(chain *context.NodeChain) bool {
 		}
 	}
 
-	// If the parent is an assignment statement, so we also check it for directives.
-	if parent := chain.Parent(); parent != nil {
-		if _, isAssign := parent.Node().(*dst.AssignStmt); isAssign && d.matchesChain(parent) {
+	parent := chain.Parent()
+	if parent == nil {
+		return false
+	}
+
+	switch node := parent.Node().(type) {
+	// Also check whether the parent carries the directive if it's one of the node types that would
+	// typically carry directives that applies to its nested node.
+	case *dst.AssignStmt:
+		// For assignments, the directive only applies downwards to the RHS, unless it's a declaration,
+		// then it also applies to any declared identifier.
+		checkParent := chain.PropertyName() == "Rhs"
+		checkParent = checkParent || (node.Tok == token.DEFINE && chain.PropertyName() == "Lhs")
+		if checkParent && d.matchesChain(parent) {
+			return true
+		}
+	case *dst.CallExpr:
+		// For call expressions, the directive only applies to the called function, not its type
+		// signature or arguments list.
+		if chain.PropertyName() == "Fun" && d.matchesChain(parent) {
+			return true
+		}
+	case *dst.SendStmt:
+		// For chanel send statements, the directive only applies to the value being sent, not to the
+		// receiving channel.
+		if chain.PropertyName() == "Value" && d.matchesChain(parent) {
+			return true
+		}
+	case *dst.DeferStmt, *dst.ExprStmt, *dst.GoStmt, *dst.ReturnStmt:
+		// Defer statements, go statements, and return statements all forward the directive to the
+		// value(s); and expression statements are just wrappers of expressions, so naturally directives
+		// that apply to the statement also apply to the expression.
+		if d.matchesChain(parent) {
 			return true
 		}
 	}
