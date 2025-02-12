@@ -91,11 +91,13 @@ sequenceDiagram
 
   loop For each package
     Toolchain ->>+ Orchestrion: compile ${args...}
-    alt never done
+    note over Toolchain,JobServer: The job server ensures a given package is compiled exactly once
+    alt first build of package
       Orchestrion ->>+ JobServer: build.Start
       JobServer ->>- Orchestrion: token
       Orchestrion ->> Orchestrion: instrument .go files
       Orchestrion ->>+ JobServer: packages.Resolve
+      note right of JobServer: injected packages
       JobServer ->>+ Toolchain: packages.Load
       Toolchain -->>- JobServer: packages
       JobServer -->>- Orchestrion: archives
@@ -103,12 +105,13 @@ sequenceDiagram
         Orchestrion ->> Orchestrion: write link-deps.go
       end
       Orchestrion ->> Orchestrion: update -importcfg file
+      note over Orchestrion,Compiler: Invoke the actual compiler tool
       Orchestrion -->>+ Compiler: ${args...}
       Compiler ->>- Orchestrion: exit code
       Orchestrion ->> Orchestrion: add link.deps to -output file
       Orchestrion ->>+ JobServer: build.Finish
       JobServer -->>- Orchestrion: ack
-    else already done
+    else subsequent build of package (idempotent)
       Orchestrion ->>+ JobServer: build.Start
       JobServer ->>- Orchestrion: idempotent
       Orchestrion ->> Orchestrion: Copy build artifacts
@@ -176,11 +179,16 @@ sequenceDiagram
 
   loop For each executable
     Toolchain ->>+ Orchestrion: link ${args...}
-    Orchestrion ->>+ JobServer: packages.Resolve
-    JobServer ->>+ Toolchain: packages.Load
-    Toolchain -->>- JobServer: packages
-    JobServer -->>- Orchestrion: archives
+    loop For each -importcfg entry
+      Orchestrion ->> Orchestrion: read link.deps object
+      Orchestrion ->>+ JobServer: packages.Resolve
+      note right of JobServer: un-satisfied link-time dependencies
+      JobServer ->>+ Toolchain: packages.Load
+      Toolchain -->>- JobServer: packages
+      JobServer -->>- Orchestrion: archives
+    end
     Orchestrion ->> Orchestrion: update -importcfg file
+    note over Orchestrion,Linker: Invoke the actual linker tool
     Orchestrion -->>+ Linker: ${args...}
     Linker ->>- Orchestrion: exit code
     Orchestrion -->>- Toolchain: exit code
@@ -193,14 +201,14 @@ invocation; hoever `go test` will invoke the linker once for each test package.
 
 Orchestrion intercepts the linker commands to update the `-importcfg` file so
 that it correctly lists all link-time dependencies introduced by instrumentation
-of all linked packages. It uses {{<godoc
+of all linked packages (②). It uses {{<godoc
   import-path="golang.org/x/tools/go/packages"
   package="packages"
   name="Load"
->}} to locate the relevant archive files (③), and writes an updated
-`-importcfg` file (⑥) with all necessary additions performed.
+>}} to locate the relevant archive files (④), and writes an updated
+`-importcfg` file (⑦) with all necessary additions performed.
 
-Finally, it invokes the `go tool link` with updated arguments (⑦).
+Finally, it invokes the `go tool link` with updated arguments (⑧).
 
 ## The job server
 
