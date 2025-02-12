@@ -210,6 +210,29 @@ of all linked packages (②). It uses {{<godoc
 
 Finally, it invokes the `go tool link` with updated arguments (⑧).
 
+## Code Injection
+
+Orchestrion drives code injection using a process similar to classical
+Aspect-oriented Programming (AoP) (see [Aspects][contrib-aspects]). These
+combine a _Join Point_ (where code needs to be modified) with one or more
+_Advices_ (what modifications need to be made).
+
+In order to reduce the cost of evaluation ({{<godoc
+import-path="gopkg.in/DataDog/dd-trace-go.v1">}}) ships more than 100 different
+aspects), we apply heuristics to determine what aspects have a chance of
+applying to any given package and source file. The heuristics are based on the
+observable dependency closure of the package being built (there is no need to
+consider instrumentation targeting the `net/http` package if that package is not
+imported) as well as the content of source files (an aspect that looks for the
+`//dd:span` directive will never match in a source file that does not contain
+any occurrence of this string).
+
+The injector performs a depth-first traversal of the entire Abstract Syntax
+Trees (ASTs), evaluates every applicable join point on each node; and applies
+the configured advice where join points match.
+
+[contrib-aspects]: ../../contributing/aspects/
+
 ## The job server
 
 Due to the design of the Go toolchain's `-toolexec` feature, orchestrion works
