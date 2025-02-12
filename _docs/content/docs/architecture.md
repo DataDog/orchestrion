@@ -55,20 +55,24 @@ The standard Go toolchain invokes all tools involved in a given build with the
 `-V=full` argument (①, ⑨), so it can use all tool's versions as build cache
 invalidation inputs. Orchestrion intercepts those calls, and appends information
 about itself to the results (④, ⑫). The version information added by
-orchestrion changes with:
+orchestrion changes:
+
+<div class="hextra-code-block hx-relative hx-mt-6 first:hx-mt-0 hx-group/code"><div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-console" data-lang="console"><span class="k">compile version go1.23.6</span><span class="o">:</span><span class="nb">orchestrion@v1.1.0-rc.1</span><span class="o">;</span><span class="s2">&lt;base64-encoded-hash&gt;</span></code></pre></div></div></div>
 
 - the version of orchestrion being used, as different versions may apply
   integrations differently
-- the specific configuration being used, as different integrations configured
-  result in different instrumented code
-- the details about all packages that may be injected by the configured
-  integrations, as the Go toolchain is unaware of these dependencies, yet
-  they affect the nature of the build output
-  * All relevant modules are listed using {{<godoc
-      import-path="golang.org/x/tools/go/packages"
-      package="packages"
-      name="Load"
-    >}} (⑤), and the result is cached
+- a base64-encoded hash composed using:
+  - the specific configuration being used, as different integrations configured
+    result in different instrumented code
+  - the details about all packages that may be injected by the configured
+    integrations, as the Go toolchain is unaware of these dependencies, yet
+    they affect the nature of the build output
+    * All relevant modules are listed using {{<godoc
+        import-path="golang.org/x/tools/go/packages"
+        package="packages"
+        name="Load"
+      >}} (⑤), and the result is cached
+
 
 This results in more cache invalidations than is strictly necessary, however
 the Go toolchain does not currently offer a more granual way to influence build
