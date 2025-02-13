@@ -1,0 +1,19 @@
+name: PR Labeler
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+jobs:
+  update-labels:
+    name: Update PR labels
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Needed to update labels
+    steps:
+      - name: Check out
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Assign Labels
+        uses: mauroalderete/action-assign-labels@671a4ca2da0f900464c58b8b5540a1e07133e915 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          conventional-commits: .github/conventional-commits.yml
