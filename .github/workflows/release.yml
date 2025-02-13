@@ -5,11 +5,14 @@ on:
   push:
     branches: [main]
     paths: [internal/version/version.go]
+  release:
+    types: [published]
 
 permissions: read-all
 
 jobs:
   validate:
+    if: github.event_name != 'release'
     name: Validate Release
     runs-on: ubuntu-latest
     permissions:
@@ -64,3 +67,58 @@ jobs:
           gh release create '${{ steps.version.outputs.tag }}' --draft --generate-notes --target='${{ github.sha }}' --title='${{ steps.version.outputs.tag }}' ${{ contains(steps.version.outputs.tag, '-') && '--prerelease' || '' }}
         env:
           GH_TOKEN: ${{ github.token }}
+
+  release:
+    if: github.event_name == 'release'
+    name: Tag Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # To be able to create new tags
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+      - name: Setup go
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+        with:
+          go-version: oldstable
+          cache-dependency-path: '**/go.mod'
+      - name: Configure git
+        env:
+          AUTHOR_NAME: ${{ github.event.release.author.name || 'Github Actions' }}
+          AUTHOR_EMAIL: ${{ github.event.release.author.email || 'github-actions@github.com' }}
+        run: |-
+          git config --global user.name "${AUTHOR_NAME}"
+          git config --global user.email "${AUTHOR_EMAIL}"
+      - name: Tag all submodules
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+        run: |-
+          for gomod in $(find . -iname go.mod -not -path '*/_*'); do
+            dir=$(dirname "${gomod}")
+            mod=$(go -C "${dir}" list -m)
+            case "${mod}" in
+              github.com/DataDog/orchestrion)
+                # This is the main module, the release already tagged it
+                continue
+                ;;
+              github.com/DataDog/orchestrion/*)
+                # This is a submodule, we'll publish it if the prefix matches the directory name
+                echo "Found sub-module: ${mod} in ${gomod}"
+                suffix="${mod#'github.com/DataDog/orchestrion/'}"
+                if [ "${suffix}" != "${dir#'./'}" ]; then
+                  echo "-> Ignoring submodule with mismatched directory path and suffix: ${dir#'./'} != ${suffix}"
+                  continue
+                fi
+                tag="${suffix}/${EVENT_TAG}"
+                echo "-> Adding required submodule tag: ${tag}"
+                git tag -m "${EVENT_TAG}" "${tag}"
+                git push origin "${tag}"
+                ;;
+              *)
+                # This is not a submodule, we'll skip it
+                echo "-> Ignorning non-submodule: ${mod} in ${gomod}"
+                ;;
+            esac
+          done
