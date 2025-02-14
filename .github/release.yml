@@ -1,0 +1,15 @@
+changelog:
+  exclude:
+    labels:
+      - conventional-commit/chore
+      - dependencies
+  categories:
+    - title: '🚀 Features'
+      labels:
+        - conventional-commit/feat
+    - title: '🐛 Bug Fixes'
+      labels:
+        - conventional-commit/fix
+    - title: '🔧 Maintenance'
+      labels:
+        - '*'

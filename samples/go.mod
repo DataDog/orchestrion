@@ -1,4 +1,4 @@
-module github.com/DataDog/orchestrion/samples
+module github.com/DataDog/orchestrion/_samples
 
 go 1.22.5
 
