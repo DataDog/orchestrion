@@ -2,16 +2,17 @@ module github.com/DataDog/orchestrion/_docs
 
 go 1.22.6
 
-replace github.com/DataDog/orchestrion => ..
-
-replace github.com/DataDog/orchestrion/instrument => ../instrument
+replace (
+	github.com/DataDog/orchestrion => ..
+	github.com/DataDog/orchestrion/instrument => ../instrument
+)
 
 require (
 	cloud.google.com/go v0.118.0
 	cloud.google.com/go/pubsub v1.45.3
 	github.com/99designs/gqlgen v0.17.62
-	github.com/DataDog/orchestrion v0.0.0-00010101000000-000000000000
-	github.com/DataDog/orchestrion/instrument v0.0.0-00010101000000-000000000000
+	github.com/DataDog/orchestrion v1.1.0-rc.1
+	github.com/DataDog/orchestrion/instrument v1.1.0-rc.1
 	github.com/IBM/sarama v1.44.0
 	github.com/Shopify/sarama v1.38.1
 	github.com/aws/aws-sdk-go v1.55.6
@@ -154,7 +155,7 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
-	github.com/ebitengine/purego v0.8.1 // indirect
+	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.4.0 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.3 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
@@ -283,6 +284,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
+	github.com/shirou/gopsutil/v4 v4.25.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
