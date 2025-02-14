@@ -138,7 +138,7 @@ jobs:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Lint main module
-        uses: golangci/golangci-lint-action@051d91933864810ecd5e2ea2cfd98f6a5bca5347 # v6
+        uses: golangci/golangci-lint-action@818ec4d51a1feacefc42ff1b3ec25d4962690f39 # v6
         with:
           version: v1.64.4
       - name: Verify license headers
