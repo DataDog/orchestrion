@@ -169,7 +169,9 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-
 		log.Trace().Err(err).Str("url-file", path).Msg("Job server still not ready...")
 		if retry == nil {
 			retry = time.NewTimer(retryDelay)
+			//revive:disable:defer This happens only once in the loop, and is to avoid starting a timer we don't use
 			defer retry.Stop()
+			//revive:enable:defer
 		} else {
 			retry.Reset(retryDelay)
 		}
