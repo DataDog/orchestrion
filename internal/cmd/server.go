@@ -72,6 +72,8 @@ var Server = &cli.Command{
 	},
 	Hidden: true,
 	Action: func(ctx *cli.Context) error {
+		log := zerolog.Ctx(ctx.Context)
+
 		opts := jobserver.Options{
 			ServerName:        "github.com/DataDog/orchestrion server",
 			Port:              ctx.Int("port"),
@@ -80,9 +82,15 @@ var Server = &cli.Command{
 		}
 
 		if urlFile := ctx.String("url-file"); urlFile != "" {
-			return startWithURLFile(ctx.Context, &opts, urlFile)
+			if err := startWithURLFile(ctx.Context, &opts, urlFile); err != nil {
+				log.Error().Err(err).Str("url-file", urlFile).Msg("Failed to start job server")
+			}
+			return nil
 		}
 		_, err := start(ctx.Context, &opts, true)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to start job server")
+		}
 		return err
 	},
 }
