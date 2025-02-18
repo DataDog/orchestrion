@@ -9,11 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/DataDog/orchestrion/internal/binpath"
@@ -87,6 +87,12 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 		return nil, err
 	}
 
+	exitChan := make(chan error)
+	go func() {
+		defer close(exitChan)
+		exitChan <- cmd.Wait()
+	}()
+
 	// Wait for the URL file to exist...
 	log.Trace().
 		Str("url-file", urlFilePath).
@@ -94,7 +100,7 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 		Msg("Waiting for job server to come online...")
 	ctx, cancel := context.WithTimeout(context.Background(), jobserverStartTimeout)
 	defer cancel()
-	client, err := waitForURLFile(ctx, urlFilePath, cmd)
+	client, err := waitForURLFile(ctx, urlFilePath, cmd, exitChan)
 	if err != nil {
 		err = errors.Join(err, cmd.Process.Kill()) // Kill the process if it's still running...
 		log.Warn().
@@ -114,17 +120,17 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 func clientFromURLFile(ctx context.Context, path string) (*Client, string, error) {
 	log := zerolog.Ctx(ctx)
 
-	mu := filelock.MutexAt(path)
-	if err := mu.RLock(); err != nil {
+	file := filelock.MutexAt(path)
+	if err := file.RLock(ctx); err != nil {
 		return nil, "", err
 	}
 	defer func() {
-		if err := mu.Unlock(); err != nil {
+		if err := file.Unlock(ctx); err != nil {
 			log.Warn().Str("url-file", path).Err(err).Msg("Failed to unlock file")
 		}
 	}()
 
-	urlBytes, err := os.ReadFile(path)
+	urlBytes, err := io.ReadAll(file)
 	if err != nil {
 		return nil, "", err
 	}
@@ -143,50 +149,76 @@ func clientFromURLFile(ctx context.Context, path string) (*Client, string, error
 	return client, url, err
 }
 
-func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd) (*Client, error) {
-	log := zerolog.Ctx(ctx)
+func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-chan error) (*Client, error) {
+	const retryDelay = 150 * time.Millisecond
+	var (
+		log   = zerolog.Ctx(ctx)
+		retry *time.Timer
+	)
+
 	for {
 		// First, try to connect to the client from the URL file.
 		c, url, err := clientFromURLFile(ctx, path)
-		if err != nil {
-			// Check whether the child process is still alive by sending it signal 0. This returns an
-			// error if the process is dead, and does nothing if it's alive.
-			if cmd.Process.Signal(syscall.Signal(0)) != nil {
-				// The process died, so we can call [exec.Cmd.Wait] on it to clean up associated resources.
-				waitErr := cmd.Wait()
+		if err == nil {
+			// There was no error, so we are good to go!
+			client = c
+			// Set it in the current environment so that child processes don't have to go through the same dance again.
+			_ = os.Setenv(EnvVarJobserverURL, url)
+			return c, nil
+		}
+		if url != "" {
+			log.Error().Err(err).
+				Str("url-file", path).
+				Str("url", url).
+				Msg("Failed to connect to job server at specified URL")
+			return nil, err
+		}
+
+		log.Trace().Err(err).Str("url-file", path).Msg("Job server still not ready...")
+		if retry == nil {
+			retry = time.NewTimer(retryDelay)
+			//revive:disable:defer This happens only once in the loop, and is to avoid starting a timer we don't use
+			defer retry.Stop()
+			//revive:enable:defer
+		} else {
+			retry.Reset(retryDelay)
+		}
+
+		select {
+		case <-ctx.Done(): // If the context is Done, we should not be waiting any longer...
+			ctxErr := ctx.Err()
+			if ctxErr == nil {
+				ctxErr = errors.New("wait context has expired")
+			}
+			log.Warn().
+				Err(ctxErr).
+				Str("url-file", path).
+				Msg("Context aborted while waiting for url-file")
+			// Attempt to kill the process if it hasn't died by itself...
+			return nil, errors.Join(err, ctxErr, cmd.Process.Kill())
+
+		case exitErr, ok := <-exitChan: // If the process has exited, there is no use to waiting any longer...
+			if exitErr != nil {
 				log.Warn().
-					Err(err).
+					Err(exitErr).
 					Stringer("state", cmd.ProcessState).
 					Str("url-file", path).
 					Msg("Job server process has exited")
-				return nil, errors.Join(
-					err,
-					waitErr,
-					fmt.Errorf("job server process has exited: %v", cmd.ProcessState),
-				)
+				return nil, errors.Join(err, exitErr, fmt.Errorf("job server process has failed: %v", cmd.ProcessState))
 			}
-
-			// The process has not died, so no we'll check whether the context has been cancelled/expired.
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				log.Warn().
-					Err(ctxErr).
+			if ok {
+				// The job server exits with status 0 if another process has written to the URL file; in
+				// which case we should be able to connect to it on the next attempt!
+				log.Info().
+					Stringer("state", cmd.ProcessState).
 					Str("url-file", path).
-					Msg("Context aborted while waiting for url-file")
-				// Attempt to kill the process if it hasn't died by itself...
-				return nil, errors.Join(err, ctxErr, cmd.Process.Kill())
+					Msg("Job server process exited with status 0 (another process is serving)")
 			}
 
-			// The process has not died, and the context has not expired yet, so we'll wait and retry...
-			log.Trace().Err(err).Str("url-file", path).Msg("Job server still not ready...")
-			time.Sleep(150 * time.Millisecond)
+		case <-retry.C:
+			// The retry timer has elapsed, we shall try again!
 			continue
 		}
-
-		// There was no error, so we are good to go!
-		client = c
-		// Set it in the current environment so that child processes don't have to go through the same dance again.
-		_ = os.Setenv(EnvVarJobserverURL, url)
-		return c, nil
 	}
 }
 

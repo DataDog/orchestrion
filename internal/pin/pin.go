@@ -81,11 +81,11 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	sha := sha512.Sum512([]byte(goMod))
 	flockname := filepath.Join(os.TempDir(), "orchestrion-pin_"+base64.URLEncoding.EncodeToString(sha[:])+"_go.mod.lock")
 	flock := filelock.MutexAt(flockname)
-	if err := flock.Lock(); err != nil {
+	if err := flock.Lock(ctx); err != nil {
 		return fmt.Errorf("failed to acquire lock on %q: %w", goMod, err)
 	}
 	defer func() {
-		if err := flock.Unlock(); err != nil {
+		if err := flock.Unlock(ctx); err != nil {
 			log.Error().Err(err).Str("lock-file", goMod).Msg("Failed to release file lock")
 		}
 	}()

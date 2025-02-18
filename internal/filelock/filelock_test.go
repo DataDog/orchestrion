@@ -6,6 +6,7 @@
 package filelock_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,16 +16,23 @@ import (
 )
 
 func Test(t *testing.T) {
+	ctx := context.Background()
+	if deadline, ok := t.Deadline(); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, deadline)
+		defer cancel()
+	}
+
 	t.Run("RLock first", func(t *testing.T) {
 		tmp := t.TempDir()
 		lockfile := filepath.Join(tmp, "file.lock")
 
 		mu := filelock.MutexAt(lockfile)
-		require.NoError(t, mu.RLock(), "failed to acquire read lock")
+		require.NoError(t, mu.RLock(ctx), "failed to acquire read lock")
 		assertExists(t, lockfile)
-		require.NoError(t, mu.Lock(), "failed to upgrade to write lock")
-		require.NoError(t, mu.RLock(), "failed to downgrade to read lock")
-		require.NoError(t, mu.Unlock(), "failed to unlock")
+		require.NoError(t, mu.Lock(ctx), "failed to upgrade to write lock")
+		require.NoError(t, mu.RLock(ctx), "failed to downgrade to read lock")
+		require.NoError(t, mu.Unlock(ctx), "failed to unlock")
 	})
 
 	t.Run("Lock first", func(t *testing.T) {
@@ -32,11 +40,11 @@ func Test(t *testing.T) {
 		lockfile := filepath.Join(tmp, "file.lock")
 
 		mu := filelock.MutexAt(lockfile)
-		require.NoError(t, mu.Lock(), "failed to acquire write lock")
+		require.NoError(t, mu.Lock(ctx), "failed to acquire write lock")
 		assertExists(t, lockfile)
-		require.NoError(t, mu.RLock(), "failed to downgrade to read lock")
-		require.NoError(t, mu.Lock(), "failed to upgrade to write lock")
-		require.NoError(t, mu.Unlock(), "failed to unlock")
+		require.NoError(t, mu.RLock(ctx), "failed to downgrade to read lock")
+		require.NoError(t, mu.Lock(ctx), "failed to upgrade to write lock")
+		require.NoError(t, mu.Unlock(ctx), "failed to unlock")
 	})
 }
 

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"time"
@@ -72,6 +73,8 @@ var Server = &cli.Command{
 	},
 	Hidden: true,
 	Action: func(ctx *cli.Context) error {
+		log := zerolog.Ctx(ctx.Context)
+
 		opts := jobserver.Options{
 			ServerName:        "github.com/DataDog/orchestrion server",
 			Port:              ctx.Int("port"),
@@ -80,9 +83,15 @@ var Server = &cli.Command{
 		}
 
 		if urlFile := ctx.String("url-file"); urlFile != "" {
-			return startWithURLFile(ctx.Context, &opts, urlFile)
+			if err := startWithURLFile(ctx.Context, &opts, urlFile); err != nil {
+				log.Error().Err(err).Str("url-file", urlFile).Msg("Failed to start job server")
+			}
+			return nil
 		}
 		_, err := start(ctx.Context, &opts, true)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to start job server")
+		}
 		return err
 	},
 }
@@ -108,8 +117,8 @@ func start(ctx context.Context, opts *jobserver.Options, wait bool) (*jobserver.
 func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile string) cli.ExitCoder {
 	log := zerolog.Ctx(ctx)
 
-	mu := filelock.MutexAt(urlFile)
-	if err := mu.RLock(); err != nil {
+	file := filelock.MutexAt(urlFile)
+	if err := file.RLock(ctx); err != nil {
 		return cli.Exit(fmt.Errorf("failed to acquire read lock on %q: %w", urlFile, err), 1)
 	}
 	log.Trace().
@@ -117,14 +126,14 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 		Msg("Acquired read lock on URL file")
 
 	// Check if there is already a server running...
-	if url, err := hasURLToRunningServer(urlFile); err != nil {
+	if url, err := hasURLToRunningServer(file); err != nil {
 		return cli.Exit(err, 1)
 	} else if url != "" {
 		return cli.Exit(fmt.Sprintf("A server is already listening on %q", url), 2)
 	}
 
 	// No existing server, so now we're actually going to try starting our own
-	if err := mu.Lock(); err != nil {
+	if err := file.Lock(ctx); err != nil {
 		return cli.Exit(fmt.Errorf("failed to upgrade to write lock on %q: %w", urlFile, err), 1)
 	}
 	log.Trace().
@@ -132,7 +141,7 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 		Msg("Upgraded lock on URL file to write lock")
 
 	// Check again whether there is a running server; as a concurrent process might have acquired the write lock first.
-	if url, err := hasURLToRunningServer(urlFile); err != nil {
+	if url, err := hasURLToRunningServer(file); err != nil {
 		return cli.Exit(err, 1)
 	} else if url != "" {
 		return cli.Exit(fmt.Sprintf("A server is already listening on %q", url), 2)
@@ -155,7 +164,7 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 		Msg("Server component successfully started")
 
 	// Write the ClientURL into the urlFile
-	if err := os.WriteFile(urlFile, []byte(clientURL), 0o644); err != nil {
+	if _, err := file.Write([]byte(clientURL)); err != nil {
 		return cli.Exit(fmt.Errorf("failed to write URL file at %q: %w", urlFile, err), 1)
 	}
 	log.Trace().
@@ -164,7 +173,7 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 		Msg("Populated URL file with server URL")
 
 	// Release the URL File lock
-	if err := mu.Unlock(); err != nil {
+	if err := file.Unlock(ctx); err != nil {
 		// Shut the server down, as we won't actually be returning it...
 		server.Shutdown()
 		return cli.Exit(fmt.Errorf("failed to release lock on %q: %w", urlFile, err), 1)
@@ -210,10 +219,13 @@ func deleteOnInterrupt(ctx context.Context, path string) func() {
 
 // hasURLToRunningServer checks whether the provided URL file contains the URL to a running server,
 // by trying to connect to it. If that is the case, it returns the URL to the running server.
-func hasURLToRunningServer(urlFile string) (string, error) {
-	urlData, err := os.ReadFile(urlFile)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("failed to read URL file at %q: %w", urlFile, err)
+func hasURLToRunningServer(file io.ReadSeeker) (string, error) {
+	urlData, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read URL file: %w", err)
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return "", fmt.Errorf("failed to seek back to start of file: %w", err)
 	}
 	if len(urlData) == 0 {
 		return "", nil
