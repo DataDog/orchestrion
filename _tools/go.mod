@@ -3,6 +3,7 @@ module github.com/DataDog/orchestrion/_tools
 go 1.23.0
 
 require (
+	github.com/google/go-github/v69 v69.2.0
 	github.com/google/go-licenses/v2 v2.0.0-alpha.1
 	golang.org/x/perf v0.0.0-20250214215153-c95ad7d5b636
 )
@@ -12,6 +13,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/otiai10/copy v1.14.1 // indirect

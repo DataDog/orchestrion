@@ -14,8 +14,13 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - name: Assign Labels
-        uses: mauroalderete/action-assign-labels@671a4ca2da0f900464c58b8b5540a1e07133e915 # v1
+      - name: Setup go
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          conventional-commits: .github/conventional-commits.yml
+          go-version: oldstable
+          cache-dependency-path: '**/go.mod'
+      - name: Assign Labels
+        run: go -C _tools run ./conventionalcommit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
