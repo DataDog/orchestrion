@@ -166,6 +166,13 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-
 			_ = os.Setenv(EnvVarJobserverURL, url)
 			return c, nil
 		}
+		if url != "" {
+			log.Error().Err(err).
+				Str("url-file", path).
+				Str("url", url).
+				Msg("Failed to connect to job server at specified URL")
+			return nil, err
+		}
 
 		log.Trace().Err(err).Str("url-file", path).Msg("Job server still not ready...")
 		if retry == nil {
@@ -190,13 +197,23 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-
 			// Attempt to kill the process if it hasn't died by itself...
 			return nil, errors.Join(err, ctxErr, cmd.Process.Kill())
 
-		case exitErr := <-exitChan: // If the process has exited, there is no use to waiting any longer...
-			log.Warn().
-				Err(exitErr).
-				Stringer("state", cmd.ProcessState).
-				Str("url-file", path).
-				Msg("Job server process has exited")
-			return nil, errors.Join(err, exitErr, fmt.Errorf("job server process has exited: %v", cmd.ProcessState))
+		case exitErr, ok := <-exitChan: // If the process has exited, there is no use to waiting any longer...
+			if exitErr != nil {
+				log.Warn().
+					Err(exitErr).
+					Stringer("state", cmd.ProcessState).
+					Str("url-file", path).
+					Msg("Job server process has exited")
+				return nil, errors.Join(err, exitErr, fmt.Errorf("job server process has failed: %v", cmd.ProcessState))
+			}
+			if ok {
+				// The job server exits with status 0 if another process has written to the URL file; in
+				// which case we should be able to connect to it on the next attempt!
+				log.Info().
+					Stringer("state", cmd.ProcessState).
+					Str("url-file", path).
+					Msg("Job server process exited with status 0 (another process is serving)")
+			}
 
 		case <-retry.C:
 			// The retry timer has elapsed, we shall try again!
