@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -119,17 +120,17 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 func clientFromURLFile(ctx context.Context, path string) (*Client, string, error) {
 	log := zerolog.Ctx(ctx)
 
-	mu := filelock.MutexAt(path)
-	if err := mu.RLock(); err != nil {
+	file := filelock.MutexAt(path)
+	if err := file.RLock(ctx); err != nil {
 		return nil, "", err
 	}
 	defer func() {
-		if err := mu.Unlock(); err != nil {
+		if err := file.Unlock(ctx); err != nil {
 			log.Warn().Str("url-file", path).Err(err).Msg("Failed to unlock file")
 		}
 	}()
 
-	urlBytes, err := os.ReadFile(path)
+	urlBytes, err := io.ReadAll(file)
 	if err != nil {
 		return nil, "", err
 	}

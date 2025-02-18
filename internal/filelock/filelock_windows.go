@@ -8,6 +8,7 @@
 package filelock
 
 import (
+	"context"
 	"os"
 
 	"golang.org/x/sys/windows"
@@ -44,7 +45,7 @@ func unlock(f *os.File) error {
 // segment of a file on which a lock is already held (including by the current
 // process) will block indefinitely. It returns `false` if the desired lock is
 // the currently held lock (idempotent success).
-func (m *Mutex) beforeLockChange(to lockState) (cont bool, err error) {
+func (m *Mutex) beforeLockChange(ctx context.Context, to lockState) (cont bool, err error) {
 	if m.locked == lockStateUnlocked {
 		// No-op, the file is not currently locked by this process.
 		return true, nil
@@ -55,7 +56,7 @@ func (m *Mutex) beforeLockChange(to lockState) (cont bool, err error) {
 	}
 
 	// We need to unlock before acquiring the new lock.
-	if err := m.unlock(); err != nil {
+	if err := m.unlock(ctx); err != nil {
 		return false, err
 	}
 
