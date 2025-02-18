@@ -138,7 +138,7 @@ jobs:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Lint main module
-        uses: golangci/golangci-lint-action@818ec4d51a1feacefc42ff1b3ec25d4962690f39 # v6
+        uses: golangci/golangci-lint-action@2226d7cb06a077cd73e56eedd38eecad18e5d837 # v6
         with:
           version: v1.64.4
       - name: Verify license headers
@@ -155,7 +155,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@6eb1abde32fed00453b0d03497f4ba4fecba146d # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@25ed13d0628a1601b4b44048e63cc4328ed03633 # v3
         with:
           allowlist:
             DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
