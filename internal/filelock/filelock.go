@@ -26,7 +26,7 @@ import (
 // happen atomically (on Windows, it is guaranteed not to be atomic).
 //
 // The [io.ReadWriteSeeker], [io.ReaderAt], and [io.WriterAt] interfaces are
-// implemented by [*Mutex] and are saef to be used once any lock as been
+// implemented by [*Mutex] and are safe to be used once any lock as been
 // acquired (as the result of [Mutex.RLock] or [Mutex.Lock]), and until the
 // mutex has been released ([Mutex.Unlock]). Attempting to use these interfaces
 // without a lock being held results in [fs.ErrClosed]. On UNIX platforms, it is
