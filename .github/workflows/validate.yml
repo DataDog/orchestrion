@@ -61,7 +61,12 @@ jobs:
       - name: Run 'go mod tidy'
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
-        run: find . -name go.mod -execdir go mod tidy -go="$(go mod edit -json | jq .Go)" \;
+        run: |-
+          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+            dir="$(dirname "${gomod}")"
+            go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
+            go -C="${dir}" mod edit -toolchain=none
+          done
 
       - name: Refresh LICENSE-3rdparty.csv
         run: ./_tools/make-licenses.sh

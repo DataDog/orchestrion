@@ -36,13 +36,22 @@ jobs:
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
-      # does not support that specific go release.
+      # does not support that specific go release. We do `go get -u` everywhere first, and then
+      # `go mod tidy`, so that the later accounts for the complete updated module graph (otherwise
+      # we'd need to run these in dependency order to ensure stable output).
       - name: Update dependencies
-        run: find . -name go.mod -execdir go get -t -u "go@$(go mod edit -json | jq .Go)" gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }} ./... \;
+        run: |-
+          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+            dir="$(dirname "${gomod}")"
+            go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }}" ./...
+          done
       - name: Run go mod tidy
-        run: find . -name go.mod -execdir go mod tidy -go="$(go mod edit -json | jq .Go)" \;
-      - name: Ensure no toolchain directive
-        run: find . -name go.mod -execdir go mod edit -toolchain=none \;
+        run: |-
+          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+            dir="$(dirname "${gomod}")"
+            go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
+            go -C="${dir}" mod edit -toolchain=none
+          done
 
       - id: is-tree-dirty
         name: Check for updates
