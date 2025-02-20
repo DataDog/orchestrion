@@ -58,9 +58,15 @@ func (sc *specialCase) matches(importPath string) bool {
 // paths. They are evaluated in order, and the first matching override is
 // applied, stopping evaluation of any further overrides.
 var weavingSpecialCase = []specialCase{
+	// Weaving inside of orchestrion packages themselves
 	{path: "github.com/DataDog/orchestrion/runtime", prefix: true, behavior: noOverride},
 	{path: "github.com/DataDog/orchestrion", prefix: true, behavior: neverWeave},
+	// V1 of the Datadog Go tracer library
 	{path: "gopkg.in/DataDog/dd-trace-go.v1", prefix: true, behavior: weaveTracerInternal},
+	// V2 of the Datadog Go tracer library
+	{path: "github.com/DataDog/dd-trace-go/v2/internal/orchestrion/_integration", prefix: true, behavior: noOverride}, // The dd-trace-go integration test suite
+	{path: "github.com/DataDog/dd-trace-go", prefix: true, behavior: weaveTracerInternal},
+	// Misc. other Datadog packages that can cause circular weaving to happen
 	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
 }
 
