@@ -24,7 +24,8 @@ var builtIn = configGo{
 					join.ValueDeclaration(join.MustTypeName("bool")),
 					join.OneOf(
 						join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrion"),
-						join.Directive("dd:orchestrion-enabled"),
+						join.Directive("orchestrion:enabled"),
+						join.Directive("dd:orchestrion-enabled"), // <- Deprecated
 					),
 				),
 				Advice: []advice.Advice{
@@ -36,7 +37,7 @@ var builtIn = configGo{
 		},
 		name: "<built-in>",
 		meta: configYMLMeta{
-			name:        "built.WithOrchestrion & //dd:orchestrion-enabled",
+			name:        "built.WithOrchestrion & //orchestrion:enabled",
 			description: "Flip a boolean to true if Orchestrion is enabled.",
 			icon:        "cog",
 			caveats: "This aspect allows introducing conditional logic based on whether" +
