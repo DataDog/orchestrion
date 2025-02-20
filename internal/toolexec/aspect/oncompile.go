@@ -64,6 +64,7 @@ var weavingSpecialCase = []specialCase{
 	// V1 of the Datadog Go tracer library
 	{path: "gopkg.in/DataDog/dd-trace-go.v1", prefix: true, behavior: weaveTracerInternal},
 	// V2 of the Datadog Go tracer library
+	{path: "github.com/DataDog/dd-trace-go/internal/orchestrion/_integration", prefix: true, behavior: noOverride},    // The dd-trace-go integration test suite
 	{path: "github.com/DataDog/dd-trace-go/v2/internal/orchestrion/_integration", prefix: true, behavior: noOverride}, // The dd-trace-go integration test suite
 	{path: "github.com/DataDog/dd-trace-go", prefix: true, behavior: weaveTracerInternal},
 	// Misc. other Datadog packages that can cause circular weaving to happen
