@@ -215,7 +215,7 @@ Finally, it invokes the `go tool link` with updated arguments (⑧).
 Orchestrion drives code injection using a process similar to classical
 Aspect-oriented Programming (AoP) (see [Aspects][contrib-aspects]). These
 combine a _Join Point_ (where code needs to be modified) with one or more
-_Advice_s (what modifications need to be made).
+_Advices_ (what modifications need to be made).
 
 In order to reduce the cost of evaluation ({{<godoc
 import-path="gopkg.in/DataDog/dd-trace-go.v1">}}) ships more than 100 different

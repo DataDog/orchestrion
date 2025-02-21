@@ -1,2 +1,5 @@
+[default.extend-words]
+advices = "advices"
+
 [files]
 extend-exclude = ["*.css", "*.tmpl"]
