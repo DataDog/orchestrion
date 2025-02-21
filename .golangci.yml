@@ -6,6 +6,7 @@ linters:
     - goimports
     - revive
     - testifylint
+    - misspell
 
 linters-settings:
   revive:

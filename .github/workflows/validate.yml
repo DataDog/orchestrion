@@ -133,7 +133,7 @@ jobs:
   lint:
     needs: generate
     runs-on: ubuntu-latest
-    name: Go Linters
+    name: Linters
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -150,6 +150,12 @@ jobs:
         run: go run ./_tools/headercheck/header_check.go
       - name: vet
         run: go vet ./...
+      - name: Check documentation for misspellings
+        uses: crate-ci/typos@212923e4ff05b7fc2294a204405eec047b807138 # v1.29.9
+        with:
+          files: |
+            _docs/
+
 
   ##############################################################################
   # Verify all GitHub workflows have hash-pinned actions
@@ -483,4 +489,3 @@ jobs:
             --token="${CODECOV_TOKEN}"                                          \
             --slug=${{ github.repository }}
           echo "::endgroup::"
-

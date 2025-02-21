@@ -24,7 +24,7 @@ type directive string
 // is a single-line style comment without any blanks between the leading // and
 // the directive name. Directives apply to the node they are directly attached
 // to, but also to certain nested nodes:
-//   - For assignments, it applies to the RHS only; unless it's a delcaration
+//   - For assignments, it applies to the RHS only; unless it's a declaration
 //     assignment (the := token), in which case it also applies to the LHS,
 //   - For call expressions, it applies only to the function part (not the
 //     arguments)n

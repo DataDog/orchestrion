@@ -5,7 +5,7 @@ prev: /docs/dd-trace-go/features
 next: /docs/troubleshooting
 ---
 
-Orchestrion offers serveral ways to control the traces produced by instrumented
+Orchestrion offers several ways to control the traces produced by instrumented
 applications.
 
 ## Prevent instrumentation of a section of code
@@ -144,7 +144,7 @@ Functions that accept neither solely rely on _goroutine local storage_ for trace
 propagation. This means that traces may be split on _goroutine_ boundaries
 unless a {{<godoc import-path="context" name="Context" >}} or
 {{<godoc import-path="net/http" package="http" name="Request" prefix="*">}}
-value carying trace context is passed across.
+value carrying trace context is passed across.
 
 Trace context carrying {{<godoc import-path="context" name="Context" >}} values
 are those that:

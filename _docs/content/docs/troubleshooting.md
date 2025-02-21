@@ -112,7 +112,7 @@ Setting `ORCHESTRION_LOG_FILE` changes the default value of
 {{</callout>}}
 
 The tokens `$PID` and `${PID}` in `ORCHESTRION_LOG_FILE` are automatically
-replaced by the loggin process' PID. This can cause a significant amount of
+replaced by the logging process' PID. This can cause a significant amount of
 files to be created when building large projects, but reduces contention writing
 to each file.
 

@@ -313,7 +313,7 @@
             "required": ["id"],
             "properties": {
               "id": {
-                "description": "An identifier for this aspect. Must be unique withing the configuration file.",
+                "description": "An identifier for this aspect. Must be unique within the configuration file.",
                 "type": "string",
                 "minLength": 1
               }

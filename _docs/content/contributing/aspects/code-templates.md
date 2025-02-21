@@ -111,7 +111,7 @@ them safe to produce in multiple locations in the output.
 
 #### The `.AST` method
 
-The `.AST` method returns a view of the node's AST. This view allows refering
+The `.AST` method returns a view of the node's AST. This view allows referring
 to all attributes of the original AST nodes, producing a similar view object for
 each child node.
 

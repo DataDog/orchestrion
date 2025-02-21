@@ -197,7 +197,7 @@ sequenceDiagram
 
 The standard Go toolchain invokes `go tool link` (①) once for each executable
 binary being produced. When using `go run` or `go build`, this is a single
-invocation; hoever `go test` will invoke the linker once for each test package.
+invocation; however `go test` will invoke the linker once for each test package.
 
 Orchestrion intercepts the linker commands to update the `-importcfg` file so
 that it correctly lists all link-time dependencies introduced by instrumentation
@@ -215,7 +215,7 @@ Finally, it invokes the `go tool link` with updated arguments (⑧).
 Orchestrion drives code injection using a process similar to classical
 Aspect-oriented Programming (AoP) (see [Aspects][contrib-aspects]). These
 combine a _Join Point_ (where code needs to be modified) with one or more
-_Advices_ (what modifications need to be made).
+_Advice_s (what modifications need to be made).
 
 In order to reduce the cost of evaluation ({{<godoc
 import-path="gopkg.in/DataDog/dd-trace-go.v1">}}) ships more than 100 different
