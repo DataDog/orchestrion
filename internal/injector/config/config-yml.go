@@ -12,8 +12,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"gopkg.in/yaml.v3"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 )
 
 const FilenameOrchestrionYML = "orchestrion.yml"

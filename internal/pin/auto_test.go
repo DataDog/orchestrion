@@ -12,10 +12,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/injector/config"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/orchestrion/internal/injector/config"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 func TestAutoPin(t *testing.T) {

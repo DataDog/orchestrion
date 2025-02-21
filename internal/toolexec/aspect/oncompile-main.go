@@ -17,10 +17,11 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"github.com/rs/zerolog"
 )
 
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for

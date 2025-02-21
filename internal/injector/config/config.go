@@ -10,8 +10,9 @@ package config
 import (
 	"fmt"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 )
 
 // Config represents an injector's configuration. It can be obtained using

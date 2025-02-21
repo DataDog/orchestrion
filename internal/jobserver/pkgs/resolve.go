@@ -16,11 +16,12 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rs/zerolog"
+	"golang.org/x/tools/go/packages"
+
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/rs/zerolog"
-	"golang.org/x/tools/go/packages"
 )
 
 const (

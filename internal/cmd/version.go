@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/urfave/cli/v2"
+
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 var Version = &cli.Command{

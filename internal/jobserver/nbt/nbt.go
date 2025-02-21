@@ -14,11 +14,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/DataDog/orchestrion/internal/files"
-	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
+
+	"github.com/DataDog/orchestrion/internal/files"
+	"github.com/DataDog/orchestrion/internal/jobserver/common"
 )
 
 const (

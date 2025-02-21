@@ -15,13 +15,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otiai10/copy"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/require"
+
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"github.com/otiai10/copy"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/require"
 )
 
 var rootDir string

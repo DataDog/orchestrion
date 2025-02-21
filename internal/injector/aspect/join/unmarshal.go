@@ -8,8 +8,9 @@ package join
 import (
 	"fmt"
 
-	"github.com/DataDog/orchestrion/internal/injector/singleton"
 	"gopkg.in/yaml.v3"
+
+	"github.com/DataDog/orchestrion/internal/injector/singleton"
 )
 
 type unmarshalerFn func(*yaml.Node) (Point, error)

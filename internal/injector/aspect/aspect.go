@@ -8,10 +8,11 @@ package aspect
 import (
 	"errors"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
-	"gopkg.in/yaml.v3"
 )
 
 // Aspect binds advice.Advice to a join.Point, effectively defining a complete

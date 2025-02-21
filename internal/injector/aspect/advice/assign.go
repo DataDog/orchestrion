@@ -8,11 +8,12 @@ package advice
 import (
 	"fmt"
 
+	"github.com/dave/dst"
+	"gopkg.in/yaml.v3"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
 )
 
 type assignValue struct {

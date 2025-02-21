@@ -10,10 +10,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"github.com/rs/zerolog"
 )
 
 func (Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) error {

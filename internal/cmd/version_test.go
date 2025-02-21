@@ -12,10 +12,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/cmd"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
+
+	"github.com/DataDog/orchestrion/internal/cmd"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 func TestVersion(t *testing.T) {

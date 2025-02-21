@@ -8,9 +8,10 @@ package context
 import (
 	"sync"
 
-	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
+
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 type AspectContext interface {

@@ -11,10 +11,11 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/dave/dst"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"github.com/dave/dst"
 )
 
 // Point is the interface that abstracts selection of nodes where to inject

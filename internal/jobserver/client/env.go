@@ -16,9 +16,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/filelock"
-	"github.com/rs/zerolog"
 )
 
 const (

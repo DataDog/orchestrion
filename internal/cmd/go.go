@@ -9,10 +9,11 @@ import (
 	"errors"
 	"os/exec"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goproxy"
 	"github.com/DataDog/orchestrion/internal/pin"
-	"github.com/urfave/cli/v2"
 )
 
 var (

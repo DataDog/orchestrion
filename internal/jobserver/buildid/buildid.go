@@ -9,9 +9,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
+
+	"github.com/DataDog/orchestrion/internal/jobserver/common"
 )
 
 const (

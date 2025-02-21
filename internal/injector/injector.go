@@ -17,16 +17,17 @@ import (
 	"go/types"
 	"sync"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/parse"
-	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/decorator/resolver"
 	"github.com/dave/dst/decorator/resolver/gotypes"
 	"github.com/dave/dst/dstutil"
 	"github.com/rs/zerolog"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/parse"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 type (

@@ -20,15 +20,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/DataDog/orchestrion/internal/filelock"
-	"github.com/DataDog/orchestrion/internal/goenv"
-	"github.com/DataDog/orchestrion/internal/injector/config"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/rs/zerolog"
 	"golang.org/x/mod/semver"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/DataDog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/injector/config"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 const (

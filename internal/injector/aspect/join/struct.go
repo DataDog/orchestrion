@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"go/token"
 
+	"github.com/dave/dst"
+	"gopkg.in/yaml.v3"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
 )
 
 type structDefinition struct {

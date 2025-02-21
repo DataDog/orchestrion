@@ -16,8 +16,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
 )
 
 const FilenameOrchestrionToolGo = "orchestrion.tool.go"

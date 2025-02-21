@@ -21,11 +21,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/DataDog/orchestrion/internal/goenv"
-	"github.com/DataDog/orchestrion/internal/goflags/quoted"
 	"github.com/rs/zerolog"
 	"github.com/shirou/gopsutil/v4/process"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/goflags/quoted"
 )
 
 // CommandFlags represents the flags provided to a go command invocation

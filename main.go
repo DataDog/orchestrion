@@ -20,12 +20,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DataDog/orchestrion/internal/cmd"
-	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
+
+	"github.com/DataDog/orchestrion/internal/cmd"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 const (

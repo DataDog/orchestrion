@@ -15,8 +15,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/orchestrion/internal/injector/parse"
 )
 
 const goFile = `

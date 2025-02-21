@@ -10,12 +10,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dave/dst"
+	"gopkg.in/yaml.v3"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
-	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
 )
 
 type appendArgs struct {
