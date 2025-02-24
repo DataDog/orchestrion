@@ -45,6 +45,11 @@ func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 		Type:  a.TypeName.AsNode(),
 	})
 
+	if importPath := a.TypeName.ImportPath(); importPath != "" {
+		// If the type name is qualified, we may need to import the package, too.
+		_ = ctx.AddImport(importPath, inferPkgName(importPath))
+	}
+
 	return true, nil
 }
 

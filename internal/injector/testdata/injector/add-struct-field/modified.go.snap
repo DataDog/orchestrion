@@ -1,0 +1,12 @@
+//line input.go:1:1
+package example
+
+//line <generated>:1
+import __orchestrion_time "time"
+
+//line input.go:3
+type injectMe struct {
+  existingField string
+//line <generated>:1
+  newField __orchestrion_time.Duration
+}
