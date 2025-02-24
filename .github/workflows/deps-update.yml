@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload Artifact
         if: steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:
           name: Patches
           path: ${{ runner.temp }}/go.diff.patch
@@ -109,7 +109,7 @@ jobs:
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
           git fetch origin "${branch}"
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@73c7d0fefec75e06673b9de4fb62f1d45561e098 # v0.2.5
+        uses: planetscale/ghcommit-action@b808a75a44019963dc31f342b50e64e3b3f35ae1 # v0.2.6
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ github.repository }}
@@ -133,7 +133,7 @@ jobs:
       # The standard GitHub Token will not trigger downstream workflows, so in order to kick off CI,
       # we'll push a blank commit to the PR branch with the mutator token.
       - name: Trigger CI
-        uses: planetscale/ghcommit-action@73c7d0fefec75e06673b9de4fb62f1d45561e098 # v0.2.5
+        uses: planetscale/ghcommit-action@b808a75a44019963dc31f342b50e64e3b3f35ae1 # v0.2.6
         with:
           commit_message: "blank: trigger CI"
           repo: ${{ github.repository }}
