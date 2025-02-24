@@ -22,4 +22,8 @@ func main() {
 	if err := gen.Generate(); err != nil {
 		log.Fatalln(err)
 	}
+
+	if err := documentSchema(filepath.Join(thisFile, "..", "..", "content", "contributing", "aspects")); err != nil {
+		log.Fatalln(err)
+	}
 }
