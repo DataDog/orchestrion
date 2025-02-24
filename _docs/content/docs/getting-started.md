@@ -23,7 +23,7 @@ It also requires the use of
 
 We recommend installing Orchestrion as a project tool dependency, as this
 ensures you are in control of the exact versions of Orchestion and the Datadog
-tracing library being used; and that your builds are reproductible.
+tracing library being used; and that your builds are reproducible.
 
 This is achieved using the following steps:
 
@@ -41,7 +41,7 @@ $ export PATH="$PATH:$(go env GOBIN)"
 ```
 
 ### Step 2
-Register `orchestrion` in your project's `go.mod` to ensure reproductible builds:
+Register `orchestrion` in your project's `go.mod` to ensure reproducible builds:
 ```console
 $ orchestrion pin
 ```
