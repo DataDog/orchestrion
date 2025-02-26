@@ -11,8 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/orchestrion/internal/filelock"
 )
 
 func Test(t *testing.T) {

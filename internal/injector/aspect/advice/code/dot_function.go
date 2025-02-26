@@ -9,8 +9,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 )
 
 type (

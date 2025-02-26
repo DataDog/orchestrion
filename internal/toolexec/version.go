@@ -12,11 +12,12 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"github.com/rs/zerolog"
 )
 
 // ComputeVersion returns the complete version string to be produced when the toolexec is invoked

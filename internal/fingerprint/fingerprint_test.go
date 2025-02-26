@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/orchestrion/internal/fingerprint"
 )
 
 func TestCast(t *testing.T) {

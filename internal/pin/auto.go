@@ -13,12 +13,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/DataDog/orchestrion/internal/ensure"
-	"github.com/DataDog/orchestrion/internal/injector/config"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/zerolog"
 	"golang.org/x/term"
+
+	"github.com/DataDog/orchestrion/internal/ensure"
+	"github.com/DataDog/orchestrion/internal/injector/config"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 const envVarCheckedGoMod = "DD_ORCHESTRION_IS_GOMOD_VERSION"

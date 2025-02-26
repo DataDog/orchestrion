@@ -10,12 +10,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rs/zerolog"
+	"github.com/urfave/cli/v2"
+
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/DataDog/orchestrion/internal/toolexec"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
-	"github.com/rs/zerolog"
-	"github.com/urfave/cli/v2"
 )
 
 var Toolexec = &cli.Command{

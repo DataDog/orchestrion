@@ -12,10 +12,11 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/DataDog/orchestrion/internal/goenv"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 const orchestrionPkgPath = "github.com/DataDog/orchestrion"

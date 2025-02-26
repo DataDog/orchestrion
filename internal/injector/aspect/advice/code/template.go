@@ -14,12 +14,13 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/DataDog/orchestrion/internal/fingerprint"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"gopkg.in/yaml.v3"
+
+	"github.com/DataDog/orchestrion/internal/fingerprint"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 type Template struct {
