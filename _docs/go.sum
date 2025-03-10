@@ -1041,8 +1041,8 @@ github.com/serialx/hashring v0.0.0-20200727003509-22c0c7ab6b1b h1:h+3JX2VoWTFuyQ
 github.com/serialx/hashring v0.0.0-20200727003509-22c0c7ab6b1b/go.mod h1:/yeG0My1xr/u+HZrFQ1tOQQQQrOawfyMUH13ai5brBc=
 github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh5dkI=
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
-github.com/shirou/gopsutil/v3 v3.24.5 h1:i0t8kL+kQTvpAYToeuiVk3TgDeKOFioZO3Ztz/iZ9pI=
-github.com/shirou/gopsutil/v3 v3.24.5/go.mod h1:bsoOS1aStSs9ErQ1WWfxllSeS1K5D+U30r2NfcubMVk=
+github.com/shirou/gopsutil/v3 v3.24.4 h1:dEHgzZXt4LMNm+oYELpzl9YCqV65Yr/6SfrvgRBtXeU=
+github.com/shirou/gopsutil/v3 v3.24.4/go.mod h1:lTd2mdiOspcqLgAnr9/nGi71NkeMpWKdmhuxm9GusH8=
 github.com/shirou/gopsutil/v4 v4.25.2 h1:NMscG3l2CqtWFS86kj3vP7soOczqrQYIEhO/pMvvQkk=
 github.com/shirou/gopsutil/v4 v4.25.2/go.mod h1:34gBYJzyqCDT11b6bMHP0XCvWeU3J61XRT7a2EmCRTA=
 github.com/shoenig/go-m1cpu v0.1.6 h1:nxdKQNcEB6vzgA2E2bvzKIYRuNj7XNJ4S/aRSwKzFtM=
@@ -1189,8 +1189,8 @@ go.opentelemetry.io/collector/component/componentstatus v0.118.0 h1:1aCIdUjqz0no
 go.opentelemetry.io/collector/component/componentstatus v0.118.0/go.mod h1:ynO1Nyj0t1h6x/djIMJy35bhnnWEc2mlQaFgDNUO504=
 go.opentelemetry.io/collector/component/componenttest v0.119.0 h1:nVlBmKSu56zO/qCcNgDYCQsRoWAL+NPkrkIPAbapdQM=
 go.opentelemetry.io/collector/component/componenttest v0.119.0/go.mod h1:H6KVzLkNhB/deEijLcq91Kjgs9Oshx2ZsFAwaMcuTLs=
-go.opentelemetry.io/collector/config/configtelemetry v0.121.0 h1:0nEcLHRjr6E9P0LXhy7uluPpOw78YZ4N0t6pZJ5ug0g=
-go.opentelemetry.io/collector/config/configtelemetry v0.121.0/go.mod h1:WXmlNatI0vwjv7whh/qF1Xy+UufCZDk7VLtYqML7QmA=
+go.opentelemetry.io/collector/config/configtelemetry v0.119.0 h1:gAgMUEVXZKgpASxOrhS55DyA/aYatq0U6gitZI8MLXw=
+go.opentelemetry.io/collector/config/configtelemetry v0.119.0/go.mod h1:SlBEwQg0qly75rXZ6W1Ig8jN25KBVBkFIIAUI1GiAAE=
 go.opentelemetry.io/collector/consumer v1.24.0 h1:7DeyBm9qdr1EPuCfPjWyChPK16DbVc0wZeSa9LZprFU=
 go.opentelemetry.io/collector/consumer v1.24.0/go.mod h1:0G6jvZprIp4dpKMD1ZxCjriiP9GdFvFMObsQEtTk71s=
 go.opentelemetry.io/collector/consumer/consumertest v0.118.0 h1:8AAS9ejQapP1zqt0+cI6u+AUBheT3X0171N9WtXWsVY=
