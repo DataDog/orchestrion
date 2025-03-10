@@ -19,15 +19,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/injector"
-	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/golden"
+
+	"github.com/DataDog/orchestrion/internal/injector"
+	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 type testConfig struct {

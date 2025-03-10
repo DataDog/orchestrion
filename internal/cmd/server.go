@@ -14,13 +14,14 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog"
+	"gopkg.in/yaml.v3"
+
 	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/fsnotify/fsnotify"
-	"github.com/rs/zerolog"
-	"gopkg.in/yaml.v3"
 
 	"github.com/urfave/cli/v2"
 )

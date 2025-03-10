@@ -16,10 +16,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/goenv"
-	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
+
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/version"
 )
 
 func TestGoModVersion(t *testing.T) {

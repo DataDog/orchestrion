@@ -13,12 +13,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/dave/dst/dstutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 )
 
 func TestDirectiveMatch(t *testing.T) {

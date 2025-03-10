@@ -14,14 +14,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/nats.go"
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
-	"github.com/nats-io/nats-server/v2/server"
-	"github.com/nats-io/nats.go"
-	"github.com/rs/zerolog"
 )
 
 const (

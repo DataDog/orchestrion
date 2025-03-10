@@ -15,9 +15,10 @@ import (
 	"slices"
 	"sync/atomic"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"golang.org/x/sync/errgroup"
 )
 
 // maxBytesEagerness is the maximum number of bytes the files of a certain package can have before

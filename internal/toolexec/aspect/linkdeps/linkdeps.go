@@ -15,8 +15,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/rs/zerolog"
+
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 )
 
 const (

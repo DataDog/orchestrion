@@ -14,13 +14,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
-	"github.com/rs/zerolog"
 )
 
 //go:generate go run github.com/DataDog/orchestrion/internal/toolexec/proxy/generator -command=compile

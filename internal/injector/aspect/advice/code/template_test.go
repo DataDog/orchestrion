@@ -8,13 +8,14 @@ package code_test
 import (
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/v3/golden"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 )
 
 func TestTemplate(t *testing.T) {

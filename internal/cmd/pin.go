@@ -6,9 +6,10 @@
 package cmd
 
 import (
+	"github.com/urfave/cli/v2"
+
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/pin"
-	"github.com/urfave/cli/v2"
 )
 
 var Pin = &cli.Command{

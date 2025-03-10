@@ -11,8 +11,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/nats-io/nats.go"
+
+	"github.com/DataDog/orchestrion/internal/jobserver/common"
 )
 
 const (
