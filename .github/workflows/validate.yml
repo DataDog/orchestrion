@@ -111,7 +111,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
       - name: Download patch
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
         with:
           name: repo.patch
           path: ${{ runner.temp }}
@@ -120,7 +120,7 @@ jobs:
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        uses: planetscale/ghcommit-action@b808a75a44019963dc31f342b50e64e3b3f35ae1 # v0.2.6
+        uses: planetscale/ghcommit-action@86434b0b2603b57a211bae56ceee257b85646630 # v0.2.8
         with:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
@@ -151,7 +151,7 @@ jobs:
       - name: vet
         run: go vet ./...
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@212923e4ff05b7fc2294a204405eec047b807138 # v1.29.9
+        uses: crate-ci/typos@8951ef9cb569c860bc8f3f18070fbfaf65cdb349 # v1.30.0
         with:
           files: |
             _docs/
@@ -370,7 +370,7 @@ jobs:
         with:
           node-version: latest
       - name: Download Artifacts
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
         with:
           pattern: coverage-*
       - name: Compute Matrix
@@ -435,7 +435,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Download Artifacts
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
         with:
           pattern: coverage-*
       - name: Upload Reports
