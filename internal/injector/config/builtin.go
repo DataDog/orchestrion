@@ -35,7 +35,8 @@ var builtIn = configGo{
 				},
 			},
 			{
-				ID: "built.WithOrchestrionVersion",
+				ID:             "built.WithOrchestrionVersion",
+				TracerInternal: true, // This is safe to apply in the tracer itself
 				JoinPoint: join.AllOf(
 					join.ValueDeclaration(join.MustTypeName("string")),
 					join.OneOf(
