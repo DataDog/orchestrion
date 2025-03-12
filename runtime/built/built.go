@@ -17,3 +17,9 @@ package built
 // avoid double-instrumentation, or to guarantee the application runs with
 // automatic instrumentation. Most users should not need to use this variable.
 const WithOrchestrion = false
+
+// WithOrchestrionVersion is the version of orchestrion used to build the
+// library, if the application was built by it. It is a blank string otherwise.
+// This can be useful context to include in logs when the use of orchestrion is
+// relevant. Most users should not need to use this variable.
+const WithOrchestrionVersion = ""

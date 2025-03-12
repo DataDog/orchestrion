@@ -195,7 +195,7 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 1) // Just the orchestrion:enabled aspect
+		assert.Len(t, cfg.Aspects(), len(builtIn.yaml.aspects)) // Just the orchestrion:... aspects
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
@@ -210,7 +210,7 @@ func TestLoad(t *testing.T) {
 		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
-		assert.Len(t, cfg.Aspects(), 116)
+		assert.Len(t, cfg.Aspects(), 115+len(builtIn.yaml.aspects))
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 
@@ -241,7 +241,7 @@ func TestLoad(t *testing.T) {
 		loader := NewLoader(tmp, false)
 		cfg, err := loader.Load()
 		require.NoError(t, err)
-		require.Len(t, cfg.Aspects(), 2)
+		require.Len(t, cfg.Aspects(), len(builtIn.yaml.aspects)+1)
 	})
 }
 

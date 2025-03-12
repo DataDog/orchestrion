@@ -3,3 +3,4 @@ yaml:
   name: <built-in>
   aspects:
     - built.WithOrchestrion
+    - built.WithOrchestrionVersion

@@ -5,6 +5,7 @@ imports:
       name: <built-in>
       aspects:
         - built.WithOrchestrion
+        - built.WithOrchestrionVersion
   - pkgpath: gopkg.in/DataDog/dd-trace-go.v1
     imports:
       - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen
