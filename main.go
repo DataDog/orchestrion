@@ -33,6 +33,7 @@ const (
 	envVarOrchestrionLogLevel        = "ORCHESTRION_LOG_LEVEL"
 	envVarOrchestrionProfilePath     = "ORCHESTRION_PROFILE_PATH"
 	envVarOrchestrionEnabledProfiles = "ORCHESTRION_ENABLED_PROFILES"
+	envVarOrchestrionReportFile      = "ORCHESTRION_REPORT_FILE"
 	envVarToolexecImportPath         = "TOOLEXEC_IMPORTPATH"
 )
 
@@ -97,6 +98,23 @@ func main() {
 				Usage:    "Send logging output to a file instead of STDERR. Unless --log-level is also specified, the default log level changed to WARN.",
 				Action:   actionSetLogFile,
 			},
+			&cli.BoolFlag{
+				Category: "Reporting",
+				Name:     "report",
+				EnvVars:  []string{envVarOrchestrionReportFile},
+				Usage: "Create a report file in orchestrion-report.json which can be read by calling `orchestrion diff orchestrion-report.json` with it." +
+					" This is useful for debugging and understanding the changes made by orchestrion but this comes with many limitations:" +
+					" - This forces a full rebuild of the project using the `-a` go flag" +
+					" - This tells go to keep all temporary build file alive so we can do a diff on them",
+				Action: func(c *cli.Context, b bool) error {
+					if b {
+						if err := os.Setenv(envVarOrchestrionReportFile, "orchestrion-report.json"); err != nil {
+							return cli.Exit(fmt.Errorf("setting environment %s: %w", envVarOrchestrionReportFile, err), 1)
+						}
+					}
+					return nil
+				},
+			},
 			&cli.StringFlag{
 				Category: "Profiling",
 				Name:     "profile-path",
@@ -118,6 +136,7 @@ func main() {
 			cmd.Toolexec,
 			cmd.Version,
 			cmd.Server,
+			cmd.Diff,
 		},
 		Before: func(ctx *cli.Context) error {
 			profiles := ctx.StringSlice("profile")

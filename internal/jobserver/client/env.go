@@ -73,6 +73,7 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 		"-inactivity-timeout=15m",
 		fmt.Sprintf("-url-file=%s", urlFilePath),
 		fmt.Sprintf("-parent-pid=%d", os.Getpid()),
+		fmt.Sprintf("-report-path=%s", filepath.Join(workDir, "orchestrion-report.json")),
 	)
 	cmd.SysProcAttr = &sysProcAttrDaemon                   // Make sure go doesn't wait for this to exit...
 	cmd.Env = append(os.Environ(), "TOOLEXEC_IMPORTPATH=") // Suppress the TOOLEXEC_IMPORTPATH variable if it's set.

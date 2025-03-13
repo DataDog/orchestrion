@@ -70,6 +70,10 @@ var Server = &cli.Command{
 				return goflags.SetFlagsFromPid(ctx.Context, val)
 			},
 		},
+		&cli.StringFlag{
+			Name:  "report-path",
+			Usage: "Write a report of the current execution for the user to use and diff.",
+		},
 	},
 	Hidden: true,
 	Action: func(ctx *cli.Context) error {
@@ -80,6 +84,7 @@ var Server = &cli.Command{
 			Port:              ctx.Int("port"),
 			InactivityTimeout: ctx.Duration("inactivity-timeout"),
 			EnableLogging:     ctx.Bool("nats-logging"),
+			ReportPath:        ctx.String("report-path"),
 		}
 
 		if urlFile := ctx.String("url-file"); urlFile != "" {

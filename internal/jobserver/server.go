@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/report"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -69,6 +70,8 @@ type (
 		// NoListener disables the network listener, only allowing in-process
 		// connections to be made to this server instead.
 		NoListener bool
+		// ReportPath is the path to the report file that should be written once the server has ended.
+		ReportPath string
 	}
 )
 
@@ -158,13 +161,27 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 		clientURL:  clientURL,
 		log:        log,
 	}
+
+	var emptyReport *report.Report
+	if opts.ReportPath != "" {
+		emptyReport, err = report.NewEmptyReport(opts.ReportPath)
+		if err != nil {
+			return nil, err
+		}
+		log.Info().Str("path", opts.ReportPath).Msg("orchestrion report enabled")
+		res.onShutdown(func(context.Context) error {
+			log.Info().Str("path", opts.ReportPath).Msg("Saving report...")
+			return emptyReport.Save()
+		})
+	}
+
 	if err := buildid.Subscribe(ctx, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
 	if err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats); err != nil {
 		return nil, err
 	}
-	cleanup, err := nbt.Subscribe(ctx, conn)
+	cleanup, err := nbt.Subscribe(ctx, conn, emptyReport)
 	if err != nil {
 		return nil, err
 	}
