@@ -34,11 +34,27 @@ var builtIn = configGo{
 					),
 				},
 			},
+			{
+				ID:             "built.WithOrchestrionVersion",
+				TracerInternal: true, // This is safe to apply in the tracer itself
+				JoinPoint: join.AllOf(
+					join.ValueDeclaration(join.MustTypeName("string")),
+					join.OneOf(
+						join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrionVersion"),
+						join.Directive("orchestrion:version"),
+					),
+				),
+				Advice: []advice.Advice{
+					advice.AssignValue(
+						code.MustTemplate(`{{Version | printf "%q"}}`, nil, context.GoLangVersion{}),
+					),
+				},
+			},
 		},
 		name: "<built-in>",
 		meta: configYMLMeta{
-			name:        "built.WithOrchestrion & //orchestrion:enabled",
-			description: "Flip a boolean to true if Orchestrion is enabled.",
+			name:        "github.com/DataDog/orchestrion/built & //orchestrion: pragmas",
+			description: "Provide runtime visibility into whether orchestrion built an application or not",
 			icon:        "cog",
 			caveats: "This aspect allows introducing conditional logic based on whether" +
 				"Orchestrion has been used to instrument an application or not. This should" +
