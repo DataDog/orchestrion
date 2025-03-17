@@ -1,8 +1,11 @@
 Component,Origin,License,Copyright
 orchestrion,github.com/DataDog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
 orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
+orchestrion,github.com/charmbracelet/colorprofile,MIT,"Copyright (c) 2020-2024 Charmbracelet, Inc"
 orchestrion,github.com/charmbracelet/lipgloss,MIT,"Copyright (c) 2021-2023 Charmbracelet, Inc"
 orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
+orchestrion,github.com/charmbracelet/x/cellbuf,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
+orchestrion,github.com/charmbracelet/x/term,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
 orchestrion,github.com/cpuguy83/go-md2man/v2/md2man,MIT,Copyright (c) 2014 Brian Goff
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
 orchestrion,github.com/dave/jennifer/jen,MIT,Copyright (c) 2017 David Brophy
@@ -34,6 +37,7 @@ orchestrion,github.com/urfave/cli/v2,MIT,Copyright (c) 2022 urfave/cli maintaine
 orchestrion,github.com/xeipuuv/gojsonpointer,Apache-2.0,Copyright 2015 xeipuuv
 orchestrion,github.com/xeipuuv/gojsonreference,Apache-2.0,Copyright 2015 xeipuuv
 orchestrion,github.com/xeipuuv/gojsonschema,Apache-2.0,Copyright 2015 xeipuuv
+orchestrion,github.com/xo/terminfo,MIT,Copyright (c) 2016 Anmol Sethi
 orchestrion,github.com/xrash/smetrics,MIT,Copyright (C) 2016 Felipe da Cunha Gonçalves
 orchestrion,github.com/yusufpapurcu/wmi,MIT,Copyright (c) 2013 Stack Exchange
 orchestrion,golang.org/x/crypto,BSD-3-Clause,Copyright 2009 The Go Authors.
