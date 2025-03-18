@@ -399,7 +399,11 @@ func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err
 		// the registered rosetta binfmt handler. In such cases, the argv0 has a leaf name of "rosetta"
 		// and is not present within the container itself (it's only on the hypervisor). In such cases,
 		// we try to resolve argv[1] instead. This can only manifest itself on amd64 + linux.
-		if errors.Is(err, fs.ErrNotExist) && runtime.GOARCH == "amd64" && runtime.GOOS == "linux" && filepath.Base(args[0]) == "rosetta" && len(args) > 1 {
+		notExist := errors.Is(err, fs.ErrNotExist) || (err != nil && strings.Contains(err.Error(), "executable file not found"))
+		base := filepath.Base(args[0])
+		emulation := runtime.GOARCH == "amd64" && strings.Contains(base, "rosetta")
+		emulation = emulation || strings.Contains(base, "qemu")
+		if notExist && runtime.GOOS == "linux" && emulation && len(args) > 1 {
 			log.Trace().Err(err).Msg("Attempting to resolve rosetta target after error resolving argv0")
 			var err2 error
 			cmd, err2 = exec.LookPath(args[1])
