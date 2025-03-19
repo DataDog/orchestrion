@@ -20,14 +20,15 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/rs/zerolog"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/tools/go/packages"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/version"
-	"github.com/rs/zerolog"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/tools/go/packages"
 )
 
 type (

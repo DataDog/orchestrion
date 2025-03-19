@@ -8,8 +8,9 @@ package common_test
 import (
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/stretchr/testify/require"
+
+	"github.com/DataDog/orchestrion/internal/jobserver/common"
 )
 
 func Test(t *testing.T) {

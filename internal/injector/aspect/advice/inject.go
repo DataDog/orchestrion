@@ -8,10 +8,11 @@ package advice
 import (
 	"fmt"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"gopkg.in/yaml.v3"
 )
 
 type injectDeclarations struct {
