@@ -37,7 +37,7 @@ var (
 func TestSamples(t *testing.T) {
 	t.Parallel()
 
-	config, err := config.NewLoader(samplesDir, true).Load()
+	config, err := config.NewLoader(samplesDir, true).Load(context.Background())
 	require.NoError(t, err)
 	aspects := config.Aspects()
 
