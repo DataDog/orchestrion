@@ -76,7 +76,7 @@ var Server = &cli.Command{
 		log := zerolog.Ctx(ctx.Context)
 
 		opts := jobserver.Options{
-			ServerName:        "github.com/DataDog/orchestrion server",
+			ServerName:        "github.com/DataDog/orchestrion/cmd/server",
 			Port:              ctx.Int("port"),
 			InactivityTimeout: ctx.Duration("inactivity-timeout"),
 			EnableLogging:     ctx.Bool("nats-logging"),
