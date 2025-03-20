@@ -11,7 +11,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/ext"
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
+	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/nats-io/nats.go"
 )
 
@@ -50,17 +53,35 @@ type (
 )
 
 func Request[Res any, Req request[Res]](ctx context.Context, client *Client, req Req) (Res, error) {
-	reqData, err := json.Marshal(req)
+	span, ctx := tracer.StartSpanFromContext(ctx, "nats.client",
+		tracer.ServiceName("orchestrion-jobserver"),
+		tracer.ResourceName(req.Subject()),
+		tracer.Tag(ext.SpanKind, ext.SpanKindClient),
+	)
+	defer span.Finish()
+
+	req.ForeachSpanTag(span.SetTag)
+
+	reqData, err := func() (_ []byte, err error) {
+		span := span.StartChild("json.Marshal")
+		defer func() { span.Finish(tracer.WithError(err)) }()
+
+		return json.Marshal(req)
+	}()
 	if err != nil {
 		var zero Res
 		return zero, fmt.Errorf("encoding request payload: %w", err)
 	}
 
-	resp, err := client.conn.RequestWithContext(ctx, req.Subject(), reqData)
+	msg := nats.NewMsg(req.Subject())
+	msg.Data = reqData
+	tracer.Inject(span.Context(), traceutil.NATSCarrier{Msg: msg})
+
+	resp, err := client.conn.RequestMsgWithContext(ctx, msg)
 	if err != nil {
 		var zero Res
 		return zero, err
 	}
 
-	return common.UnmarshalResponse[Res](resp.Data)
+	return common.UnmarshalResponse[Res](ctx, resp.Data)
 }

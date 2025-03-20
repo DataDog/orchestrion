@@ -6,6 +6,9 @@
 package cmd
 
 import (
+	"strings"
+
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/urfave/cli/v2"
@@ -31,13 +34,18 @@ var Pin = &cli.Command{
 			Value: false,
 		},
 	},
-	Action: func(ctx *cli.Context) error {
-		return pin.PinOrchestrion(ctx.Context, pin.Options{
-			Writer:     ctx.App.Writer,
-			ErrWriter:  ctx.App.ErrWriter,
-			Validate:   ctx.Bool("validate"),
-			NoGenerate: !ctx.Bool("generate"),
-			NoPrune:    !ctx.Bool("prune"),
+	Action: func(clictx *cli.Context) (err error) {
+		span, ctx := tracer.StartSpanFromContext(clictx.Context, "pin",
+			tracer.ResourceName(strings.Join(clictx.Args().Slice(), " ")),
+		)
+		defer func() { span.Finish(tracer.WithError(err)) }()
+
+		return pin.PinOrchestrion(ctx, pin.Options{
+			Writer:     clictx.App.Writer,
+			ErrWriter:  clictx.App.ErrWriter,
+			Validate:   clictx.Bool("validate"),
+			NoGenerate: !clictx.Bool("generate"),
+			NoPrune:    !clictx.Bool("prune"),
 		})
 	},
 }

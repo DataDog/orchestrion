@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
@@ -29,20 +30,25 @@ import (
 // creating circular import dependencies).
 // This ensures that the relevant packages' `init` (if any) are appropriately run, and that the
 // linker automatically picks up these dependencies when creating the full binary.
-func (Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) error {
+func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (err error) {
 	if cmd.Flags.Package != "main" {
 		return nil
 	}
 
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompileMain",
+		tracer.ResourceName(w.ImportPath),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile(main)").Logger()
 	ctx = log.WithContext(ctx)
 
-	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	reg, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	linkDeps, err := linkdeps.FromImportConfig(&reg)
+	linkDeps, err := linkdeps.FromImportConfig(ctx, &reg)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
@@ -74,7 +80,7 @@ func (Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) erro
 			reg.PackageFile[p] = a
 
 			// The package may have its own link-time dependencies we need to resolve
-			tDeps, err := linkdeps.FromArchive(a)
+			tDeps, err := linkdeps.FromArchive(ctx, a)
 			if err != nil {
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, a, err)
 			}

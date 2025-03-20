@@ -12,11 +12,14 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/rs/zerolog"
+	"github.com/urfave/cli/v2"
 )
 
 type config struct {
@@ -121,9 +124,16 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	span, _ := tracer.StartSpanFromContext(ctx, "exec",
+		tracer.ResourceName(cmd.String()),
+	)
+	defer span.Finish()
+	tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &cmd.Env})
+
 	if err := cmd.Run(); err != nil {
 		if err, ok := err.(*exec.ExitError); ok {
-			os.Exit(err.ExitCode())
+			return cli.Exit(err, err.ExitCode())
 		}
 		return fmt.Errorf("exec: %w", err)
 	}

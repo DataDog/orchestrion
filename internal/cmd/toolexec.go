@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/DataDog/orchestrion/internal/toolexec"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
@@ -24,21 +26,26 @@ var Toolexec = &cli.Command{
 	UsageText:       "orchestrion toolexec [tool] [tool args...]",
 	Args:            true,
 	SkipFlagParsing: true,
-	Action: func(ctx *cli.Context) (resErr error) {
-		log := zerolog.Ctx(ctx.Context)
+	Action: func(clictx *cli.Context) (resErr error) {
+		log := zerolog.Ctx(clictx.Context)
 		importPath := os.Getenv("TOOLEXEC_IMPORTPATH")
 
-		proxyCmd, err := proxy.ParseCommand(ctx.Context, importPath, ctx.Args().Slice())
+		span, ctx := tracer.StartSpanFromContext(clictx.Context, "toolexec",
+			tracer.ResourceName(strings.Join(clictx.Args().Slice(), " ")),
+		)
+		defer func() { span.Finish(tracer.WithError(resErr)) }()
+
+		proxyCmd, err := proxy.ParseCommand(ctx, importPath, clictx.Args().Slice())
 		if err != nil || proxyCmd == nil {
 			// An error occurred, or we have been instructed to skip this command.
 			return err
 		}
-		defer func() { proxyCmd.Close(ctx.Context, resErr) }()
+		defer func() { proxyCmd.Close(ctx, resErr) }()
 
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do
 			// any kind of processing on these...
-			err := proxy.RunCommand(proxyCmd)
+			err := proxy.RunCommand(ctx, proxyCmd)
 			var event *zerolog.Event
 			if err != nil {
 				event = log.Error().Err(err)
@@ -50,13 +57,13 @@ var Toolexec = &cli.Command{
 		}
 
 		// Ensure Orchestrion is properly pinned
-		if err := pin.AutoPinOrchestrion(ctx.Context, ctx.App.Writer, ctx.App.ErrWriter); err != nil {
+		if err := pin.AutoPinOrchestrion(ctx, clictx.App.Writer, clictx.App.ErrWriter); err != nil {
 			return cli.Exit(err, -1)
 		}
 
 		if proxyCmd.ShowVersion() {
 			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec version command")
-			fullVersion, err := toolexec.ComputeVersion(ctx.Context, proxyCmd)
+			fullVersion, err := toolexec.ComputeVersion(ctx, proxyCmd)
 			if err != nil {
 				return err
 			}
@@ -68,19 +75,19 @@ var Toolexec = &cli.Command{
 		log.Info().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
 		weaver := aspect.Weaver{ImportPath: importPath}
 
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
+		if err := proxy.ProcessCommand(ctx, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Trace().Msg("OnCompile processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnCompileMain); errors.Is(err, proxy.ErrSkipCommand) {
+		if err := proxy.ProcessCommand(ctx, proxyCmd, weaver.OnCompileMain); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Trace().Msg("OnCompileMain processor requested command skipping...")
 			return nil
 		} else if err != nil {
 			return err
 		}
-		if err := proxy.ProcessCommand(ctx.Context, proxyCmd, weaver.OnLink); errors.Is(err, proxy.ErrSkipCommand) {
+		if err := proxy.ProcessCommand(ctx, proxyCmd, weaver.OnLink); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Trace().Msg("OnLink processor requested command skipping...")
 			return nil
 		} else if err != nil {
@@ -88,7 +95,7 @@ var Toolexec = &cli.Command{
 		}
 
 		log.Debug().Strs("command", proxyCmd.Args()).Msg("Toolexec final command")
-		if err := proxy.RunCommand(proxyCmd); err != nil {
+		if err := proxy.RunCommand(ctx, proxyCmd); err != nil {
 			// Logging as debug, as the error will likely surface back to the user anyway...
 			log.Error().Strs("command", proxyCmd.Args()).Err(err).Msg("Proxied command failed")
 			return err

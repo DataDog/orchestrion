@@ -32,7 +32,7 @@ func ComputeVersion(ctx context.Context, cmd proxy.Command) (string, error) {
 
 	// Get the output of the raw `-V=full` invocation
 	stdout := strings.Builder{}
-	if err := proxy.RunCommand(cmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout }); err != nil {
+	if err := proxy.RunCommand(ctx, cmd, func(cmd *exec.Cmd) { cmd.Stdout = &stdout }); err != nil {
 		return "", err
 	}
 
@@ -52,7 +52,7 @@ func ComputeVersion(ctx context.Context, cmd proxy.Command) (string, error) {
 		}
 	}
 
-	res, err := client.Request(context.Background(), conn, buildid.VersionSuffixRequest{})
+	res, err := client.Request(ctx, conn, buildid.VersionSuffixRequest{})
 	if err != nil {
 		return "", err
 	}

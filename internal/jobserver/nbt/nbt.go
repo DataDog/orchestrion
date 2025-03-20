@@ -119,6 +119,9 @@ const (
 
 func (StartRequest) Subject() string           { return startSubject }
 func (StartRequest) ResponseIs(*StartResponse) {}
+func (r StartRequest) ForeachSpanTag(set func(key string, value any)) {
+	set("request.importPath", r.ImportPath)
+}
 
 func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, error) {
 	if req.ImportPath == "" || req.BuildID == "" {
@@ -185,6 +188,13 @@ type (
 
 func (FinishRequest) Subject() string            { return finishSubject }
 func (FinishRequest) ResponseIs(*FinishResponse) {}
+func (r FinishRequest) ForeachSpanTag(set func(key string, value any)) {
+	set("request.importPath", r.ImportPath)
+	for label, path := range r.Files {
+		set(fmt.Sprintf("request.files.%s", label), path)
+	}
+	set("request.error", r.Error)
+}
 
 var errNoFilesNorError = errors.New("missing files, and no error reported")
 

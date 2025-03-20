@@ -8,8 +8,11 @@
 package config
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
 )
@@ -25,7 +28,7 @@ type Config interface {
 
 // HasConfig determines whether the specified package contains injector
 // configuration, and optionally validates it.
-func HasConfig(pkg *packages.Package, validate bool) (bool, error) {
+func HasConfig(ctx context.Context, pkg *packages.Package, validate bool) (bool, error) {
 	root := packageRoot(pkg)
 	if root == "" {
 		// It contains no .go file, so it can't contain configuration.
@@ -33,7 +36,7 @@ func HasConfig(pkg *packages.Package, validate bool) (bool, error) {
 	}
 
 	l := NewLoader(root, validate)
-	cfg, err := l.loadGoPackage(pkg)
+	cfg, err := l.loadGoPackage(ctx, pkg)
 	if err != nil {
 		return false, err
 	}
@@ -57,8 +60,15 @@ func NewLoader(dir string, validate bool) *Loader {
 }
 
 // Load proceeds to load the configuration from this loader's directory.
-func (l *Loader) Load() (Config, error) {
-	pkgs, err := l.packages(l.dir)
+func (l *Loader) Load(ctx context.Context) (_ Config, err error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "config.Load",
+		tracer.ServiceName("orchestrion-config"),
+		tracer.ResourceName(l.dir),
+		tracer.Tag("validate", l.validate),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
+	pkgs, err := l.packages(ctx, l.dir)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +77,7 @@ func (l *Loader) Load() (Config, error) {
 		panic(fmt.Errorf("no package returned by packages.Load(%q)", l.dir))
 	}
 
-	return l.loadGoPackage(pkgs[0])
+	return l.loadGoPackage(ctx, pkgs[0])
 }
 
 // markLoaded marks the specified file as loaded. Return true if the file was
@@ -80,7 +90,12 @@ func (l *Loader) markLoaded(filename string) bool {
 	return true
 }
 
-func (l *Loader) packages(patterns ...string) ([]*packages.Package, error) {
+func (l *Loader) packages(ctx context.Context, patterns ...string) (_ []*packages.Package, err error) {
+	span, _ := tracer.StartSpanFromContext(ctx, "config.packages",
+		tracer.ResourceName(strings.Join(patterns, " ")),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
 	cfg := packages.Config{
 		BuildFlags: []string{"-toolexec="},
 		Dir:        l.dir,

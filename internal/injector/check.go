@@ -6,6 +6,7 @@
 package injector
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	"go/importer"
@@ -14,12 +15,16 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/parse"
 )
 
 // typeCheck runs the Go type checker on the provided files, and returns the
 // Uses type information map that is built in the process.
-func (i *Injector) typeCheck(fset *token.FileSet, files []parse.File) (types.Info, error) {
+func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File) (types.Info, error) {
+	span, _ := tracer.StartSpanFromContext(ctx, "Injector.typeCheck")
+	defer span.Finish()
+
 	pkg := types.NewPackage(i.ImportPath, i.Name)
 	typeInfo := types.Info{
 		Uses:   make(map[*ast.Ident]types.Object),

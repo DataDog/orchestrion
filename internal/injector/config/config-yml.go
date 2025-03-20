@@ -6,12 +6,14 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"gopkg.in/yaml.v3"
 )
@@ -19,7 +21,7 @@ import (
 const FilenameOrchestrionYML = "orchestrion.yml"
 
 // loadYMLFile loads configuration from the specified directory.
-func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
+func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *configYML, err error) {
 	filename := name
 	if !filepath.IsAbs(name) {
 		filename = filepath.Join(dir, name)
@@ -28,6 +30,11 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 		// Already loaded, ignoring...
 		return nil, nil
 	}
+
+	span, ctx := tracer.StartSpanFromContext(ctx, "config.loadYMLFile",
+		tracer.ResourceName(filename),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
 
 	yml, err := l.parseYMLFile(filename)
 	if err != nil {
@@ -42,7 +49,7 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 		if stat, err := os.Stat(extFilename); err != nil {
 			return nil, maskErrNotExist(err)
 		} else if stat.IsDir() {
-			pkgs, err := l.packages(extFilename)
+			pkgs, err := l.packages(ctx, extFilename)
 			if err != nil {
 				return nil, fmt.Errorf("extends %q: %w", ext, err)
 			}
@@ -51,7 +58,7 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 				panic(fmt.Errorf("extends %q: no package returned by packages.Load(%q)", ext, l.dir))
 			}
 
-			cfg, err := l.loadGoPackage(pkgs[0])
+			cfg, err := l.loadGoPackage(ctx, pkgs[0])
 			if err != nil {
 				return nil, maskErrNotExist(err)
 			}
@@ -63,7 +70,7 @@ func (l *Loader) loadYMLFile(dir string, name string) (*configYML, error) {
 			continue
 		}
 
-		cfg, err := l.loadYMLFile(dir, ext)
+		cfg, err := l.loadYMLFile(ctx, dir, ext)
 		if err != nil {
 			return nil, maskErrNotExist(err)
 		}

@@ -8,7 +8,9 @@ package cmd
 import (
 	"errors"
 	"os/exec"
+	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goproxy"
 	"github.com/DataDog/orchestrion/internal/pin"
@@ -22,15 +24,20 @@ var (
 		UsageText:       "orchestrion go [go command arguments...]",
 		Args:            true,
 		SkipFlagParsing: true,
-		Action: func(ctx *cli.Context) error {
-			if err := pin.AutoPinOrchestrion(ctx.Context, ctx.App.Writer, ctx.App.ErrWriter); err != nil {
+		Action: func(clictx *cli.Context) (err error) {
+			span, ctx := tracer.StartSpanFromContext(clictx.Context, "go",
+				tracer.ResourceName(strings.Join(clictx.Args().Slice(), " ")),
+			)
+			defer func() { span.Finish(tracer.WithError(err)) }()
+
+			if err := pin.AutoPinOrchestrion(ctx, clictx.App.Writer, clictx.App.ErrWriter); err != nil {
 				return cli.Exit(err, -1)
 			}
 
-			if err := goproxy.Run(ctx.Context, ctx.Args().Slice(), goproxy.WithToolexec(binpath.Orchestrion, "toolexec")); err != nil {
+			if err := goproxy.Run(ctx, clictx.Args().Slice(), goproxy.WithToolexec(binpath.Orchestrion, "toolexec")); err != nil {
 				var exitErr *exec.ExitError
 				if errors.As(err, &exitErr) {
-					return cli.Exit("", exitErr.ExitCode())
+					return cli.Exit(err, exitErr.ExitCode())
 				}
 				return cli.Exit(err, -1)
 			}

@@ -17,6 +17,7 @@ import (
 	"go/types"
 	"sync"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/parse"
@@ -83,7 +84,13 @@ type (
 // InjectFiles performs injections on the specified files. All provided file paths must belong to the import path set on
 // the receiving Injector. The method returns a map that associates the original source file path to the modified file
 // information. It does not contain entries for unmodified files.
-func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []*aspect.Aspect) (map[string]InjectedFile, context.GoLangVersion, error) {
+func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []*aspect.Aspect) (_ map[string]InjectedFile, _ context.GoLangVersion, err error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "InjectFiles",
+		tracer.ServiceName("orchestrion-injector"),
+		tracer.ResourceName(i.ImportPath),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
 	if err := i.validate(); err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -93,7 +100,7 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 
 	fset := token.NewFileSet()
 	parser := parse.NewParser(fset, len(files))
-	parsedFiles, err := parser.ParseFiles(files, aspects)
+	parsedFiles, err := parser.ParseFiles(ctx, files, aspects)
 	if err != nil {
 		return nil, context.GoLangVersion{}, err
 	}
@@ -103,7 +110,7 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		return nil, context.GoLangVersion{}, nil
 	}
 
-	typeInfo, err := i.typeCheck(fset, parsedFiles)
+	typeInfo, err := i.typeCheck(ctx, fset, parsedFiles)
 	if errors.Is(err, typeCheckingError{}) {
 		// We don't want to fail here on type-checking errors... Instead do nothing and let the standard
 		// go compiler/toolchain surface the error to the user in a canonical way.
@@ -177,6 +184,11 @@ func (i *Injector) validate() error {
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
 func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decorator, file *dst.File, typeInfo types.Info, aspects []*aspect.Aspect) (result, error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "Injector.injectFile",
+		tracer.ResourceName(decorator.Filenames[file]),
+	)
+	defer span.Finish()
+
 	result, err := i.applyAspects(ctx, parameters{
 		Decorator: decorator,
 		File:      file,
@@ -188,6 +200,8 @@ func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decora
 	}
 
 	if result.Modified {
+		span.SetTag("modified", true)
+
 		result.Filename, err = i.writeModifiedFile(ctx, decorator, file)
 		if err != nil {
 			return result, err

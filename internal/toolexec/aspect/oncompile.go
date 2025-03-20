@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -72,11 +73,16 @@ var weavingSpecialCase = []specialCase{
 }
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile",
+		tracer.ResourceName(w.ImportPath),
+	)
+	defer func() { span.Finish(tracer.WithError(resErr)) }()
+
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
-	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
@@ -88,7 +94,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	goModDir := filepath.Dir(goMod)
 	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
-	cfg, resErr := config.NewLoader(goModDir, false).Load()
+	cfg, resErr := config.NewLoader(goModDir, false).Load(ctx)
 	if resErr != nil {
 		return fmt.Errorf("loading injector configuration: %w", resErr)
 	}
@@ -189,7 +195,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 		}
 		for dep, archive := range deps {
-			deps, err := linkdeps.FromArchive(archive)
+			deps, err := linkdeps.FromArchive(ctx, archive)
 			if err != nil {
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
 			}
