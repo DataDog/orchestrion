@@ -227,7 +227,12 @@ jobs:
   benchmark:
     needs: generate
     runs-on: arm-8core-linux
-    name: Benchmarks
+    name: Benchmarks (run ${{ matrix.run_number }})
+    strategy:
+      matrix:
+        # Run benchmarks 6 times on different runners to smooth out compute discrepancies...
+        run_number: [1, 2, 3, 4, 5, 6]
+      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -240,20 +245,39 @@ jobs:
       - name: Run benchmarks
         run: |-
           set -euo pipefail
-          go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks.txt
+          go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks-${{ matrix.run_number }}.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload benchmark report (raw)
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:
           if-no-files-found: error
-          name: Benchmark Report
-          path: ${{ runner.temp }}/benchmarks.txt
-      - name: Format Report
+          name: Benchmark Report (run ${{ matrix.run_number }})
+          path: ${{ runner.temp }}/benchmarks-${{ matrix.run_number }}.txt
+
+  benchmark-report:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    name: Benchmark Report
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Setup go
+        id: setup-go
+        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5
+        with:
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
+      - name: Download benchmark reports (raw)
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
+        with:
+          pattern: Benchmark Report (run *)
+          path: ${{ runner.temp }}
+      - name: Format report
         run: |-
           go -C _tools run golang.org/x/perf/cmd/benchstat  \
-            -table=.name -row=/repo -col=/variant \
-            ${{ runner.temp }}/benchmarks.txt     \
+            -table=.name -row=/repo -col=/variant           \
+            ${{ runner.temp }}/benchmarks-*.txt             \
             | tee ${{ runner.temp }}/benchmarks-formatted.txt
       - name: Setting Job Summary
         run: |-
@@ -285,7 +309,7 @@ jobs:
       - lint-workflows
       - unit-tests
       - integration-tests
-      - benchmark
+      - benchmark-report
     if: '!cancelled()'
     steps:
       - name: Success
