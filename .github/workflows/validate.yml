@@ -273,10 +273,12 @@ jobs:
         with:
           pattern: Benchmark Report (run *)
           path: ${{ runner.temp }}
+          merge-multiple: true
       - name: Format report
         run: |-
+          set -euo pipefail
           go -C _tools run golang.org/x/perf/cmd/benchstat  \
-            -table=.name -row=/repo -col=/variant           \
+            -table=.name -row=/repo@alpha -col=/variant     \
             ${{ runner.temp }}/benchmarks-*.txt             \
             | tee ${{ runner.temp }}/benchmarks-formatted.txt
       - name: Setting Job Summary
