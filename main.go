@@ -45,21 +45,18 @@ func main() {
 	// If requested, start the tracer...
 	if os.Getenv(envVarOrchestrionTrace) != "" {
 		tracer.Start(
-			tracer.WithService("orchestrion"),
+			tracer.WithService("github.com/DataDog/orchestrion"),
 			tracer.WithServiceVersion(version.Tag()),
 			tracer.WithLogStartup(false),
 		)
 		defer tracer.Stop()
 
-		opts := make([]tracer.StartSpanOption, 0, 3)
+		opts := make([]tracer.StartSpanOption, 0, 2)
 		env := os.Environ()
 		if spanCtx, err := tracer.Extract(traceutil.EnvVarCarrier{Env: &env}); err == nil {
 			opts = append(opts, tracer.ChildOf(spanCtx))
 		}
-		opts = append(opts,
-			tracer.Tag("process.args", os.Args[1:]),
-			tracer.Tag("process.pid", os.Getpid()),
-		)
+		opts = append(opts, tracer.Tag("process.args", os.Args[1:]))
 
 		var span *tracer.Span
 		span, ctx = tracer.StartSpanFromContext(ctx, "main", opts...)

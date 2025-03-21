@@ -34,7 +34,13 @@ func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *c
 	span, ctx := tracer.StartSpanFromContext(ctx, "config.loadYMLFile",
 		tracer.ResourceName(filename),
 	)
-	defer func() { span.Finish(tracer.WithError(err)) }()
+	defer func() {
+		if !errors.Is(err, fs.ErrNotExist) {
+			span.Finish(tracer.WithError(err))
+		} else {
+			span.Finish()
+		}
+	}()
 
 	yml, err := l.parseYMLFile(filename)
 	if err != nil {

@@ -42,9 +42,10 @@ func HandleRequest[Res any, Req Request[Res]](ctx context.Context, handler Reque
 		go func() {
 			if spanCtx, err := tracer.Extract(traceutil.NATSCarrier{Msg: msg}); err == nil && spanCtx != nil {
 				span := tracer.StartSpan("nats.server",
-					tracer.ServiceName("orchestrion-jobserver"),
+					tracer.ServiceName("github.com/DataDog/orchestrion/internal/jobserver"),
 					tracer.ResourceName(msg.Subject),
 					tracer.Tag(ext.SpanKind, ext.SpanKindServer),
+					tracer.Tag(ext.SpanType, "nats"),
 					tracer.ChildOf(spanCtx),
 				)
 				defer span.Finish()

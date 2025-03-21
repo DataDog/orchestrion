@@ -86,7 +86,7 @@ type (
 // information. It does not contain entries for unmodified files.
 func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []*aspect.Aspect) (_ map[string]InjectedFile, _ context.GoLangVersion, err error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "InjectFiles",
-		tracer.ServiceName("orchestrion-injector"),
+		tracer.ServiceName("github.com/DataDog/orchestrion/internal/injector"),
 		tracer.ResourceName(i.ImportPath),
 	)
 	defer func() { span.Finish(tracer.WithError(err)) }()

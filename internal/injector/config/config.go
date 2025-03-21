@@ -61,8 +61,8 @@ func NewLoader(dir string, validate bool) *Loader {
 
 // Load proceeds to load the configuration from this loader's directory.
 func (l *Loader) Load(ctx context.Context) (_ Config, err error) {
-	span, ctx := tracer.StartSpanFromContext(ctx, "config.Load",
-		tracer.ServiceName("orchestrion-config"),
+	span, ctx := tracer.StartSpanFromContext(ctx, "Load",
+		tracer.ServiceName("github.com/DataDog/orchestrion/internal/injector/config"),
 		tracer.ResourceName(l.dir),
 		tracer.Tag("validate", l.validate),
 	)
@@ -91,7 +91,8 @@ func (l *Loader) markLoaded(filename string) bool {
 }
 
 func (l *Loader) packages(ctx context.Context, patterns ...string) (_ []*packages.Package, err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "config.packages",
+	span, _ := tracer.StartSpanFromContext(ctx, "Load",
+		tracer.ServiceName("golang.org/x/tools/go/packages"),
 		tracer.ResourceName(strings.Join(patterns, " ")),
 	)
 	defer func() { span.Finish(tracer.WithError(err)) }()

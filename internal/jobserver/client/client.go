@@ -54,9 +54,9 @@ type (
 
 func Request[Res any, Req request[Res]](ctx context.Context, client *Client, req Req) (Res, error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "nats.client",
-		tracer.ServiceName("orchestrion-jobserver"),
 		tracer.ResourceName(req.Subject()),
 		tracer.Tag(ext.SpanKind, ext.SpanKindClient),
+		tracer.Tag(ext.SpanType, "nats"),
 	)
 	defer span.Finish()
 

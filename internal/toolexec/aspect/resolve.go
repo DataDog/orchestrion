@@ -42,7 +42,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 		req.TempDir = filepath.Join(workDir, "__tmp__")
 	}
 	archives, err := client.Request(
-		context.Background(),
+		ctx,
 		conn,
 		req,
 	)
