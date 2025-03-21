@@ -6,11 +6,11 @@
 package proxy
 
 import (
+	"bytes"
 	gocontext "context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +20,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/blakesmith/ar"
 	"github.com/rs/zerolog"
 )
 
@@ -160,23 +161,38 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
 		return fmt.Errorf("mkdir %q: %w", orchestrionDir, err)
 	}
 
-	linkDepsFile := filepath.Join(orchestrionDir, linkdeps.Filename)
-	if err := cmd.LinkDeps.WriteFile(linkDepsFile); err != nil {
-		return fmt.Errorf("writing %s file: %w", linkdeps.Filename, err)
+	var buf bytes.Buffer
+	if err := cmd.LinkDeps.Write(&buf); err != nil {
+		return fmt.Errorf("writing "+linkdeps.Filename+": %w", err)
 	}
 
 	log := zerolog.Ctx(ctx)
-	log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, &cmd.LinkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
+	log.Trace().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, &cmd.LinkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
 
-	child := exec.Command("go", "tool", "pack", "r", cmd.Flags.Output, linkDepsFile)
-	if err := child.Run(); err != nil {
-		return fmt.Errorf("running %q: %w", child.Args, err)
+	file, err := os.OpenFile(cmd.Flags.Output, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("opening archive: %w", err)
+	}
+	defer file.Close()
+
+	wr := ar.NewWriter(file)
+	if err := wr.WriteHeader(&ar.Header{Name: linkdeps.Filename, Mode: 0o644, Size: int64(buf.Len())}); err != nil {
+		return fmt.Errorf("writing header: %w", err)
+	}
+	if _, err := wr.Write(buf.Bytes()); err != nil {
+		return fmt.Errorf("writing "+linkdeps.Filename+" entry: %w", err)
 	}
 
 	return nil
 }
 
 func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) error {
+	if cmd.finishToken == "" {
+		// Nothing to do...
+		zerolog.Ctx(ctx).Info().Msg("No finish token, skipping job server notification...")
+		return nil
+	}
+
 	jobs, err := client.FromEnvironment(ctx, cmd.WorkDir)
 	if err != nil {
 		return err
@@ -244,12 +260,12 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 	if res.FinishToken != "" {
 		cmd.finishToken = res.FinishToken
 
-		imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+		imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 		if err != nil {
 			return nil, fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 		}
 
-		cmd.LinkDeps, err = linkdeps.FromImportConfig(&imports)
+		cmd.LinkDeps, err = linkdeps.FromImportConfig(ctx, &imports)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 		}

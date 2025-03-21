@@ -37,6 +37,7 @@ type (
 
 func (VersionSuffixRequest) Subject() string                  { return versionSubject }
 func (VersionSuffixRequest) ResponseIs(VersionSuffixResponse) {}
+func (VersionSuffixRequest) ForeachSpanTag(func(string, any)) {}
 
 func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (VersionSuffixResponse, error) {
 	log := zerolog.Ctx(ctx)
@@ -50,7 +51,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 	}
 	s.stats.RecordMiss()
 
-	cfg, err := config.NewLoader(".", false).Load()
+	cfg, err := config.NewLoader(s.packageLoader, ".", false).Load(ctx)
 	if err != nil {
 		return "", fmt.Errorf("loading injector configuration: %w", err)
 	}

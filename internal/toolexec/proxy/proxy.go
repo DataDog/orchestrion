@@ -7,11 +7,12 @@ package proxy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 )
 
 type (
@@ -56,6 +57,17 @@ const (
 	CommandTypeCompile
 	CommandTypeLink
 )
+
+func (t CommandType) String() string {
+	switch t {
+	case CommandTypeCompile:
+		return "compile"
+	case CommandTypeLink:
+		return "link"
+	default:
+		return "<other>"
+	}
+}
 
 // ProcessCommand applies a processor on a command if said command matches
 // the input type of said input processor. Nothing happens if the processor does
@@ -126,7 +138,13 @@ func (cmd *command) ReplaceParam(param string, val string) error {
 type RunCommandOption func(*exec.Cmd)
 
 // RunCommand executes the underlying go tool command and forwards the program's standard fluxes
-func RunCommand(cmd Command, opts ...RunCommandOption) error {
+func RunCommand(ctx context.Context, cmd Command, opts ...RunCommandOption) (err error) {
+	span, _ := tracer.StartSpanFromContext(ctx, cmd.Type().String(),
+		tracer.ServiceName("go-tool"),
+		tracer.ResourceName(strings.Join(cmd.Args(), " ")),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
 	args := cmd.Args()
 	c := exec.Command(args[0], args[1:]...)
 	if c == nil {
@@ -142,19 +160,6 @@ func RunCommand(cmd Command, opts ...RunCommandOption) error {
 	}
 
 	return c.Run()
-}
-
-// MustRunCommand is like RunCommand but panics if the command fails to build or run
-func MustRunCommand(cmd Command, opts ...RunCommandOption) {
-	var exitErr *exec.ExitError
-	err := RunCommand(cmd, opts...)
-	if err == nil {
-		return
-	}
-	if errors.As(err, &exitErr) {
-		os.Exit(exitErr.ExitCode())
-	}
-	panic(err)
 }
 
 func (*command) Type() CommandType {

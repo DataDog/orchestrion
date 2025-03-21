@@ -9,10 +9,13 @@ package importcfg
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 )
 
 // ImportConfig represents the parsed out contents of an `importcfg` (or `importcfg.link`) file,
@@ -30,7 +33,12 @@ type ImportConfig struct {
 }
 
 // ParseFile parses the contents of the provided `importcfg` (or `importcfg.link`) file.
-func ParseFile(filename string) (ImportConfig, error) {
+func ParseFile(ctx context.Context, filename string) (ImportConfig, error) {
+	span, _ := tracer.StartSpanFromContext(ctx, "importcfg.ParseFile",
+		tracer.ResourceName(filename),
+	)
+	defer span.Finish()
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return ImportConfig{}, err

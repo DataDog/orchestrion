@@ -13,15 +13,19 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/rs/zerolog"
+	"golang.org/x/tools/go/packages"
 )
 
 type (
@@ -72,11 +76,16 @@ var weavingSpecialCase = []specialCase{
 }
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile",
+		tracer.ResourceName(w.ImportPath),
+	)
+	defer func() { span.Finish(tracer.WithError(resErr)) }()
+
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
 	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
-	imports, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
@@ -88,7 +97,13 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	goModDir := filepath.Dir(goMod)
 	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
-	cfg, resErr := config.NewLoader(goModDir, false).Load()
+	js, err := client.FromEnvironment(ctx, cmd.WorkDir)
+	if err != nil {
+		return err
+	}
+	pkgLoader := packageLoader(js)
+
+	cfg, resErr := config.NewLoader(pkgLoader, goModDir, false).Load(ctx)
 	if resErr != nil {
 		return fmt.Errorf("loading injector configuration: %w", resErr)
 	}
@@ -189,14 +204,14 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 		}
 		for dep, archive := range deps {
-			deps, err := linkdeps.FromArchive(archive)
+			deps, err := linkdeps.FromArchive(ctx, archive)
 			if err != nil {
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
 			}
-			log.Debug().Str("import-path", dep).Msg("Processing " + linkdeps.Filename + " dependencies")
+			log.Trace().Str("import-path", dep).Msg("Processing " + linkdeps.Filename + " dependencies")
 			for _, tDep := range deps.Dependencies() {
 				if _, found := imports.PackageFile[tDep]; !found {
-					log.Debug().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
+					log.Trace().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
 					cmd.LinkDeps.Add(tDep)
 				}
 			}
@@ -205,7 +220,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 				// Already part of natural dependencies, nothing to do...
 				continue
 			}
-			log.Debug().Str("import-path", dep).Str("inherited-from", depImportPath).Str("archive", archive).Msg("Recording transitive dependency")
+			log.Trace().Str("import-path", dep).Str("inherited-from", depImportPath).Str("archive", archive).Msg("Recording transitive dependency")
 			imports.PackageFile[dep] = archive
 			regUpdated = true
 		}
@@ -235,4 +250,10 @@ func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, fi
 	}
 
 	return nil
+}
+
+func packageLoader(js *client.Client) config.PackageLoader {
+	return func(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
+		return client.Request(ctx, js, pkgs.LoadRequest{Dir: dir, Patterns: patterns})
+	}
 }

@@ -6,6 +6,7 @@
 package injector
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	goparser "go/parser"
@@ -40,6 +41,6 @@ func TestNewerGoVersion(t *testing.T) {
 		},
 	}
 
-	_, err = injector.typeCheck(fset, []parse.File{{Name: "main.go", AstFile: astFile}})
+	_, err = injector.typeCheck(context.Background(), fset, []parse.File{{Name: "main.go", AstFile: astFile}})
 	require.ErrorContains(t, err, "please reinstall and pin orchestrion with a newer Go version")
 }

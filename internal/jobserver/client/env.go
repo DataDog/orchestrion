@@ -42,6 +42,9 @@ var (
 //     job server will automatically shut itself down once it no longer has any
 //     active client for a period of time.
 //   - Otherwise, the ErrNoServerAvailable error is returned.
+//
+// The returned client is re-used, so callers should NOT call [Client.Close] on
+// it.
 func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 	if client != nil {
 		return client, nil

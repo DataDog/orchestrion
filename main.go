@@ -20,8 +20,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/cmd"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -29,6 +31,7 @@ import (
 )
 
 const (
+	envVarOrchestrionTrace           = "ORCHESTRION_TRACE"
 	envVarOrchestrionLogFile         = "ORCHESTRION_LOG_FILE"
 	envVarOrchestrionLogLevel        = "ORCHESTRION_LOG_LEVEL"
 	envVarOrchestrionProfilePath     = "ORCHESTRION_PROFILE_PATH"
@@ -37,6 +40,29 @@ const (
 )
 
 func main() {
+	ctx := context.Background()
+
+	// If requested, start the tracer...
+	if os.Getenv(envVarOrchestrionTrace) != "" {
+		tracer.Start(
+			tracer.WithService("github.com/DataDog/orchestrion"),
+			tracer.WithServiceVersion(version.Tag()),
+			tracer.WithLogStartup(false),
+		)
+		defer tracer.Stop()
+
+		opts := make([]tracer.StartSpanOption, 0, 2)
+		env := os.Environ()
+		if spanCtx, err := tracer.Extract(traceutil.EnvVarCarrier{Env: &env}); err == nil {
+			opts = append(opts, tracer.ChildOf(spanCtx))
+		}
+		opts = append(opts, tracer.Tag("process.args", os.Args[1:]))
+
+		var span *tracer.Span
+		span, ctx = tracer.StartSpanFromContext(ctx, "main", opts...)
+		defer span.Finish()
+	}
+
 	// Setup the logger
 	zerolog.TimeFieldFormat = time.RFC3339
 	log.Logger = log.Output(zerolog.ConsoleWriter{
@@ -186,7 +212,11 @@ func main() {
 		},
 	}
 	// Run the CLI application
-	if err := app.RunContext(log.Logger.WithContext(context.Background()), os.Args); err != nil {
+	ctx = log.Logger.WithContext(ctx)
+	if err := app.RunContext(ctx, os.Args); err != nil {
+		if span, ok := tracer.SpanFromContext(ctx); ok {
+			span.Finish(tracer.WithError(err))
+		}
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
 	}

@@ -10,24 +10,30 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/rs/zerolog"
 )
 
-func (Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) error {
+func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnLink",
+		tracer.ResourceName(w.ImportPath),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
 	log := zerolog.Ctx(ctx).With().Str("phase", "link").Logger()
 	ctx = log.WithContext(ctx)
 
-	reg, err := importcfg.ParseFile(cmd.Flags.ImportCfg)
+	reg, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
 	var changed bool
 	for archiveImportPath, archive := range reg.PackageFile {
-		linkDeps, err := linkdeps.FromArchive(archive)
+		linkDeps, err := linkdeps.FromArchive(ctx, archive)
 		if err != nil {
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.Filename, archiveImportPath, err)
 		}

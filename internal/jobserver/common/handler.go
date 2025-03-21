@@ -11,6 +11,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/ext"
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
@@ -18,6 +21,7 @@ import (
 type (
 	Request[Res any] interface {
 		ResponseIs(Res)
+		ForeachSpanTag(func(key string, val any))
 	}
 	// RequestHandler is a function that processes a request of a given type, and returns a response or an error to be
 	// sent back to the client.
@@ -36,6 +40,18 @@ func HandleRequest[Res any, Req Request[Res]](ctx context.Context, handler Reque
 
 		// Spawn the handler in a new goroutine to avoid blocking the NATS subscription poller.
 		go func() {
+			if spanCtx, err := tracer.Extract(traceutil.NATSCarrier{Msg: msg}); err == nil && spanCtx != nil {
+				span := tracer.StartSpan("nats.server",
+					tracer.ServiceName("github.com/DataDog/orchestrion/internal/jobserver"),
+					tracer.ResourceName(msg.Subject),
+					tracer.Tag(ext.SpanKind, ext.SpanKindServer),
+					tracer.Tag(ext.SpanType, "nats"),
+					tracer.ChildOf(spanCtx),
+				)
+				defer span.Finish()
+				ctx = tracer.ContextWithSpan(ctx, span)
+			}
+
 			resp, err := handler(ctx, req)
 			if err != nil {
 				respond(ctx, msg, errorResponse{Error: err.Error()})
@@ -88,7 +104,10 @@ func respond(ctx context.Context, msg *nats.Msg, val natsResponse) {
 
 // UnmarshalResponse parses a response received from the job server, either into a result of the specified type, or as
 // an error; depending on the response's structure.
-func UnmarshalResponse[T any](data []byte) (T, error) {
+func UnmarshalResponse[T any](ctx context.Context, data []byte) (_ T, err error) {
+	span, _ := tracer.StartSpanFromContext(ctx, "nats.UnmarshalResponse")
+	defer span.Finish()
+
 	var parsed struct {
 		successResponse[T]
 		errorResponse

@@ -87,6 +87,7 @@ func goModVersion(ctx context.Context, dir string) (moduleVersion string, module
 		Mode: packages.NeedModule,
 		Logf: func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 	}
+
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
 	if err != nil {
 		return "", "", err
