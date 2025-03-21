@@ -9,6 +9,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -21,13 +22,14 @@ const (
 )
 
 type service struct {
+	packageLoader   config.PackageLoader
 	stats           *common.CacheStats
 	resolvedVersion VersionSuffixResponse
 	mu              sync.Mutex
 }
 
-func Subscribe(ctx context.Context, conn *nats.Conn, stats *common.CacheStats) error {
-	s := &service{stats: stats}
+func Subscribe(ctx context.Context, conn *nats.Conn, pkgLoader config.PackageLoader, stats *common.CacheStats) error {
+	s := &service{packageLoader: pkgLoader, stats: stats}
 	ctx = zerolog.Ctx(ctx).With().Str("nats.subject", versionSubject).Logger().WithContext(ctx)
 	_, err := conn.Subscribe(versionSubject, common.HandleRequest(ctx, s.versionSuffix))
 	return err

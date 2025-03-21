@@ -26,16 +26,19 @@ type Config interface {
 	visit(Visitor, string) error
 }
 
+type PackageLoader = func(context.Context, string, ...string) ([]*packages.Package, error)
+
 // HasConfig determines whether the specified package contains injector
-// configuration, and optionally validates it.
-func HasConfig(ctx context.Context, pkg *packages.Package, validate bool) (bool, error) {
+// configuration, and optionally validates it. If the [PackageLoader] is nil,
+// a default implementation is used.
+func HasConfig(ctx context.Context, pkgLoader PackageLoader, pkg *packages.Package, validate bool) (bool, error) {
 	root := packageRoot(pkg)
 	if root == "" {
 		// It contains no .go file, so it can't contain configuration.
 		return false, nil
 	}
 
-	l := NewLoader(root, validate)
+	l := NewLoader(pkgLoader, root, validate)
 	cfg, err := l.loadGoPackage(ctx, pkg)
 	if err != nil {
 		return false, err
@@ -46,17 +49,45 @@ func HasConfig(ctx context.Context, pkg *packages.Package, validate bool) (bool,
 
 // Loader is a facility to load configuration from available sources.
 type Loader struct {
-	loaded   map[string]struct{}
-	dir      string
-	validate bool
+	pkgLoader PackageLoader
+	loaded    map[string]struct{}
+	dir       string
+	validate  bool
 }
 
-// NewLoader creates a new [Loader] in the specified directory. The directory
-// is used to resolve relative paths and must be a valid Go package directory,
-// meaning it must contain at least one `.go` file. If [Loader.validate] is
-// true, the YAML documents will be validated against the JSON schema.
-func NewLoader(dir string, validate bool) *Loader {
-	return &Loader{loaded: make(map[string]struct{}), dir: dir, validate: validate}
+func defaultPackageLoader(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "Load",
+		tracer.ServiceName("golang.org/x/tools/go/packages"),
+		tracer.ResourceName(strings.Join(patterns, " ")),
+	)
+	defer span.Finish()
+
+	cfg := &packages.Config{
+		Context: ctx,
+		Dir:     dir,
+		Mode:    packages.NeedName | packages.NeedFiles,
+	}
+	return packages.Load(cfg, patterns...)
+}
+
+// NewLoader creates a new [Loader] in the specified directory.
+//
+//	If the [PackageLoader] is nil, a default implementation is used.
+//
+// The directory is used to resolve relative paths and must be a valid Go
+// package directory, meaning it must contain at least one `.go` file. If
+// [Loader.validate] is true, the YAML documents will be validated against the
+// JSON schema.
+func NewLoader(pkgLoader PackageLoader, dir string, validate bool) *Loader {
+	if pkgLoader == nil {
+		pkgLoader = defaultPackageLoader
+	}
+	return &Loader{
+		pkgLoader: pkgLoader,
+		loaded:    make(map[string]struct{}),
+		dir:       dir,
+		validate:  validate,
+	}
 }
 
 // Load proceeds to load the configuration from this loader's directory.
@@ -68,7 +99,7 @@ func (l *Loader) Load(ctx context.Context) (_ Config, err error) {
 	)
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
-	pkgs, err := l.packages(ctx, l.dir)
+	pkgs, err := l.packages(ctx, ".")
 	if err != nil {
 		return nil, err
 	}
@@ -90,17 +121,6 @@ func (l *Loader) markLoaded(filename string) bool {
 	return true
 }
 
-func (l *Loader) packages(ctx context.Context, patterns ...string) (_ []*packages.Package, err error) {
-	span, _ := tracer.StartSpanFromContext(ctx, "Load",
-		tracer.ServiceName("golang.org/x/tools/go/packages"),
-		tracer.ResourceName(strings.Join(patterns, " ")),
-	)
-	defer func() { span.Finish(tracer.WithError(err)) }()
-
-	cfg := packages.Config{
-		BuildFlags: []string{"-toolexec="},
-		Dir:        l.dir,
-		Mode:       packages.NeedName | packages.NeedFiles,
-	}
-	return packages.Load(&cfg, patterns...)
+func (l *Loader) packages(ctx context.Context, patterns ...string) ([]*packages.Package, error) {
+	return l.pkgLoader(ctx, l.dir, patterns...)
 }

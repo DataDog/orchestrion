@@ -167,7 +167,7 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
 	}
 
 	log := zerolog.Ctx(ctx)
-	log.Debug().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, &cmd.LinkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
+	log.Trace().Str("archive", cmd.Flags.Output).Array(linkdeps.Filename, &cmd.LinkDeps).Msg("Adding " + linkdeps.Filename + " file in archive")
 
 	file, err := os.OpenFile(cmd.Flags.Output, os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -189,6 +189,7 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
 func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) error {
 	if cmd.finishToken == "" {
 		// Nothing to do...
+		zerolog.Ctx(ctx).Info().Msg("No finish token, skipping job server notification...")
 		return nil
 	}
 

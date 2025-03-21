@@ -51,7 +51,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 	}
 	s.stats.RecordMiss()
 
-	cfg, err := config.NewLoader(".", false).Load(ctx)
+	cfg, err := config.NewLoader(s.packageLoader, ".", false).Load(ctx)
 	if err != nil {
 		return "", fmt.Errorf("loading injector configuration: %w", err)
 	}

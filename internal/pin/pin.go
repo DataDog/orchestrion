@@ -305,7 +305,7 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 
 	var pruned bool
 	for _, pkg := range pkgs {
-		hasConfig, err := config.HasConfig(ctx, pkg, opts.Validate)
+		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
 			pruned = pruneImport(importSet, pkg.PkgPath, err.Error(), opts) || pruned
 			continue

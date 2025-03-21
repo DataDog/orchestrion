@@ -146,6 +146,9 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
 		}
 
+		zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Waiting for concurrent task to complete...")
+		defer zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Concurrent was completed!")
+
 		<-state.done
 		if state.error != nil {
 			return nil, state.error
@@ -161,7 +164,7 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 	}
 
 	// Otherwise, return a finalization token, etc...
-	zerolog.Ctx(ctx).Debug().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Compile task started")
+	zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Compile task started")
 	return &StartResponse{FinishToken: state.token}, nil
 }
 
@@ -199,6 +202,13 @@ func (r FinishRequest) ForeachSpanTag(set func(key string, value any)) {
 var errNoFilesNorError = errors.New("missing files, and no error reported")
 
 func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishResponse, error) {
+	log := zerolog.Ctx(ctx).With().
+		Str("import-path", req.ImportPath).
+		Logger()
+	ctx = log.WithContext(ctx)
+
+	log.Trace().Any("request", req).Msg("Finish request received")
+
 	if req.ImportPath == "" || req.FinishToken == "" {
 		return nil, fmt.Errorf("invalid request: %#v", req)
 	}
@@ -207,11 +217,6 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 	if !found {
 		return nil, fmt.Errorf("no build started for %q", req.ImportPath)
 	}
-
-	log := zerolog.Ctx(ctx).With().
-		Str("import-path", req.ImportPath).
-		Logger()
-	ctx = log.WithContext(ctx)
 
 	state, _ := rawState.(*buildState)
 	if state.token != req.FinishToken {

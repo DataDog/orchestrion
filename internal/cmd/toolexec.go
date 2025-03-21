@@ -72,7 +72,7 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		log.Info().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
+		log.Debug().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
 		weaver := aspect.Weaver{ImportPath: importPath}
 
 		if err := proxy.ProcessCommand(ctx, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
