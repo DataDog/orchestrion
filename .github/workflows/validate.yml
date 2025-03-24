@@ -271,7 +271,7 @@ jobs:
       - name: Download benchmark reports (raw)
         uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4
         with:
-          pattern: benchmarks-*.yxy
+          pattern: benchmarks-*.txt
           path: ${{ runner.temp }}
           merge-multiple: true
       - name: Format report
