@@ -99,7 +99,7 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 				argv[3] = cfg.toolexec
 
 				// We'll need a job server to support toolexec operations
-				server, err := jobserver.New(ctx, &jobserver.Options{ServerName: fmt.Sprintf("orchestrion[%d]", os.Getpid())})
+				server, err := jobserver.New(ctx, nil)
 				if err != nil {
 					return err
 				}
