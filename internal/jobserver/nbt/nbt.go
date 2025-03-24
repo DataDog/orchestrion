@@ -16,6 +16,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
+	"github.com/DataDog/orchestrion/internal/report"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
@@ -30,8 +31,9 @@ const (
 
 type (
 	service struct {
-		state sync.Map
-		dir   string
+		state  sync.Map
+		dir    string
+		report *report.Report
 	}
 	buildState struct {
 		initOnce sync.Once
@@ -46,7 +48,7 @@ type (
 	}
 )
 
-func Subscribe(ctx context.Context, conn *nats.Conn) (cleanup func(context.Context) error, resErr error) {
+func Subscribe(ctx context.Context, conn *nats.Conn, report *report.Report) (cleanup func(context.Context) error, resErr error) {
 	dir, err := os.MkdirTemp("", "orchestrion.nbt-*")
 	if err != nil {
 		return nil, fmt.Errorf("creating storage directory: %w", err)
@@ -60,7 +62,7 @@ func Subscribe(ctx context.Context, conn *nats.Conn) (cleanup func(context.Conte
 		}
 	}()
 
-	s := &service{dir: dir}
+	s := &service{dir: dir, report: report}
 	_, err = conn.Subscribe(startSubject,
 		common.HandleRequest(
 			zerolog.Ctx(ctx).With().Str("nats.subject", startSubject).Logger().WithContext(ctx),
@@ -174,6 +176,9 @@ type (
 		// Files is a list of files produced by the compilation task, associated to
 		// a user-defined label.
 		Files map[Label]string `json:"extra,omitempty"`
+		// ModifiedFiles is a list of files that were modified by the compilation,
+		// associated to their original files
+		ModifiedFiles []report.ModifiedFile `json:"modified_files,omitempty"`
 		// Error is the error that occurred as a result of this compilation task, if
 		// any.
 		Error *string `json:"error,omitempty"`
@@ -248,6 +253,11 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 			return nil, state.error
 		}
 		state.files[label] = filename
+	}
+
+	// Fill in the report if there is one
+	if s.report != nil && len(req.ModifiedFiles) > 0 {
+		s.report.Append(req.ModifiedFiles...)
 	}
 
 	return &FinishResponse{}, nil

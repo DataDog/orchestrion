@@ -18,6 +18,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
+	"github.com/DataDog/orchestrion/internal/report"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/rs/zerolog"
@@ -54,12 +55,14 @@ type CompileCommand struct {
 	// [nbt.StartRequest] when the operation needs to continue, and that is then
 	// forwarded to the [nbt.FinishRequest].
 	finishToken string
+	// modifiedFiles is a map of source files that have been modified
+	modifiedFiles []report.ModifiedFile
 }
 
 func (*CompileCommand) Type() CommandType { return CommandTypeCompile }
 
-func (c *CompileCommand) ShowVersion() bool {
-	return c.Flags.ShowVersion
+func (cmd *CompileCommand) ShowVersion() bool {
+	return cmd.Flags.ShowVersion
 }
 
 // TestMain returns true if the compiled package name is "main" and all source
@@ -67,13 +70,13 @@ func (c *CompileCommand) ShowVersion() bool {
 // indicates the package being compiled is a synthetic "main" package generated
 // by `go test`. For more accurate readings, users should also validate the
 // declared package import path ends in `.test`.
-func (c *CompileCommand) TestMain() bool {
-	if c.Flags.Package != "main" {
+func (cmd *CompileCommand) TestMain() bool {
+	if cmd.Flags.Package != "main" {
 		return false
 	}
 
-	stageDir := filepath.Dir(c.Flags.ImportCfg)
-	for _, f := range c.GoFiles() {
+	stageDir := filepath.Dir(cmd.Flags.ImportCfg)
+	for _, f := range cmd.GoFiles() {
 		if filepath.Dir(f) != stageDir {
 			return false
 		}
@@ -116,6 +119,16 @@ func (cmd *CompileCommand) GoFiles() []string {
 	}
 
 	return files
+}
+
+// ReplaceSourceFile will replace a source file in the list of Go files passed as arguments to the compiler
+func (cmd *CompileCommand) ReplaceSourceFile(param string, val string) error {
+	if err := cmd.command.ReplaceParam(param, val); err != nil {
+		return err
+	}
+
+	cmd.modifiedFiles = append(cmd.modifiedFiles, report.ModifiedFile{OriginalFilePath: param, ModifiedFilePath: val, ImportPath: cmd.importPath})
+	return nil
 }
 
 // AddFiles adds the provided go files paths to the list of Go files passed
@@ -200,10 +213,11 @@ func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) 
 	}
 
 	_, err = client.Request(ctx, jobs, nbt.FinishRequest{
-		ImportPath:  cmd.importPath,
-		FinishToken: cmd.finishToken,
-		Files:       files,
-		Error:       errorMessage,
+		ImportPath:    cmd.importPath,
+		FinishToken:   cmd.finishToken,
+		Files:         files,
+		Error:         errorMessage,
+		ModifiedFiles: cmd.modifiedFiles,
 	})
 
 	return err
