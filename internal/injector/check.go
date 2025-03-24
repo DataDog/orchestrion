@@ -21,9 +21,9 @@ import (
 
 // typeCheck runs the Go type checker on the provided files, and returns the
 // Uses type information map that is built in the process.
-func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File) (types.Info, error) {
+func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File) (_ types.Info, err error) {
 	span, _ := tracer.StartSpanFromContext(ctx, "Injector.typeCheck")
-	defer span.Finish()
+	defer func() { span.Finish(tracer.WithError(err)) }()
 
 	pkg := types.NewPackage(i.ImportPath, i.Name)
 	typeInfo := types.Info{

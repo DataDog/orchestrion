@@ -7,7 +7,6 @@ package linkdeps
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -76,7 +75,7 @@ func FromArchive(ctx context.Context, archive string) (res LinkDeps, err error) 
 	)
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
-	var data io.Reader
+	var data io.ReadCloser
 	data, err = readArchiveData(archive, Filename)
 	if err != nil {
 		return res, fmt.Errorf("reading %s from %q: %w", Filename, archive, err)
@@ -84,6 +83,7 @@ func FromArchive(ctx context.Context, archive string) (res LinkDeps, err error) 
 	if data == nil {
 		return
 	}
+	defer data.Close()
 	return Read(data)
 }
 
@@ -201,12 +201,18 @@ func (l *LinkDeps) Write(w io.Writer) error {
 
 // readArchiveData returns the content of the given entry from the provided archive file. If there
 // is no such entry in the archive, a nil io.Reader and no error is returned.
-func readArchiveData(archive string, entry string) (io.Reader, error) {
+func readArchiveData(archive string, entry string) (rc io.ReadCloser, err error) {
 	file, err := os.Open(archive)
 	if err != nil {
 		return nil, fmt.Errorf("opening archive: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		// If we return no [io.ReadCloser], then we need to close the file ourselves.
+		if rc != nil {
+			return
+		}
+		err = errors.Join(err, file.Close())
+	}()
 
 	rd := ar.NewReader(file)
 	for {
@@ -220,12 +226,8 @@ func readArchiveData(archive string, entry string) (io.Reader, error) {
 		if hdr.Name != entry {
 			continue
 		}
-		data := make([]byte, hdr.Size)
-		n, err := rd.Read(data)
-		if err != nil {
-			return nil, fmt.Errorf("reading entry from archive: %w", err)
-		}
-		return bytes.NewReader(data[:n]), nil
+
+		return arReadCloser{Reader: rd, Closer: file}, nil
 	}
 
 	return nil, nil
@@ -237,4 +239,9 @@ func (l *LinkDeps) MarshalZerologArray(a *zerolog.Array) {
 	for _, dep := range l.Dependencies() {
 		a.Str(dep)
 	}
+}
+
+type arReadCloser struct {
+	*ar.Reader
+	io.Closer
 }

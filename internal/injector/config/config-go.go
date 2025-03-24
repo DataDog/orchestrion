@@ -82,11 +82,11 @@ func (l *Loader) loadGoFile(ctx context.Context, filename string) (_ []Config, e
 
 	span, ctx := tracer.StartSpanFromContext(ctx, "config.loadGoFile", tracer.ResourceName(filename))
 	defer func() {
-		if !errors.Is(err, fs.ErrNotExist) {
-			span.Finish(tracer.WithError(err))
-		} else {
-			span.Finish()
+		spanErr := err
+		if errors.Is(err, fs.ErrNotExist) {
+			spanErr = nil
 		}
+		span.Finish(tracer.WithError(spanErr))
 	}()
 
 	file, err := os.Open(filename)

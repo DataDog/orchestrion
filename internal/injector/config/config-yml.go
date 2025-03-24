@@ -35,11 +35,11 @@ func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *c
 		tracer.ResourceName(filename),
 	)
 	defer func() {
-		if !errors.Is(err, fs.ErrNotExist) {
-			span.Finish(tracer.WithError(err))
-		} else {
-			span.Finish()
+		spanErr := err
+		if errors.Is(err, fs.ErrNotExist) {
+			spanErr = nil
 		}
+		span.Finish(tracer.WithError(spanErr))
 	}()
 
 	yml, err := l.parseYMLFile(filename)

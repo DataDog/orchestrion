@@ -99,7 +99,7 @@ func (l *Loader) Load(ctx context.Context) (_ Config, err error) {
 	)
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
-	pkgs, err := l.packages(ctx, ".")
+	pkgs, err := l.packages(ctx, l.dir)
 	if err != nil {
 		return nil, err
 	}
