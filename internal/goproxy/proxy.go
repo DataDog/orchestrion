@@ -12,11 +12,12 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/rs/zerolog"
+
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
-	"github.com/rs/zerolog"
 )
 
 type config struct {
