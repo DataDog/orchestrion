@@ -41,7 +41,7 @@ func TestSetAtLeast(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	require.Equal(t, "", GoLangVersion{}.String())
+	require.Empty(t, GoLangVersion{}.String())
 	require.Equal(t, "go1.18", MustParseGoLangVersion("go1.18").String())
 }
 

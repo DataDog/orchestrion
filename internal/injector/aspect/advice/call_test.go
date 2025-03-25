@@ -53,7 +53,7 @@ func TestAppendArgs(t *testing.T) {
 				for _, imp := range tc.expectedImports {
 					assert.Contains(t, imports, imp)
 				}
-				require.Equal(t, len(tc.expectedImports), len(imports), "expected %d imports, got %d", len(tc.expectedImports), len(imports))
+				require.Len(t, imports, len(tc.expectedImports), "expected %d imports, got %d", len(tc.expectedImports), len(imports))
 			})
 		}
 	})

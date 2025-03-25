@@ -124,7 +124,7 @@ func TestFilterExtraneousImports(t *testing.T) {
 
 			require.Len(t, out, 1)
 			for v := range out {
-				require.EqualValues(t, tc.expected, v)
+				require.Equal(t, tc.expected, v)
 			}
 		})
 	}

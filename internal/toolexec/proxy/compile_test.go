@@ -80,7 +80,7 @@ func TestParseCompile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, CommandTypeCompile, cmd.Type())
 			require.Equal(t, tc.flags, cmd.Flags)
-			require.EqualValues(t, tc.goFiles, cmd.GoFiles())
+			require.Equal(t, tc.goFiles, cmd.GoFiles())
 		})
 	}
 }
