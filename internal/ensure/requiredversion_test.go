@@ -77,7 +77,7 @@ func TestGoModVersion(t *testing.T) {
 
 			require.NoError(t, err)
 			if test.replace {
-				require.Equal(t, "", rVersion)
+				require.Empty(t, rVersion)
 				require.Equal(t, orchestrionSrcDir, rDir)
 			} else {
 				require.Equal(t, test.version, rVersion)
@@ -146,7 +146,7 @@ func TestRequiredVersion(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			mockGoVersion := func(_ context.Context, dir string) (string, string, error) {
-				require.Equal(t, "", dir)
+				require.Empty(t, dir)
 				return tc.goModVersion.version, tc.goModVersion.path, tc.goModVersion.err
 			}
 

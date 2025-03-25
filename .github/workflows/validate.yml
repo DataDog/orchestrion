@@ -145,7 +145,7 @@ jobs:
       - name: Lint main module
         uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v6
         with:
-          version: v1.64.4
+          version: v2.0.1
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: vet
