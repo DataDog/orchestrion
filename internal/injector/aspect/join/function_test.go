@@ -24,7 +24,7 @@ func TestSignatureContains(t *testing.T) {
 			args: []TypeName{
 				{name: "string"},
 			},
-			ret: []TypeName{},
+			ret: make([]TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -34,7 +34,7 @@ func TestSignatureContains(t *testing.T) {
 						},
 					},
 					Results: &dst.FieldList{
-						List: []*dst.Field{},
+						List: make([]*dst.Field, 0),
 					},
 				},
 			},
@@ -42,14 +42,14 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "single return matches",
-			args: []TypeName{},
+			args: make([]TypeName, 0),
 			ret: []TypeName{
 				{name: "error"},
 			},
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
-						List: []*dst.Field{},
+						List: make([]*dst.Field, 0),
 					},
 					Results: &dst.FieldList{
 						List: []*dst.Field{
@@ -65,7 +65,7 @@ func TestSignatureContains(t *testing.T) {
 			args: []TypeName{
 				{name: "string"},
 			},
-			ret: []TypeName{},
+			ret: make([]TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -75,7 +75,7 @@ func TestSignatureContains(t *testing.T) {
 						},
 					},
 					Results: &dst.FieldList{
-						List: []*dst.Field{},
+						List: make([]*dst.Field, 0),
 					},
 				},
 			},
@@ -83,14 +83,14 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "return in any position matches",
-			args: []TypeName{},
+			args: make([]TypeName, 0),
 			ret: []TypeName{
 				{name: "error"},
 			},
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
-						List: []*dst.Field{},
+						List: make([]*dst.Field, 0),
 					},
 					Results: &dst.FieldList{
 						List: []*dst.Field{
@@ -107,7 +107,7 @@ func TestSignatureContains(t *testing.T) {
 			args: []TypeName{
 				{name: "string"},
 			},
-			ret: []TypeName{},
+			ret: make([]TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params:  nil,
@@ -145,7 +145,7 @@ func TestSignatureContains(t *testing.T) {
 			args: []TypeName{
 				{name: "CustomType", path: "pkg"},
 			},
-			ret: []TypeName{},
+			ret: make([]TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -159,7 +159,7 @@ func TestSignatureContains(t *testing.T) {
 						},
 					},
 					Results: &dst.FieldList{
-						List: []*dst.Field{},
+						List: make([]*dst.Field, 0),
 					},
 				},
 			},
