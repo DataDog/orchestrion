@@ -7,6 +7,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,7 +31,7 @@ func TestHasConfig(t *testing.T) {
 		t.Run("no source files at all", func(t *testing.T) {
 			t.Parallel()
 
-			hasCfg, err := HasConfig(&packages.Package{}, true)
+			hasCfg, err := HasConfig(context.Background(), nil, &packages.Package{}, true)
 			require.NoError(t, err)
 			require.False(t, hasCfg)
 		})
@@ -38,7 +39,7 @@ func TestHasConfig(t *testing.T) {
 		t.Run("ignored files", func(t *testing.T) {
 			t.Parallel()
 
-			hasCfg, err := HasConfig(&packages.Package{IgnoredFiles: []string{filepath.Join(t.TempDir(), "test.go")}}, true)
+			hasCfg, err := HasConfig(context.Background(), nil, &packages.Package{IgnoredFiles: []string{filepath.Join(t.TempDir(), "test.go")}}, true)
 			require.NoError(t, err)
 			require.False(t, hasCfg)
 		})
@@ -46,7 +47,7 @@ func TestHasConfig(t *testing.T) {
 		t.Run("regular files", func(t *testing.T) {
 			t.Parallel()
 
-			hasCfg, err := HasConfig(&packages.Package{GoFiles: []string{filepath.Join(t.TempDir(), "test.go")}}, true)
+			hasCfg, err := HasConfig(context.Background(), nil, &packages.Package{GoFiles: []string{filepath.Join(t.TempDir(), "test.go")}}, true)
 			require.NoError(t, err)
 			require.False(t, hasCfg)
 		})
@@ -75,7 +76,7 @@ func TestHasConfig(t *testing.T) {
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
 				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
-			hasCfg, err := HasConfig(pkg, true)
+			hasCfg, err := HasConfig(context.Background(), nil, pkg, true)
 			require.NoError(t, err)
 			require.True(t, hasCfg)
 		})
@@ -91,7 +92,7 @@ func TestHasConfig(t *testing.T) {
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
 				GoFiles: []string{filepath.Join(pkgRoot, "main.go")},
 			}
-			hasCfg, err := HasConfig(pkg, true)
+			hasCfg, err := HasConfig(context.Background(), nil, pkg, true)
 			require.NoError(t, err)
 			require.True(t, hasCfg)
 		})
@@ -115,7 +116,7 @@ func TestHasConfig(t *testing.T) {
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
 				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
-			hasCfg, err := HasConfig(pkg, true)
+			hasCfg, err := HasConfig(context.Background(), nil, pkg, true)
 			require.NoError(t, err)
 			require.True(t, hasCfg)
 		})
@@ -140,7 +141,7 @@ func TestHasConfig(t *testing.T) {
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
 				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
-			hasCfg, err := HasConfig(pkg, false)
+			hasCfg, err := HasConfig(context.Background(), nil, pkg, false)
 			require.NoError(t, err)
 			require.True(t, hasCfg)
 		})
@@ -165,7 +166,7 @@ func TestHasConfig(t *testing.T) {
 				PkgPath: "github.com/DataDog/orchestrion/config_test",
 				GoFiles: []string{filepath.Join(pkgRoot, FilenameOrchestrionToolGo)},
 			}
-			_, err := HasConfig(pkg, true)
+			_, err := HasConfig(context.Background(), nil, pkg, true)
 			require.ErrorContains(t, err, "meta is required")
 		})
 	})
@@ -179,14 +180,14 @@ func TestLoad(t *testing.T) {
 		tmpDir := t.TempDir()
 		goMod := filepath.Join(tmpDir, "go.mod")
 		require.NoError(t, os.WriteFile(goMod, []byte("module test\n"), 0o644))
-		loader := NewLoader(tmpDir, true)
-		_, err := loader.Load()
+		loader := NewLoader(nil, tmpDir, true)
+		_, err := loader.Load(context.Background())
 		require.ErrorContains(t, err, "no Go files found, was expecting at least orchestrion.tool.go")
 	})
 
 	t.Run("required.yml", func(t *testing.T) {
-		loader := NewLoader(repoRoot, true)
-		cfg, err := loader.Load()
+		loader := NewLoader(nil, repoRoot, true)
+		cfg, err := loader.Load(context.Background())
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
@@ -200,8 +201,8 @@ func TestLoad(t *testing.T) {
 	})
 
 	t.Run("instrument", func(t *testing.T) {
-		loader := NewLoader(filepath.Join(repoRoot, "instrument"), true)
-		cfg, err := loader.Load()
+		loader := NewLoader(nil, filepath.Join(repoRoot, "instrument"), true)
+		cfg, err := loader.Load(context.Background())
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
@@ -238,8 +239,8 @@ func TestLoad(t *testing.T) {
 		`), 0o644))
 		runGo(t, tmp, "mod", "tidy")
 
-		loader := NewLoader(tmp, false)
-		cfg, err := loader.Load()
+		loader := NewLoader(nil, tmp, false)
+		cfg, err := loader.Load(context.Background())
 		require.NoError(t, err)
 		require.Len(t, cfg.Aspects(), len(builtIn.yaml.aspects)+1)
 	})

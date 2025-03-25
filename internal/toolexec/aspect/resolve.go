@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 )
@@ -18,7 +19,12 @@ import (
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
 // to locate the archive for `importPath` and its dependencies using `go list`. If that fails, it
 // will try to resolve it using `go get`.
-func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (map[string]string, error) {
+func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (_ map[string]string, err error) {
+	span, ctx := tracer.StartSpanFromContext(ctx, "aspect.resolvePackageFiles",
+		tracer.ResourceName(importPath),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -36,7 +42,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 		req.TempDir = filepath.Join(workDir, "__tmp__")
 	}
 	archives, err := client.Request(
-		context.Background(),
+		ctx,
 		conn,
 		req,
 	)

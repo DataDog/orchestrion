@@ -16,9 +16,11 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
 )
@@ -70,6 +72,10 @@ func NewResolveRequest(dir string, pattern string) ResolveRequest {
 
 func (ResolveRequest) Subject() string            { return resolveSubject }
 func (ResolveRequest) ResponseIs(ResolveResponse) {}
+func (r ResolveRequest) ForeachSpanTag(set func(key string, value any)) {
+	set("request.dir", r.Dir)
+	set("request.pattern", r.Pattern)
+}
 
 func (r *ResolveRequest) canonicalizeEnviron() {
 	named := make(map[string]string, len(r.Env))
@@ -116,13 +122,17 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		defer s.graph.RemoveEdge(req.resolveParentID, req.toolexecImportpath)
 	}
 
-	resp, err := s.resolved.Load(reqHash, func() (ResolveResponse, error) {
+	resp, err := s.resolved.Load(reqHash, func() (_ ResolveResponse, err error) {
 		log := log.With().Str("pattern", req.Pattern).Logger()
 		ctx := log.WithContext(ctx)
 
+		span, ctx := tracer.StartSpanFromContext(ctx, "pkgs.Resolve")
+		defer func() { span.Finish(tracer.WithError(err)) }()
+
 		log.Trace().Str("dir", req.Dir).Msg("pkgs.Resolve starting")
 
-		env := req.Env
+		env := slices.Clone(req.Env)
+		tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &env})
 		if req.toolexecImportpath != "" {
 			env = make([]string, 0, len(req.Env)+1)
 			env = append(env, req.Env...)

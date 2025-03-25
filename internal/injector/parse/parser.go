@@ -6,6 +6,7 @@
 package parse
 
 import (
+	"context"
 	"fmt"
 	"go/ast"
 	goparser "go/parser"
@@ -15,6 +16,7 @@ import (
 	"slices"
 	"sync/atomic"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"golang.org/x/sync/errgroup"
@@ -73,7 +75,7 @@ func NewParser(fset *token.FileSet, nbFiles int) *Parser {
 
 // ParseFiles return either zero files if no aspect matched on any file of the package,
 // or all files parsed with their respective aspects that can match on them.
-func (p *Parser) ParseFiles(files []string, aspects []*aspect.Aspect) ([]File, error) {
+func (p *Parser) ParseFiles(ctx context.Context, files []string, aspects []*aspect.Aspect) ([]File, error) {
 	for idx, file := range files {
 		idx, file := idx, file
 		p.wg.Go(func() error {
@@ -100,7 +102,7 @@ func (p *Parser) ParseFiles(files []string, aspects []*aspect.Aspect) ([]File, e
 			}
 
 			p.mustParseAll.Store(true)
-			p.parsedFiles[idx], err = p.parseFile(p.rawFiles[idx], fileAspects)
+			p.parsedFiles[idx], err = p.parseFile(ctx, p.rawFiles[idx], fileAspects)
 			return err
 		})
 	}
@@ -115,7 +117,7 @@ func (p *Parser) ParseFiles(files []string, aspects []*aspect.Aspect) ([]File, e
 	}
 
 	// If we arrived here, this means we need to parse all files anyway because the type-checking pass will need them.
-	if err := p.parseMissingFiles(); err != nil {
+	if err := p.parseMissingFiles(ctx); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +129,12 @@ func (p *Parser) hasApplicableAspects() bool {
 	return p.mustParseAll.Load() || p.filesBytesCount.Load() > maxBytesEagerness
 }
 
-func (p *Parser) parseFile(rawFile rawFile, aspects []*aspect.Aspect) (File, error) {
+func (p *Parser) parseFile(ctx context.Context, rawFile rawFile, aspects []*aspect.Aspect) (File, error) {
+	span, _ := tracer.StartSpanFromContext(ctx, "Parser.parseFile",
+		tracer.ResourceName(rawFile.mappedName),
+	)
+	defer span.Finish()
+
 	astFile, err := goparser.ParseFile(p.fset, rawFile.mappedName, rawFile.content, goparser.ParseComments)
 	if err != nil {
 		return File{}, fmt.Errorf("parsing %q: %w", rawFile.name, err)
@@ -136,7 +143,7 @@ func (p *Parser) parseFile(rawFile rawFile, aspects []*aspect.Aspect) (File, err
 	return File{rawFile.name, astFile, aspects}, nil
 }
 
-func (p *Parser) parseMissingFiles() error {
+func (p *Parser) parseMissingFiles(ctx context.Context) error {
 	for i := range p.parsedFiles {
 		// Skip files that have already been parsed.
 		if p.parsedFiles[i].AstFile != nil {
@@ -146,7 +153,7 @@ func (p *Parser) parseMissingFiles() error {
 		i := i
 		p.wg.Go(func() error {
 			var err error
-			p.parsedFiles[i], err = p.parseFile(p.rawFiles[i], nil)
+			p.parsedFiles[i], err = p.parseFile(ctx, p.rawFiles[i], nil)
 			return err
 		})
 	}

@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"embed" // For go:embed
 	"fmt"
 	"html/template"
@@ -38,7 +39,7 @@ func (g *Generator) Generate() (err error) {
 		return fmt.Errorf("mkdir -p %s: %w", g.Dir, err)
 	}
 
-	cfg, err := config.NewLoader(g.ConfigSource, true).Load()
+	cfg, err := config.NewLoader(nil, g.ConfigSource, true).Load(context.Background())
 	if err != nil {
 		return fmt.Errorf("config.Load(%s): %w", g.ConfigSource, err)
 	}

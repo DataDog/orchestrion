@@ -79,6 +79,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.64.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.64.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.6.0 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.0.0-rc.8 // indirect
 	github.com/DataDog/go-libddwaf/v3 v3.5.4 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250130110637-613183a20f93 // indirect
 	github.com/DataDog/go-sqllexer v0.1.3 // indirect
@@ -135,6 +136,7 @@ require (
 	github.com/bep/overlayfs v0.9.2 // indirect
 	github.com/bep/simplecobra v0.5.0 // indirect
 	github.com/bep/tmc v0.5.1 // indirect
+	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -283,6 +285,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
+	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect

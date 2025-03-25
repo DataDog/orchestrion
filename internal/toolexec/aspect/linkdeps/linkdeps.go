@@ -7,15 +7,17 @@ package linkdeps
 
 import (
 	"bufio"
-	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
+	"github.com/blakesmith/ar"
 	"github.com/rs/zerolog"
 )
 
@@ -39,11 +41,14 @@ type LinkDeps struct {
 
 // FromImportConfig aggregates entries from all [Filename] found in the
 // archives listed in [importcfg.ImportConfig].
-func FromImportConfig(importcfg *importcfg.ImportConfig) (LinkDeps, error) {
+func FromImportConfig(ctx context.Context, importcfg *importcfg.ImportConfig) (LinkDeps, error) {
 	var res LinkDeps
 
+	span, ctx := tracer.StartSpanFromContext(ctx, "LinkDeps.FromImportConfig")
+	defer span.Finish()
+
 	for importPath, archivePath := range importcfg.PackageFile {
-		ld, err := FromArchive(archivePath)
+		ld, err := FromArchive(ctx, archivePath)
 		if err != nil {
 			return LinkDeps{}, fmt.Errorf("reading %s from %s=%s: %w", Filename, importPath, archivePath, err)
 		}
@@ -64,8 +69,13 @@ func FromImportConfig(importcfg *importcfg.ImportConfig) (LinkDeps, error) {
 // FromArchive reads a [Filename] file from the provided Go archive file.
 // Returns an empty [LinkDeps] if the archive does not contain a [Filename]
 // file.
-func FromArchive(archive string) (res LinkDeps, err error) {
-	var data io.Reader
+func FromArchive(ctx context.Context, archive string) (res LinkDeps, err error) {
+	span, _ := tracer.StartSpanFromContext(ctx, "linkdeps.FromArchive",
+		tracer.ResourceName(archive),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
+	var data io.ReadCloser
 	data, err = readArchiveData(archive, Filename)
 	if err != nil {
 		return res, fmt.Errorf("reading %s from %q: %w", Filename, archive, err)
@@ -73,6 +83,7 @@ func FromArchive(archive string) (res LinkDeps, err error) {
 	if data == nil {
 		return
 	}
+	defer data.Close()
 	return Read(data)
 }
 
@@ -164,17 +175,6 @@ func (l *LinkDeps) Len() int {
 	return len(l.deps)
 }
 
-// WriteFile writes this [LinkDeps] instance to the provided filename.
-func (l *LinkDeps) WriteFile(filename string) error {
-	wr, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer wr.Close()
-
-	return l.Write(wr)
-}
-
 // Write writes this [LinkDeps] instance to the provided writer.
 func (l *LinkDeps) Write(w io.Writer) error {
 	if _, err := fmt.Fprintln(w, headerV1); err != nil {
@@ -201,32 +201,36 @@ func (l *LinkDeps) Write(w io.Writer) error {
 
 // readArchiveData returns the content of the given entry from the provided archive file. If there
 // is no such entry in the archive, a nil io.Reader and no error is returned.
-func readArchiveData(archive string, entry string) (io.Reader, error) {
-	var list, data bytes.Buffer
-	cmd := exec.Command("go", "tool", "pack", "t", archive)
-	cmd.Stdout = &list
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("running `go tool pack t %q`: %w\n%s", archive, err, stderr.String())
+func readArchiveData(archive string, entry string) (rc io.ReadCloser, err error) {
+	file, err := os.Open(archive)
+	if err != nil {
+		return nil, fmt.Errorf("opening archive: %w", err)
 	}
+	defer func() {
+		// If we return no [io.ReadCloser], then we need to close the file ourselves.
+		if rc != nil {
+			return
+		}
+		err = errors.Join(err, file.Close())
+	}()
+
+	rd := ar.NewReader(file)
 	for {
-		line, err := list.ReadString('\n')
-		if err == io.EOF {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("reading pack list from %q: %w", archive, err)
-		}
-		if line[:len(line)-1] == entry {
-			// Found it!
+		hdr, err := rd.Next()
+		if errors.Is(err, io.EOF) {
 			break
 		}
+		if err != nil {
+			return nil, fmt.Errorf("reading archive: %w", err)
+		}
+		if hdr.Name != entry {
+			continue
+		}
+
+		return arReadCloser{Reader: rd, Closer: file}, nil
 	}
 
-	cmd = exec.Command("go", "tool", "pack", "p", archive, entry)
-	cmd.Stdout = &data
-	return &data, cmd.Run()
+	return nil, nil
 }
 
 var _ zerolog.LogArrayMarshaler = (*LinkDeps)(nil)
@@ -235,4 +239,9 @@ func (l *LinkDeps) MarshalZerologArray(a *zerolog.Array) {
 	for _, dep := range l.Dependencies() {
 		a.Str(dep)
 	}
+}
+
+type arReadCloser struct {
+	*ar.Reader
+	io.Closer
 }

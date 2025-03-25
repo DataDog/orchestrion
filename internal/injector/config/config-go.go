@@ -6,6 +6,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"go/parser"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
 )
@@ -25,12 +27,17 @@ const FilenameOrchestrionToolGo = "orchestrion.tool.go"
 var ErrInvalidGoPackage = errors.New("no .go files in package")
 
 // loadGoPackage loads configuration from the specified go package.
-func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
+func (l *Loader) loadGoPackage(ctx context.Context, pkg *packages.Package) (_ *configGo, err error) {
 	// Special-case the `github.com/DataDog/orchestrion` package, we need not
 	// parse this one, and should always use the built-in object.
 	if pkg.PkgPath == builtIn.pkgPath {
 		return &builtIn, nil
 	}
+
+	span, ctx := tracer.StartSpanFromContext(ctx, "config.loadGoPackage",
+		tracer.ResourceName(pkg.PkgPath),
+	)
+	defer func() { span.Finish(tracer.WithError(err)) }()
 
 	root := packageRoot(pkg)
 	if root == "" {
@@ -53,12 +60,12 @@ func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
 	}
 
 	toolFile := filepath.Join(root, FilenameOrchestrionToolGo)
-	imports, err := l.loadGoFile(toolFile)
+	imports, err := l.loadGoFile(ctx, toolFile)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
 
-	ymlCfg, err := l.loadYMLFile(root, FilenameOrchestrionYML)
+	ymlCfg, err := l.loadYMLFile(ctx, root, FilenameOrchestrionYML)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
@@ -68,10 +75,19 @@ func (l *Loader) loadGoPackage(pkg *packages.Package) (*configGo, error) {
 
 // loadGoFile loads configuration from the specified go file. Returns nil if the
 // file had already been loaded previously, or if the configuration is empty.
-func (l *Loader) loadGoFile(filename string) ([]Config, error) {
+func (l *Loader) loadGoFile(ctx context.Context, filename string) (_ []Config, err error) {
 	if !l.markLoaded(filename) {
 		return nil, nil
 	}
+
+	span, ctx := tracer.StartSpanFromContext(ctx, "config.loadGoFile", tracer.ResourceName(filename))
+	defer func() {
+		spanErr := err
+		if errors.Is(err, fs.ErrNotExist) {
+			spanErr = nil
+		}
+		span.Finish(tracer.WithError(spanErr))
+	}()
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -97,14 +113,14 @@ func (l *Loader) loadGoFile(filename string) ([]Config, error) {
 		imports = append(imports, path)
 	}
 
-	pkgs, err := l.packages(imports...)
+	pkgs, err := l.packages(ctx, imports...)
 	if err != nil {
 		return nil, fmt.Errorf("imports from %q (%q): %w", filename, imports, err)
 	}
 
 	cfgs := make([]Config, 0, len(pkgs))
 	for _, pkg := range pkgs {
-		cfg, err := l.loadGoPackage(pkg)
+		cfg, err := l.loadGoPackage(ctx, pkg)
 		if err != nil {
 			return nil, fmt.Errorf("in %q imported from %q: %w", pkg.PkgPath, filename, err)
 		}

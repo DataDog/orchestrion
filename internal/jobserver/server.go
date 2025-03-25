@@ -156,10 +156,11 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 		clientURL:  clientURL,
 		log:        log,
 	}
-	if err := buildid.Subscribe(ctx, conn, res.CacheStats); err != nil {
+	pkgLoader, err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats)
+	if err != nil {
 		return nil, err
 	}
-	if err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats); err != nil {
+	if err := buildid.Subscribe(ctx, conn, pkgLoader, res.CacheStats); err != nil {
 		return nil, err
 	}
 	cleanup, err := nbt.Subscribe(ctx, conn)
