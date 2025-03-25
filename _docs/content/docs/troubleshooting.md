@@ -118,3 +118,20 @@ to each file.
 
 If the file already exists, new entries are appended to it, instead of
 clobbering it.
+
+## Internal Tracing
+
+Orchestrion itself is built using the Datadog Tracing library for Go. This means
+that it can be configured to emit traces that can be collected by a Datadog
+Agent and sent to a Datadog backend for analysis.
+
+If you have performances concerns. Using the environment variable
+`ORCHESTRION_TRACE=true` and running alongside a Datadog Agent will make
+multiple services that belong to the different components of Orchestrion appear
+in the Datadog APM UI.
+
+{{<callout emoji="⚠️">}}
+This data is hard to interpret without a good understanding of the internals of
+Orchestrion and the Go toolchain. Please make sure to engage with Datadog support
+if you need help interpreting this data.
+{{</callout>}}
