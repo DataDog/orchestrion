@@ -121,7 +121,7 @@ clobbering it.
 
 ## Internal Tracing
 
-Orchestrion itself is build using the Datadog Tracing library for Go. This means
+Orchestrion itself is built using the Datadog Tracing library for Go. This means
 that it can be configured to emit traces that can be collected by a Datadog
 Agent and sent to a Datadog backend for analysis.
 
