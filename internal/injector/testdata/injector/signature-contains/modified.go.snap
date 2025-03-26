@@ -1,0 +1,85 @@
+//line input.go:1:1
+package test
+
+import (
+  "context"
+//line <generated>:1
+  __orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+)
+
+// Matches both: has context in args and error in returns
+//
+//line input.go:8
+func withContextAndError(ctx context.Context, data []byte) (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withContextAndError",
+      __orchestrion_tracer.Tag("function-name", "withContextAndError"),
+    )
+
+    defer func() {
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:9
+  return "", nil
+}
+
+// Matches both: has context in middle of args and error in returns
+func withContextInMiddle(data []byte, ctx context.Context, moreData []byte) (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withContextInMiddle",
+      __orchestrion_tracer.Tag("function-name", "withContextInMiddle"),
+    )
+
+    defer func() {
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:14
+  return "", nil
+}
+
+// Matches only error return (multiple returns)
+func onlyError(data []byte) (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "onlyError",
+      __orchestrion_tracer.Tag("function-name", "onlyError"),
+    )
+
+    defer func() {
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:19
+  return "", nil
+}
+
+// Matches only context argument (multiple args)
+func onlyContext(data []byte, ctx context.Context, moreData []byte) string {
+//line <generated>:1
+  {
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "onlyContext",
+      __orchestrion_tracer.Tag("function-name", "onlyContext"),
+    )
+
+    defer span.Finish()
+  }
+//line input.go:24
+  return ""
+}
+
+// Matches neither
+func noMatch(data []byte) string {
+  return ""
+}

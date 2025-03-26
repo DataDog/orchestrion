@@ -1,3 +1,8 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
 package join
 
 import (
@@ -186,27 +191,22 @@ func TestSignatureContainsHash(t *testing.T) {
 	err := fo.Hash(h1)
 	require.NoError(t, err, "Hash failed")
 
-	// Get the fingerprint string
 	fp1 := h1.Finish()
 
-	// Create identical signature and verify hash is the same
 	fo2 := SignatureContains(args, ret)
 	h2 := fingerprint.New()
 	err = fo2.Hash(h2)
 	require.NoError(t, err, "Hash failed")
 
-	// Get the fingerprint string
 	fp2 := h2.Finish()
 
 	assert.Equal(t, fp1, fp2, "Hash() gave different results for identical signatures")
 
-	// Different arguments should give different hash
 	fo3 := SignatureContains([]TypeName{{name: "float64"}}, ret)
 	h3 := fingerprint.New()
 	err = fo3.Hash(h3)
 	require.NoError(t, err, "Hash failed")
 
-	// Get the fingerprint string
 	fp3 := h3.Finish()
 
 	assert.NotEqual(t, fp1, fp3, "Hash() gave same result for different signatures")

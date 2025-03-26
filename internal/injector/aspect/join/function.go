@@ -236,12 +236,10 @@ func (fo *signatureContains) Hash(h *fingerprint.Hasher) error {
 }
 
 func (fo *signatureContains) evaluate(info functionInformation) bool {
-	// Return true if any result type matches.
 	if containsAnyType(fo.Results, info.Type.Results) {
 		return true
 	}
 
-	// Return true if any parameter type matches.
 	if containsAnyType(fo.Arguments, info.Type.Params) {
 		return true
 	}
@@ -252,12 +250,12 @@ func (fo *signatureContains) evaluate(info functionInformation) bool {
 // containsAnyType checks if any of the expected types match any of the actual types in the field list.
 // Returns false if either slice is empty or nil.
 func containsAnyType(expectedTypes []TypeName, fieldList *dst.FieldList) bool {
-	// Quick return if either side is empty
+	// Quick return if either side is empty.
 	if len(expectedTypes) == 0 || fieldList == nil || len(fieldList.List) == 0 {
 		return false
 	}
 
-	// Check if any expected type matches any actual type
+	// Check if any expected type matches any actual type.
 	for _, expected := range expectedTypes {
 		for _, actual := range fieldList.List {
 			if expected.Matches(actual.Type) {
