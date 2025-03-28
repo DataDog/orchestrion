@@ -6,6 +6,7 @@
 package code_test
 
 import (
+	"go/types"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
@@ -36,6 +37,10 @@ func (mockAdviceContext) ParseSource(src []byte) (*dst.File, error) {
 }
 
 // The rest is not used by the tests as of now...
+func (m mockAdviceContext) ResolveType(dst.Expr) types.Type {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
+}
 func (m mockAdviceContext) Release() {
 	assert.FailNow(m.t, "unexpected method call")
 }
