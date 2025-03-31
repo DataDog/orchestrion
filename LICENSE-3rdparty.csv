@@ -99,7 +99,7 @@ orchestrion,golang.org/x/term,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/text,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/time/rate,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright 2009 The Go Authors.
-orchestrion,golang.org/x/xerrors,BSD-3-Clause,Copyright (c) 2019 The Go Authors. All rights reserved.
+orchestrion,golang.org/x/xerrors,BSD-3-Clause,Copyright 2019 The Go Authors.
 orchestrion,google.golang.org/genproto/googleapis/rpc/status,Apache-2.0,unknown
 orchestrion,google.golang.org/grpc,Apache-2.0,Copyright 2014 gRPC authors.
 orchestrion,google.golang.org/protobuf,BSD-3-Clause,Copyright (c) 2018 The Go Authors. All rights reserved.
