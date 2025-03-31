@@ -1,0 +1,67 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - signature-contains:
+              args: [context.Context]
+              returns: [error]
+    advice:
+      - prepend-statements:
+          imports:
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+          template: |-
+            {{ $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- if (eq $ctx "") -}}
+              {{- $ctx = "ctx" -}}
+              ctx := context.TODO()
+            {{ end -}}
+
+            var span tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf "%q" .Function.Name }},
+              tracer.Tag("function-name", {{ printf "%q" .Function.Name }}),
+            )
+
+            {{ with .Function.ResultOfType "error" -}}
+              defer func() {
+                span.Finish(tracer.WithError({{ . }}))
+              }()
+            {{ else -}}
+              defer span.Finish()
+            {{- end -}}
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer: true
+
+code: |-
+  package test
+
+  import (
+    "context"
+  )
+
+  // Matches both: has context in args and error in returns
+  func withContextAndError(ctx context.Context, data []byte) (string, error) {
+    return "", nil
+  }
+
+  // Matches both: has context in middle of args and error in returns
+  func withContextInMiddle(data []byte, ctx context.Context, moreData []byte) (string, error) {
+    return "", nil
+  }
+
+  // Matches only error return (multiple returns)
+  func onlyError(data []byte) (string, error) {
+    return "", nil
+  }
+
+  // Matches only context argument (multiple args)
+  func onlyContext(data []byte, ctx context.Context, moreData []byte) string {
+    return ""
+  }
+
+  // Matches neither
+  func noMatch(data []byte) string {
+    return ""
+  }
