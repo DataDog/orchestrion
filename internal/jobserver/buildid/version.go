@@ -99,6 +99,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 		if err != nil {
 			return "", err
 		}
+		log.Trace().RawJSON("module", jsonMod).Msg("Adding module to fingerprint...")
 		if err := fptr.Named(name, fingerprint.String(jsonMod)); err != nil {
 			return "", err
 		}
