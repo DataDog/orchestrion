@@ -16,6 +16,7 @@ env:
   # Make sure we're actually testing with the intended Go release (i.e, ensure
   # no automatic toolchain download happens).
   GOTOOLCHAIN: local
+  DD_CI_API_KEY: ${{ secrets.DD_CI_API_KEY }}
 
 jobs:
   ##############################################################################
@@ -298,7 +299,6 @@ jobs:
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
-      dd-ci-api-key: ${{ secrets.DD_CI_API_KEY }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
