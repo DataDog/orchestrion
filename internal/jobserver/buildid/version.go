@@ -151,8 +151,13 @@ func (m *moduleInfo) MarshalJSON() ([]byte, error) {
 		Files [][2]string `json:"files,omitempty"`
 	}{Module: m.Module}
 
-	// If this module is replaced by a directory; we'll hash the files as well...
-	if m.Replace != nil && m.Replace.Version == "" {
+	// If this module does not have a version, or is replaced by a module with no
+	// version, it means it has been replaced by some directory on the local
+	// machine (the [packages.Module.Replace] field is nil for replaced modules
+	// that belong to the current go.work workspace). In these cases, we need to
+	// hash the contents of all the files that contribute to the module's build to
+	// properly invalidate when a local file has changed.
+	if m.Version == "" || (m.Replace != nil && m.Replace.Version == "") {
 		toMarshal.Files = make([][2]string, 0, len(m.Files))
 
 		var (
