@@ -299,6 +299,7 @@ jobs:
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
+      dd-api-key: ${{ secrets.DD_API_KEY }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
