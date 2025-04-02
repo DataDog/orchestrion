@@ -298,7 +298,8 @@ jobs:
       - name: Grab API Key
         run: |-
           echo "dd-api-key=${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
-          echo "length=${ #secrets.DD_API_KEY }"
+          TEMP="${{ secrets.DD_API_KEY }}"
+          echo "Length: ${#TEMP}"
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
