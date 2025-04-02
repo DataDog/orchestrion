@@ -293,13 +293,12 @@ jobs:
   setup-integration-tests:
     runs-on: ubuntu-latest
     outputs:
-      api_key: ${{ steps.get-secret.outputs.api_key }}
+      api_key: ${{ steps.get-api-key.outputs.api_key }}
     steps:
       - name: Grab API Key
+        id: get-api-key
         run: |-
-          echo "dd-api-key=${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
-          TEMP="${{ secrets.DD_API_KEY }}"
-          echo "Length: ${#TEMP}"
+          echo "${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
