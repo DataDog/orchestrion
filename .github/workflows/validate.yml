@@ -293,12 +293,14 @@ jobs:
   # Run all integration tests and gather extensive coverage
   integration-tests:
     name: Integration Tests
-    needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@hannahkm/fix-path-for-orchestrion
-    with:
-      collect-coverage: ${{ github.event_name != 'merge_group' }}
-      orchestrion-version: ${{ github.sha }}
-      dd-api-key: ${{ secrets.DD_API_KEY }}
+    steps:
+      - name: Run tests
+        needs: generate
+        uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@hannahkm/fix-path-for-orchestrion
+        with:
+          collect-coverage: ${{ github.event_name != 'merge_group' }}
+          orchestrion-version: ${{ github.sha }}
+          dd-api-key: ${{ secrets.DD_API_KEY }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
