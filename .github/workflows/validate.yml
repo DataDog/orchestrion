@@ -297,7 +297,7 @@ jobs:
     steps:
       - name: Grab API Key
         id: get-api-key
-        run: echo "${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
+        run: echo ${{ secrets.DD_API_KEY }} >> $GITHUB_OUTPUT
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
