@@ -291,8 +291,9 @@ jobs:
   ##############################################################################
   # Set up secret keys to be used with integration tests
   setup-integration-tests:
+    runs-on: ubuntu-latest
     outputs:
-          api_key: ${{ steps.get-secret.outputs.api_key }}
+      api_key: ${{ steps.get-secret.outputs.api_key }}
     steps:
       - name: Grab API Key
         run: echo "dd-api-key=${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
