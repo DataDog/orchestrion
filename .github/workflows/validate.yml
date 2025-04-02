@@ -288,19 +288,27 @@ jobs:
           cat ${{ runner.temp }}/benchmarks-formatted.txt >> "${GITHUB_STEP_SUMMARY}"
           echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
 
+  ##############################################################################
+  # Set up secret keys to be used with integration tests
+  setup-integration-tests:
+    outputs:
+          api_key: ${{ steps.get-secret.outputs.api_key }}
+    steps:
+      - name: Grab API Key
+        run: echo "dd-api-key=${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
   integration-tests:
     name: Integration Tests
-    steps:
-      - name: Run tests
-        needs: generate
-        uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@hannahkm/fix-path-for-orchestrion
-        with:
-          collect-coverage: ${{ github.event_name != 'merge_group' }}
-          orchestrion-version: ${{ github.sha }}
-          dd-api-key: ${{ secrets.DD_API_KEY }}
+    needs: 
+      - generate
+      - setup-integration-tests
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@hannahkm/fix-path-for-orchestrion
+    with:
+      collect-coverage: ${{ github.event_name != 'merge_group' }}
+      orchestrion-version: ${{ github.sha }}
+      dd-api-key: ${{ needs.setup-integration-tests.outputs.api_key }}
 
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
