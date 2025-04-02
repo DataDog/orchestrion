@@ -296,7 +296,9 @@ jobs:
       api_key: ${{ steps.get-secret.outputs.api_key }}
     steps:
       - name: Grab API Key
-        run: echo "dd-api-key=${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
+        run: |-
+          echo "dd-api-key=${{ secrets.DD_API_KEY }}" >> $GITHUB_OUTPUT
+          echo "length=${ #secrets.DD_API_KEY }"
 
   ##############################################################################
   # Run all integration tests and gather extensive coverage
