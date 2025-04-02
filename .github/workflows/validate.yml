@@ -16,7 +16,6 @@ env:
   # Make sure we're actually testing with the intended Go release (i.e, ensure
   # no automatic toolchain download happens).
   GOTOOLCHAIN: local
-  DD_CI_API_KEY: ${{ secrets.DD_CI_API_KEY }}
 
 jobs:
   ##############################################################################
