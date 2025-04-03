@@ -34,6 +34,7 @@ orchestrion,github.com/eapache/queue/v2,MIT,Copyright (c) 2014 Evan Huus
 orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
 orchestrion,github.com/fsnotify/fsnotify,BSD-3-Clause,Copyright © 2012 The Go Authors. All rights reserved.
 orchestrion,github.com/go-ole/go-ole,MIT,"Copyright © 2013-2017 Yasuhiro Matsumoto, <mattn.jp@gmail.com>"
+orchestrion,github.com/goccy/go-yaml,MIT,Copyright (c) 2019 Masaaki Goshima
 orchestrion,github.com/gogo/protobuf,BSD-3-Clause,"Copyright (c) 2013, The GoGo Authors. All rights reserved. | Copyright 2010 The Go Authors.  All rights reserved."
 orchestrion,github.com/golang/protobuf/proto,BSD-3-Clause,Copyright 2010 The Go Authors.  All rights reserved.
 orchestrion,github.com/google/go-tpm,Apache-2.0,unknown
