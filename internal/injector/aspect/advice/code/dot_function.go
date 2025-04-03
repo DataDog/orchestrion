@@ -8,9 +8,12 @@ package code
 import (
 	"errors"
 	"fmt"
+	"go/types"
 
-	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/dave/dst"
+
+	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 )
 
 type (
@@ -34,6 +37,12 @@ type (
 		// ResultOfType returns the name of the first return value in this function that has the
 		// provided type, or a empty string if none is found.
 		ResultOfType(string) (string, error)
+		// ResultImplements returns the name of the first return value in this function that implements
+		// the provided interface type, or an empty string if none is found.
+		ResultImplements(string) (string, error)
+		// LastResultImplements returns the name of the last return value in this function that implements
+		// the provided interface type, or an empty string if none is found.
+		LastResultImplements(string) (string, error)
 	}
 
 	declaredFunc struct {
@@ -58,9 +67,9 @@ func (d *dot) Function() function {
 	for curr := d.context.Chain(); curr != nil; curr = curr.Parent() {
 		switch node := curr.Node().(type) {
 		case *dst.FuncDecl:
-			return &declaredFunc{signature{node.Type}, node}
+			return &declaredFunc{signature{d.context, node.Type}, node}
 		case *dst.FuncLit:
-			return &literalFunc{signature{node.Type}, node}
+			return &literalFunc{signature{d.context, node.Type}, node}
 		}
 	}
 	return noFunc{}
@@ -109,7 +118,16 @@ func (noFunc) ResultOfType(string) (string, error) {
 	return "", errNoFunction
 }
 
+func (noFunc) ResultImplements(string) (string, error) {
+	return "", errNoFunction
+}
+
+func (noFunc) LastResultImplements(string) (string, error) {
+	return "", errNoFunction
+}
+
 type signature struct {
+	context context.AdviceContext
 	*dst.FuncType
 }
 
@@ -127,6 +145,89 @@ func (s signature) Result(index int) (name string, err error) {
 
 func (s signature) ResultOfType(name string) (string, error) {
 	return fieldOfType(s.Results, name, "result")
+}
+
+func (s signature) ResultImplements(name string) (string, error) {
+	// Return blank if there are no results.
+	if s.Results == nil {
+		return "", nil
+	}
+
+	// Parse the interface type name
+	tn, err := join.NewTypeName(name)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse interface type name: %v", err)
+	}
+	// Parse the interface type.
+	interfaceExpr := tn.AsNode()
+	iface, err := resolveInterfaceType(s.context, interfaceExpr)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve type for interface %s: %v", name, err)
+	}
+
+	// Check each result.
+	index := 0
+	for _, field := range s.Results.List {
+		if exprImplements(s.context, field.Type, iface) {
+			return fieldAt(s.Results, index, "result")
+		}
+
+		switch count := len(field.Names); count {
+		case 0, 1:
+			index++
+		default:
+			index += count
+		}
+	}
+
+	// Not found.
+	return "", nil
+}
+
+func (s signature) LastResultImplements(name string) (string, error) {
+	// Return blank if there are no results.
+	if s.Results == nil {
+		return "", nil
+	}
+
+	// Parse the interface type name
+	tn, err := join.NewTypeName(name)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse interface type name: %v", err)
+	}
+
+	// Parse the interface type.
+	interfaceExpr := tn.AsNode()
+	iface, err := resolveInterfaceType(s.context, interfaceExpr)
+	if err != nil {
+		return "", fmt.Errorf("cannot resolve type for interface %s: %v", name, err)
+	}
+
+	// Check each result in reverse order.
+	index := 0
+	lastIndex := -1
+	lastField := -1
+
+	for i, field := range s.Results.List {
+		if exprImplements(s.context, field.Type, iface) {
+			lastIndex = index
+			lastField = i
+		}
+
+		switch count := len(field.Names); count {
+		case 0, 1:
+			index++
+		default:
+			index += count
+		}
+	}
+
+	if lastField >= 0 {
+		return fieldAt(s.Results, lastIndex, "result")
+	}
+
+	// Not found
+	return "", nil
 }
 
 func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
@@ -193,4 +294,58 @@ func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, er
 
 	// Not found!
 	return "", nil
+}
+
+// resolveInterfaceType gets the underlying interface type from a type expression.
+func resolveInterfaceType(ctx context.AdviceContext, expr dst.Expr) (*types.Interface, error) {
+	// Get the interface type from the context.
+	interfaceType := ctx.ResolveType(expr)
+	if interfaceType == nil {
+		return nil, fmt.Errorf("cannot resolve type for interface expression")
+	}
+
+	// Extract the underlying interface
+	switch t := interfaceType.(type) {
+	case *types.Interface:
+		return t, nil
+	case *types.Named:
+		if underlying, ok := t.Underlying().(*types.Interface); ok {
+			return underlying, nil
+		}
+		return nil, fmt.Errorf("type is not an interface")
+	default:
+		return nil, fmt.Errorf("type is not an interface")
+	}
+}
+
+// exprImplements checks if an expression's type implements an interface.
+func exprImplements(ctx context.AdviceContext, expr dst.Expr, iface *types.Interface) bool {
+	actualType := ctx.ResolveType(expr)
+	if actualType == nil {
+		return false
+	}
+
+	return typeImplements(actualType, iface)
+}
+
+// typeImplements checks if a type implements an interface (including pointer receivers).
+func typeImplements(t types.Type, iface *types.Interface) bool {
+	if t == nil || iface == nil {
+		return false
+	}
+
+	// Direct implementation check
+	if types.Implements(t, iface) {
+		return true
+	}
+
+	// Check pointer type implementation for named types.
+	if named, ok := t.(*types.Named); ok {
+		ptrType := types.NewPointer(named)
+		if types.Implements(ptrType, iface) {
+			return true
+		}
+	}
+
+	return false
 }
