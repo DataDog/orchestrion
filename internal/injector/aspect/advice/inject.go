@@ -6,12 +6,14 @@
 package advice
 
 import (
+	gocontext "context"
 	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type injectDeclarations struct {
@@ -65,12 +67,12 @@ func (a injectDeclarations) AddedImports() []string {
 }
 
 func init() {
-	unmarshalers["inject-declarations"] = func(node *yaml.Node) (Advice, error) {
+	unmarshalers["inject-declarations"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var config struct {
 			Template *code.Template `yaml:",inline"`
 			Links    []string
 		}
-		if err := node.Decode(&config); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &config); err != nil {
 			return nil, err
 		}
 

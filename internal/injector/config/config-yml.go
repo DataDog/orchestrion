@@ -15,7 +15,8 @@ import (
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 const FilenameOrchestrionYML = "orchestrion.yml"
@@ -42,7 +43,7 @@ func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *c
 		span.Finish(tracer.WithError(spanErr))
 	}()
 
-	yml, err := l.parseYMLFile(filename)
+	yml, err := l.parseYMLFile(ctx, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ type ymlFile struct {
 	}
 }
 
-func (l *Loader) parseYMLFile(filename string) (*ymlFile, error) {
+func (l *Loader) parseYMLFile(ctx context.Context, filename string) (*ymlFile, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("open %q: %w", filename, err)
@@ -171,16 +172,19 @@ func (l *Loader) parseYMLFile(filename string) (*ymlFile, error) {
 	// This dance is significantly cheaper (both in time & allocations) than doing
 	// a full blown [yaml.Decoder.Decode] twice (as it internally transits through
 	// the [yaml.Node] representation anyway).
-	var dec interface{ Decode(any) error } = yaml.NewDecoder(file)
+	ctx, yamlDec := yaml.NewDecoderContext(ctx, file)
+	var dec interface {
+		DecodeContext(context.Context, any) error
+	} = yamlDec
 	if l.validate {
-		var node yaml.Node
-		if err := dec.Decode(&node); err != nil {
+		var node ast.Node
+		if err := dec.DecodeContext(ctx, &node); err != nil {
 			return nil, fmt.Errorf("yaml.Decode %q -> yaml.Node: %w", filename, err)
 		}
-		dec = &node
+		dec = decodedNode{yamlDec, node}
 
 		var simple map[string]any
-		if err := dec.Decode(&simple); err != nil {
+		if err := dec.DecodeContext(ctx, &simple); err != nil {
 			return nil, fmt.Errorf("yaml.Decode %q -> map[string]any: %w", filename, err)
 		}
 
@@ -190,11 +194,20 @@ func (l *Loader) parseYMLFile(filename string) (*ymlFile, error) {
 	}
 
 	var yml ymlFile
-	if err := dec.Decode(&yml); err != nil {
+	if err := dec.DecodeContext(ctx, &yml); err != nil {
 		return nil, fmt.Errorf("yaml.Decode %q: %w", filename, err)
 	}
 
 	return &yml, nil
+}
+
+type decodedNode struct {
+	*yaml.Decoder
+	ast.Node
+}
+
+func (n decodedNode) DecodeContext(ctx context.Context, out any) error {
+	return n.Decoder.DecodeFromNodeContext(ctx, n.Node, out)
 }
 
 // maskErrNotExist intentionally "breaks" the error chaining if the provided

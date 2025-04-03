@@ -6,13 +6,15 @@
 package advice
 
 import (
+	gocontext "context"
 	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type wrapExpression struct {
@@ -61,11 +63,11 @@ func (a *wrapExpression) AddedImports() []string {
 }
 
 func init() {
-	unmarshalers["wrap-expression"] = func(node *yaml.Node) (Advice, error) {
-		var template *code.Template
-		if err := node.Decode(&template); err != nil {
+	unmarshalers["wrap-expression"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
+		var template code.Template
+		if err := yaml.NodeToValueContext(ctx, node, &template); err != nil {
 			return nil, err
 		}
-		return WrapExpression(template), nil
+		return WrapExpression(&template), nil
 	}
 }
