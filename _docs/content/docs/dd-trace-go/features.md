@@ -10,7 +10,8 @@ next: /docs/dd-trace-go/custom-trace
 
 {{<callout type="info">}}
 The core tracer integration is provided by:
-- [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../integrations/ddtrace-tracer)
+- Tracer v1: [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../v1/ddtrace-tracer)
+- Tracer v2: [`github.com/DataDog/dd-trace-go/v2/ddtrace/tracer`](../v2/ddtrace-tracer)
 {{</callout>}}
 
 All applications built using `orchestrion` automatically start the Datadog
@@ -31,7 +32,8 @@ with your preferred configuration options.
 
 {{<callout type="info">}}
 The Go continuous profiler integration is provided by:
-- [`gopkg.in/DataDog/dd-trace-go.v1/profiler`](../integrations/profiler)
+- Tracer v1: [`gopkg.in/DataDog/dd-trace-go.v1/profiler`](../v1/profiler)
+- Tracer v2: [`github.com/DataDog/dd-trace-go/v2/profiler`](../v2/profiler)
 {{</callout>}}
 
 All applications built using `orchestrion` automatically start the Datadog
@@ -41,10 +43,14 @@ to `1` or `true`. If profiling is enabled via the
 set to `auto`.
 
 When enabled, the continuous profiler will activate the following profiles:
-- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="CPUProfile" >}}
-- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="HeapProfile" >}}
-- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="GoroutineProfile" >}}
-- {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="MutexProfile" >}}
+- Tracer v1: {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="CPUProfile" >}} /
+  Tracer v2: {{<godoc import-path="github.com/DataDog/dd-trace-go/v2/profiler" package="profiler" name="CPUProfile" >}}
+- Tracer v1: {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="HeapProfile" >}} /
+  Tracer v2: {{<godoc import-path="github.com/DataDog/dd-trace-go/v2/profiler" package="profiler" name="HeapProfile" >}}
+- Tracer v1: {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="GoroutineProfile" >}} /
+  Tracer v2: {{<godoc import-path="github.com/DataDog/dd-trace-go/v2/profiler" package="profiler" name="GoroutineProfile" >}}
+- Tracer v1: {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1/profiler" package="profiler" name="MutexProfile" >}} /
+  Tracer v2: {{<godoc import-path="github.com/DataDog/dd-trace-go/v2/profiler" package="profiler" name="MutexProfile" >}}
 
 [dd-adm-controller]: https://docs.datadoghq.com/containers/cluster_agent/admission_controller/?tab=datadogoperator
 
@@ -54,7 +60,8 @@ When enabled, the continuous profiler will activate the following profiles:
 The Application Security (ASM) features are supported by the core tracer
 integrations, and baked into the various supported library integrations. As a
 result, ASM requires you enable:
-- [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../integrations/ddtrace-tracer)
+- [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../v1/ddtrace-tracer) or
+  [`github.com/DataDog/dd-trace-go/v2/ddtrace/tracer`](../v2/ddtrace-tracer)
 - Integrations for supported libraries you want monitoring and/or protection for
 {{</callout>}}
 

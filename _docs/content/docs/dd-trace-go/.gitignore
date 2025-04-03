@@ -1,2 +1,5 @@
-/integrations/*.md
-!/integrations/_index.md
+/v1/*.md
+!/v1/_index.md
+
+/v2/*.md
+!/v2/_index.md

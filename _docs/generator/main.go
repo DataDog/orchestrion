@@ -15,14 +15,32 @@ import (
 
 func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
+
+	// Document the V1 integrations
 	gen := Generator{
-		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "integrations"),
+		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "v1"),
 		ConfigSource: filepath.Join(thisFile, "..", "..", "..", "instrument"),
+		Validate:     true,
+		CommonPrefix: "gopkg.in/DataDog/dd-trace-go.v1/",
 	}
 	if err := gen.Generate(); err != nil {
 		log.Fatalln(err)
 	}
 
+	// Document the V2 integrations
+	gen = Generator{
+		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "v2"),
+		ConfigSource: filepath.Join(thisFile, "..", ".."),
+		Validate:     false, // Currently one aspect is not valid in V2 (rueidis)
+		CommonPrefix: "github.com/DataDog/dd-trace-go/",
+		TrimPrefix:   "v2/",
+		TrimSuffix:   "/v2",
+	}
+	if err := gen.Generate(); err != nil {
+		log.Fatalln(err)
+	}
+
+	// Document the aspects schema
 	if err := documentSchema(filepath.Join(thisFile, "..", "..", "content", "contributing", "aspects")); err != nil {
 		log.Fatalln(err)
 	}

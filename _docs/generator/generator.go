@@ -28,8 +28,22 @@ var (
 )
 
 type Generator struct {
-	Dir          string
+	// Dir is the directory in which to write the generated files.
+	Dir string
+	// ConfigSource is the directory from which to load configuration.
 	ConfigSource string
+	// Validate determines whether the config parser runs in validation mode.
+	Validate bool
+
+	// CommonPrefix is used to trim common prefixes from package paths when
+	// generating doc titles.
+	CommonPrefix string
+	// TrimPrefix is used to trim common prefixes from package paths when
+	// generating doc titles. This is done after [Generator.CommonPrefix].
+	TrimPrefix string
+	// TrimSuffix is used to remove common suffixes from package paths when
+	// generating doc titles.
+	TrimSuffix string
 
 	generatedFiles map[string]struct{}
 }
@@ -39,7 +53,7 @@ func (g *Generator) Generate() (err error) {
 		return fmt.Errorf("mkdir -p %s: %w", g.Dir, err)
 	}
 
-	cfg, err := config.NewLoader(nil, g.ConfigSource, true).Load(context.Background())
+	cfg, err := config.NewLoader(nil, g.ConfigSource, g.Validate).Load(context.Background())
 	if err != nil {
 		return fmt.Errorf("config.Load(%s): %w", g.ConfigSource, err)
 	}
@@ -120,7 +134,13 @@ func (g *Generator) updateToolsFile(cfg config.Config) error {
 }
 
 func (g *Generator) renderPackage(pkgPath string, files []config.File) error {
-	shortName := strings.TrimPrefix(pkgPath, "gopkg.in/DataDog/dd-trace-go.v1/")
+	if pkgPath == "github.com/DataDog/orchestrion" {
+		return nil
+	}
+
+	shortName := strings.TrimPrefix(pkgPath, g.CommonPrefix)
+	shortName = strings.TrimPrefix(shortName, g.TrimPrefix)
+	shortName = strings.TrimSuffix(shortName, g.TrimSuffix)
 	filename := strings.ReplaceAll(shortName, "/", "-") + ".md"
 	g.generatedFiles[filename] = struct{}{}
 
