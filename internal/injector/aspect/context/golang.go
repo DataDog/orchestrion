@@ -6,11 +6,13 @@
 package context
 
 import (
+	gocontext "context"
 	"fmt"
 	"go/version"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 // GoLangVersion represents a go language level. It's a string of the form "go1.18".
@@ -60,11 +62,11 @@ func (g GoLangVersion) Hash(h *fingerprint.Hasher) error {
 	return h.Named("GoLangVersion", fingerprint.String(g.label))
 }
 
-var _ yaml.Unmarshaler = (*GoLangVersion)(nil)
+var _ yaml.NodeUnmarshalerContext = (*GoLangVersion)(nil)
 
-func (g *GoLangVersion) UnmarshalYAML(node *yaml.Node) error {
+func (g *GoLangVersion) UnmarshalYAML(ctx gocontext.Context, node ast.Node) error {
 	var lang string
-	if err := node.Decode(&lang); err != nil {
+	if err := yaml.NodeToValueContext(ctx, node, &lang); err != nil {
 		return err
 	}
 

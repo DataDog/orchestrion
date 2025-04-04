@@ -6,14 +6,16 @@
 package join
 
 import (
+	gocontext "context"
 	"fmt"
 	"regexp"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type functionCall struct {
@@ -70,9 +72,9 @@ func (i *functionCall) Hash(h *fingerprint.Hasher) error {
 var funcNamePattern = regexp.MustCompile(`\A(?:(.+)\.)?([\p{L}_][\p{L}_\p{Nd}]*)\z`)
 
 func init() {
-	unmarshalers["function-call"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["function-call"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var symbol string
-		if err := node.Decode(&symbol); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &symbol); err != nil {
 			return nil, err
 		}
 

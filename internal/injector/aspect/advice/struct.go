@@ -6,13 +6,15 @@
 package advice
 
 import (
+	gocontext "context"
 	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type addStructField struct {
@@ -65,13 +67,13 @@ func (a *addStructField) AddedImports() []string {
 }
 
 func init() {
-	unmarshalers["add-struct-field"] = func(node *yaml.Node) (Advice, error) {
+	unmarshalers["add-struct-field"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var spec struct {
 			Name string
 			Type string
 		}
 
-		if err := node.Decode(&spec); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
 		}
 		tn, err := join.NewTypeName(spec.Type)

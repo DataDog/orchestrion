@@ -6,14 +6,16 @@
 package join
 
 import (
+	gocontext "context"
 	"fmt"
 	"regexp"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type declarationOf struct {
@@ -118,9 +120,9 @@ func (i *valueDeclaration) Hash(h *fingerprint.Hasher) error {
 var symbolNamePattern = regexp.MustCompile(`\A(.+)\.([\p{L}_][\p{L}_\p{Nd}]*)\z`)
 
 func init() {
-	unmarshalers["declaration-of"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["declaration-of"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var symbol string
-		if err := node.Decode(&symbol); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &symbol); err != nil {
 			return nil, err
 		}
 
@@ -132,9 +134,9 @@ func init() {
 		return DeclarationOf(matches[1], matches[2]), nil
 	}
 
-	unmarshalers["value-declaration"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["value-declaration"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var typeName string
-		if err := node.Decode(&typeName); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &typeName); err != nil {
 			return nil, err
 		}
 

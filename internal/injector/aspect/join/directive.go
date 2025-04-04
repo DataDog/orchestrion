@@ -6,6 +6,7 @@
 package join
 
 import (
+	gocontext "context"
 	"go/token"
 	"strings"
 	"unicode"
@@ -14,8 +15,9 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type directive string
@@ -130,9 +132,9 @@ func (d directive) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["directive"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["directive"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var name string
-		if err := node.Decode(&name); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &name); err != nil {
 			return nil, err
 		}
 		return Directive(name), nil

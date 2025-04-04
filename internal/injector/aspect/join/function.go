@@ -6,14 +6,17 @@
 package join
 
 import (
+	gocontext "context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type (
@@ -348,17 +351,17 @@ func (s *functionBody) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["function-body"] = func(node *yaml.Node) (Point, error) {
-		up, err := FromYAML(node)
+	unmarshalers["function-body"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
+		up, err := FromYAML(ctx, node)
 		if err != nil {
 			return nil, err
 		}
 		return FunctionBody(up), nil
 	}
 
-	unmarshalers["function"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["function"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var unmarshalOpts []unmarshalFuncDeclOption
-		if err := node.Decode(&unmarshalOpts); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &unmarshalOpts); err != nil {
 			return nil, err
 		}
 		opts := make([]FunctionOption, len(unmarshalOpts))
@@ -373,30 +376,31 @@ type unmarshalFuncDeclOption struct {
 	FunctionOption
 }
 
-func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind != yaml.MappingNode {
-		return fmt.Errorf("line %d: cannot unmarshal into a FuncDeclOption: not a mapping", node.Line)
+func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.Node) error {
+	mapping, ok := node.(*ast.MappingNode)
+	if !ok {
+		return errors.New("cannot unmarshal into a FuncDeclOption: not a mapping")
 	}
 
-	if len(node.Content) != 2 {
-		return fmt.Errorf("line %d: cannot unmarshal into a FuncDeclOption: not a singleton mapping", node.Line)
+	if len(mapping.Values) != 1 {
+		return errors.New("cannot unmarshal into a FuncDeclOption: not a singleton mapping")
 	}
 
 	var key string
-	if err := node.Content[0].Decode(&key); err != nil {
+	if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Key, &key); err != nil {
 		return err
 	}
 
 	switch key {
 	case "name":
 		var name string
-		if err := node.Content[1].Decode(&name); err != nil {
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &name); err != nil {
 			return err
 		}
 		o.FunctionOption = Name(name)
 	case "receiver":
 		var arg string
-		if err := node.Content[1].Decode(&arg); err != nil {
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &arg); err != nil {
 			return err
 		}
 		tn, err := NewTypeName(arg)
@@ -406,17 +410,19 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 		o.FunctionOption = Receiver(tn)
 	case "signature", "signature-contains":
 		var sig struct {
-			Extra map[string]yaml.Node `yaml:",inline"`
-			Args  []string             `yaml:"args"`
-			Ret   []string             `yaml:"returns"`
+			Args  []string            `yaml:"args"`
+			Ret   []string            `yaml:"returns"`
+			Extra map[string]ast.Node `yaml:",inline"`
 		}
-		if err := node.Content[1].Decode(&sig); err != nil {
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &sig); err != nil {
 			return err
 		}
+		delete(sig.Extra, "args")
+		delete(sig.Extra, "returns")
 		if len(sig.Extra) != 0 {
 			keys := make([]string, 0, len(sig.Extra))
 			for key, val := range sig.Extra {
-				keys = append(keys, fmt.Sprintf("%q (line %d)", key, val.Line))
+				keys = append(keys, fmt.Sprintf("%q (line %d)", key, val.GetToken().Position.Line))
 			}
 			return fmt.Errorf("unexpected keys: %s", strings.Join(keys, ", "))
 		}
@@ -450,7 +456,7 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(node *yaml.Node) error {
 			o.FunctionOption = SignatureContains(args, ret)
 		}
 	default:
-		return fmt.Errorf("line %d: unknown FuncDeclOption name: %q", node.Content[0].Line, key)
+		return fmt.Errorf("unknown FuncDeclOption name: %q", key)
 	}
 
 	return nil

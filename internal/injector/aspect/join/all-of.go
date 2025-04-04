@@ -6,10 +6,13 @@
 package join
 
 import (
+	gocontext "context"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type allOf []Point
@@ -62,21 +65,21 @@ func (o allOf) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["all-of"] = func(node *yaml.Node) (Point, error) {
-		var nodes []yaml.Node
-		if err := node.Decode(&nodes); err != nil {
+	unmarshalers["all-of"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
+		var nodes []ast.Node
+		if err := yaml.NodeToValueContext(ctx, node, &nodes); err != nil {
 			return nil, err
 		}
 
 		if len(nodes) == 1 {
-			pt, err := FromYAML(&nodes[0])
+			pt, err := FromYAML(ctx, nodes[0])
 			return pt, err
 		}
 
 		requirements := make([]Point, len(nodes))
 		for i, n := range nodes {
 			var err error
-			if requirements[i], err = FromYAML(&n); err != nil {
+			if requirements[i], err = FromYAML(ctx, n); err != nil {
 				return nil, err
 			}
 		}

@@ -15,10 +15,10 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
-	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/golden"
 )
 
@@ -191,9 +191,8 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
-		enc := yaml.NewEncoder(&buf)
+		enc := yaml.NewEncoder(&buf, yaml.Indent(2), yaml.IndentSequence(true), yaml.UseSingleQuote(true))
 		defer func() { require.NoError(t, enc.Close()) }()
-		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
 		assert.Len(t, cfg.Aspects(), len(builtIn.yaml.aspects)) // Just the orchestrion:... aspects
@@ -206,9 +205,8 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 
 		var buf bytes.Buffer
-		enc := yaml.NewEncoder(&buf)
+		enc := yaml.NewEncoder(&buf, yaml.Indent(2), yaml.IndentSequence(true), yaml.UseSingleQuote(true))
 		defer func() { require.NoError(t, enc.Close()) }()
-		enc.SetIndent(2)
 		require.NoError(t, enc.Encode(cfg))
 
 		assert.Len(t, cfg.Aspects(), 115+len(builtIn.yaml.aspects))
@@ -255,8 +253,8 @@ func runGo(t *testing.T, tmp string, args ...string) {
 }
 
 var (
-	_ yaml.Marshaler = (*configGo)(nil)
-	_ yaml.Marshaler = (*configYML)(nil)
+	_ yaml.InterfaceMarshaler = (*configGo)(nil)
+	_ yaml.InterfaceMarshaler = (*configYML)(nil)
 )
 
 func (c *configGo) MarshalYAML() (any, error) {

@@ -6,22 +6,23 @@
 package singleton
 
 import (
-	"fmt"
+	"context"
+	"errors"
 
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
-func Unmarshal(node *yaml.Node) (key string, value *yaml.Node, err error) {
-	if node.Kind != yaml.MappingNode || len(node.Content) != 2 {
-		err = fmt.Errorf("line %d: cannot unmarshal: not a singleton mapping", node.Line)
-		return
+func Unmarshal(ctx context.Context, node ast.Node) (key string, value ast.Node, err error) {
+	mapping, ok := node.(*ast.MappingNode)
+	if !ok || len(mapping.Values) != 1 {
+		err = errors.New("not a singleton mapping")
+		return "", nil, err
 	}
 
-	if err = node.Content[0].Decode(&key); err != nil {
-		return
+	if err = yaml.NodeToValueContext(ctx, mapping.Values[0].Key, &key); err != nil {
+		return "", nil, err
 	}
 
-	value = node.Content[1]
-
-	return
+	return key, mapping.Values[0].Value, nil
 }

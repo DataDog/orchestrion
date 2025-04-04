@@ -6,27 +6,28 @@
 package advice
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/injector/singleton"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
-type unmarshalerFn func(*yaml.Node) (Advice, error)
+type unmarshalerFn func(context.Context, ast.Node) (Advice, error)
 
 var unmarshalers = make(map[string]unmarshalerFn)
 
-func FromYAML(node *yaml.Node) (Advice, error) {
-	key, value, err := singleton.Unmarshal(node)
+func FromYAML(ctx context.Context, node ast.Node) (Advice, error) {
+	key, value, err := singleton.Unmarshal(ctx, node)
 	if err != nil {
 		return nil, err
 	}
 
 	unmarshaler, ok := unmarshalers[key]
 	if !ok {
-		return nil, fmt.Errorf("line %d: unknown advice type: %q", node.Line, key)
+		return nil, fmt.Errorf("unknown advice type: %q", key)
 	}
 
-	act, err := unmarshaler(value)
+	act, err := unmarshaler(ctx, value)
 	return act, err
 }

@@ -8,9 +8,12 @@
 package advice
 
 import (
+	gocontext "context"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type addBlankImport string
@@ -33,9 +36,9 @@ func (a addBlankImport) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["add-blank-import"] = func(node *yaml.Node) (Advice, error) {
+	unmarshalers["add-blank-import"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var path string
-		if err := node.Decode(&path); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &path); err != nil {
 			return nil, err
 		}
 		return AddBlankImport(path), nil

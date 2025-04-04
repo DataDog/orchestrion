@@ -6,10 +6,13 @@
 package join
 
 import (
+	gocontext "context"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 
 	_ "embed" // For go:embed
 )
@@ -47,8 +50,8 @@ func (jp configuration) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["configuration"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["configuration"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var c configuration
-		return c, node.Decode(&c)
+		return c, yaml.NodeToValueContext(ctx, node, &c)
 	}
 }

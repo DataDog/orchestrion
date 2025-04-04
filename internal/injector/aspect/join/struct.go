@@ -6,14 +6,16 @@
 package join
 
 import (
+	gocontext "context"
 	"fmt"
 	"go/token"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type structDefinition struct {
@@ -177,9 +179,9 @@ func (s *structLiteral) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["struct-definition"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["struct-definition"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var spec string
-		if err := node.Decode(&spec); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
 		}
 
@@ -193,13 +195,13 @@ func init() {
 
 		return StructDefinition(tn), nil
 	}
-	unmarshalers["struct-literal"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["struct-literal"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var spec struct {
 			Type  string
 			Field string
 			Match StructLiteralMatch
 		}
-		if err := node.Decode(&spec); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
 		}
 
@@ -219,11 +221,11 @@ func init() {
 	}
 }
 
-var _ yaml.Unmarshaler = (*StructLiteralMatch)(nil)
+var _ yaml.NodeUnmarshalerContext = (*StructLiteralMatch)(nil)
 
-func (s *StructLiteralMatch) UnmarshalYAML(node *yaml.Node) error {
+func (s *StructLiteralMatch) UnmarshalYAML(ctx gocontext.Context, node ast.Node) error {
 	var name string
-	if err := node.Decode(&name); err != nil {
+	if err := yaml.NodeToValueContext(ctx, node, &name); err != nil {
 		return err
 	}
 

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/dave/dst"
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 )

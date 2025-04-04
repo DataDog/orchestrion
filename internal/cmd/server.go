@@ -19,8 +19,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/fsnotify/fsnotify"
+	"github.com/goccy/go-yaml"
 	"github.com/rs/zerolog"
-	"gopkg.in/yaml.v3"
 
 	"github.com/urfave/cli/v2"
 )

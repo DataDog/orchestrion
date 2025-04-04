@@ -7,6 +7,7 @@ package code
 
 import (
 	"bytes"
+	gocontext "context"
 	"errors"
 	"fmt"
 	"go/token"
@@ -17,9 +18,10 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/version"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type Template struct {
@@ -211,14 +213,16 @@ func (t *Template) AddedImports() []string {
 	return imports
 }
 
-func (t *Template) UnmarshalYAML(node *yaml.Node) (err error) {
+var _ yaml.NodeUnmarshalerContext = (*Template)(nil)
+
+func (t *Template) UnmarshalYAML(ctx gocontext.Context, node ast.Node) (err error) {
 	var cfg struct {
 		Template string
 		Imports  map[string]string
 		Links    []string
 		Lang     context.GoLangVersion
 	}
-	if err = node.Decode(&cfg); err != nil {
+	if err = yaml.NodeToValueContext(ctx, node, &cfg); err != nil {
 		return
 	}
 

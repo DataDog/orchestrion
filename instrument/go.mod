@@ -104,6 +104,7 @@ require (
 	github.com/go-redis/redis/v7 v7.4.1 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/goccy/go-yaml v1.17.1 // indirect
 	github.com/gocql/gocql v1.7.0 // indirect
 	github.com/gofiber/fiber/v2 v2.52.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

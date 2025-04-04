@@ -6,27 +6,28 @@
 package join
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/injector/singleton"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
-type unmarshalerFn func(*yaml.Node) (Point, error)
+type unmarshalerFn func(context.Context, ast.Node) (Point, error)
 
 var unmarshalers = make(map[string]unmarshalerFn)
 
-func FromYAML(node *yaml.Node) (Point, error) {
-	key, value, err := singleton.Unmarshal(node)
+func FromYAML(ctx context.Context, node ast.Node) (Point, error) {
+	key, value, err := singleton.Unmarshal(ctx, node)
 	if err != nil {
 		return nil, err
 	}
 
 	unmarshaller, found := unmarshalers[key]
 	if !found {
-		return nil, fmt.Errorf("line %d: unknown injection point type %q", node.Line, key)
+		return nil, fmt.Errorf("unknown injection point type %q", key)
 	}
 
-	ip, err := unmarshaller(value)
+	ip, err := unmarshaller(ctx, value)
 	return ip, err
 }
