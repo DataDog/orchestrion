@@ -1,6 +1,6 @@
 # https://editorconfig.org/
 
-root = trrue
+root = true
 
 # Use unix-style newlines with a new line at EOF. No trailing whitespace.
 [*]

@@ -99,6 +99,7 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 		if err != nil {
 			return "", err
 		}
+		log.Trace().RawJSON("module", jsonMod).Msg("Adding module to fingerprint...")
 		if err := fptr.Named(name, fingerprint.String(jsonMod)); err != nil {
 			return "", err
 		}
@@ -111,6 +112,18 @@ func (s *service) versionSuffix(ctx context.Context, _ VersionSuffixRequest) (Ve
 type moduleInfo struct {
 	*packages.Module
 	Files map[string]struct{}
+}
+
+// shouldHashContent determines whether this module's files need to be hashed in
+// order to properly invalidate build caches when the module changes. This is
+// necessary when the module does not have a version, or is replaced by a module
+// with no version. Both cases imply the module has been replaced by some local
+// directory.
+// Interestingly, the [packages.Module.Replace] field is nil for replaced
+// modules that belong to the current go.work workspace. This is why we also
+// need to verify absence of a [packages.Module.Version] value.
+func (m *moduleInfo) shouldHashContent() bool {
+	return m.Version == "" || (m.Replace != nil && m.Replace.Version == "")
 }
 
 func collectModules(pkg *packages.Package, modules map[string]*moduleInfo, knownIDs map[string]struct{}) {
@@ -150,8 +163,7 @@ func (m *moduleInfo) MarshalJSON() ([]byte, error) {
 		Files [][2]string `json:"files,omitempty"`
 	}{Module: m.Module}
 
-	// If this module is replaced by a directory; we'll hash the files as well...
-	if m.Replace != nil && m.Replace.Version == "" {
+	if m.shouldHashContent() {
 		toMarshal.Files = make([][2]string, 0, len(m.Files))
 
 		var (
