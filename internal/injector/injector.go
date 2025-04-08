@@ -250,6 +250,8 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 			SourceParser: params.Decorator,
 			MinGoLang:    &minGoLang,
 			TestMain:     i.TestMain,
+			TypeInfo:     params.TypeInfo,
+			NodeMap:      params.Decorator.Ast.Nodes,
 		})
 		defer ctx.Release()
 		changed, err = injectNode(ctx, params.Aspects)
@@ -288,6 +290,7 @@ func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, 
 		if !inj.JoinPoint.Matches(ctx) {
 			continue
 		}
+
 		for idx, act := range inj.Advice {
 			var changed bool
 			changed, err := act.Apply(ctx)

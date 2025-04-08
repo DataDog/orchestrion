@@ -1,0 +1,300 @@
+%YAML 1.1
+---
+aspects:
+  - id: "aspect-error-implements"
+    join-point:
+      function-body:
+        function:
+          - name: returnsError
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for error")
+            {{ with .Function.ResultThatImplements "error" }}
+            fmt.Printf("Success: Found error at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No error found")
+            {{ end }}
+
+  - id: "aspect-multiple-errors"
+    join-point:
+      function-body:
+        function:
+          - name: returnsMultipleErrors
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing LastResultThatImplements for error")
+            {{ $first := .Function.ResultThatImplements "error" }}
+            {{ $last := .Function.LastResultThatImplements "error" }}
+            {{ with $first }}
+            fmt.Printf("Success: Found first error at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No first error found")
+            {{ end }}
+            {{ with $last }}
+            fmt.Printf("Success: Found last error at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No last error found")
+            {{ end }}
+            {{ if and $first $last }}
+              {{ if ne $first $last }}
+            fmt.Println("Success: First and last errors are different")
+              {{ else }}
+            fmt.Println("Failure: First and last errors are the same")
+              {{ end }}
+            {{ else }}
+            fmt.Println("Failure: Cannot compare errors: At least one error position not found")
+            {{ end }}
+
+  - id: "aspect-io-reader"
+    join-point:
+      function-body:
+        function:
+          - name: returnsReader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for io.Reader")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Success: Found io.Reader at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No io.Reader found")
+            {{ end }}
+
+  - id: "aspect-strings-reader"
+    join-point:
+      function-body:
+        function:
+          - name: returnsStringReader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for *strings.Reader")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Success: Found io.Reader at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No io.Reader found")
+            {{ end }}
+
+  - id: "aspect-no-match"
+    join-point:
+      function-body:
+        function:
+          - name: returnsNoMatch
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for error (no match)")
+            {{ with .Function.ResultThatImplements "error" }}
+            fmt.Printf("Failure: Found error at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Success: No error found")
+            {{ end }}
+
+  - id: "aspect-concrete-value-reader"
+    join-point:
+      function-body:
+        function:
+          - name: returnsConcreteValueReader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for io.Reader (concrete value, value receiver)")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Success: Found io.Reader at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No io.Reader found")
+            {{ end }}
+
+  - id: "aspect-concrete-pointer-reader-value"
+    join-point:
+      function-body:
+        function:
+          - name: returnsConcretePointerReaderValue
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for io.Reader (concrete value, pointer receiver)")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Failure: Found io.Reader at: %q\n", "{{ . }}") // Should not find for value type
+            {{ else }}
+            fmt.Println("Success: No io.Reader found (correct for value type)")
+            {{ end }}
+
+  - id: "aspect-named-error"
+    join-point:
+      function-body:
+        function:
+          - name: returnsNamedError
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for error (named result)")
+            {{ with .Function.ResultThatImplements "error" }}
+            fmt.Printf("Success: Found error at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No error found")
+            {{ end }}
+
+  - id: "aspect-read-closer"
+    join-point:
+      function-body:
+        function:
+          - name: returnsReadCloser
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for io.Reader (embedded)")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Success: Found io.Reader at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No io.Reader found")
+            {{ end }}
+
+  - id: "aspect-string-reader-alias"
+    join-point:
+      function-body:
+        function:
+          - name: returnsMyStringReaderAlias
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for io.Reader (type alias concrete)")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Failure: Found io.Reader at: %q\n", "{{ . }}") // Should not find for alias
+            {{ else }}
+            fmt.Println("Success: No io.Reader found (correct for type alias)")
+            {{ end }}
+
+  - id: "aspect-reader-alias"
+    join-point:
+      function-body:
+        function:
+          - name: returnsMyReaderAlias
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ResultThatImplements for io.Reader (type alias interface)")
+            {{ with .Function.ResultThatImplements "io.Reader" }}
+            fmt.Printf("Success: Found io.Reader at: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No io.Reader found")
+            {{ end }}
+
+syntheticReferences:
+  fmt: true
+
+code: |-
+  package test
+
+  import (
+    "errors"
+    "io"
+    "strings"
+  )
+
+  // Returns a simple error
+  func returnsError() error {
+    return errors.New("some error")
+  }
+
+  // Returns multiple errors to test LastResultThatImplements
+  func returnsMultipleErrors() (error, string, error) {
+    return errors.New("first error"), "middle", errors.New("last error")
+  }
+
+  // Returns an io.Reader
+  func returnsReader() io.Reader {
+    return strings.NewReader("test")
+  }
+
+  // Returns a strings.Reader
+  func returnsStringReader() *strings.Reader {
+    return strings.NewReader("test")
+  }
+
+  // Returns values that don't implement error
+  func returnsNoMatch() (string, int) {
+    return "hello", 123
+  }
+
+  // Returns a concrete type that implements io.Reader via value receiver
+  type myValueReader struct { data string }
+  func (r myValueReader) Read(p []byte) (n int, err error) {
+    if len(r.data) == 0 {
+      return 0, io.EOF
+    }
+    n = copy(p, []byte(r.data))
+    return n, nil // Simplified
+  }
+  func returnsConcreteValueReader() myValueReader {
+    return myValueReader{data:"value"}
+  }
+
+  // Returns a concrete type whose pointer implements io.Reader
+  type myPointerReader struct { data string }
+  func (r *myPointerReader) Read(p []byte) (n int, err error) {
+    if len(r.data) == 0 {
+      return 0, io.EOF
+    }
+    n = copy(p, []byte(r.data))
+    return n, nil // Simplified
+  }
+  func returnsConcretePointerReaderValue() myPointerReader {
+    return myPointerReader{data:"pointer"}
+  }
+
+  // Returns a named error
+  func returnsNamedError() (err error) {
+    err = errors.New("named error")
+    return
+  }
+
+  // Returns a type embedding io.Reader (io.ReadCloser)
+  type myReadCloser struct { *strings.Reader }
+  func (rc myReadCloser) Close() error { return nil }
+  func returnsReadCloser() io.ReadCloser {
+    return myReadCloser{strings.NewReader("closer")}
+  }
+
+  // Returns a type alias for an implementing type
+  type MyStringReader strings.Reader
+  func returnsMyStringReaderAlias() *MyStringReader {
+    // Need to cast the result of strings.NewReader
+    r := strings.NewReader("alias")
+    return (*MyStringReader)(r)
+  }
+
+  // Returns a type alias for the interface
+  type MyReader io.Reader
+  func returnsMyReaderAlias() MyReader {
+    return strings.NewReader("interface alias")
+  }
+
+  // Returns a value that doesn't implement error
+  func returnsString() string {
+    return "not an error"
+  }
