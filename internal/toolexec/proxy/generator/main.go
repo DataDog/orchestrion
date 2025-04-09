@@ -65,7 +65,7 @@ func main() {
 	version := strings.TrimSpace(fullVersion.String())
 	version = version[:strings.LastIndexByte(version, '.')]
 
-	outFile := filepath.Join(goFile, "..", fmt.Sprintf("%s.flags.go", command))
+	outFile := filepath.Join(goFile, "..", command+".flags.go")
 	if content, err := os.ReadFile(outFile); err == nil {
 		newMajorS, newMinorS, _ := strings.Cut(strings.Fields(version)[2][2:], ".")
 		newMajor, _ := strconv.Atoi(newMajorS)
@@ -155,7 +155,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	typeName := fmt.Sprintf("%sFlagSet", command)
+	typeName := command + "FlagSet"
 	capturedFlags := make(map[string]string)
 	for _, decl := range parsed.Decls {
 		decl, ok := decl.(*ast.GenDecl)

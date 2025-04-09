@@ -64,7 +64,7 @@ func (r *ReferenceMap) AddImport(file *dst.File, nodes []dst.Node, path string, 
 		if r.aliases == nil {
 			r.aliases = make(map[string]string)
 		}
-		r.aliases[path] = fmt.Sprintf("__orchestrion_%s", localName)
+		r.aliases[path] = "__orchestrion_" + localName
 	}
 
 	return true

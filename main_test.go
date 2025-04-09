@@ -27,7 +27,7 @@ func TestBuildFromModuleSubdirectory(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 
 	run.exec(t, "go", "mod", "init", "github.com/DataDog/orchestrion.testing")
-	run.exec(t, "go", "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir))
+	run.exec(t, "go", "mod", "edit", "-replace=github.com/DataDog/orchestrion="+rootDir)
 	require.NoError(t, os.Mkdir(filepath.Join(run.dir, "cmd"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(run.dir, "cmd", "main.go"), []byte(`package main
 
@@ -71,7 +71,7 @@ var benchCases = map[string]func(b *testing.B) benchCase{
 
 func Benchmark(b *testing.B) {
 	for name, create := range benchCases {
-		b.Run(fmt.Sprintf("repo=%s", name), func(b *testing.B) {
+		b.Run("repo="+name, func(b *testing.B) {
 			tc := create(b)
 			b.Run("variant=baseline", func(b *testing.B) {
 				b.ResetTimer()
@@ -105,7 +105,7 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 
 		tc.gitCloneGithub(b, owner, repo, tag)
 		tc.exec(b, "go", "mod", "download")
-		tc.exec(b, "go", "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir))
+		tc.exec(b, "go", "mod", "edit", "-replace=github.com/DataDog/orchestrion="+rootDir)
 		if stat, err := os.Stat(filepath.Join(tc.dir, "vendor")); err == nil && stat.IsDir() {
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")
@@ -199,7 +199,7 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
 	if token, ok := getGithubToken(); ok {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -252,7 +252,7 @@ func (h *harness) gitCloneGithub(b *testing.B, owner string, repo string, tag st
 	b.Helper()
 
 	h.dir = b.TempDir()
-	h.exec(b, "git", "clone", "--depth=1", fmt.Sprintf("--branch=%s", tag), fmt.Sprintf("https://github.com/%s/%s.git", owner, repo), h.dir)
+	h.exec(b, "git", "clone", "--depth=1", "--branch="+tag, fmt.Sprintf("https://github.com/%s/%s.git", owner, repo), h.dir)
 
 	return h.dir
 }
@@ -268,7 +268,7 @@ func buildOrchestrion(tb testing.TB) string {
 	orchestrionBinOnce.Do(func() {
 		orchestrionBin = filepath.Join(rootDir, "bin", "orchestrion.exe")
 
-		cmd := exec.Command("go", "build", fmt.Sprintf("-o=%s", orchestrionBin), rootDir)
+		cmd := exec.Command("go", "build", "-o="+orchestrionBin, rootDir)
 		require.NoError(tb, cmd.Run())
 	})
 

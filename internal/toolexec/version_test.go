@@ -7,7 +7,6 @@ package toolexec
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,8 +37,8 @@ func Test(t *testing.T) {
 		tmp := t.TempDir()
 		runGo(t, tmp, "mod", "init", "github.com/DataDog/phony/package")
 		runGo(t, tmp, "mod", "edit",
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+			"-replace=github.com/DataDog/orchestrion="+rootDir,
+			"-replace=github.com/DataDog/orchestrion/instrument="+filepath.Join(rootDir, "instrument"),
 		)
 
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`
@@ -89,8 +88,8 @@ func Test(t *testing.T) {
 
 		// Replace the orchestrion package with the copy we just made...
 		runGo(t, tmp, "mod", "edit",
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", copyDir),
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(copyDir, "instrument")),
+			"-replace=github.com/DataDog/orchestrion="+copyDir,
+			"-replace=github.com/DataDog/orchestrion/instrument="+filepath.Join(copyDir, "instrument"),
 		)
 		runGo(t, tmp, "mod", "tidy") // The hash of the dependency has changed... go list would complain...
 		updated := inDir(t, tmp, func() string {
@@ -119,8 +118,8 @@ func Test(t *testing.T) {
 		// Initialize the workspace...
 		runGo(t, tmp, "work", "init")
 		runGo(t, tmp, "work", "edit",
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
-			fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+			"-replace=github.com/DataDog/orchestrion="+rootDir,
+			"-replace=github.com/DataDog/orchestrion/instrument="+filepath.Join(rootDir, "instrument"),
 		)
 
 		// Create the cmd/main package...

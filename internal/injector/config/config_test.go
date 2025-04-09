@@ -8,7 +8,6 @@ package config
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -69,7 +68,7 @@ func TestHasConfig(t *testing.T) {
 				package tools
 				import _ "github.com/DataDog/orchestrion"
 			`), 0o644))
-			runGo(t, pkgRoot, "mod", "edit", "-replace", fmt.Sprintf("github.com/DataDog/orchestrion=%s", repoRoot))
+			runGo(t, pkgRoot, "mod", "edit", "-replace", "github.com/DataDog/orchestrion="+repoRoot)
 			runGo(t, pkgRoot, "mod", "tidy")
 
 			pkg := &packages.Package{
@@ -218,7 +217,7 @@ func TestLoad(t *testing.T) {
 	t.Run("recursive", func(t *testing.T) {
 		tmp := t.TempDir()
 		runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test")
-		runGo(t, tmp, "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", repoRoot))
+		runGo(t, tmp, "mod", "edit", "-replace=github.com/DataDog/orchestrion="+repoRoot)
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, FilenameOrchestrionToolGo), []byte(`
 			//go:build tools
 			package tools

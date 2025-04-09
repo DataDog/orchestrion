@@ -6,7 +6,6 @@
 package code
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -24,7 +23,7 @@ var spaces = regexp.MustCompile(`\s+`)
 // comment with the directive immediately following the leading `//`, without any spacing in
 // between; followed by optional arguments formatted as `key:value`, separated by spaces.
 func (d *dot) DirectiveArgs(directive string) (args []DirectiveArgument) {
-	prefix := fmt.Sprintf(`//%s`, directive)
+	prefix := "//" + directive
 
 	for curr := d.context.Chain(); curr != nil; curr = curr.Parent() {
 		for _, dec := range curr.Node().Decorations().Start {

@@ -7,7 +7,6 @@ package join
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,7 +27,7 @@ func TestTypeName(t *testing.T) {
 			}
 		})
 
-		t.Run(fmt.Sprintf("Must=%s", name), func(t *testing.T) {
+		t.Run("Must="+name, func(t *testing.T) {
 			defer func() {
 				e, _ := recover().(error)
 				if err == nil {

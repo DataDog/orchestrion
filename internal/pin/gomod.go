@@ -136,14 +136,14 @@ func runGoModEdit(ctx context.Context, modfile string, edits ...goModEdit) error
 }
 
 func (v goModVersion) goModEditFlag() string {
-	return fmt.Sprintf("-go=%s", string(v))
+	return "-go=" + string(v)
 }
 
 func (t goModToolchain) goModEditFlag() string {
 	if t == "" {
 		return "-toolchain=none"
 	}
-	return fmt.Sprintf("-toolchain=%s", string(t))
+	return "-toolchain=" + string(t)
 }
 
 func (r goModRequire) goModEditFlag() string {
