@@ -1,0 +1,193 @@
+//line input.go:1:1
+package main
+
+import (
+  "bytes"
+  "errors"
+  "fmt"
+  "io"
+  "net/http" // Import a package with a type that implements error but isn't errors.New
+)
+
+// Concrete type implementing CustomReader
+//
+//line input.go:13
+type myCustomReaderImpl struct {
+  data string
+}
+
+func (cr myCustomReaderImpl) Read(p []byte) (int, error) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:18
+  n := copy(p, []byte(cr.data))
+  return n, io.EOF // Simplified
+}
+
+// Custom error type
+type myCustomError struct {
+  msg string
+}
+
+func (e myCustomError) Error() string {
+  return fmt.Sprintf("custom error: %s", e.msg)
+}
+
+// Implementations
+
+func returnsReader() io.Reader {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:34
+  fmt.Println("Executing returnsReader")
+  return bytes.NewBufferString("hello")
+}
+
+func returnsBuffer() *bytes.Buffer {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:39
+  fmt.Println("Executing returnsBuffer")
+  return bytes.NewBufferString("world")
+}
+
+func returnsError() error {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:44
+  fmt.Println("Executing returnsError")
+  return errors.New("standard error")
+}
+
+func returnsHttpError() error {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:49
+  fmt.Println("Executing returnsHttpError")
+  // http.ErrServerClosed is an error type from a different package
+  return http.ErrServerClosed
+}
+
+func returnsCustomReaderImpl() myCustomReaderImpl {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:55
+  fmt.Println("Executing returnsCustomReaderImpl")
+  return myCustomReaderImpl{data: "custom data"}
+}
+
+func returnsCustomError() myCustomError {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:60
+  fmt.Println("Executing returnsCustomError")
+  return myCustomError{msg: "something went wrong"}
+}
+
+// Non-implementations
+
+func returnsString() string {
+  fmt.Println("Executing returnsString")
+  return "not a reader or error"
+}
+
+func noReturn() {
+  fmt.Println("Executing noReturn")
+}
+
+// Multiple return values
+
+func returnsIntAndReader() (int, io.Reader) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:78
+  fmt.Println("Executing returnsIntAndReader")
+  return 1, bytes.NewBufferString("multi-return reader")
+}
+
+func returnsReaderAndInt() (io.Reader, int) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:83
+  fmt.Println("Executing returnsReaderAndInt")
+  return bytes.NewBufferString("multi-return reader first"), 2
+}
+
+func returnsIntAndError() (int, error) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:88
+  fmt.Println("Executing returnsIntAndError")
+  return 3, errors.New("multi-return error")
+}
+
+func returnsErrorAndInt() (error, int) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:93
+  fmt.Println("Executing returnsErrorAndInt")
+  return errors.New("multi-return error first"), 4
+}
+
+func returnsMultipleReaders() (*bytes.Buffer, io.Reader) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:98
+  fmt.Println("Executing returnsMultipleReaders")
+  return bytes.NewBufferString("first reader"), bytes.NewBufferString("second reader")
+}
+
+func returnsMultipleErrors() (error, error) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:103
+  fmt.Println("Executing returnsMultipleErrors")
+  return errors.New("first error"), fmt.Errorf("second error: %w", io.EOF)
+}
+
+func returnsStringAndInt() (string, int) {
+  fmt.Println("Executing returnsStringAndInt")
+  return "neither implements", 5
+}
+
+// Main - needed for compilation by the test harness.
+func main() {}

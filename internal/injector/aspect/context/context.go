@@ -51,6 +51,9 @@ type AspectContext interface {
 	// Release returns this context to the memory pool so that it can be reused
 	// later.
 	Release()
+
+	// ResolveType resolves a dst.Expr to its corresponding types.Type.
+	ResolveType(dst.Expr) types.Type
 }
 
 type AdviceContext interface {
@@ -76,9 +79,6 @@ type AdviceContext interface {
 	// EnsureMinGoLang ensures that the current compile unit uses at least the
 	// specified language level when passed to the compiler.
 	EnsureMinGoLang(GoLangVersion)
-
-	// ResolveType resolves a dst.Expr to its corresponding types.Type.
-	ResolveType(dst.Expr) types.Type
 }
 
 type (
