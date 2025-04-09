@@ -1,0 +1,149 @@
+# Example configuration demonstrating the desired 'return-implements' functionality.
+# We will target functions returning types that implement io.Reader or error.
+
+# Configuration using a single injector and conditional logic
+# based on ResultThatImplements, following existing patterns.
+%YAML 1.1
+---
+aspects:
+  # Aspect 1: Target functions returning io.Reader implementers
+  - id: "instrument-reader-returns"
+    join-point:
+      function-body:
+        function:
+          - return-implements: "io.Reader" # ...of functions where a return type implements io.Reader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented returnsReader implementer")
+
+  # Aspect 2: Target functions returning error implementers
+  - id: "instrument-error-returns"
+    join-point:
+      function-body:
+        function:
+          - return-implements: "error" # ...of functions where a return type implements error
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented returnsError implementer")
+
+
+code: |-
+  package main
+
+  import (
+    "bytes"
+    "errors"
+    "fmt"
+    "io"
+    "net/http" // Import a package with a type that implements error but isn't errors.New
+  )
+
+
+  // Concrete type implementing CustomReader
+  type myCustomReaderImpl struct {
+    data string
+  }
+
+  func (cr myCustomReaderImpl) Read(p []byte) (int, error) {
+    n := copy(p, []byte(cr.data))
+    return n, io.EOF // Simplified
+  }
+
+  // Custom error type
+  type myCustomError struct {
+    msg string
+  }
+
+  func (e myCustomError) Error() string {
+    return fmt.Sprintf("custom error: %s", e.msg)
+  }
+
+  // Implementations
+
+  func returnsReader() io.Reader {
+    fmt.Println("Executing returnsReader")
+    return bytes.NewBufferString("hello")
+  }
+
+  func returnsBuffer() *bytes.Buffer {
+    fmt.Println("Executing returnsBuffer")
+    return bytes.NewBufferString("world")
+  }
+
+  func returnsError() error {
+    fmt.Println("Executing returnsError")
+    return errors.New("standard error")
+  }
+
+  func returnsHttpError() error {
+    fmt.Println("Executing returnsHttpError")
+    // http.ErrServerClosed is an error type from a different package
+    return http.ErrServerClosed
+  }
+
+  func returnsCustomReaderImpl() myCustomReaderImpl {
+    fmt.Println("Executing returnsCustomReaderImpl")
+    return myCustomReaderImpl{data: "custom data"}
+  }
+
+  func returnsCustomError() myCustomError {
+    fmt.Println("Executing returnsCustomError")
+    return myCustomError{msg: "something went wrong"}
+  }
+
+  // Non-implementations
+
+  func returnsString() string {
+    fmt.Println("Executing returnsString")
+    return "not a reader or error"
+  }
+
+  func noReturn() {
+    fmt.Println("Executing noReturn")
+  }
+
+  // Multiple return values
+
+  func returnsIntAndReader() (int, io.Reader) {
+    fmt.Println("Executing returnsIntAndReader")
+    return 1, bytes.NewBufferString("multi-return reader")
+  }
+
+  func returnsReaderAndInt() (io.Reader, int) {
+    fmt.Println("Executing returnsReaderAndInt")
+    return bytes.NewBufferString("multi-return reader first"), 2
+  }
+
+  func returnsIntAndError() (int, error) {
+    fmt.Println("Executing returnsIntAndError")
+    return 3, errors.New("multi-return error")
+  }
+
+  func returnsErrorAndInt() (error, int) {
+    fmt.Println("Executing returnsErrorAndInt")
+    return errors.New("multi-return error first"), 4
+  }
+
+  func returnsMultipleReaders() (*bytes.Buffer, io.Reader) {
+    fmt.Println("Executing returnsMultipleReaders")
+    return bytes.NewBufferString("first reader"), bytes.NewBufferString("second reader")
+  }
+
+  func returnsMultipleErrors() (error, error) {
+    fmt.Println("Executing returnsMultipleErrors")
+    return errors.New("first error"), fmt.Errorf("second error: %w", io.EOF)
+  }
+
+  func returnsStringAndInt() (string, int) {
+    fmt.Println("Executing returnsStringAndInt")
+    return "neither implements", 5
+  }
+
+  // Main - needed for compilation by the test harness.
+  func main() {}
