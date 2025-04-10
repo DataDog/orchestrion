@@ -23,10 +23,10 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
-	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/golden"
 )
 
@@ -77,10 +77,11 @@ func Test(t *testing.T) {
 				return os.Open(file)
 			}
 
-			data, err := os.ReadFile(filepath.Join(testPath, "config.yml"))
-			require.NoError(t, err, "failed to read test configuration")
+			cfgFile, err := os.Open(filepath.Join(testPath, "config.yml"))
+			require.NoError(t, err, "failed to open test configuration")
+			defer cfgFile.Close()
 			var config testConfig
-			require.NoError(t, yaml.Unmarshal(data, &config), "failed to parse test configuration")
+			require.NoError(t, yaml.UnmarshalContext(gocontext.Background(), cfgFile, &config), "failed to parse test configuration")
 
 			runGo(t, tmp, "mod", "init", testModuleName)
 			runGo(t, tmp, "mod", "edit",
