@@ -57,7 +57,7 @@ func (p *placeholders) forNode(node dst.Node, singleton bool) string {
 		p.byName[name], _ = dst.Clone(node).(dst.Expr)
 	}
 
-	return fmt.Sprintf("_.%s", name)
+	return "_." + name
 }
 
 // replaceAllIn replaces all placeholders found in the given AST with the actual dst.Expr value.

@@ -69,7 +69,7 @@ func TestSamples(t *testing.T) {
 				return os.Open(file)
 			}
 
-			importMap := map[string]string{}
+			importMap := make(map[string]string)
 			for _, a := range aspects {
 				for _, i := range a.JoinPoint.ImpliesImported() {
 					importMap[i] = ""
@@ -82,7 +82,7 @@ func TestSamples(t *testing.T) {
 					return filepath.Join(tmp, filepath.Base(filename))
 				},
 				RootConfig: map[string]string{"httpmode": "wrap"},
-				ImportPath: fmt.Sprintf("github.com/DataDog/orchestrion/samples/%s", dir),
+				ImportPath: "github.com/DataDog/orchestrion/samples/" + dir,
 				Lookup:     testLookup,
 				ImportMap:  importMap,
 			}

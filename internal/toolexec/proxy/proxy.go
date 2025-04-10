@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -148,7 +149,7 @@ func RunCommand(ctx context.Context, cmd Command, opts ...RunCommandOption) (err
 	args := cmd.Args()
 	c := exec.Command(args[0], args[1:]...)
 	if c == nil {
-		return fmt.Errorf("command couldn't build")
+		return errors.New("command couldn't build")
 	}
 
 	c.Stdin = os.Stdin

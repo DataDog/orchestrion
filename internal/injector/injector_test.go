@@ -85,8 +85,8 @@ func Test(t *testing.T) {
 
 			runGo(t, tmp, "mod", "init", testModuleName)
 			runGo(t, tmp, "mod", "edit",
-				fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir),
-				fmt.Sprintf("-replace=github.com/DataDog/orchestrion/instrument=%s", filepath.Join(rootDir, "instrument")),
+				"-replace=github.com/DataDog/orchestrion="+rootDir,
+				"-replace=github.com/DataDog/orchestrion/instrument="+filepath.Join(rootDir, "instrument"),
 			)
 
 			inputFile := filepath.Join(tmp, "input.go")

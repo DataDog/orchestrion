@@ -142,10 +142,6 @@ jobs:
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
-      - name: Lint main module
-        uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v6
-        with:
-          version: v2.0.1
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: vet
@@ -156,6 +152,28 @@ jobs:
           files: |
             _docs/
 
+  golangci-lint:
+    needs: generate
+    name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
+    strategy:
+      fail-fast: false # Get as much feedback as possible in one go...
+      matrix:
+        runs-on: [macos-latest, ubuntu-latest, windows-latest]
+        working-directory: ['', samples]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Setup go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
+        with:
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v6
+        with:
+          version: v2.0.1
+          working-directory: ${{ matrix.working-directory }}
 
   ##############################################################################
   # Verify all GitHub workflows have hash-pinned actions
@@ -309,6 +327,7 @@ jobs:
     needs:
       - generate
       - lint
+      - golangci-lint
       - lint-workflows
       - unit-tests
       - integration-tests
@@ -316,10 +335,10 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Success
-        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-workflows.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure'
+        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.golangci-lint.result != 'failure' && needs.lint-workflows.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure'
         run: echo "OK"
       - name: Failed
-        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-workflows.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure'
+        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.golangci-lint.result == 'failure' || needs.lint-workflows.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure'
         run: |-
           echo "Failed!"
           exit 1

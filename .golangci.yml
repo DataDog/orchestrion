@@ -4,10 +4,23 @@ linters:
   default: none
   enable:
     - misspell
+    - perfsprint
     - revive
     - testifylint
 
   settings:
+    perfsprint:
+      integer-format: true
+      int-conversion: true
+      error-format: true
+      err-error: false
+      errorf: true
+      string-format: true
+      sprintf1: true
+      strconcat: true
+      bool-format: true
+      hex-format: true
+
     revive:
       enable-all-rules: false
       rules:

@@ -7,7 +7,6 @@ package built_test
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +30,7 @@ func Test(t *testing.T) {
 
 	_, thisFile, _, _ := runtime.Caller(0)
 	rootDir := filepath.Join(thisFile, "..", "..", "..")
-	cmd = exec.Command("go", "mod", "edit", fmt.Sprintf("-replace=github.com/DataDog/orchestrion=%s", rootDir))
+	cmd = exec.Command("go", "mod", "edit", "-replace=github.com/DataDog/orchestrion="+rootDir)
 	cmd.Dir = tmp
 	require.NoError(t, cmd.Run())
 

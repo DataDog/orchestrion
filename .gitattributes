@@ -1,7 +1,4 @@
 # Some files must be LF-normalized, always: this includes YAML configuration
 # files as well as any golden snapshots. Failing this, some tests will fail on
 # Windows due to normalization differences.
-*.yml      text=auto eol=lf
-*.yaml     text=auto eol=lf
-*.snap     text=auto eol=lf
-*.snap.yml text=auto eol=lf
+* text=auto eol=lf

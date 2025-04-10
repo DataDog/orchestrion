@@ -74,7 +74,7 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 	// command's exit status, because another process might act as our server down the line.
 	cmd := exec.Command(binpath.Orchestrion, "server",
 		"-inactivity-timeout=15m",
-		fmt.Sprintf("-url-file=%s", urlFilePath),
+		"-url-file="+urlFilePath,
 		fmt.Sprintf("-parent-pid=%d", os.Getpid()),
 	)
 	cmd.SysProcAttr = &sysProcAttrDaemon                   // Make sure go doesn't wait for this to exit...

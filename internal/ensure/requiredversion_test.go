@@ -48,7 +48,7 @@ func TestGoModVersion(t *testing.T) {
 			goMod := []string{
 				"module test_case",
 				"",
-				fmt.Sprintf("go %s", runtime.Version()[2:]),
+				"go " + runtime.Version()[2:],
 				"",
 			}
 			if test.version != "" {

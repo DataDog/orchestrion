@@ -97,7 +97,7 @@ func redisV9Client(ctx context.Context) {
 	}
 }
 
-func redigoClient(ctx context.Context, net, addr string) {
+func redigoClient(ctx context.Context, net string, addr string) {
 	use := func(conn redigo.Conn) {
 		conn.Do("SET", "test_key", "test_value", ctx)
 	}
@@ -106,35 +106,33 @@ func redigoClient(ctx context.Context, net, addr string) {
 		redigo.DialConnectTimeout(5 * time.Second),
 	}
 
-	if conn, err :=
+	conn, err :=
 //line <generated>:1
 		func() (redigo.Conn, error) {
 			return __orchestrion_redigotrace.Dial(
 //line samples/client/redis.go:61
 				net, addr)
-		}();
-//line samples/client/redis.go:61
-	err != nil {
+		}()
+//line samples/client/redis.go:62
+	if err != nil {
 		panic(err)
-	} else {
-		use(conn)
 	}
+	use(conn)
 
-	if conn, err :=
+	conn, err =
 //line <generated>:1
 		func() (redigo.Conn, error) {
 			return __orchestrion_redigotrace.DialContext(
 //line samples/client/redis.go:67
 				ctx, net, addr, redigo.DialConnectTimeout(5*time.Second))
-		}();
-//line samples/client/redis.go:67
-	err != nil {
+		}()
+//line samples/client/redis.go:68
+	if err != nil {
 		panic(err)
-	} else {
-		use(conn)
 	}
+	use(conn)
 
-	if conn, err :=
+	conn, err =
 //line <generated>:1
 		func() (redigo.Conn, error) {
 			opts :=
@@ -150,11 +148,10 @@ func redigoClient(ctx context.Context, net, addr string) {
 				fmt.Sprintf("%s://%s", net, addr),
 //line <generated>:1
 				anyOpts...)
-		}();
-//line samples/client/redis.go:73
-	err != nil {
+		}()
+//line samples/client/redis.go:74
+	if err != nil {
 		panic(err)
-	} else {
-		use(conn)
 	}
+	use(conn)
 }

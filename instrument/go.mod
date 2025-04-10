@@ -5,8 +5,8 @@ go 1.23.0
 replace github.com/DataDog/orchestrion => ..
 
 require (
-	github.com/DataDog/orchestrion v1.1.0-rc.3
-	gopkg.in/DataDog/dd-trace-go.v1 v1.73.0-dev
+	github.com/DataDog/orchestrion v1.3.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.73.0-rc.2.0.20250410131047-ff1599a6b0fe
 )
 
 require (
@@ -181,6 +181,7 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/redis/go-redis/v9 v9.7.3 // indirect
+	github.com/redis/rueidis v1.0.56 // indirect
 	github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
@@ -200,6 +201,7 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/urfave/cli/v2 v2.27.6 // indirect
+	github.com/valkey-io/valkey-go v1.0.56 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.60.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
@@ -227,6 +229,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.29.0 // indirect

@@ -9,7 +9,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"fmt"
+	"errors"
 	"log"
 )
 
@@ -19,31 +19,31 @@ func init() {
 
 type testDriver struct{}
 
-func (t *testDriver) Open(name string) (driver.Conn, error) {
+func (*testDriver) Open(string) (driver.Conn, error) {
 	return &testConn{}, nil
 }
 
 type testConn struct{}
 
-func (t *testConn) Prepare(query string) (driver.Stmt, error) {
-	return nil, fmt.Errorf("NOT IMPLEMENTED")
+func (*testConn) Prepare(string) (driver.Stmt, error) {
+	return nil, errors.ErrUnsupported
 }
 
-func (t *testConn) Close() error {
+func (*testConn) Close() error {
 	return nil
 }
 
-func (t *testConn) Begin() (driver.Tx, error) {
-	return nil, fmt.Errorf("NOT IMPLEMENTED")
+func (*testConn) Begin() (driver.Tx, error) {
+	return nil, errors.ErrUnsupported
 }
 
 type testConnector struct{}
 
-func (t *testConnector) Connect(ctx context.Context) (driver.Conn, error) {
+func (*testConnector) Connect(context.Context) (driver.Conn, error) {
 	return &testConn{}, nil
 }
 
-func (t *testConnector) Driver() driver.Driver {
+func (*testConnector) Driver() driver.Driver {
 	return &testDriver{}
 }
 

@@ -21,16 +21,16 @@ import (
 //line samples/server/other_handlers.go:18
 type foo struct{}
 
-func (f foo) fooHandler(rw http.ResponseWriter, req *http.Request) {
+func (foo) fooHandler(rw http.ResponseWriter, _ *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte("Foo!"))
 }
 
 func buildHandlers() {
-	http.HandleFunc("/foo/bar", func(writer http.ResponseWriter, request *http.Request) {
+	http.HandleFunc("/foo/bar", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Write([]byte("done!"))
 	})
-	v := func(w http.ResponseWriter, r *http.Request) {
+	v := func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("another one!"))
 	}
 
@@ -41,7 +41,7 @@ func buildHandlers() {
 	}
 
 	x := holder{
-		f: func(w http.ResponseWriter, request *http.Request) {
+		f: func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("asdf"))
 		},
 	}
@@ -49,7 +49,7 @@ func buildHandlers() {
 	fmt.Println(x)
 
 	// silly legal things
-	func(w http.ResponseWriter, r *http.Request) {
+	func(w http.ResponseWriter, _ *http.Request) {
 		client := &http.Client{
 			Timeout: time.Second,
 		}
@@ -66,12 +66,12 @@ func buildHandlers() {
 	}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 
 	for i := 0; i < 10; i++ {
-		go func(w http.ResponseWriter, r *http.Request) {
+		go func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("goroutine!"))
 		}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 	}
 
-	defer func(w http.ResponseWriter, r *http.Request) {
+	defer func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte("goroutine!"))
 	}(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/asfd", nil))
 }
@@ -138,17 +138,17 @@ func registerHandlers() {
 	handler := http.HandlerFunc(myHandler)
 	http.Handle("/handle-1", handler)
 	http.Handle("/hundle-2", http.HandlerFunc(myHandler))
-	http.Handle("/hundle-3", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	http.Handle("/hundle-3", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	http.HandleFunc("/handlefunc-1", handler)
 	http.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
-	http.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {})
+	http.HandleFunc("/handlefunc-3", func(http.ResponseWriter, *http.Request) {})
 	s := http.NewServeMux()
 	s.Handle("/handle-mux", handler)
 	s.Handle("/handle-mux", http.HandlerFunc(myHandler))
-	s.Handle("/handle-mux", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	s.Handle("/handle-mux", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	s.HandleFunc("/handlefunc-1", handler)
 	s.HandleFunc("/handlefunc-2", http.HandlerFunc(myHandler))
-	s.HandleFunc("/handlefunc-3", func(w http.ResponseWriter, r *http.Request) {})
+	s.HandleFunc("/handlefunc-3", func(http.ResponseWriter, *http.Request) {})
 	_ = &http.Server{
 		Addr:    ":8080",
 		Handler: handler,

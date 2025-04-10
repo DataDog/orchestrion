@@ -259,7 +259,7 @@ func actionSetLogFile(ctx *cli.Context, path string) error {
 		case "PID":
 			return strconv.FormatInt(int64(os.Getpid()), 10)
 		default:
-			return fmt.Sprintf("$%s", name)
+			return "$" + name
 		}
 	})
 	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
