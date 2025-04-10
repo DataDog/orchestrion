@@ -6,10 +6,13 @@
 package join
 
 import (
+	gocontext "context"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type testMain bool
@@ -45,9 +48,9 @@ func (t testMain) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["test-main"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["test-main"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var val bool
-		if err := node.Decode(&val); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &val); err != nil {
 			return nil, err
 		}
 		return TestMain(val), nil

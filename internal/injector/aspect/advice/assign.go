@@ -6,13 +6,15 @@
 package advice
 
 import (
+	gocontext "context"
 	"fmt"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type assignValue struct {
@@ -53,9 +55,9 @@ func (a *assignValue) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["assign-value"] = func(node *yaml.Node) (Advice, error) {
+	unmarshalers["assign-value"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var template *code.Template
-		if err := node.Decode(&template); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &template); err != nil {
 			return nil, err
 		}
 		return AssignValue(template), nil
