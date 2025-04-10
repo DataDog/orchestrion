@@ -6,10 +6,13 @@
 package join
 
 import (
+	gocontext "context"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type importPath string
@@ -73,17 +76,17 @@ func (p packageName) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["import-path"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["import-path"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var name string
-		if err := node.Decode(&name); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &name); err != nil {
 			return nil, err
 		}
 		return ImportPath(name), nil
 	}
 
-	unmarshalers["package-name"] = func(node *yaml.Node) (Point, error) {
+	unmarshalers["package-name"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var name string
-		if err := node.Decode(&name); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &name); err != nil {
 			return nil, err
 		}
 		return PackageName(name), nil

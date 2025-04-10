@@ -6,12 +6,14 @@
 package aspect
 
 import (
+	"context"
 	"errors"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
-	"gopkg.in/yaml.v3"
+	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/goccy/go-yaml/ast"
 )
 
 // Aspect binds advice.Advice to a join.Point, effectively defining a complete
@@ -75,21 +77,21 @@ func InjectedPaths(list []*Aspect) []string {
 	return res
 }
 
-func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
+func (a *Aspect) UnmarshalYAML(ctx context.Context, node ast.Node) error {
 	var ti struct {
-		JoinPoint      yaml.Node `yaml:"join-point"`
-		Advice         yaml.Node `yaml:"advice"`
-		ID             string    `yaml:"id"`
-		TracerInternal bool      `yaml:"tracer-internal"`
+		JoinPoint      ast.Node `yaml:"join-point"`
+		Advice         ast.Node `yaml:"advice"`
+		ID             string   `yaml:"id"`
+		TracerInternal bool     `yaml:"tracer-internal"`
 	}
-	if err := node.Decode(&ti); err != nil {
+	if err := yaml.NodeToValueContext(ctx, node, &ti); err != nil {
 		return err
 	}
 
-	if ti.JoinPoint.Kind == 0 {
+	if ti.JoinPoint == nil {
 		return errors.New("missing required key 'join-point'")
 	}
-	if ti.Advice.Kind == 0 {
+	if ti.Advice == nil {
 		return errors.New("missing required key 'advice'")
 	}
 
@@ -97,24 +99,24 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 	a.TracerInternal = ti.TracerInternal
 
 	var err error
-	if a.JoinPoint, err = join.FromYAML(&ti.JoinPoint); err != nil {
+	if a.JoinPoint, err = join.FromYAML(ctx, ti.JoinPoint); err != nil {
 		return err
 	}
 
-	if ti.Advice.Kind == yaml.SequenceNode {
-		var nodes []yaml.Node
-		if err := ti.Advice.Decode(&nodes); err != nil {
+	if seq, ok := ti.Advice.(*ast.SequenceNode); ok {
+		var nodes []ast.Node
+		if err := yaml.NodeToValueContext(ctx, seq, &nodes); err != nil {
 			return err
 		}
 		a.Advice = make([]advice.Advice, len(nodes))
 		for i, node := range nodes {
-			a.Advice[i], err = advice.FromYAML(&node)
+			a.Advice[i], err = advice.FromYAML(ctx, node)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
-		adv, err := advice.FromYAML(&ti.Advice)
+		adv, err := advice.FromYAML(ctx, ti.Advice)
 		if err != nil {
 			return err
 		}
@@ -125,5 +127,5 @@ func (a *Aspect) UnmarshalYAML(node *yaml.Node) error {
 }
 
 var (
-	_ yaml.Unmarshaler = (*Aspect)(nil)
+	_ yaml.NodeUnmarshalerContext = (*Aspect)(nil)
 )

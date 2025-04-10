@@ -6,10 +6,12 @@
 package join
 
 import (
+	gocontext "context"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type not struct {
@@ -41,8 +43,8 @@ func (n not) Hash(h *fingerprint.Hasher) error {
 }
 
 func init() {
-	unmarshalers["not"] = func(node *yaml.Node) (Point, error) {
-		jp, err := FromYAML(node)
+	unmarshalers["not"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
+		jp, err := FromYAML(ctx, node)
 		if err != nil {
 			return nil, err
 		}
