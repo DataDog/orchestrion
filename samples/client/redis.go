@@ -49,7 +49,7 @@ func redisV9Client(ctx context.Context) {
 	}
 }
 
-func redigoClient(ctx context.Context, net, addr string) {
+func redigoClient(ctx context.Context, net string, addr string) {
 	use := func(conn redigo.Conn) {
 		conn.Do("SET", "test_key", "test_value", ctx)
 	}
@@ -58,21 +58,21 @@ func redigoClient(ctx context.Context, net, addr string) {
 		redigo.DialConnectTimeout(5 * time.Second),
 	}
 
-	if conn, err := redigo.Dial(net, addr); err != nil {
+	conn, err := redigo.Dial(net, addr)
+	if err != nil {
 		panic(err)
-	} else {
-		use(conn)
 	}
+	use(conn)
 
-	if conn, err := redigo.DialContext(ctx, net, addr, redigo.DialConnectTimeout(5*time.Second)); err != nil {
+	conn, err = redigo.DialContext(ctx, net, addr, redigo.DialConnectTimeout(5*time.Second))
+	if err != nil {
 		panic(err)
-	} else {
-		use(conn)
 	}
+	use(conn)
 
-	if conn, err := redigo.DialURL(fmt.Sprintf("%s://%s", net, addr), options...); err != nil {
+	conn, err = redigo.DialURL(fmt.Sprintf("%s://%s", net, addr), options...)
+	if err != nil {
 		panic(err)
-	} else {
-		use(conn)
 	}
+	use(conn)
 }
