@@ -12,7 +12,7 @@ require (
 	cloud.google.com/go/pubsub v1.49.0
 	github.com/99designs/gqlgen v0.17.70
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.1.0-dev
-	github.com/DataDog/orchestrion v1.3.1
+	github.com/DataDog/orchestrion v1.4.0-rc.2
 	github.com/DataDog/orchestrion/instrument v1.3.1
 	github.com/IBM/sarama v1.45.1
 	github.com/Shopify/sarama v1.38.1
@@ -408,7 +408,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250409194420-de1ac958c67a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250409194420-de1ac958c67a // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.73.0-rc.2.0.20250410131047-ff1599a6b0fe // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.73.0-rc.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
