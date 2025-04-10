@@ -240,6 +240,11 @@ imports:
           name: orchestrion.yml
           aspects:
             - NewClient
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/rueidis
+        yaml:
+          name: orchestrion.yml
+          aspects:
+            - NewClient
       - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0
         yaml:
           name: orchestrion.yml
@@ -262,6 +267,11 @@ imports:
           name: orchestrion.yml
           aspects:
             - Server
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/valkey-go
+        yaml:
+          name: orchestrion.yml
+          aspects:
+            - NewClient
       - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
         yaml:
           name: orchestrion.yml
@@ -289,6 +299,7 @@ imports:
             - common.Skip
             - common.Skipf
             - common.SkipNow
+            - testify.suite.Run
       - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/profiler
         yaml:
           name: orchestrion.yml
