@@ -8,7 +8,7 @@ next: /docs/dd-trace-go/integrations
 ## Default configuration
 
 Orchestrion is complemented by the Datadog tracing library,
-{{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1">}} wtarting with
+{{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1">}} starting with
 `v1.72.0-rc.1`. It provides compile-time integrations for many popular Go
 libraries; and is enabled by default when running `orchestrion pin`.
 
