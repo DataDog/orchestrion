@@ -1,7 +1,7 @@
 ---
-title: Integrations
+title: V1 Integrations
 weight: 10
-prev: /docs/dd-trace-go
+prev: /docs/dd-trace-go/v2
 next: /docs/dd-trace-go/features
 ---
 

@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
 	"gotest.tools/v3/golden"
@@ -193,8 +192,6 @@ func TestLoad(t *testing.T) {
 		enc := yaml.NewEncoder(&buf, yaml.Indent(2), yaml.IndentSequence(true), yaml.UseSingleQuote(true))
 		defer func() { require.NoError(t, enc.Close()) }()
 		require.NoError(t, enc.Encode(cfg))
-
-		assert.Len(t, cfg.Aspects(), len(builtIn.yaml.aspects)) // Just the orchestrion:... aspects
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
@@ -207,8 +204,6 @@ func TestLoad(t *testing.T) {
 		enc := yaml.NewEncoder(&buf, yaml.Indent(2), yaml.IndentSequence(true), yaml.UseSingleQuote(true))
 		defer func() { require.NoError(t, enc.Close()) }()
 		require.NoError(t, enc.Encode(cfg))
-
-		assert.Len(t, cfg.Aspects(), 115+len(builtIn.yaml.aspects))
 		golden.Assert(t, buf.String(), "instrument.snap.yml")
 	})
 
