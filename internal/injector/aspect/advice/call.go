@@ -6,6 +6,7 @@
 package advice
 
 import (
+	gocontext "context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -14,8 +15,9 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type appendArgs struct {
@@ -156,13 +158,13 @@ func (r *redirectCall) AddedImports() []string {
 }
 
 func init() {
-	unmarshalers["append-args"] = func(node *yaml.Node) (Advice, error) {
+	unmarshalers["append-args"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var args struct {
 			TypeName string           `yaml:"type"`
 			Values   []*code.Template `yaml:"values"`
 		}
 
-		if err := node.Decode(&args); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &args); err != nil {
 			return nil, err
 		}
 
@@ -173,13 +175,13 @@ func init() {
 
 		return AppendArgs(tn, args.Values...), nil
 	}
-	unmarshalers["replace-function"] = func(node *yaml.Node) (Advice, error) {
+	unmarshalers["replace-function"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var (
 			fqn  string
 			path string
 			name string
 		)
-		if err := node.Decode(&fqn); err != nil {
+		if err := yaml.NodeToValueContext(ctx, node, &fqn); err != nil {
 			return nil, err
 		}
 
