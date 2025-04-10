@@ -159,7 +159,7 @@ jobs:
       fail-fast: false # Get as much feedback as possible in one go...
       matrix:
         runs-on: [macos-latest, ubuntu-latest, windows-latest]
-        working-directory: ['', instrument, samples]
+        working-directory: ['', samples]
     runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout
