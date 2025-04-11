@@ -168,12 +168,11 @@ func (s signature) ResultThatImplements(name string) (string, error) {
 			return fieldAt(s.Results, index, "result")
 		}
 
-		switch count := len(field.Names); count {
-		case 0, 1:
-			index++
-		default:
-			index += count
+		count := len(field.Names)
+		if count == 0 {
+			count = 1
 		}
+		index += count
 	}
 
 	// Not found.
@@ -192,27 +191,28 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 		return "", fmt.Errorf("resolving interface type %q: %w", name, err)
 	}
 
-	// Check each result in reverse order.
-	index := 0
-	lastIndex := -1
-	lastField := -1
-
-	for i, field := range s.Results.List {
-		if exprImplements(s.context, field.Type, iface) {
-			lastIndex = index
-			lastField = i
+	// First, we need to build a map of result fields to their indices
+	// that takes into account named and unnamed parameters.
+	var (
+		fieldIndices = make(map[*dst.Field]int)
+		index        = 0
+	)
+	for _, field := range s.Results.List {
+		fieldIndices[field] = index
+		count := len(field.Names)
+		if count == 0 {
+			count = 1
 		}
-
-		switch count := len(field.Names); count {
-		case 0, 1:
-			index++
-		default:
-			index += count
-		}
+		index += count
 	}
 
-	if lastField >= 0 {
-		return fieldAt(s.Results, lastIndex, "result")
+	// Loop backward through the results list.
+	for i := len(s.Results.List) - 1; i >= 0; i-- {
+		field := s.Results.List[i]
+		if exprImplements(s.context, field.Type, iface) {
+			// Found a match, return the corresponding field.
+			return fieldAt(s.Results, fieldIndices[field], "result")
+		}
 	}
 
 	// Not found
@@ -273,12 +273,12 @@ func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, er
 		if tn.Matches(field.Type) {
 			return fieldAt(fields, index, use)
 		}
-		switch count := len(field.Names); count {
-		case 0, 1:
-			index++
-		default:
-			index += count
+
+		count := len(field.Names)
+		if count == 0 { // If the field is not named it's as if there is one.
+			count = 1
 		}
+		index += count
 	}
 
 	// Not found!
@@ -370,12 +370,17 @@ func resolveInterfaceTypeByName(name string) (*types.Interface, error) {
 	return t, nil
 }
 
-// splitPackageAndName splits a fully qualified type name into its package and type components.
-// For example, "io.Reader" becomes "io" and "Reader".
-func splitPackageAndName(fullName string) (pkg string, name string) {
-	parts := strings.Split(fullName, ".")
-	if len(parts) <= 1 {
+// splitPackageAndName splits a fully qualified type name like "io.Reader" or "example.com/pkg.Type"
+// into its package path and local name.
+// Returns ("", "error") for built-in "error".
+// Returns ("", "MyType") for unqualified "MyType".
+func splitPackageAndName(fullName string) (pkgPath string, localName string) {
+	if !strings.Contains(fullName, ".") {
+		// Assume built-in type (like "error") or unqualified local type.
 		return "", fullName
 	}
-	return parts[0], parts[1]
+	lastDot := strings.LastIndex(fullName, ".")
+	pkgPath = fullName[:lastDot]
+	localName = fullName[lastDot+1:]
+	return pkgPath, localName
 }

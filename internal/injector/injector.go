@@ -242,7 +242,7 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 		}()
 
 		var changed bool
-		ctx := chain.Context(context.ContextArgs{
+		ctx := chain.Context(ctx, context.ContextArgs{
 			Cursor:       csor,
 			ImportPath:   params.Decorator.Path,
 			File:         params.File,
@@ -254,6 +254,7 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 			NodeMap:      params.Decorator.Ast.Nodes,
 		})
 		defer ctx.Release()
+
 		changed, err = injectNode(ctx, params.Aspects)
 		modified = modified || changed
 
