@@ -1,4 +1,4 @@
-# Example configuration demonstrating the desired 'return-implements' functionality.
+# Example configuration demonstrating the desired 'result-implements' functionality.
 # We will target functions returning types that implement io.Reader or error.
 
 # Configuration using a single injector and conditional logic
@@ -11,7 +11,7 @@ aspects:
     join-point:
       function-body:
         function:
-          - return-implements: "io.Reader" # ...of functions where a return type implements io.Reader
+          - result-implements: "io.Reader" # ...of functions where a return type implements io.Reader
     advice:
       - prepend-statements:
           imports:
@@ -24,7 +24,7 @@ aspects:
     join-point:
       function-body:
         function:
-          - return-implements: "error" # ...of functions where a return type implements error
+          - result-implements: "error" # ...of functions where a return type implements error
     advice:
       - prepend-statements:
           imports:
