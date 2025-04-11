@@ -63,8 +63,25 @@ jobs:
       # If the release does not yet exist, create a draft release targeting this commit.
       - name: Create draft release
         if: github.event_name == 'push' && steps.version.outputs.exists == 'false'
+        # We explicitly set the notes start tag because GitHub otherwise does not make the right
+        # decision (it is very sensitive to non-version tags being present in the repository, and
+        # the Go nexted modules tags hinder it). We pick the latest non-prerelease tag as the start
+        # tag, always.
         run: |-
-          gh release create '${{ steps.version.outputs.tag }}' --draft --generate-notes --target='${{ github.sha }}' --title='${{ steps.version.outputs.tag }}' ${{ contains(steps.version.outputs.tag, '-') && '--prerelease' || '' }}
+          lastTag=$(gh release list                                                                 \
+            --exclude-drafts                                                                        \
+            --exclude-pre-releases                                                                  \
+            --limit=1                                                                               \
+            --json=tagName                                                                          \
+            --template="{{ (index . 0).tagName }}"                                                  \
+          )
+          gh release create '${{ steps.version.outputs.tag }}'                                      \
+            --draft                                                                                 \
+            --generate-notes                                                                        \
+            --target='${{ github.sha }}'                                                            \
+            --title='${{ steps.version.outputs.tag }}'                                              \
+            --notes-start-tag="${lastTag}"                                                          \
+            ${{ contains(steps.version.outputs.tag, '-') && '--prerelease' || '' }}
         env:
           GH_TOKEN: ${{ github.token }}
 
