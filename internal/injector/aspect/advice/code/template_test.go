@@ -38,60 +38,75 @@ func (mockAdviceContext) ParseSource(src []byte) (*dst.File, error) {
 }
 
 // The rest is not used by the tests as of now...
+
 func (m mockAdviceContext) ResolveType(dst.Expr) types.Type {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
+
 func (m mockAdviceContext) Release() {
 	assert.FailNow(m.t, "unexpected method call")
 }
+
 func (m mockAdviceContext) Chain() *context.NodeChain {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
+
 func (m mockAdviceContext) Node() dst.Node {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
+
 func (m mockAdviceContext) Parent() context.AspectContext {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
+
 func (m mockAdviceContext) Config(string) (string, bool) {
 	assert.FailNow(m.t, "unexpected method call")
 	return "", false
 }
+
 func (m mockAdviceContext) File() *dst.File {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
+
 func (m mockAdviceContext) ImportPath() string {
 	assert.FailNow(m.t, "unexpected method call")
 	return ""
 }
+
 func (m mockAdviceContext) Package() string {
 	assert.FailNow(m.t, "unexpected method call")
 	return ""
 }
+
 func (m mockAdviceContext) TestMain() bool {
 	assert.FailNow(m.t, "unexpected method call")
 	return false
 }
+
 func (m mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
+
 func (m mockAdviceContext) ReplaceNode(dst.Node) {
 	assert.FailNow(m.t, "unexpected method call")
 }
+
 func (m mockAdviceContext) AddImport(string, string) bool {
 	assert.FailNow(m.t, "unexpected method call")
 	return false
 }
+
 func (m mockAdviceContext) AddLink(string) bool {
 	assert.FailNow(m.t, "unexpected method call")
 	return false
 }
+
 func (m mockAdviceContext) EnsureMinGoLang(context.GoLangVersion) {
 	assert.FailNow(m.t, "unexpected method call")
 }
