@@ -361,19 +361,19 @@ func (s *functionBody) Hash(h *fingerprint.Hasher) error {
 	return h.Named("function-body", s.Function)
 }
 
-// returnImplements matches functions where at least one return value's type
+// resultImplements matches functions where at least one return value's type
 // implements the specified interface.
-type returnImplements struct {
+type resultImplements struct {
 	InterfaceName string
 }
 
-// ReturnImplements creates a FunctionOption that matches functions where at least one
+// ResultImplements creates a FunctionOption that matches functions where at least one
 // return value implements the named interface.
-func ReturnImplements(interfaceName string) FunctionOption {
-	return &returnImplements{InterfaceName: interfaceName}
+func ResultImplements(interfaceName string) FunctionOption {
+	return &resultImplements{InterfaceName: interfaceName}
 }
 
-func (fo *returnImplements) impliesImported() []string {
+func (fo *resultImplements) impliesImported() []string {
 	pkgPath, _ := typed.SplitPackageAndName(fo.InterfaceName)
 	if pkgPath != "" {
 		return []string{pkgPath}
@@ -381,20 +381,20 @@ func (fo *returnImplements) impliesImported() []string {
 	return nil
 }
 
-func (_ *returnImplements) packageMayMatch(_ *may.PackageContext) may.MatchType {
+func (_ *resultImplements) packageMayMatch(_ *may.PackageContext) may.MatchType {
 	// Cannot reliably determine possibility of match based on package imports
 	// due to structural typing. A type can implement an interface without
 	// importing the interface's package.
 	return may.Unknown
 }
 
-func (_ *returnImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
+func (_ *resultImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
 	// Cannot reliably determine possibility of match based on file contents
 	// due to structural typing and type aliases.
 	return may.Unknown
 }
 
-func (fo *returnImplements) evaluate(info functionInformation) bool {
+func (fo *resultImplements) evaluate(info functionInformation) bool {
 	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
 		// No return values, no match.
 		return false
@@ -424,8 +424,8 @@ func (fo *returnImplements) evaluate(info functionInformation) bool {
 	return false
 }
 
-func (fo *returnImplements) Hash(h *fingerprint.Hasher) error {
-	return h.Named("return-implements", fingerprint.String(fo.InterfaceName))
+func (fo *resultImplements) Hash(h *fingerprint.Hasher) error {
+	return h.Named("result-implements", fingerprint.String(fo.InterfaceName))
 }
 
 func init() {
@@ -533,16 +533,16 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		case "signature-contains":
 			o.FunctionOption = SignatureContains(args, ret)
 		}
-	case "return-implements":
+	case "result-implements":
 		var ifaceName string
 		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &ifaceName); err != nil {
 			return err
 		}
 		if ifaceName == "" {
-			return fmt.Errorf("line %d: 'return-implements' cannot be empty", node.GetToken().Position.Line)
+			return fmt.Errorf("line %d: 'result-implements' cannot be empty", node.GetToken().Position.Line)
 		}
 		// NOTE: Validation happens later during type resolution.
-		o.FunctionOption = ReturnImplements(ifaceName)
+		o.FunctionOption = ResultImplements(ifaceName)
 	default:
 		return fmt.Errorf("unknown FuncDeclOption name: %q", key)
 	}
