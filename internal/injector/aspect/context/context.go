@@ -6,12 +6,14 @@
 package context
 
 import (
+	gocontext "context"
 	"go/ast"
 	"go/types"
 	"sync"
 
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
+	"github.com/rs/zerolog"
 
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
@@ -81,6 +83,8 @@ type AdviceContext interface {
 
 type (
 	context struct {
+		log *zerolog.Logger
+
 		*NodeChain
 		cursor *dstutil.Cursor
 
@@ -130,11 +134,14 @@ type ContextArgs struct {
 // provided cursor. The [context.Release] function should be called on values
 // returned by this function to allow for memory re-use, which can significantly
 // reduce allocations performed during AST traversal.
-func (n *NodeChain) Context(args ContextArgs) *context {
+func (n *NodeChain) Context(ctx gocontext.Context, args ContextArgs) *context {
 	c, _ := contextPool.Get().(*context)
 	*c = context{
-		NodeChain:    n,
-		cursor:       args.Cursor,
+		log: zerolog.Ctx(ctx),
+
+		NodeChain: n,
+		cursor:    args.Cursor,
+
 		file:         args.File,
 		refMap:       args.RefMap,
 		minGoLang:    args.MinGoLang,
@@ -262,10 +269,6 @@ func (c *context) EnsureMinGoLang(lang GoLangVersion) {
 // ResolveType resolves a dst.Expr to its corresponding types.Type within the
 // current context.
 func (c *context) ResolveType(expr dst.Expr) types.Type {
-	if expr == nil {
-		return nil
-	}
-
 	// Convert dst.Expr to ast.Expr using the nodeMap.
 	astNode, ok := c.nodeMap[expr]
 	if !ok {
@@ -275,6 +278,7 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 	// Convert ast.Node to ast.Expr.
 	astExpr, ok := astNode.(ast.Expr)
 	if !ok {
+		c.log.Error().Msgf("node %v is not an ast.Expr", astNode)
 		return nil
 	}
 

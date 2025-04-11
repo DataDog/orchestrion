@@ -72,3 +72,70 @@ func TestResolveInterfaceTypeByName(t *testing.T) {
 		})
 	}
 }
+
+// TestSplitPackageAndName tests the SplitPackageAndName function with various package name formats.
+func TestSplitPackageAndName(t *testing.T) {
+	testCases := []struct {
+		name          string
+		fullName      string
+		expectedPkg   string
+		expectedLocal string
+	}{
+		{
+			name:          "standard library package",
+			fullName:      "io.Reader",
+			expectedPkg:   "io",
+			expectedLocal: "Reader",
+		},
+		{
+			name:          "built-in type",
+			fullName:      "error",
+			expectedPkg:   "",
+			expectedLocal: "error",
+		},
+		{
+			name:          "unqualified type",
+			fullName:      "MyType",
+			expectedPkg:   "",
+			expectedLocal: "MyType",
+		},
+		{
+			name:          "github import path",
+			fullName:      "github.com/user/pkg.Type",
+			expectedPkg:   "github.com/user/pkg",
+			expectedLocal: "Type",
+		},
+		{
+			name:          "versioned package",
+			fullName:      "gopkg.in/pkg.v1.Type",
+			expectedPkg:   "gopkg.in/pkg.v1",
+			expectedLocal: "Type",
+		},
+		{
+			name:          "complex domain with version and subpackage",
+			fullName:      "gopkg.in/DataDog/dd-trace-go.v1/ddtrace.Span",
+			expectedPkg:   "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+			expectedLocal: "Span",
+		},
+		{
+			name:          "standard domain with version",
+			fullName:      "github.com/DataDog/dd-trace-go/v2.Tracer",
+			expectedPkg:   "github.com/DataDog/dd-trace-go/v2",
+			expectedLocal: "Tracer",
+		},
+		{
+			name:          "multiple dots in package name",
+			fullName:      "k8s.io/client-go/kubernetes.Clientset",
+			expectedPkg:   "k8s.io/client-go/kubernetes",
+			expectedLocal: "Clientset",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pkg, local := splitPackageAndName(tc.fullName)
+			assert.Equal(t, tc.expectedPkg, pkg, "Package path should match")
+			assert.Equal(t, tc.expectedLocal, local, "Local name should match")
+		})
+	}
+}
