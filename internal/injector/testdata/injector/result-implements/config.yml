@@ -51,6 +51,74 @@ aspects:
             fmt.Println("Failure: Cannot compare errors: At least one error position not found")
             {{ end }}
 
+  - id: "aspect-final-error-check"
+    join-point:
+      function-body:
+        function:
+          - name: returnsError
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing FinalResultImplements for error (single result)")
+            {{ if .Function.FinalResultImplements "error" }}
+            fmt.Println("Success: Final result implements error interface")
+            {{ else }}
+            fmt.Println("Failure: Final result does not implement error interface")
+            {{ end }}
+
+  - id: "aspect-final-multiple-errors"
+    join-point:
+      function-body:
+        function:
+          - name: returnsMultipleErrors
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing FinalResultImplements for error (multiple results)")
+            {{ if .Function.FinalResultImplements "error" }}
+            fmt.Println("Success: Final result implements error interface")
+            {{ else }}
+            fmt.Println("Failure: Final result does not implement error interface")
+            {{ end }}
+
+  - id: "aspect-final-reader"
+    join-point:
+      function-body:
+        function:
+          - name: returnsReader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing FinalResultImplements for io.Reader")
+            {{ if .Function.FinalResultImplements "io.Reader" }}
+            fmt.Println("Success: Final result implements io.Reader interface")
+            {{ else }}
+            fmt.Println("Failure: Final result does not implement io.Reader interface")
+            {{ end }}
+
+  - id: "aspect-final-no-match"
+    join-point:
+      function-body:
+        function:
+          - name: returnsNoMatch
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing FinalResultImplements for error (no match)")
+            {{ if .Function.FinalResultImplements "error" }}
+            fmt.Println("Failure: Final result implements error interface")
+            {{ else }}
+            fmt.Println("Success: Final result does not implement error interface")
+            {{ end }}
+
   - id: "aspect-io-reader"
     join-point:
       function-body:
@@ -204,6 +272,26 @@ aspects:
             fmt.Println("Failure: No io.Reader found")
             {{ end }}
 
+  - id: "aspect-error-non-final-position"
+    join-point:
+      function-body:
+        function:
+          - name: returnsErrorButNotLast
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing distinction case: error in non-final position")
+            {{ $last := .Function.LastResultThatImplements "error" }}
+            {{ $implements := .Function.FinalResultImplements "error" }}
+            fmt.Printf("LastResultThatImplements 'error': %q\n", "{{ $last }}")
+            {{ if $implements }}
+            fmt.Println("FinalResultImplements 'error': true (INCORRECT!)")
+            {{ else }}
+            fmt.Println("FinalResultImplements 'error': false (CORRECT!)")
+            {{ end }}
+
 syntheticReferences:
   fmt: true
 
@@ -297,4 +385,9 @@ code: |-
   // Returns a value that doesn't implement error
   func returnsString() string {
     return "not an error"
+  }
+
+  // Function where the last result implementing an interface is NOT the final result
+  func returnsErrorButNotLast() (error, string) {
+    return errors.New("error not in final position"), "final result"
   }

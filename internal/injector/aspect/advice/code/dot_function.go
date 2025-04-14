@@ -45,6 +45,8 @@ type (
 		// LastResultThatImplements returns the name of the last return value in this function that implements
 		// the provided interface type, or an empty string if none is found.
 		LastResultThatImplements(string) (string, error)
+		// FinalResultImplements returns whether the final result implements the provided interface type.
+		FinalResultImplements(string) (bool, error)
 	}
 
 	declaredFunc struct {
@@ -126,6 +128,10 @@ func (noFunc) ResultThatImplements(string) (string, error) {
 
 func (noFunc) LastResultThatImplements(string) (string, error) {
 	return "", errNoFunction
+}
+
+func (noFunc) FinalResultImplements(string) (bool, error) {
+	return false, errNoFunction
 }
 
 type signature struct {
@@ -383,4 +389,20 @@ func splitPackageAndName(fullName string) (pkgPath string, localName string) {
 	pkgPath = fullName[:lastDot]
 	localName = fullName[lastDot+1:]
 	return pkgPath, localName
+}
+
+// FinalResultImplements returns whether the final result implements the provided interface type.
+func (s signature) FinalResultImplements(interfaceName string) (bool, error) {
+	if s.Results == nil || len(s.Results.List) == 0 {
+		return false, nil
+	}
+
+	iface, err := resolveInterfaceTypeByName(interfaceName)
+	if err != nil {
+		return false, fmt.Errorf("resolving interface type %q: %w", interfaceName, err)
+	}
+
+	// Check if the last field type implements the interface.
+	lastField := s.Results.List[len(s.Results.List)-1]
+	return exprImplements(s.context, lastField.Type, iface), nil
 }
