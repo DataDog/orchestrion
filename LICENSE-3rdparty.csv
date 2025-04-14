@@ -89,7 +89,7 @@ orchestrion,go.uber.org/atomic,MIT,"Copyright (c) 2016 Uber Technologies, Inc."
 orchestrion,go.uber.org/multierr,MIT,"Copyright (c) 2017-2021 Uber Technologies, Inc."
 orchestrion,go.uber.org/zap,MIT,"Copyright (c) 2016-2017 Uber Technologies, Inc."
 orchestrion,golang.org/x/crypto,BSD-3-Clause,Copyright 2009 The Go Authors.
-orchestrion,golang.org/x/exp/constraints,BSD-3-Clause,Copyright 2009 The Go Authors.
+orchestrion,golang.org/x/exp,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/net,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/sync/errgroup,BSD-3-Clause,Copyright 2009 The Go Authors.
