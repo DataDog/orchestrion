@@ -7,7 +7,6 @@ package parse
 
 import (
 	"bytes"
-	"io"
 	"strings"
 	"testing"
 
@@ -38,11 +37,14 @@ func TestConsumeLineDirective(t *testing.T) {
 				"// no directive": "",
 				// Bad directives (ignored)
 				"//line path/to/file.go:1:42": "",
+				"//line path/to/file.go:42:1": "",
 				"//line path/to/file.go:1337": "",
 				// Valid directives
-				"//line path/to/file.go:1:1": "path/to/file.go",
-				"//line path/to/file.go:1":   "path/to/file.go",
-				"//line path/to/file.go":     "path/to/file.go",
+				"//line  path/to/file.go:1:1":   "path/to/file.go", // Extra space before
+				"//line  path/to/file.go:1:1  ": "path/to/file.go", // Extra space adter
+				"//line path/to/file.go:1:1":    "path/to/file.go",
+				"//line path/to/file.go:1":      "path/to/file.go",
+				"//line path/to/file.go":        "path/to/file.go",
 			}
 			for directive, expectedOutcome := range cases {
 				t.Run(directive, func(t *testing.T) {
@@ -51,20 +53,16 @@ func TestConsumeLineDirective(t *testing.T) {
 					buffer.WriteString(sep)
 					buffer.Write(sourceBytes)
 
-					reader := bytes.NewReader(buffer.Bytes())
-					filename, err := consumeLineDirective(reader)
+					filename, data, err := consumeLineDirective(buffer.Bytes(), "")
 					require.NoError(t, err)
 					require.Equal(t, expectedOutcome, filename)
-
-					rest, err := io.ReadAll(reader)
-					require.NoError(t, err)
 
 					expected := sourceBytes
 					if expectedOutcome == "" {
 						expected = buffer.Bytes()
 					}
 
-					require.Equal(t, string(expected), string(rest))
+					require.Equal(t, string(expected), string(data))
 				})
 			}
 		})

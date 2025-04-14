@@ -7,65 +7,68 @@ package parse
 
 import (
 	"bytes"
-	"io"
 )
 
 // consumeLineDirective consumes the first line from r if it's a "//line"
 // directive that either does not have line/column information or has it set to
 // line 1 (and column 1). If the directive is consumed, the filename it refers
 // to is returned. Otherwise, the reader is rewinded to its original position.
-func consumeLineDirective(r io.ReadSeeker) (string, error) {
-	var buf [7]byte
-	n, err := r.Read(buf[:])
-	if err != nil {
-		return "", err
+func consumeLineDirective(d []byte, filename string) (string, []byte, error) {
+	if len(d) < 7 {
+		// There cannot be a "//line " directive here, since there's not enough data.
+		return filename, d, nil
 	}
-	if string(buf[:n]) != "//line " {
-		_, err := r.Seek(0, io.SeekStart)
-		return "", err
+	if string(d[:7]) != "//line " {
+		// There is no "//line " directive at the start of the file, so we just
+		// return the original filename and full data.
+		return filename, d, nil
 	}
 
-	buffer := make([]byte, 0, 128)
-	var wasCR, done bool
-	for !done {
-		if n, err := r.Read(buf[:1]); err != nil {
-			return "", err
-		} else if n == 0 {
-			// Reached EOF
+	si := 7 // Value start index
+	for si < len(d) && d[si] == ' ' {
+		si++
+	}
+
+	ei := si // Value end index (exclusive)
+	ds := ei // Data start index
+	for ; ei < len(d); ei++ {
+		if d[ei] == '\r' {
+			if ei+1 < len(d) && d[ei+1] == '\n' {
+				// CRLF
+				ds = ei + 2
+			} else {
+				// CR
+				ds = ei + 1
+			}
 			break
 		}
-		switch c := buf[0]; c {
-		case '\n':
-			done = true
-		case '\r':
-			wasCR = true
-			continue
-		default:
-			if wasCR {
-				// We saw a CR and this is not an LF, so we rewind one byte and bail out.
-				if _, err := r.Seek(-1, io.SeekCurrent); err != nil {
-					return "", err
-				}
-				done = true
-			} else {
-				buffer = append(buffer, c)
-			}
+		if d[ei] == '\n' {
+			ds = ei + 1
+			break
 		}
+		ds = ei
 	}
 
-	// Remove any leading or trailing white space
-	if rest, pos, hadPos := cutPositionSuffix(bytes.TrimSpace(buffer)); !hadPos {
-		return string(rest), nil
-	} else if pos != 1 {
-		// It was not at position 1, so it's not the directive we're looking for.
-		_, err := r.Seek(0, io.SeekStart)
-		return "", err
-	} else if rest, pos, hadPos := cutPositionSuffix(rest); !hadPos || pos == 1 {
-		return string(rest), nil
+	dv := bytes.TrimSpace(d[si:ei])
+	fn, pos, ok := cutPositionSuffix(dv)
+	if !ok {
+		// There is no position suffix, so we just remove the directive and return
+		// its value as-is...
+		return string(fn), d[ds:], nil
 	}
-	// It was not at position 1, so it's not the directive we're looking for.
-	_, err = r.Seek(0, io.SeekStart)
-	return "", err
+	if ok && pos != 1 {
+		// We only trim if the position is 1, otherwise this isn't the directive
+		// we're looking to trim.
+		return filename, d, nil
+	}
+	fn, pos, ok = cutPositionSuffix(fn)
+	if ok && pos != 1 {
+		// We only trim if the position is 1, otherwise this isn't the directive
+		// we're looking to trim.
+		return filename, d, nil
+	}
+
+	return string(fn), d[ds:], nil
 }
 
 // cutPositionSuffix removes a trailing ":<int>" from the provided buffer, if present.
