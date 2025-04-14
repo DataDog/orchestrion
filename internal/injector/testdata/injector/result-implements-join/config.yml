@@ -32,6 +32,67 @@ aspects:
           template: |
             fmt.Println("Success: instrumented returnsError implementer")
 
+  # Aspect 3: Target functions where the final return value implements io.Reader
+  - id: "instrument-final-reader-returns"
+    join-point:
+      function-body:
+        function:
+          - final-result-implements: "io.Reader" # ...of functions where the final return value implements io.Reader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented final returnsReader implementer")
+
+  # Aspect 4: Target functions where the final return value implements error
+  - id: "instrument-final-error-returns"
+    join-point:
+      function-body:
+        function:
+          - final-result-implements: "error" # ...of functions where the final return value implements error
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented final returnsError implementer")
+
+  # Aspect 5: Demonstrate difference between result-implements and final-result-implements
+  - id: "demonstrate-difference"
+    join-point:
+      function-body:
+        function:
+          - name: returnsErrorThenString # Target specific function for clarity
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Demonstrating difference between result-implements and final-result-implements:")
+            {{ $resultMatches := false }}
+            {{ $finalMatches := false }}
+
+            {{ with .Function.ResultThatImplements "error" }}
+              {{ $resultMatches = true }}
+            {{ end }}
+
+            {{ if .Function.FinalResultImplements "error" }}
+              {{ $finalMatches = true }}
+            {{ end }}
+
+            {{ if $resultMatches }}
+            fmt.Println("Success: result-implements finds error in non-final position")
+            {{ else }}
+            fmt.Println("Failure: result-implements didn't find error in function")
+            {{ end }}
+
+            {{ if not $finalMatches }}
+            fmt.Println("Success: final-result-implements correctly ignores non-final error")
+            {{ else }}
+            fmt.Println("Failure: final-result-implements incorrectly matched non-final error")
+            {{ end }}
+
 
 code: |-
   package main
@@ -143,6 +204,13 @@ code: |-
   func returnsStringAndInt() (string, int) {
     fmt.Println("Executing returnsStringAndInt")
     return "neither implements", 5
+  }
+
+  // This function has an error but it's not the final return value
+  // Should match ResultImplements("error") but not FinalResultImplements("error")
+  func returnsErrorThenString() (error, string) {
+    fmt.Println("Executing returnsErrorThenString")
+    return errors.New("error in non-final position"), "final non-error value"
   }
 
   // Main - needed for compilation by the test harness.
