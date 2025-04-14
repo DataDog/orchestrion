@@ -428,6 +428,66 @@ func (fo *resultImplements) Hash(h *fingerprint.Hasher) error {
 	return h.Named("result-implements", fingerprint.String(fo.InterfaceName))
 }
 
+// finalResultImplements matches functions where specifically the final return value
+// implements the specified interface.
+type finalResultImplements struct {
+	InterfaceName string
+}
+
+// FinalResultImplements creates a FunctionOption that matches functions where the final
+// return value implements the named interface.
+func FinalResultImplements(interfaceName string) FunctionOption {
+	return &finalResultImplements{InterfaceName: interfaceName}
+}
+
+func (fo *finalResultImplements) impliesImported() []string {
+	pkgPath, _ := typed.SplitPackageAndName(fo.InterfaceName)
+	if pkgPath != "" {
+		return []string{pkgPath}
+	}
+	return nil
+}
+
+func (_ *finalResultImplements) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on package imports
+	// due to structural typing. A type can implement an interface without
+	// importing the interface's package.
+	return may.Unknown
+}
+
+func (_ *finalResultImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on file contents
+	// due to structural typing and type aliases.
+	return may.Unknown
+}
+
+func (fo *finalResultImplements) evaluate(info functionInformation) bool {
+	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
+		// No return values, no match.
+		return false
+	}
+
+	// Ensure the type resolver is available.
+	if info.typeResolver == nil {
+		return false
+	}
+
+	// Resolve the target interface name (e.g., "io.Reader", "error") to a types.Interface.
+	targetInterface, err := typed.ResolveInterfaceTypeByName(fo.InterfaceName)
+	if err != nil {
+		// If the interface name is invalid or cannot be resolved, we cannot match.
+		return false
+	}
+
+	// Check if the last field implements the interface.
+	lastField := info.Type.Results.List[len(info.Type.Results.List)-1]
+	return typed.ExprImplements(info.typeResolver, lastField.Type, targetInterface)
+}
+
+func (fo *finalResultImplements) Hash(h *fingerprint.Hasher) error {
+	return h.Named("final-result-implements", fingerprint.String(fo.InterfaceName))
+}
+
 func init() {
 	unmarshalers["function-body"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		up, err := FromYAML(ctx, node)
@@ -543,6 +603,16 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		}
 		// NOTE: Validation happens later during type resolution.
 		o.FunctionOption = ResultImplements(ifaceName)
+	case "final-result-implements":
+		var ifaceName string
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &ifaceName); err != nil {
+			return err
+		}
+		if ifaceName == "" {
+			return fmt.Errorf("line %d: 'final-result-implements' cannot be empty", node.GetToken().Position.Line)
+		}
+		// NOTE: Validation happens later during type resolution.
+		o.FunctionOption = FinalResultImplements(ifaceName)
 	default:
 		return fmt.Errorf("unknown FuncDeclOption name: %q", key)
 	}

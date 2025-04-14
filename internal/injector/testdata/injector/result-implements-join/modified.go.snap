@@ -19,6 +19,10 @@ type myCustomReaderImpl struct {
 func (cr myCustomReaderImpl) Read(p []byte) (int, error) {
 //line <generated>:1
   {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
     fmt.Println("Success: instrumented returnsError implementer")
 
   }
@@ -41,6 +45,10 @@ func (e myCustomError) Error() string {
 func returnsReader() io.Reader {
 //line <generated>:1
   {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
     fmt.Println("Success: instrumented returnsReader implementer")
 
   }
@@ -51,6 +59,10 @@ func returnsReader() io.Reader {
 
 func returnsBuffer() *bytes.Buffer {
 //line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
   {
     fmt.Println("Success: instrumented returnsReader implementer")
 
@@ -63,6 +75,10 @@ func returnsBuffer() *bytes.Buffer {
 func returnsError() error {
 //line <generated>:1
   {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
     fmt.Println("Success: instrumented returnsError implementer")
 
   }
@@ -73,6 +89,10 @@ func returnsError() error {
 
 func returnsHttpError() error {
 //line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
   {
     fmt.Println("Success: instrumented returnsError implementer")
 
@@ -86,6 +106,10 @@ func returnsHttpError() error {
 func returnsCustomReaderImpl() myCustomReaderImpl {
 //line <generated>:1
   {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
     fmt.Println("Success: instrumented returnsReader implementer")
 
   }
@@ -96,6 +120,10 @@ func returnsCustomReaderImpl() myCustomReaderImpl {
 
 func returnsCustomError() myCustomError {
 //line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
   {
     fmt.Println("Success: instrumented returnsError implementer")
 
@@ -121,6 +149,10 @@ func noReturn() {
 func returnsIntAndReader() (int, io.Reader) {
 //line <generated>:1
   {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
     fmt.Println("Success: instrumented returnsReader implementer")
 
   }
@@ -142,6 +174,10 @@ func returnsReaderAndInt() (io.Reader, int) {
 
 func returnsIntAndError() (int, error) {
 //line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
   {
     fmt.Println("Success: instrumented returnsError implementer")
 
@@ -165,6 +201,10 @@ func returnsErrorAndInt() (error, int) {
 func returnsMultipleReaders() (*bytes.Buffer, io.Reader) {
 //line <generated>:1
   {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
     fmt.Println("Success: instrumented returnsReader implementer")
 
   }
@@ -175,6 +215,10 @@ func returnsMultipleReaders() (*bytes.Buffer, io.Reader) {
 
 func returnsMultipleErrors() (error, error) {
 //line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
   {
     fmt.Println("Success: instrumented returnsError implementer")
 
@@ -187,6 +231,26 @@ func returnsMultipleErrors() (error, error) {
 func returnsStringAndInt() (string, int) {
   fmt.Println("Executing returnsStringAndInt")
   return "neither implements", 5
+}
+
+// This function has an error but it's not the final return value
+// Should match ResultImplements("error") but not FinalResultImplements("error")
+func returnsErrorThenString() (__result__0 error, _ string) {
+//line <generated>:1
+  {
+    fmt.Println("Demonstrating difference between result-implements and final-result-implements:")
+
+    fmt.Println("Success: result-implements finds error in non-final position")
+
+    fmt.Println("Success: final-result-implements correctly ignores non-final error")
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:115
+  fmt.Println("Executing returnsErrorThenString")
+  return errors.New("error in non-final position"), "final non-error value"
 }
 
 // Main - needed for compilation by the test harness.
