@@ -109,7 +109,7 @@ jobs:
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
           git fetch origin "${branch}"
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@b1cac81e65b25c96bc767d2b726b6a6e10d226d0 # v0.2.10
+        uses: planetscale/ghcommit-action@cfc84b2c92fad05a4f61797b0f06f4051564988f # v0.2.11
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ github.repository }}
@@ -133,7 +133,7 @@ jobs:
       # The standard GitHub Token will not trigger downstream workflows, so in order to kick off CI,
       # we'll push a blank commit to the PR branch with the mutator token.
       - name: Trigger CI
-        uses: planetscale/ghcommit-action@b1cac81e65b25c96bc767d2b726b6a6e10d226d0 # v0.2.10
+        uses: planetscale/ghcommit-action@cfc84b2c92fad05a4f61797b0f06f4051564988f # v0.2.11
         with:
           commit_message: "blank: trigger CI"
           repo: ${{ github.repository }}
