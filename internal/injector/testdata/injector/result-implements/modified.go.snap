@@ -15,6 +15,12 @@ import (
 func returnsError() (__result__0 error) {
 //line <generated>:1
   {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for error (single result)")
+
+    __orchestrion_fmt.Println("Success: Final result implements error interface")
+
+  }
+  {
     __orchestrion_fmt.Println("Testing ResultThatImplements for error")
 
     __orchestrion_fmt.Printf("Success: Found error at: %q\n", "__result__0")
@@ -27,6 +33,12 @@ func returnsError() (__result__0 error) {
 // Returns multiple errors to test LastResultThatImplements
 func returnsMultipleErrors() (__result__0 error, _ string, __result__2 error) {
 //line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for error (multiple results)")
+
+    __orchestrion_fmt.Println("Success: Final result implements error interface")
+
+  }
   {
     __orchestrion_fmt.Println("Testing LastResultThatImplements for error")
 
@@ -46,6 +58,12 @@ func returnsReader() (__result__0 io.Reader) {
     __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader")
 
     __orchestrion_fmt.Printf("Success: Found io.Reader at: %q\n", "__result__0")
+
+  }
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for io.Reader")
+
+    __orchestrion_fmt.Println("Success: Final result implements io.Reader interface")
 
   }
 //line input.go:21
@@ -72,6 +90,12 @@ func returnsNoMatch() (string, int) {
     __orchestrion_fmt.Println("Testing ResultThatImplements for error (no match)")
 
     __orchestrion_fmt.Println("Success: No error found")
+
+  }
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for error (no match)")
+
+    __orchestrion_fmt.Println("Success: Final result does not implement error interface")
 
   }
 //line input.go:31
@@ -187,4 +211,18 @@ func returnsMyReaderAlias() (__result__0 MyReader) {
 // Returns a value that doesn't implement error
 func returnsString() string {
   return "not an error"
+}
+
+// Function where the last result implementing an interface is NOT the final result
+func returnsErrorButNotLast() (__result__0 error, _ string) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing distinction case: error in non-final position")
+    __orchestrion_fmt.Printf("LastResultThatImplements 'error': %q\n", "__result__0")
+
+    __orchestrion_fmt.Println("FinalResultImplements 'error': false (CORRECT!)")
+
+  }
+//line input.go:94
+  return errors.New("error not in final position"), "final result"
 }
