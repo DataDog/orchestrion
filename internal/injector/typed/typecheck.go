@@ -46,64 +46,37 @@ func typeImplements(t types.Type, iface *types.Interface) bool {
 
 // ResolveInterfaceTypeByName takes an interface name as a string and resolves it to an interface type.
 func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
-	// Handle built-in types.
-	if obj := types.Universe.Lookup(name); obj != nil {
-		typeObj, ok := obj.(*types.TypeName)
-		if !ok {
-			return nil, fmt.Errorf("object %s is not a type name but a %T", name, obj)
-		}
+	pkgPath, typeName := SplitPackageAndName(name)
 
-		typ := typeObj.Type()
-		if !types.IsInterface(typ) {
-			return nil, fmt.Errorf("type %s is not an interface", name)
+	if pkgPath == "" {
+		// Handle built-in types or unqualified names.
+		scope := types.Universe
+		obj := scope.Lookup(typeName)
+		if obj == nil {
+			// Not found in universe scope.
+			return nil, fmt.Errorf("interface %q not found (not a built-in or unqualified)", typeName)
 		}
-
-		t, ok := typ.Underlying().(*types.Interface)
-		if !ok {
-			return nil, fmt.Errorf("type %s is not an interface", name)
-		}
-
-		return t, nil
+		// Found in universe, now validate it's an interface type name.
+		return validateTypeNameIsInterface(obj, name, pkgPath, typeName)
 	}
 
 	// Handle package-qualified types (e.g., "io.Writer").
-	pkgPath, typeName := SplitPackageAndName(name)
-	if pkgPath == "" {
-		// If not built-in and no package path, it's likely an undefined or local type
-		// that importer won't find directly without context. Assume invalid for now.
-		return nil, fmt.Errorf("invalid or unqualified interface name: %s", name)
-	}
-
-	// Import the package
 	imp := importer.Default()
 	pkg, err := imp.Import(pkgPath)
 	if err != nil {
+		// Specific error for import failure.
 		return nil, fmt.Errorf("failed to import package %q: %w", pkgPath, err)
 	}
 
-	// Look up the type in the package's scope
-	obj := pkg.Scope().Lookup(typeName)
+	scope := pkg.Scope()
+	obj := scope.Lookup(typeName)
 	if obj == nil {
+		// Not found within the imported package's scope.
 		return nil, fmt.Errorf("type %q not found in package %q", typeName, pkgPath)
 	}
 
-	typeObj, ok := obj.(*types.TypeName)
-	if !ok {
-		return nil, fmt.Errorf("object %s.%s is not a type name but a %T", pkgPath, typeName, obj)
-	}
-
-	typ := typeObj.Type()
-	if !types.IsInterface(typ) {
-		return nil, fmt.Errorf("type %s is not an interface", name)
-	}
-
-	t, ok := typ.Underlying().(*types.Interface)
-	if !ok {
-		// This should ideally not happen if types.IsInterface passed, but check defensively.
-		return nil, fmt.Errorf("type %s is an interface but failed to get underlying *types.Interface", name)
-	}
-
-	return t, nil
+	// Found in package scope, now validate it's an interface type name.
+	return validateTypeNameIsInterface(obj, name, pkgPath, typeName)
 }
 
 // SplitPackageAndName splits a fully qualified type name like "io.Reader" or "example.com/pkg.Type"
@@ -119,4 +92,32 @@ func SplitPackageAndName(fullName string) (pkgPath string, localName string) {
 	pkgPath = fullName[:lastDot]
 	localName = fullName[lastDot+1:]
 	return pkgPath, localName
+}
+
+// validateTypeNameIsInterface checks if a successfully looked-up types.Object represents
+// a type name that resolves to an interface. It assumes obj is not nil.
+func validateTypeNameIsInterface(obj types.Object, fullName string, pkgPath string, typeName string) (*types.Interface, error) {
+	typeObj, ok := obj.(*types.TypeName)
+	if !ok {
+		// Provide context whether it was expected to be built-in or package-qualified.
+		if pkgPath == "" {
+			return nil, fmt.Errorf("object %q is not a type name but a %T", typeName, obj)
+		}
+		return nil, fmt.Errorf("object %s.%s is not a type name but a %T", pkgPath, typeName, obj)
+	}
+
+	typ := typeObj.Type()
+	if !types.IsInterface(typ) {
+		// Use the original full name in the error message for clarity.
+		return nil, fmt.Errorf("type %s is not an interface", fullName)
+	}
+
+	// Use .Underlying() to get the *types.Interface.
+	iface, ok := typ.Underlying().(*types.Interface)
+	if !ok {
+		// This should ideally not happen if types.IsInterface passed, but check defensively.
+		return nil, fmt.Errorf("type %s is an interface but failed to get underlying *types.Interface", fullName)
+	}
+
+	return iface, nil
 }
