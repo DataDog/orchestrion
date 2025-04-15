@@ -14,22 +14,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 func TestSignatureContains(t *testing.T) {
 	tests := []struct {
 		name     string
-		args     []TypeName
-		ret      []TypeName
+		args     []typed.TypeName
+		ret      []typed.TypeName
 		funcInfo functionInformation
 		want     bool
 	}{
 		{
 			name: "single argument matches",
-			args: []TypeName{
-				{name: "string"},
+			args: []typed.TypeName{
+				{Name: "string"},
 			},
-			ret: make([]TypeName, 0),
+			ret: make([]typed.TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -47,9 +48,9 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "single return matches",
-			args: make([]TypeName, 0),
-			ret: []TypeName{
-				{name: "error"},
+			args: make([]typed.TypeName, 0),
+			ret: []typed.TypeName{
+				{Name: "error"},
 			},
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
@@ -67,10 +68,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "argument in any position matches",
-			args: []TypeName{
-				{name: "string"},
+			args: []typed.TypeName{
+				{Name: "string"},
 			},
-			ret: make([]TypeName, 0),
+			ret: make([]typed.TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -88,9 +89,9 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "return in any position matches",
-			args: make([]TypeName, 0),
-			ret: []TypeName{
-				{name: "error"},
+			args: make([]typed.TypeName, 0),
+			ret: []typed.TypeName{
+				{Name: "error"},
 			},
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
@@ -109,10 +110,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "no match for empty fields",
-			args: []TypeName{
-				{name: "string"},
+			args: []typed.TypeName{
+				{Name: "string"},
 			},
-			ret: make([]TypeName, 0),
+			ret: make([]typed.TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params:  nil,
@@ -123,11 +124,11 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "no match for different type",
-			args: []TypeName{
-				{name: "float64"},
+			args: []typed.TypeName{
+				{Name: "float64"},
 			},
-			ret: []TypeName{
-				{name: "byte"},
+			ret: []typed.TypeName{
+				{Name: "byte"},
 			},
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
@@ -147,10 +148,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "complex type match",
-			args: []TypeName{
-				{name: "CustomType", path: "pkg"},
+			args: []typed.TypeName{
+				{Name: "CustomType", ImportPath: "pkg"},
 			},
-			ret: make([]TypeName, 0),
+			ret: make([]typed.TypeName, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -182,8 +183,8 @@ func TestSignatureContains(t *testing.T) {
 }
 
 func TestSignatureContainsHash(t *testing.T) {
-	args := []TypeName{{name: "string"}, {name: "int"}}
-	ret := []TypeName{{name: "error"}}
+	args := []typed.TypeName{{Name: "string"}, {Name: "int"}}
+	ret := []typed.TypeName{{Name: "error"}}
 
 	fo := SignatureContains(args, ret)
 
@@ -202,7 +203,7 @@ func TestSignatureContainsHash(t *testing.T) {
 
 	assert.Equal(t, fp1, fp2, "Hash() gave different results for identical signatures")
 
-	fo3 := SignatureContains([]TypeName{{name: "float64"}}, ret)
+	fo3 := SignatureContains([]typed.TypeName{{Name: "float64"}}, ret)
 	h3 := fingerprint.New()
 	err = fo3.Hash(h3)
 	require.NoError(t, err, "Hash failed")
@@ -227,9 +228,9 @@ signature-contains:
 	require.True(t, ok, "Expected *signatureContains, got %T", option.FunctionOption)
 
 	require.Len(t, signatureContains.Arguments, 2, "Expected 2 arguments")
-	assert.Equal(t, "string", signatureContains.Arguments[0].Name(), "First argument should be string")
-	assert.Equal(t, "error", signatureContains.Arguments[1].Name(), "Second argument should be error")
+	assert.Equal(t, "string", signatureContains.Arguments[0].Name, "First argument should be string")
+	assert.Equal(t, "error", signatureContains.Arguments[1].Name, "Second argument should be error")
 
 	require.Len(t, signatureContains.Results, 1, "Expected 1 result")
-	assert.Equal(t, "bool", signatureContains.Results[0].Name(), "Result should be bool")
+	assert.Equal(t, "bool", signatureContains.Results[0].Name, "Result should be bool")
 }

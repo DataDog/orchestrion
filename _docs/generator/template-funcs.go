@@ -17,10 +17,12 @@ import (
 	"strings"
 	"unicode"
 
+	"golang.org/x/tools/go/packages"
+
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
-	"golang.org/x/tools/go/packages"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 var (
@@ -65,7 +67,7 @@ func render(val any) (template.HTML, error) {
 
 	templateName := "doc."
 	switch val := val.(type) {
-	case join.Point, join.TypeName, join.FunctionOption:
+	case join.Point, typed.TypeName, join.FunctionOption:
 		templateName += "join"
 	case advice.Advice:
 		templateName += "advice"
