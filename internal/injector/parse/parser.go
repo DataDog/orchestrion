@@ -11,14 +11,13 @@ import (
 	"go/ast"
 	goparser "go/parser"
 	"go/token"
-	"io"
-	"os"
 	"slices"
 	"sync/atomic"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"golang.org/x/exp/mmap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -186,26 +185,24 @@ func (p *Parser) fileFilterAspects(aspects []*aspect.Aspect, file rawFile) ([]*a
 }
 
 func readFile(filename string) (rawFile, error) {
-	file, err := os.Open(filename)
+	m, err := mmap.Open(filename)
 	if err != nil {
-		return rawFile{}, fmt.Errorf("open %q: %w", filename, err)
+		return rawFile{}, fmt.Errorf("mmap %q: %w", filename, err)
 	}
-	defer file.Close()
+	defer m.Close()
+
+	data := make([]byte, m.Len())
+	if _, err := m.ReadAt(data, 0); err != nil {
+		return rawFile{}, fmt.Errorf("read: %w", err)
+	}
 
 	// If the file begins with a "//line <path>:1:1" directive, we consume it and
 	// then pretend the "<path>" was our filename all along. This simplifies
 	// handling of line offsets further down the line and removes some duplicated
 	// effort to do it early.
-	mappedFilename := filename
-	if mapped, err := consumeLineDirective(file); err != nil {
-		return rawFile{}, fmt.Errorf("peeking at first line of %q: %w", filename, err)
-	} else if mapped != "" {
-		mappedFilename = mapped
-	}
-
-	fileContent, err := io.ReadAll(file)
+	mappedFilename, fileContent, err := consumeLineDirective(data, filename)
 	if err != nil {
-		return rawFile{}, fmt.Errorf("reading %q: %w", filename, err)
+		return rawFile{}, fmt.Errorf("peeking at first line of %q: %w", filename, err)
 	}
 
 	return rawFile{filename, mappedFilename, fileContent}, nil
