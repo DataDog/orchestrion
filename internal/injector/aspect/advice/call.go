@@ -14,20 +14,20 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
 	"github.com/goccy/go-yaml/ast"
 )
 
 type appendArgs struct {
-	TypeName  join.TypeName
+	TypeName  typed.TypeName
 	Templates []*code.Template
 }
 
 // AppendArgs appends arguments of a given type to the end of a function call. All arguments must be
 // of the same type, as they may be appended at the tail end of a variadic call.
-func AppendArgs(typeName join.TypeName, templates ...*code.Template) *appendArgs {
+func AppendArgs(typeName typed.TypeName, templates ...*code.Template) *appendArgs {
 	return &appendArgs{typeName, templates}
 }
 
@@ -92,7 +92,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 		Ellipsis: true,
 	}
 
-	if importPath := a.TypeName.ImportPath(); importPath != "" {
+	if importPath := a.TypeName.ImportPath; importPath != "" {
 		ctx.AddImport(importPath, inferPkgName(importPath))
 	}
 
@@ -101,7 +101,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 
 func (a *appendArgs) AddedImports() []string {
 	imports := make([]string, 0, len(a.Templates)+1)
-	if argTypeImportPath := a.TypeName.ImportPath(); argTypeImportPath != "" {
+	if argTypeImportPath := a.TypeName.ImportPath; argTypeImportPath != "" {
 		imports = append(imports, argTypeImportPath)
 	}
 	for _, t := range a.Templates {
@@ -168,7 +168,7 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := join.NewTypeName(args.TypeName)
+		tn, err := typed.NewTypeName(args.TypeName)
 		if err != nil {
 			return nil, err
 		}
