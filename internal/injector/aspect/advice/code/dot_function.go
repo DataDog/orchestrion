@@ -8,12 +8,8 @@ package code
 import (
 	"errors"
 	"fmt"
-	"go/importer"
-	"go/types"
-	"strings"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 )
@@ -162,6 +158,11 @@ func (s signature) ResultThatImplements(name string) (string, error) {
 		return "", nil
 	}
 
+	// Optimization: First, check for an exact match using the helper.
+	if index, found := typed.FindMatchingTypeName(s.Results, name); found {
+		return fieldAt(s.Results, index, "result")
+	} // If not found, fall through to type resolution.
+
 	// Resolve the interface type.
 	iface, err := typed.ResolveInterfaceTypeByName(name)
 	if err != nil {
@@ -192,18 +193,38 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 		return "", nil
 	}
 
+	// Optimization: First, check for an exact match using TypeName parsing, finding the last one.
+	lastMatchIndex := -1
+	if tn, err := typed.NewTypeName(name); err == nil {
+		currentIndex := 0
+		for _, field := range s.Results.List {
+			if tn.Matches(field.Type) {
+				lastMatchIndex = currentIndex // Update last found index
+			}
+			// Increment index by the number of names in the field (or 1 if unnamed).
+			count := len(field.Names)
+			if count == 0 {
+				count = 1
+			}
+			currentIndex += count
+		}
+	}
+	// If we found a match via TypeName, return it.
+	if lastMatchIndex != -1 {
+		return fieldAt(s.Results, lastMatchIndex, "result")
+	} // If parsing failed or no match, fall through to type resolution.
+
 	// Resolve the interface type.
 	iface, err := typed.ResolveInterfaceTypeByName(name)
 	if err != nil {
+		// Propagate error if interface resolution fails
 		return "", fmt.Errorf("resolving interface type %q: %w", name, err)
 	}
 
-	// First, we need to build a map of result fields to their indices
-	// that takes into account named and unnamed parameters.
-	var (
-		fieldIndices = make(map[*dst.Field]int)
-		index        = 0
-	)
+	// Fallback: Check using ExprImplements, iterating backward.
+	// Need field indices map again for this path.
+	fieldIndices := make(map[*dst.Field]int)
+	index := 0
 	for _, field := range s.Results.List {
 		fieldIndices[field] = index
 		count := len(field.Names)
@@ -213,7 +234,6 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 		index += count
 	}
 
-	// Loop backward through the results list.
 	for i := len(s.Results.List) - 1; i >= 0; i-- {
 		field := s.Results.List[i]
 		if typed.ExprImplements(s.context, field.Type, iface) {
@@ -265,7 +285,7 @@ func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
 }
 
 func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, error) {
-	tn, err := join.NewTypeName(typeName)
+	tn, err := typed.NewTypeName(typeName)
 	if err != nil {
 		return "", err
 	}
@@ -292,118 +312,27 @@ func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, er
 	return "", nil
 }
 
-// exprImplements checks if an expression's type implements an interface.
-func exprImplements(ctx context.AdviceContext, expr dst.Expr, iface *types.Interface) bool {
-	actualType := ctx.ResolveType(expr)
-	if actualType == nil {
-		return false
-	}
-
-	return typeImplements(actualType, iface)
-}
-
-// typeImplements checks if a type implements an interface (including pointer receivers).
-func typeImplements(t types.Type, iface *types.Interface) bool {
-	if t == nil || iface == nil {
-		return false
-	}
-
-	// Direct implementation check.
-	if types.Implements(t, iface) {
-		return true
-	}
-
-	return false
-}
-
-// resolveInterfaceTypeByName takes an interface name as a string and resolves it to an interface type.
-// It supports built-in interfaces (e.g. "error"), package qualified interfaces (e.g. "io.Reader"),
-// and third-party package interfaces (e.g. "example.com/pkg.Interface").
-func resolveInterfaceTypeByName(name string) (*types.Interface, error) {
-	// Handle built-in types.
-	if obj := types.Universe.Lookup(name); obj != nil {
-		typeObj, ok := obj.(*types.TypeName)
-		if !ok {
-			return nil, fmt.Errorf("object %s is not a type name but a %T", name, obj)
-		}
-
-		typ := typeObj.Type()
-		if !types.IsInterface(typ) {
-			return nil, fmt.Errorf("type %s is not an interface", name)
-		}
-
-		t, ok := typ.Underlying().(*types.Interface)
-		if !ok {
-			return nil, fmt.Errorf("type %s is not an interface", name)
-		}
-
-		return t, nil
-	}
-
-	// Handle package-qualified types (e.g., "io.Writer").
-	pkgName, typeName := splitPackageAndName(name)
-	if pkgName == "" {
-		return nil, fmt.Errorf("invalid type name: %s", name)
-	}
-
-	// Import the package
-	imp := importer.Default()
-	pkg, err := imp.Import(pkgName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to import package %q: %w", pkgName, err)
-	}
-
-	// Look up the type in the package's scope
-	obj := pkg.Scope().Lookup(typeName)
-	if obj == nil {
-		return nil, fmt.Errorf("type %q not found in package %q", typeName, pkgName)
-	}
-
-	typeObj, ok := obj.(*types.TypeName)
-	if !ok {
-		return nil, fmt.Errorf("object %s is not a type name but a %T", name, obj)
-	}
-
-	typ := typeObj.Type()
-	if !types.IsInterface(typ) {
-		return nil, fmt.Errorf("type %s is not an interface", name)
-	}
-
-	t, ok := typ.Underlying().(*types.Interface)
-	if !ok {
-		return nil, fmt.Errorf("type %s is not an interface", name)
-	}
-
-	return t, nil
-}
-
-// splitPackageAndName splits a fully qualified type name like "io.Reader" or "example.com/pkg.Type"
-// into its package path and local name.
-// Returns ("", "error") for built-in "error".
-// Returns ("", "MyType") for unqualified "MyType".
-func splitPackageAndName(fullName string) (pkgPath string, localName string) {
-	if !strings.Contains(fullName, ".") {
-		// Assume built-in type (like "error") or unqualified local type.
-		return "", fullName
-	}
-	lastDot := strings.LastIndex(fullName, ".")
-	pkgPath = fullName[:lastDot]
-	localName = fullName[lastDot+1:]
-	return pkgPath, localName
-}
-
 // FinalResultImplements returns whether the final result implements the provided interface type.
 func (s signature) FinalResultImplements(interfaceName string) (bool, error) {
 	if s.Results == nil || len(s.Results.List) == 0 {
 		return false, nil
 	}
 
-	iface, err := resolveInterfaceTypeByName(interfaceName)
+	lastField := s.Results.List[len(s.Results.List)-1]
+
+	// Optimization: First, check for an exact match using TypeName parsing.
+	// Note: Not using FindMatchingTypeName as we only need to check the last field.
+	if tn, err := typed.NewTypeName(interfaceName); err == nil {
+		if tn.Matches(lastField.Type) {
+			return true, nil
+		}
+	} // If parsing failed or no match, fall through to type resolution.
+
+	iface, err := typed.ResolveInterfaceTypeByName(interfaceName)
 	if err != nil {
 		return false, fmt.Errorf("resolving interface type %q: %w", interfaceName, err)
 	}
 
 	// Check if the last field type implements the interface.
-	lastField := s.Results.List[len(s.Results.List)-1]
-	return exprImplements(s.context, lastField.Type, iface), nil
+	return typed.ExprImplements(s.context, lastField.Type, iface), nil
 }
