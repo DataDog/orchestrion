@@ -1,0 +1,84 @@
+//line input.go:1:1
+package test
+
+import (
+  "context"
+  "fmt"
+  "io"
+  "strings"
+)
+
+// Takes context.Context
+func hasContext(ctx context.Context) {
+//line <generated>:1
+  {
+    fmt.Println("Matched hasContext via argument-implements: context.Context")
+
+  }
+//line input.go:12
+  fmt.Println("Executing hasContext")
+}
+
+// Takes io.Reader
+func hasIoReader(r io.Reader) {
+//line <generated>:1
+  {
+    fmt.Println("Matched hasIoReader via argument-implements: io.Reader")
+
+  }
+//line input.go:17
+  fmt.Println("Executing hasIoReader")
+}
+
+// Concrete type implementing via pointer receiver
+type pointerImplementer struct{}
+
+func (p *pointerImplementer) Read(b []byte) (int, error) { return 0, io.EOF }
+func hasPointerImplementer(p *pointerImplementer) {
+//line <generated>:1
+  {
+    fmt.Println("Matched hasPointerImplementer via argument-implements: io.Reader")
+
+  }
+//line input.go:24
+  fmt.Println("Executing hasPointerImplementer")
+}
+
+// Concrete type implementing via value receiver
+type valueImplementer struct{}
+
+func (v valueImplementer) Read(b []byte) (int, error) { return 0, io.EOF }
+func hasValueImplementer(v valueImplementer) {
+//line <generated>:1
+  {
+    fmt.Println("!!! INCORRECTLY Matched hasValueImplementer via argument-implements: io.Reader !!!")
+
+  }
+//line input.go:31
+  fmt.Println("Executing hasValueImplementer")
+}
+
+// Type alias for interface
+type MyReader io.Reader
+
+func hasInterfaceAlias(mr MyReader) {
+//line <generated>:1
+  {
+    fmt.Println("Matched hasInterfaceAlias via argument-implements: io.Reader")
+
+  }
+//line input.go:37
+  fmt.Println("Executing hasInterfaceAlias")
+}
+
+// Type alias for concrete type
+type MyConcreteReader strings.Reader
+
+func hasConcreteAlias(cr *MyConcreteReader) {
+  fmt.Println("Executing hasConcreteAlias")
+}
+
+// Takes a string
+func hasString(s string) {
+  fmt.Println("Executing hasString")
+}

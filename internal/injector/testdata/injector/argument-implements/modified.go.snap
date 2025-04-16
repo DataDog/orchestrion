@@ -1,0 +1,80 @@
+//line input.go:1:1
+package test
+
+import (
+  "context"
+  "fmt"
+  "io"
+  "net/http"
+)
+
+// NoParams is a function with no parameters.
+func NoParams() {
+  fmt.Println("No parameters here.")
+}
+
+// WithReader takes a named parameter implementing io.Reader.
+func WithReader(r io.Reader) {
+  fmt.Printf("Got a reader: %T\n", r)
+}
+
+// WithUnnamedContext takes an unnamed parameter implementing context.Context.
+func WithUnnamedContext(__argument__0 context.Context) {
+//line <generated>:1
+  {
+    fmt.Println("Testing ArgumentThatImplements for context.Context in WithUnnamedContext")
+
+    fmt.Printf("Success: Found context.Context argument: %q\n", "__argument__0")
+
+  }
+//line input.go:22
+  fmt.Println("Got an unnamed context.")
+}
+
+// WithMultipleReaders takes multiple named parameters of the same type (io.Reader).
+func WithMultipleReaders(r1, r2 io.Reader) {
+  fmt.Printf("Got two readers: %T, %T\n", r1, r2)
+}
+
+// WithMixedParams takes various parameters, including some implementing interfaces.
+func WithMixedParams(w io.Writer, req *http.Request, ctx context.Context, data []byte, r io.Reader) error {
+//line <generated>:1
+  {
+    fmt.Println("Testing ArgumentThatImplements in WithMixedParams")
+
+    fmt.Printf("Success: Found io.Reader argument: %q\n", "r")
+    fmt.Printf("Success: Found context.Context argument: %q\n", "ctx")
+
+  }
+//line input.go:32
+  fmt.Printf("Writer: %T, Request: %T, Context: %T, Data: %T, Reader: %T\n", w, req, ctx, data, r)
+  return nil
+}
+
+// NoImplementingParams takes parameters that do not implement common interfaces used in tests.
+func NoImplementingParams(name string, count int, active bool) {
+  fmt.Printf("Name: %s, Count: %d, Active: %v\n", name, count, active)
+}
+
+// InterfaceImplementer is a local type that implements io.Reader.
+type InterfaceImplementer struct{}
+
+func (ii *InterfaceImplementer) Read(p []byte) (n int, err error) { return 0, io.EOF }
+
+// WithLocalImplementer takes a parameter whose type implements io.Reader.
+func WithLocalImplementer(impl *InterfaceImplementer) {
+  fmt.Printf("Got local implementer: %T\n", impl)
+}
+
+// SimpleContext takes a named context.Context parameter.
+func SimpleContext(ctx context.Context) {
+//line <generated>:1
+  {
+    fmt.Println("Testing ArgumentThatImplements for context.Context in SimpleContext")
+
+    fmt.Printf("Success: Found context.Context argument: %q\n", "ctx")
+
+  }
+//line input.go:53
+  fmt.Println("Got a simple context.")
+}
