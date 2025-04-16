@@ -1,0 +1,199 @@
+%YAML 1.1
+---
+aspects:
+  # - id: "aspect-with-reader"
+  #   join-point:
+  #     function-body:
+  #       function:
+  #         - name: WithReader
+  #   advice:
+  #     - prepend-statements:
+  #         imports:
+  #           fmt: fmt
+  #         template: |-
+  #           fmt.Println("Testing ArgumentThatImplements for io.Reader in WithReader")
+  #           {{ with .Function.ArgumentThatImplements "io.Reader" }}
+  #           fmt.Printf("Success: Found io.Reader argument: %q\n", "{{ . }}")
+  #           {{ else }}
+  #           fmt.Println("Failure: No io.Reader argument found.")
+  #           {{ end }}
+
+  - id: "aspect-with-unnamed-context"
+    join-point:
+      function-body:
+        function:
+          - name: WithUnnamedContext
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ArgumentThatImplements for context.Context in WithUnnamedContext")
+            {{ with .Function.ArgumentThatImplements "context.Context" }}
+            fmt.Printf("Success: Found context.Context argument: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No context.Context argument found.")
+            {{ end }}
+
+  - id: "aspect-with-mixed-params"
+    join-point:
+      function-body:
+        function:
+          - name: WithMixedParams
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ArgumentThatImplements in WithMixedParams")
+            {{ with $reader := .Function.ArgumentThatImplements "io.Reader" }}
+            fmt.Printf("Success: Found io.Reader argument: %q\n", "{{ $reader }}")
+            {{ else }}
+            fmt.Println("Failure: No io.Reader argument found.")
+            {{ end }}
+            {{ with $ctx := .Function.ArgumentThatImplements "context.Context" }}
+            fmt.Printf("Success: Found context.Context argument: %q\n", "{{ $ctx }}")
+            {{ else }}
+            fmt.Println("Failure: No context.Context argument found.")
+            {{ end }}
+
+  # - id: "aspect-with-multiple-readers"
+  #   join-point:
+  #     function-body:
+  #       function:
+  #         - name: WithMultipleReaders
+  #   advice:
+  #     - prepend-statements:
+  #         imports:
+  #           fmt: fmt
+  #         template: |-
+  #           fmt.Println("Testing ArgumentThatImplements with multiple readers")
+  #           {{ with .Function.ArgumentThatImplements "io.Reader" }}
+  #           fmt.Printf("Success: Found first io.Reader argument: %q\n", "{{ . }}")
+  #           {{ else }}
+  #           fmt.Println("Failure: No io.Reader argument found.")
+  #           {{ end }}
+
+  # - id: "aspect-with-local-implementer"
+  #   join-point:
+  #     function-body:
+  #       function:
+  #         - name: WithLocalImplementer
+  #   advice:
+  #     - prepend-statements:
+  #         imports:
+  #           fmt: fmt
+  #         template: |-
+  #           fmt.Println("Testing ArgumentThatImplements with local type that implements io.Reader")
+  #           {{ with .Function.ArgumentThatImplements "io.Reader" }}
+  #           fmt.Printf("Success: Found io.Reader argument: %q\n", "{{ . }}")
+  #           {{ else }}
+  #           fmt.Println("Failure: No io.Reader argument found.")
+  #           {{ end }}
+
+  # - id: "aspect-no-params"
+  #   join-point:
+  #     function-body:
+  #       function:
+  #         - name: NoParams
+  #   advice:
+  #     - prepend-statements:
+  #         imports:
+  #           fmt: fmt
+  #         template: |-
+  #           fmt.Println("Testing ArgumentThatImplements with no parameters")
+  #           {{ with .Function.ArgumentThatImplements "io.Reader" }}
+  #           fmt.Printf("Failure: Found io.Reader argument unexpectedly: %q\n", "{{ . }}")
+  #           {{ else }}
+  #           fmt.Println("Success: Correctly found no io.Reader argument.")
+  #           {{ end }}
+
+  # - id: "aspect-no-implementing-params"
+  #   join-point:
+  #     function-body:
+  #       function:
+  #         - name: NoImplementingParams
+  #   advice:
+  #     - prepend-statements:
+  #         imports:
+  #           fmt: fmt
+  #         template: |-
+  #           fmt.Println("Testing ArgumentThatImplements with parameters that don't implement interfaces")
+  #           {{ with .Function.ArgumentThatImplements "io.Reader" }}
+  #           fmt.Printf("Failure: Found io.Reader argument unexpectedly: %q\n", "{{ . }}")
+  #           {{ else }}
+  #           fmt.Println("Success: Correctly found no io.Reader argument.")
+  #           {{ end }}
+
+  - id: "aspect-simple-context"
+    join-point:
+      function-body:
+        function:
+          - name: SimpleContext
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            fmt.Println("Testing ArgumentThatImplements for context.Context in SimpleContext")
+            {{ with .Function.ArgumentThatImplements "context.Context" }}
+            fmt.Printf("Success: Found context.Context argument: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("Failure: No context.Context argument found.")
+            {{ end }}
+
+code: |-
+  package test
+
+  import (
+  	"context"
+  	"fmt"
+  	"io"
+  	"net/http"
+  )
+
+  // NoParams is a function with no parameters.
+  func NoParams() {
+  	fmt.Println("No parameters here.")
+  }
+
+  // WithReader takes a named parameter implementing io.Reader.
+  func WithReader(r io.Reader) {
+  	fmt.Printf("Got a reader: %T\n", r)
+  }
+
+  // WithUnnamedContext takes an unnamed parameter implementing context.Context.
+  func WithUnnamedContext(context.Context) {
+  	fmt.Println("Got an unnamed context.")
+  }
+
+  // WithMultipleReaders takes multiple named parameters of the same type (io.Reader).
+  func WithMultipleReaders(r1, r2 io.Reader) {
+  	fmt.Printf("Got two readers: %T, %T\n", r1, r2)
+  }
+
+  // WithMixedParams takes various parameters, including some implementing interfaces.
+  func WithMixedParams(w io.Writer, req *http.Request, ctx context.Context, data []byte, r io.Reader) error {
+  	fmt.Printf("Writer: %T, Request: %T, Context: %T, Data: %T, Reader: %T\n", w, req, ctx, data, r)
+  	return nil
+  }
+
+  // NoImplementingParams takes parameters that do not implement common interfaces used in tests.
+  func NoImplementingParams(name string, count int, active bool) {
+  	fmt.Printf("Name: %s, Count: %d, Active: %v\n", name, count, active)
+  }
+
+  // InterfaceImplementer is a local type that implements io.Reader.
+  type InterfaceImplementer struct{}
+
+  func (ii *InterfaceImplementer) Read(p []byte) (n int, err error) { return 0, io.EOF }
+
+  // WithLocalImplementer takes a parameter whose type implements io.Reader.
+  func WithLocalImplementer(impl *InterfaceImplementer) {
+  	fmt.Printf("Got local implementer: %T\n", impl)
+  }
+
+  // SimpleContext takes a named context.Context parameter.
+  func SimpleContext(ctx context.Context) {
+  	fmt.Println("Got a simple context.")
+  }

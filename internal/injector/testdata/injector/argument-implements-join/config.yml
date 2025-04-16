@@ -1,0 +1,144 @@
+%YAML 1.1
+---
+aspects:
+  - id: "match-context"
+    join-point:
+      function-body:
+        function:
+          - name: hasContext
+          - argument-implements: "context.Context"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Matched hasContext via argument-implements: context.Context")
+
+  - id: "match-io-reader"
+    join-point:
+      function-body:
+        function:
+          - name: hasIoReader
+          - argument-implements: "io.Reader"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Matched hasIoReader via argument-implements: io.Reader")
+
+  - id: "match-pointer-implementer"
+    join-point:
+      function-body:
+        function:
+          - name: hasPointerImplementer
+          - argument-implements: "io.Reader"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Matched hasPointerImplementer via argument-implements: io.Reader")
+
+  - id: "match-value-implementer-fail"
+    join-point:
+      function-body:
+        function:
+          - name: hasValueImplementer
+          - argument-implements: "io.Reader"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("!!! INCORRECTLY Matched hasValueImplementer via argument-implements: io.Reader !!!")
+
+  - id: "match-interface-alias"
+    join-point:
+      function-body:
+        function:
+          - name: hasInterfaceAlias
+          - argument-implements: "io.Reader"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Matched hasInterfaceAlias via argument-implements: io.Reader")
+
+  - id: "match-concrete-alias-fail"
+    join-point:
+      function-body:
+        function:
+          - name: hasConcreteAlias
+          - argument-implements: "io.Reader"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("!!! INCORRECTLY Matched hasConcreteAlias via argument-implements: io.Reader !!!")
+
+  - id: "no-match-string"
+    join-point:
+      function-body:
+        function:
+          - name: hasString
+          - argument-implements: "io.Reader"
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("!!! INCORRECTLY Matched hasString via argument-implements: io.Reader !!!")
+
+code: |-
+  package test
+
+  import (
+    "context"
+    "fmt"
+    "io"
+    "strings"
+  )
+
+  // Takes context.Context
+  func hasContext(ctx context.Context) {
+    fmt.Println("Executing hasContext")
+  }
+
+  // Takes io.Reader
+  func hasIoReader(r io.Reader) {
+    fmt.Println("Executing hasIoReader")
+  }
+
+  // Concrete type implementing via pointer receiver
+  type pointerImplementer struct{}
+  func (p *pointerImplementer) Read(b []byte) (int, error) { return 0, io.EOF }
+  func hasPointerImplementer(p *pointerImplementer) {
+    fmt.Println("Executing hasPointerImplementer")
+  }
+
+  // Concrete type implementing via value receiver
+  type valueImplementer struct{}
+  func (v valueImplementer) Read(b []byte) (int, error) { return 0, io.EOF }
+  func hasValueImplementer(v valueImplementer) {
+    fmt.Println("Executing hasValueImplementer")
+  }
+
+  // Type alias for interface
+  type MyReader io.Reader
+  func hasInterfaceAlias(mr MyReader) {
+    fmt.Println("Executing hasInterfaceAlias")
+  }
+
+  // Type alias for concrete type
+  type MyConcreteReader strings.Reader
+  func hasConcreteAlias(cr *MyConcreteReader) {
+    fmt.Println("Executing hasConcreteAlias")
+  }
+
+  // Takes a string
+  func hasString(s string) {
+    fmt.Println("Executing hasString")
+  }
