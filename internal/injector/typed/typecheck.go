@@ -113,5 +113,5 @@ func validateTypeNameIsInterface(obj types.Object, fullName string, pkgPath stri
 	}
 
 	// Since types.IsInterface passed, we can safely cast typ.Underlying() to *types.Interface
-	return typ.Underlying().(*types.Interface), nil
+	return typ.Underlying().(*types.Interface), nil //nolint:revive
 }
