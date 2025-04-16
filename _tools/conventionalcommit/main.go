@@ -26,13 +26,21 @@ import (
 	"github.com/google/go-github/v69/github"
 )
 
+// conventionalLabels is a map of conventional commit types to their corresponding labels.
+// See: https://gist.github.com/qoomon/5dfcdf8eec66a051ecd85625518cfd13
 var conventionalLabels = map[string]string{
-	"chore":   "conventional-commit/chore",
-	"doc":     "conventional-commit/chore",
-	"docs":    "conventional-commit/chore",
-	"feat":    "conventional-commit/feat",
-	"fix":     "conventional-commit/fix",
-	"release": "conventional-commit/chore",
+	"chore":    "conventional-commit/chore", // Miscellaneous commits e.g. modifying .gitignore
+	"doc":      "conventional-commit/chore", // Alias for docs
+	"docs":     "conventional-commit/chore", // Commits that affect documentation only
+	"feat":     "conventional-commit/feat",  // Commits that add or remove a new feature to the API or UI
+	"fix":      "conventional-commit/fix",   // Commits that fix an API or UI bug of a preceded feat commit
+	"release":  "conventional-commit/chore", // Release-related commits
+	"refactor": "conventional-commit/chore", // Commits that rewrite/restructure code without changing API/UI behavior
+	"perf":     "conventional-commit/chore", // Special refactor commits that improve performance
+	"style":    "conventional-commit/chore", // Commits that don't affect meaning (whitespace, formatting, etc)
+	"test":     "conventional-commit/chore", // Commits that add missing tests or correct existing tests
+	"build":    "conventional-commit/chore", // Commits affecting build components (tools, CI, dependencies, etc)
+	"ops":      "conventional-commit/chore", // Commits affecting operational components (infrastructure, deployment, etc)
 }
 
 func main() {
