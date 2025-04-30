@@ -16,7 +16,7 @@ import (
 	"github.com/dave/dst/dstutil"
 )
 
-// importSet is a set of impored packages from a given Go source file. It can be
+// importSet is a set of imported packages from a given Go source file. It can be
 // used to inspect whether a particular import path is imported or not, and to
 // add new imports to the file.
 type importSet struct {
@@ -145,7 +145,7 @@ func (s *importSet) Remove(toRemove string) bool {
 	return removed
 }
 
-// firstImportIn returns the first import delcartion found in the provided
+// firstImportIn returns the first import declaration found in the provided
 // [*dst.File]. If no import declaration is present, returns `nil`.
 func firstImportIn(file *dst.File) *dst.GenDecl {
 	if len(file.Decls) == 0 {
@@ -170,7 +170,7 @@ func newImportDeclIn(file *dst.File) *dst.GenDecl {
 			NodeDecs: dst.NodeDecs{
 				Before: dst.EmptyLine,
 				Start: dst.Decorations{
-					"// Imports in this file determine which tracer intergations are enabled in",
+					"// Imports in this file determine which tracer integrations are enabled in",
 					"// orchestrion. New integrations can be automatically discovered by running",
 					"// `orchestrion pin` again. You can also manually add new imports here to",
 					"// enable additional integrations. When doing so, you can run `orchestrion pin`",
