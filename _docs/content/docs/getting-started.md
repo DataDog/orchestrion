@@ -11,6 +11,12 @@ next: /docs/dd-trace-go
 Orchestrion supports the two latest Go releases, matching the
 [Go release policy](https://go.dev/doc/devel/release#policy).
 
+| Orchestrion Version       | Go 1.19 | Go 1.20 | Go 1.21 | Go 1.22 | Go 1.23 | Go 1.24 |
+|---------------------------|---------|---------|---------|---------|---------|---------|
+| `v0.1.x` - `v0.6.x`       | ✓       | ✓       | ✓       | ✗       | ✗       | ✗       |
+| `v0.7.x` - `v1.0.x`       | ✗       | ✗       | ✗       | ✓       | ✓       | ✗       |
+| `v1.1.0+` (Current)       | ✗       | ✗       | ✗       | ✗       | ✓       | ✓       |
+
 It also requires the use of
 [Go modules](https://pkg.go.dev/cmd/go#hdr-Modules__module_versions__and_more).
 
