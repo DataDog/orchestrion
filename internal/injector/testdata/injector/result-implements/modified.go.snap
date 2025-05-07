@@ -1,0 +1,228 @@
+//line input.go:1:1
+package test
+
+import (
+  "errors"
+  "io"
+  "strings"
+//line <generated>:1
+  __orchestrion_fmt "fmt"
+)
+
+// Returns a simple error
+//
+//line input.go:10
+func returnsError() (__result__0 error) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for error (single result)")
+
+    __orchestrion_fmt.Println("Success: Final result implements error interface")
+
+  }
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for error")
+
+    __orchestrion_fmt.Printf("Success: Found error at: %q\n", "__result__0")
+
+  }
+//line input.go:11
+  return errors.New("some error")
+}
+
+// Returns multiple errors to test LastResultThatImplements
+func returnsMultipleErrors() (__result__0 error, _ string, __result__2 error) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for error (multiple results)")
+
+    __orchestrion_fmt.Println("Success: Final result implements error interface")
+
+  }
+  {
+    __orchestrion_fmt.Println("Testing LastResultThatImplements for error")
+
+    __orchestrion_fmt.Printf("Success: Found first error at: %q\n", "__result__0")
+    __orchestrion_fmt.Printf("Success: Found last error at: %q\n", "__result__2")
+    __orchestrion_fmt.Println("Success: First and last errors are different")
+
+  }
+//line input.go:16
+  return errors.New("first error"), "middle", errors.New("last error")
+}
+
+// Returns an io.Reader
+func returnsReader() (__result__0 io.Reader) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader")
+
+    __orchestrion_fmt.Printf("Success: Found io.Reader at: %q\n", "__result__0")
+
+  }
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for io.Reader")
+
+    __orchestrion_fmt.Println("Success: Final result implements io.Reader interface")
+
+  }
+//line input.go:21
+  return strings.NewReader("test")
+}
+
+// Returns a strings.Reader
+func returnsStringReader() (__result__0 *strings.Reader) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for *strings.Reader")
+
+    __orchestrion_fmt.Printf("Success: Found io.Reader at: %q\n", "__result__0")
+
+  }
+//line input.go:26
+  return strings.NewReader("test")
+}
+
+// Returns values that don't implement error
+func returnsNoMatch() (string, int) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for error (no match)")
+
+    __orchestrion_fmt.Println("Success: No error found")
+
+  }
+  {
+    __orchestrion_fmt.Println("Testing FinalResultImplements for error (no match)")
+
+    __orchestrion_fmt.Println("Success: Final result does not implement error interface")
+
+  }
+//line input.go:31
+  return "hello", 123
+}
+
+// Returns a concrete type that implements io.Reader via value receiver
+type myValueReader struct{ data string }
+
+func (r myValueReader) Read(p []byte) (n int, err error) {
+  if len(r.data) == 0 {
+    return 0, io.EOF
+  }
+  n = copy(p, []byte(r.data))
+  return n, nil // Simplified
+}
+func returnsConcreteValueReader() (__result__0 myValueReader) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader (concrete value, value receiver)")
+
+    __orchestrion_fmt.Printf("Success: Found io.Reader at: %q\n", "__result__0")
+
+  }
+//line input.go:44
+  return myValueReader{data: "value"}
+}
+
+// Returns a concrete type whose pointer implements io.Reader
+type myPointerReader struct{ data string }
+
+func (r *myPointerReader) Read(p []byte) (n int, err error) {
+  if len(r.data) == 0 {
+    return 0, io.EOF
+  }
+  n = copy(p, []byte(r.data))
+  return n, nil // Simplified
+}
+func returnsConcretePointerReaderValue() myPointerReader {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader (concrete value, pointer receiver)")
+
+    __orchestrion_fmt.Println("Success: No io.Reader found (correct for value type)")
+
+  }
+//line input.go:57
+  return myPointerReader{data: "pointer"}
+}
+
+// Returns a named error
+func returnsNamedError() (err error) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for error (named result)")
+
+    __orchestrion_fmt.Printf("Success: Found error at: %q\n", "err")
+
+  }
+//line input.go:62
+  err = errors.New("named error")
+  return
+}
+
+// Returns a type embedding io.Reader (io.ReadCloser)
+type myReadCloser struct{ *strings.Reader }
+
+func (rc myReadCloser) Close() error { return nil }
+func returnsReadCloser() (__result__0 io.ReadCloser) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader (embedded)")
+
+    __orchestrion_fmt.Printf("Success: Found io.Reader at: %q\n", "__result__0")
+
+  }
+//line input.go:70
+  return myReadCloser{strings.NewReader("closer")}
+}
+
+// Returns a type alias for an implementing type
+type MyStringReader strings.Reader
+
+func returnsMyStringReaderAlias() *MyStringReader {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader (type alias concrete)")
+
+    __orchestrion_fmt.Println("Success: No io.Reader found (correct for type alias)")
+
+  }
+  // Need to cast the result of strings.NewReader
+//line input.go:77
+  r := strings.NewReader("alias")
+  return (*MyStringReader)(r)
+}
+
+// Returns a type alias for the interface
+type MyReader io.Reader
+
+func returnsMyReaderAlias() (__result__0 MyReader) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing ResultThatImplements for io.Reader (type alias interface)")
+
+    __orchestrion_fmt.Printf("Success: Found io.Reader at: %q\n", "__result__0")
+
+  }
+//line input.go:84
+  return strings.NewReader("interface alias")
+}
+
+// Returns a value that doesn't implement error
+func returnsString() string {
+  return "not an error"
+}
+
+// Function where the last result implementing an interface is NOT the final result
+func returnsErrorButNotLast() (__result__0 error, _ string) {
+//line <generated>:1
+  {
+    __orchestrion_fmt.Println("Testing distinction case: error in non-final position")
+    __orchestrion_fmt.Printf("LastResultThatImplements 'error': %q\n", "__result__0")
+
+    __orchestrion_fmt.Println("FinalResultImplements 'error': false (CORRECT!)")
+
+  }
+//line input.go:94
+  return errors.New("error not in final position"), "final result"
+}
