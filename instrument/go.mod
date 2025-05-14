@@ -5,8 +5,8 @@ go 1.23.0
 replace github.com/DataDog/orchestrion => ..
 
 require (
-	github.com/DataDog/orchestrion v1.4.0-rc.3
-	gopkg.in/DataDog/dd-trace-go.v1 v1.73.0-rc.3
+	github.com/DataDog/orchestrion v1.4.0
+	gopkg.in/DataDog/dd-trace-go.v1 v1.73.1
 )
 
 require (

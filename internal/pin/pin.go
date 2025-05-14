@@ -120,16 +120,16 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
 
-	if ver, found := curMod.requires(datadogTracerV1); !found || semver.Compare(ver, "v1.72.0-rc.1") < 0 {
+	if ver, found := curMod.requires(datadogTracerV1); !found || semver.Compare(ver, "v1.72.2") < 0 {
 		log.Info().Msg("Installing or upgrading " + datadogTracerV1)
 		if err := runGoGet(ctx, goMod, datadogTracerV1+"@latest"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
 		}
 	}
 
-	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.22.0") < 0 {
-		log.Info().Msg("Setting go directive to 1.22.0")
-		edits = append(edits, goModVersion("1.22.0"))
+	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.23.0") < 0 {
+		log.Info().Msg("Setting go directive to 1.23.0")
+		edits = append(edits, goModVersion("1.23.0"))
 	}
 
 	if ver, found := curMod.requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {

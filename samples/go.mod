@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/99designs/gqlgen v0.17.70
-	github.com/DataDog/orchestrion v1.4.0-rc.3
+	github.com/DataDog/orchestrion v1.4.0
 	github.com/DataDog/orchestrion/instrument v1.3.1
 	github.com/IBM/sarama v1.45.1
 	github.com/Shopify/sarama v1.38.1
@@ -273,7 +273,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250409194420-de1ac958c67a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250409194420-de1ac958c67a // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.73.0-rc.3 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.73.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
