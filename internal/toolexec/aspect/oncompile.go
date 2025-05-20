@@ -84,7 +84,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
-	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
+	outputDir := filepath.Dir(cmd.Flags.Output)
 	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
@@ -145,7 +145,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		ImportMap:  imports.PackageFile,
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
-			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
+			return ModifiedFilePath(outputDir, cmd.Flags.Package, file)
 		},
 	}
 
@@ -234,6 +234,34 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	}
 
 	return nil
+}
+
+// OrchestrionDirPathElement is the prefix for orchestrion source files in the build output directory.
+var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
+
+// ModifiedFilePath returns the path to a modified file, given the output directory, package name and file name.
+func ModifiedFilePath(output, pkg, file string) string {
+	return filepath.Join(output, OrchestrionDirPathElement, pkg, filepath.Base(file))
+}
+
+// OriginalFilePath returns the path to the original file, given the entire path to the modified file and if it is one.
+func OriginalFilePath(path string) (string, bool) {
+	if !strings.Contains(path, OrchestrionDirPathElement) {
+		return "", false
+	}
+
+	// The path is in the form of /tmp/b001/orchestrion/src/<pkg>/<file>
+	parts := filepath.SplitList(path)
+	if len(parts) < 3 {
+		return "", false
+	}
+
+	i := slices.Index(parts, "orchestrion")
+	if i < 0 || i+2 >= len(parts) {
+		return "", false
+	}
+
+	return filepath.Join(slices.Concat(parts[:i], parts[i+2:])...), true
 }
 
 func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, filename string) (err error) {
