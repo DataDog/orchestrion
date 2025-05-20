@@ -144,6 +144,7 @@ func main() {
 			cmd.Toolexec,
 			cmd.Version,
 			cmd.Server,
+			cmd.Diff,
 		},
 		Before: func(ctx *cli.Context) error {
 			profiles := ctx.StringSlice("profile")
