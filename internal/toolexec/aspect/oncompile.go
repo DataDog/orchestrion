@@ -244,26 +244,6 @@ func ModifiedFilePath(output, pkg, file string) string {
 	return filepath.Join(output, OrchestrionDirPathElement, pkg, filepath.Base(file))
 }
 
-// OriginalFilePath returns the path to the original file, given the entire path to the modified file and if it is one.
-func OriginalFilePath(path string) (string, bool) {
-	if !strings.Contains(path, OrchestrionDirPathElement) {
-		return "", false
-	}
-
-	// The path is in the form of /tmp/b001/orchestrion/src/<pkg>/<file>
-	parts := filepath.SplitList(path)
-	if len(parts) < 3 {
-		return "", false
-	}
-
-	i := slices.Index(parts, "orchestrion")
-	if i < 0 || i+2 >= len(parts) {
-		return "", false
-	}
-
-	return filepath.Join(slices.Concat(parts[:i], parts[i+2:])...), true
-}
-
 func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, filename string) (err error) {
 	const dotOriginal = ".original"
 
