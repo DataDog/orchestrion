@@ -73,8 +73,9 @@ func (r Report) WithFilter(regex string) (Report, error) {
 }
 
 // Diff generates a diff between the original and modified files and writes it to the writer.
-func (r Report) Diff(writer io.Writer) error {
+func (r Report) Diff(ctx context.Context, writer io.Writer) error {
 	dmp := diffmatchpatch.New()
+	log := zerolog.Ctx(ctx)
 
 	var (
 		wg      errgroup.Group
@@ -96,22 +97,22 @@ func (r Report) Diff(writer io.Writer) error {
 				return fmt.Errorf("consume line directive: %w", err)
 			}
 
-			if originalPath == "" {
-				return fmt.Errorf("no //line directive found in %s", modifiedPath)
-			}
-
 			modifiedCode, err := io.ReadAll(modifiedFile)
 			if err != nil {
 				return fmt.Errorf("read %s: %w", modifiedPath, err)
 			}
 
-			originalCode, err := os.ReadFile(originalPath)
-			if err != nil {
-				return fmt.Errorf("read %s: %w", originalPath, err)
+			var originalCode []byte
+			if originalPath != "" {
+				originalCode, err = os.ReadFile(originalPath)
+				if err != nil {
+					return fmt.Errorf("read %s: %w", originalPath, err)
+				}
 			}
 
 			// TODO: work with charmaps to avoid converting to string and support multiple encodings
-			fragments := dmp.DiffMainRunes([]rune(string(originalCode)), []rune(string(modifiedCode)), false)
+			originalRunes, modifiedRunes, _ := dmp.DiffLinesToRunes(string(originalCode), string(modifiedCode))
+			fragments := dmp.DiffMainRunes(originalRunes, modifiedRunes, false)
 			fragments = dmp.DiffCleanupEfficiency(fragments)
 			fragments = dmp.DiffCleanupSemantic(fragments)
 			diffsMu.Lock()
@@ -122,7 +123,7 @@ func (r Report) Diff(writer io.Writer) error {
 	}
 
 	if err := wg.Wait(); err != nil {
-		return err
+		log.Error().Err(err).Msg("failed to generate diff")
 	}
 
 	output := dmp.DiffPrettyText(diffs)
@@ -134,6 +135,7 @@ func (r Report) Diff(writer io.Writer) error {
 		}
 		n, err := io.WriteString(writer, output)
 		if err != nil {
+
 			return err
 		}
 		length -= n
