@@ -88,7 +88,7 @@ func (p *Parser) ParseFiles(ctx context.Context, files []string, aspects []*aspe
 			fileAspects := aspects
 			p.filesBytesCount.Add(uint64(len(p.rawFiles[idx].content)))
 			if !p.hasApplicableAspects() {
-				// While the current packae still has a chance to not require all files to be parsed, we can try to filter out
+				// While the current package still has a chance to not require all files to be parsed, we can try to filter out
 				// aspects that cannot match on this file before parsing it.
 				fileAspects, err = p.fileFilterAspects(fileAspects, p.rawFiles[idx])
 				if err != nil {
@@ -197,7 +197,7 @@ func readFile(filename string) (rawFile, error) {
 	// handling of line offsets further down the line and removes some duplicated
 	// effort to do it early.
 	mappedFilename := filename
-	if mapped, err := consumeLineDirective(file); err != nil {
+	if mapped, err := ConsumeLineDirective(file); err != nil {
 		return rawFile{}, fmt.Errorf("peeking at first line of %q: %w", filename, err)
 	} else if mapped != "" {
 		mappedFilename = mapped

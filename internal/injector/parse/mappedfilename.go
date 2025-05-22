@@ -10,11 +10,11 @@ import (
 	"io"
 )
 
-// consumeLineDirective consumes the first line from r if it's a "//line"
+// ConsumeLineDirective consumes the first line from r if it's a "//line"
 // directive that either does not have line/column information or has it set to
 // line 1 (and column 1). If the directive is consumed, the filename it refers
 // to is returned. Otherwise, the reader is rewinded to its original position.
-func consumeLineDirective(r io.ReadSeeker) (string, error) {
+func ConsumeLineDirective(r io.ReadSeeker) (string, error) {
 	var buf [7]byte
 	n, err := r.Read(buf[:])
 	if err != nil {

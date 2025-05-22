@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
 	"github.com/rs/zerolog"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -25,6 +26,13 @@ var Diff = &cli.Command{
 	Name:  "diff",
 	Usage: "Generates a diff between a nominal and orchestrion-instrumented build using a go work directory that can be obtained running `orchestrion go build -work -a`. This does work with -cover builds.",
 	Args:  true,
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "filenames",
+			Usage: "Only show file paths created by orchestrion instead of diff output",
+			Value: false,
+		},
+	},
 	Action: func(clictx *cli.Context) (err error) {
 		workFolder := clictx.Args().First()
 		if workFolder == "" {
@@ -38,6 +46,13 @@ var Diff = &cli.Command{
 
 		if len(report.Files) == 0 {
 			return cli.Exit("no files to diff (did you forgot the -a flag during build?)", 1)
+		}
+
+		if clictx.Bool("filenames") {
+			for _, file := range report.Files {
+				fmt.Fprintln(clictx.App.Writer, file)
+			}
+			return nil
 		}
 
 		if err := report.diff(clictx.App.Writer); err != nil {
@@ -56,10 +71,7 @@ func reportFromWorkDir(ctx context.Context, dir string) (report, error) {
 		return report{}, fmt.Errorf("read dir %s: %w", dir, err)
 	}
 
-	rp := report{
-		Files: make(map[string]string),
-	}
-
+	rp := report{}
 	for _, packageBuildDir := range entries {
 		if !packageBuildDir.IsDir() || !strings.HasPrefix(packageBuildDir.Name(), "b") {
 			log.Debug().Str("package-dir", packageBuildDir.Name()).Msg("skipping build dir entry")
@@ -67,34 +79,26 @@ func reportFromWorkDir(ctx context.Context, dir string) (report, error) {
 		}
 
 		orchestrionDir := filepath.Join(dir, packageBuildDir.Name(), aspect.OrchestrionDirPathElement)
-		if err := filepath.WalkDir(orchestrionDir, func(path string, d os.DirEntry, err error) error {
+		_ = filepath.WalkDir(orchestrionDir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return fmt.Errorf("walk dir %s: %w", path, err)
 			}
 
-			if d.IsDir() || !strings.HasPrefix(d.Name(), ".go") {
+			if d.IsDir() || !strings.HasSuffix(d.Name(), ".go") {
 				return nil
 			}
 
-			originalPath, ok := aspect.OriginalFilePath(path)
-			if !ok {
-				log.Debug().Str("path", path).Msg("skipping unknown file")
-				return nil
-			}
-
-			rp.Files[originalPath] = path
-			log.Debug().Str("original-path", originalPath).Str("orchestrion-path", path).Msg("found orchestrion file")
+			log.Debug().Str("path", path).Msg("found orchestrion file")
+			rp.Files = append(rp.Files, path)
 			return nil
-		}); err != nil {
-			log.Debug().Err(err).Str("orchestrion-dir", orchestrionDir).Msg("failed to walk orchestrion dir")
-		}
+		})
 	}
 
 	return rp, nil
 }
 
 type report struct {
-	Files map[string]string
+	Files []string
 }
 
 func (r report) diff(writer io.Writer) error {
@@ -106,20 +110,36 @@ func (r report) diff(writer io.Writer) error {
 		diffsMu sync.Mutex
 	)
 
-	for originalPath, modifiedPath := range r.Files {
+	for _, modifiedPath := range r.Files {
 		wg.Go(func() error {
-			source, err := os.ReadFile(originalPath)
-			if err != nil {
-				return fmt.Errorf("read %s: %w", originalPath, err)
-			}
-
-			target, err := os.ReadFile(modifiedPath)
+			modifiedFile, err := os.Open(modifiedPath)
 			if err != nil {
 				return fmt.Errorf("read %s: %w", modifiedPath, err)
 			}
 
+			defer modifiedFile.Close()
+
+			originalPath, err := parse.ConsumeLineDirective(modifiedFile)
+			if err != nil {
+				return fmt.Errorf("consume line directive: %w", err)
+			}
+
+			if originalPath == "" {
+				return fmt.Errorf("no //line directive found in %s", modifiedPath)
+			}
+
+			modifiedCode, err := io.ReadAll(modifiedFile)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", modifiedPath, err)
+			}
+
+			originalCode, err := os.ReadFile(originalPath)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", originalPath, err)
+			}
+
 			// TODO: work with charmaps to avoid converting to string and support multiple encodings
-			fragments := dmp.DiffMainRunes([]rune(string(source)), []rune(string(target)), false)
+			fragments := dmp.DiffMainRunes([]rune(string(originalCode)), []rune(string(modifiedCode)), false)
 			fragments = dmp.DiffCleanupEfficiency(fragments)
 			fragments = dmp.DiffCleanupSemantic(fragments)
 			diffsMu.Lock()
