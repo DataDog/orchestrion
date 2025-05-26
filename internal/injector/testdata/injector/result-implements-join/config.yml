@@ -1,0 +1,360 @@
+# Example configuration demonstrating the desired 'result-implements' functionality.
+# We will target functions returning types that implement io.Reader or error.
+
+# Configuration using a single injector and conditional logic
+# based on ResultThatImplements, following existing patterns.
+%YAML 1.1
+---
+aspects:
+  # Aspect 1: Target functions returning io.Reader implementers
+  - id: "instrument-reader-returns"
+    join-point:
+      function-body:
+        function:
+          - result-implements: "io.Reader" # ...of functions where a return type implements io.Reader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented returnsReader implementer")
+
+  # Aspect 2: Target functions returning error implementers
+  - id: "instrument-error-returns"
+    join-point:
+      function-body:
+        function:
+          - result-implements: "error" # ...of functions where a return type implements error
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented returnsError implementer")
+
+  # Aspect 3: Target functions where the final return value implements io.Reader
+  - id: "instrument-final-reader-returns"
+    join-point:
+      function-body:
+        function:
+          - final-result-implements: "io.Reader" # ...of functions where the final return value implements io.Reader
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented final returnsReader implementer")
+
+  # Aspect 4: Target functions where the final return value implements error
+  - id: "instrument-final-error-returns"
+    join-point:
+      function-body:
+        function:
+          - final-result-implements: "error" # ...of functions where the final return value implements error
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Success: instrumented final returnsError implementer")
+
+  # Aspect 5: Demonstrate difference between result-implements and final-result-implements
+  - id: "demonstrate-difference"
+    join-point:
+      function-body:
+        function:
+          - name: returnsErrorThenString # Target specific function for clarity
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |
+            fmt.Println("Demonstrating difference between result-implements and final-result-implements:")
+            {{ $resultMatches := false }}
+            {{ $finalMatches := false }}
+
+            {{ with .Function.ResultThatImplements "error" }}
+              {{ $resultMatches = true }}
+            {{ end }}
+
+            {{ if .Function.FinalResultImplements "error" }}
+              {{ $finalMatches = true }}
+            {{ end }}
+
+            {{ if $resultMatches }}
+            fmt.Println("Success: result-implements finds error in non-final position")
+            {{ else }}
+            fmt.Println("Failure: result-implements didn't find error in function")
+            {{ end }}
+
+            {{ if not $finalMatches }}
+            fmt.Println("Success: final-result-implements correctly ignores non-final error")
+            {{ else }}
+            fmt.Println("Failure: final-result-implements incorrectly matched non-final error")
+            {{ end }}
+
+
+code: |-
+  package main
+
+  import (
+    "bytes"
+    "errors"
+    "fmt"
+    "io"
+    "net/http" // Import a package with a type that implements error but isn't errors.New
+  )
+
+
+  // Concrete type implementing CustomReader
+  type myCustomReaderImpl struct {
+    data string
+  }
+
+  func (cr myCustomReaderImpl) Read(p []byte) (int, error) {
+    n := copy(p, []byte(cr.data))
+    return n, io.EOF // Simplified
+  }
+
+  // Custom error type
+  type myCustomError struct {
+    msg string
+  }
+
+  func (e myCustomError) Error() string {
+    return fmt.Sprintf("custom error: %s", e.msg)
+  }
+
+  // Implementations
+
+  func returnsReader() io.Reader {
+    fmt.Println("Executing returnsReader")
+    return bytes.NewBufferString("hello")
+  }
+
+  func returnsBuffer() *bytes.Buffer {
+    fmt.Println("Executing returnsBuffer")
+    return bytes.NewBufferString("world")
+  }
+
+  func returnsError() error {
+    fmt.Println("Executing returnsError")
+    return errors.New("standard error")
+  }
+
+  func returnsHttpError() error {
+    fmt.Println("Executing returnsHttpError")
+    // http.ErrServerClosed is an error type from a different package
+    return http.ErrServerClosed
+  }
+
+  func returnsCustomReaderImpl() myCustomReaderImpl {
+    fmt.Println("Executing returnsCustomReaderImpl")
+    return myCustomReaderImpl{data: "custom data"}
+  }
+
+  func returnsCustomError() myCustomError {
+    fmt.Println("Executing returnsCustomError")
+    return myCustomError{msg: "something went wrong"}
+  }
+
+  // Non-implementations
+
+  func returnsString() string {
+    fmt.Println("Executing returnsString")
+    return "not a reader or error"
+  }
+
+  func noReturn() {
+    fmt.Println("Executing noReturn")
+  }
+
+  // Multiple return values
+
+  func returnsIntAndReader() (int, io.Reader) {
+    fmt.Println("Executing returnsIntAndReader")
+    return 1, bytes.NewBufferString("multi-return reader")
+  }
+
+  func returnsReaderAndInt() (io.Reader, int) {
+    fmt.Println("Executing returnsReaderAndInt")
+    return bytes.NewBufferString("multi-return reader first"), 2
+  }
+
+  func returnsIntAndError() (int, error) {
+    fmt.Println("Executing returnsIntAndError")
+    return 3, errors.New("multi-return error")
+  }
+
+  func returnsErrorAndInt() (error, int) {
+    fmt.Println("Executing returnsErrorAndInt")
+    return errors.New("multi-return error first"), 4
+  }
+
+  func returnsMultipleReaders() (*bytes.Buffer, io.Reader) {
+    fmt.Println("Executing returnsMultipleReaders")
+    return bytes.NewBufferString("first reader"), bytes.NewBufferString("second reader")
+  }
+
+  func returnsMultipleErrors() (error, error) {
+    fmt.Println("Executing returnsMultipleErrors")
+    return errors.New("first error"), fmt.Errorf("second error: %w", io.EOF)
+  }
+
+  func returnsStringAndInt() (string, int) {
+    fmt.Println("Executing returnsStringAndInt")
+    return "neither implements", 5
+  }
+
+  // This function has an error but it's not the final return value
+  // Should match ResultImplements("error") but not FinalResultImplements("error")
+  func returnsErrorThenString() (error, string) {
+    fmt.Println("Executing returnsErrorThenString")
+    return errors.New("error in non-final position"), "final non-error value"
+  }
+
+  // ========== GENERIC TYPE TESTS ==========
+
+  // Generic type implementing io.Reader
+  type GenericBuffer[T any] struct {
+    data T
+  }
+
+  func (gb GenericBuffer[T]) Read(p []byte) (int, error) {
+    // Simplified implementation
+    dataStr := fmt.Sprintf("%v", gb.data)
+    n := copy(p, []byte(dataStr))
+    return n, io.EOF
+  }
+
+  // Function returning generic type that implements io.Reader
+  func returnsGenericBufferString() GenericBuffer[string] {
+    fmt.Println("Executing returnsGenericBufferString")
+    return GenericBuffer[string]{data: "generic string data"}
+  }
+
+  func returnsGenericBufferInt() GenericBuffer[int] {
+    fmt.Println("Executing returnsGenericBufferInt")
+    return GenericBuffer[int]{data: 42}
+  }
+
+  // Generic error type
+  type GenericError[T any] struct {
+    value T
+    msg   string
+  }
+
+  func (e GenericError[T]) Error() string {
+    return fmt.Sprintf("generic error: %s (value: %v)", e.msg, e.value)
+  }
+
+  // Functions returning generic error types
+  func returnsGenericErrorInt() GenericError[int] {
+    fmt.Println("Executing returnsGenericErrorInt")
+    return GenericError[int]{value: 404, msg: "not found"}
+  }
+
+  func returnsGenericErrorString() GenericError[string] {
+    fmt.Println("Executing returnsGenericErrorString")
+    return GenericError[string]{value: "test", msg: "test error"}
+  }
+
+  // Generic interface and implementation
+  type Processor[T any] interface {
+    Process(T) error
+  }
+
+  type StringProcessor struct{}
+
+  func (sp StringProcessor) Process(s string) error {
+    fmt.Printf("Processing string: %s\n", s)
+    return nil
+  }
+
+  // Note: This doesn't implement Processor[T] directly, but demonstrates a concrete type
+  func returnsStringProcessor() StringProcessor {
+    fmt.Println("Executing returnsStringProcessor")
+    return StringProcessor{}
+  }
+
+  // Multiple type parameters
+  type Pair[K comparable, V any] struct {
+    key   K
+    value V
+  }
+
+  // Implement error interface for Pair
+  func (p Pair[K, V]) Error() string {
+    return fmt.Sprintf("pair error: key=%v, value=%v", p.key, p.value)
+  }
+
+  func returnsPairStringInt() Pair[string, int] {
+    fmt.Println("Executing returnsPairStringInt")
+    return Pair[string, int]{key: "age", value: 30}
+  }
+
+  // Type with constraints
+  type Number interface {
+    ~int | ~int32 | ~int64 | ~float32 | ~float64
+  }
+
+  type Calculator[T Number] struct {
+    value T
+  }
+
+  // Implement io.Reader for Calculator
+  func (c Calculator[T]) Read(p []byte) (int, error) {
+    data := fmt.Sprintf("Calculator value: %v", c.value)
+    n := copy(p, []byte(data))
+    return n, io.EOF
+  }
+
+  func returnsCalculatorInt() Calculator[int] {
+    fmt.Println("Executing returnsCalculatorInt")
+    return Calculator[int]{value: 100}
+  }
+
+  func returnsCalculatorFloat64() Calculator[float64] {
+    fmt.Println("Executing returnsCalculatorFloat64")
+    return Calculator[float64]{value: 3.14}
+  }
+
+  // Generic type with pointer receiver implementing error
+  type GenericPointerError[T any] struct {
+    data T
+  }
+
+  func (e *GenericPointerError[T]) Error() string {
+    return fmt.Sprintf("pointer error: %v", e.data)
+  }
+
+  func returnsGenericPointerError() *GenericPointerError[bool] {
+    fmt.Println("Executing returnsGenericPointerError")
+    return &GenericPointerError[bool]{data: true}
+  }
+
+  // Multiple returns with generics
+  func returnsIntAndGenericBuffer() (int, GenericBuffer[string]) {
+    fmt.Println("Executing returnsIntAndGenericBuffer")
+    return 42, GenericBuffer[string]{data: "multi-return generic"}
+  }
+
+  func returnsGenericErrorAndString() (GenericError[int], string) {
+    fmt.Println("Executing returnsGenericErrorAndString")
+    return GenericError[int]{value: 500, msg: "server error"}, "additional info"
+  }
+
+  // Generic function with generic return type
+  func createGenericBuffer[T any](data T) GenericBuffer[T] {
+    fmt.Printf("Executing createGenericBuffer with type %T\n", data)
+    return GenericBuffer[T]{data: data}
+  }
+
+  // Test function that uses the generic function
+  func returnsGenericBufferViaGenericFunc() GenericBuffer[[]byte] {
+    fmt.Println("Executing returnsGenericBufferViaGenericFunc")
+    return createGenericBuffer([]byte("byte slice data"))
+  }
+
+  // Main - needed for compilation by the test harness.
+  func main() {}
