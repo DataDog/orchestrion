@@ -70,7 +70,7 @@ var (
 				return nil
 			}
 
-			if err := report.Diff(clictx.Context, clictx.App.Writer); err != nil {
+			if err := report.Diff(clictx.App.Writer); err != nil {
 				return cli.Exit(fmt.Sprintf("failed to generate diff: %s", err), 1)
 			}
 
