@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/dave/dst"
+	"github.com/goccy/go-yaml/ast"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
-	"github.com/dave/dst"
-	"github.com/goccy/go-yaml/ast"
 )
 
 type declarationOf struct {
@@ -72,15 +74,15 @@ func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
 }
 
 type valueDeclaration struct {
-	TypeName TypeName
+	TypeName typed.TypeName
 }
 
-func ValueDeclaration(typeName TypeName) *valueDeclaration {
+func ValueDeclaration(typeName typed.TypeName) *valueDeclaration {
 	return &valueDeclaration{typeName}
 }
 
 func (i *valueDeclaration) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	return ctx.PackageImports(i.TypeName.ImportPath())
+	return ctx.PackageImports(i.TypeName.ImportPath)
 }
 
 func (*valueDeclaration) FileMayMatch(_ *may.FileContext) may.MatchType {
@@ -106,7 +108,7 @@ func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
 }
 
 func (i *valueDeclaration) ImpliesImported() []string {
-	if path := i.TypeName.ImportPath(); path != "" {
+	if path := i.TypeName.ImportPath; path != "" {
 		return []string{path}
 	}
 	return nil
@@ -140,7 +142,7 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := NewTypeName(typeName)
+		tn, err := typed.NewTypeName(typeName)
 		if err != nil {
 			return nil, err
 		}

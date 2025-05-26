@@ -11,6 +11,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 var builtIn = configGo{
@@ -21,7 +22,7 @@ var builtIn = configGo{
 				ID:             "built.WithOrchestrion",
 				TracerInternal: true, // This is safe to apply in the tracer itself
 				JoinPoint: join.AllOf(
-					join.ValueDeclaration(join.MustTypeName("bool")),
+					join.ValueDeclaration(typed.Bool),
 					join.OneOf(
 						join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrion"),
 						join.Directive("orchestrion:enabled"),
@@ -38,7 +39,7 @@ var builtIn = configGo{
 				ID:             "built.WithOrchestrionVersion",
 				TracerInternal: true, // This is safe to apply in the tracer itself
 				JoinPoint: join.AllOf(
-					join.ValueDeclaration(join.MustTypeName("string")),
+					join.ValueDeclaration(typed.String),
 					join.OneOf(
 						join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrionVersion"),
 						join.Directive("orchestrion:version"),
