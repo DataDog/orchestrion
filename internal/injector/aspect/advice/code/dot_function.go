@@ -42,10 +42,11 @@ type (
 		// ResultThatImplements returns the name of the first return value in this function that implements
 		// the provided interface type, or an empty string if none is found.
 		ResultThatImplements(string) (string, error)
-		// LastResultThatImplements returns the name of the last return value in this function that implements
+		// LastResultThatImplements returns the name of the last return value
+		// (may not be the last item in the function's return list) in this function that implements
 		// the provided interface type, or an empty string if none is found.
 		LastResultThatImplements(string) (string, error)
-		// FinalResultImplements returns whether the final result implements the provided interface type.
+		// FinalResultImplements returns whether the final (very last item that is returned) result implements the provided interface type.
 		FinalResultImplements(string) (bool, error)
 	}
 
