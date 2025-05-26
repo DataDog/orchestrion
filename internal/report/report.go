@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
 	"github.com/rs/zerolog"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/sourcegraph/go-diff/diff"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -74,72 +76,151 @@ func (r Report) WithFilter(regex string) (Report, error) {
 
 // Diff generates a diff between the original and modified files and writes it to the writer.
 func (r Report) Diff(ctx context.Context, writer io.Writer) error {
-	dmp := diffmatchpatch.New()
 	log := zerolog.Ctx(ctx)
 
 	var (
-		wg      errgroup.Group
-		diffs   []diffmatchpatch.Diff
-		diffsMu sync.Mutex
+		wg    errgroup.Group
+		diffs []*diff.FileDiff
+		mu    sync.Mutex
 	)
 
 	for _, modifiedPath := range r.Files {
 		wg.Go(func() error {
-			modifiedFile, err := os.Open(modifiedPath)
+			hunks, err := diffFile(modifiedPath)
 			if err != nil {
-				return fmt.Errorf("read %s: %w", modifiedPath, err)
+				return fmt.Errorf("generate diff for %s: %w", modifiedPath, err)
 			}
 
-			defer modifiedFile.Close()
+			log.Debug().Str("file", modifiedPath).Msg("generated diff for file")
 
-			originalPath, err := parse.ConsumeLineDirective(modifiedFile)
-			if err != nil {
-				return fmt.Errorf("consume line directive: %w", err)
-			}
-
-			modifiedCode, err := io.ReadAll(modifiedFile)
-			if err != nil {
-				return fmt.Errorf("read %s: %w", modifiedPath, err)
-			}
-
-			var originalCode []byte
-			if originalPath != "" {
-				originalCode, err = os.ReadFile(originalPath)
-				if err != nil {
-					return fmt.Errorf("read %s: %w", originalPath, err)
-				}
-			}
-
-			// TODO: work with charmaps to avoid converting to string and support multiple encodings
-			originalRunes, modifiedRunes, _ := dmp.DiffLinesToRunes(string(originalCode), string(modifiedCode))
-			fragments := dmp.DiffMainRunes(originalRunes, modifiedRunes, false)
-			fragments = dmp.DiffCleanupEfficiency(fragments)
-			fragments = dmp.DiffCleanupSemantic(fragments)
-			diffsMu.Lock()
-			defer diffsMu.Unlock()
-			diffs = append(diffs, fragments...)
+			mu.Lock()
+			defer mu.Unlock()
+			diffs = append(diffs, hunks)
 			return nil
 		})
 	}
 
 	if err := wg.Wait(); err != nil {
-		log.Error().Err(err).Msg("failed to generate diff")
+		log.Error().Err(err).Msg("failed to generate diff for some files")
 	}
 
-	output := dmp.DiffPrettyText(diffs)
+	slices.SortFunc(diffs, func(a, b *diff.FileDiff) int {
+		return strings.Compare(a.NewName, b.NewName)
+	})
+
+	output, err := diff.PrintMultiFileDiff(diffs)
+	if err != nil {
+		return fmt.Errorf("print multi file diff: %w", err)
+	}
+
 	length := len(output)
-
-	for {
-		if length == 0 {
-			break
-		}
-		n, err := io.WriteString(writer, output)
+	for length != 0 {
+		n, err := writer.Write(output)
 		if err != nil {
-
 			return err
 		}
+
 		length -= n
 	}
 
 	return nil
+}
+
+// diffFile generates a [diff.FileDiff] for the given orchestrion generated file path
+// It uses github.com/sergi/go-diff to compute the diff between the original file and the modified file.
+// And then uses github.com/sourcegraph/go-diff to read the hunks from the diff output.
+// Which allows us to create a context aware diff that can be used to print the diff in a human readable way.
+func diffFile(modifiedPath string) (*diff.FileDiff, error) {
+	dmp := diffmatchpatch.New()
+	modifiedFile, err := os.Open(modifiedPath)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", modifiedPath, err)
+	}
+
+	defer modifiedFile.Close()
+
+	originalPath, err := parse.ConsumeLineDirective(modifiedFile)
+	if err != nil {
+		return nil, fmt.Errorf("consume line directive: %w", err)
+	}
+
+	modifiedCode, err := io.ReadAll(modifiedFile)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", modifiedPath, err)
+	}
+
+	var originalCode []byte
+	if originalPath != "" {
+		originalCode, err = os.ReadFile(originalPath)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", originalPath, err)
+		}
+	}
+
+	// TODO: work with charmaps to avoid converting to string and support multiple encodings
+	originalRunes, modifiedRunes, _ := dmp.DiffLinesToRunes(string(originalCode), string(modifiedCode))
+	fragments := dmp.DiffMainRunes(originalRunes, modifiedRunes, true)
+	fragments = dmp.DiffCleanupEfficiency(fragments)
+	fragments = dmp.DiffCleanupSemantic(fragments)
+
+	hunks, err := diffpatchmatchToHunk(fragments)
+	if err != nil {
+		return nil, fmt.Errorf("read hunks from diff: %w", err)
+	}
+
+	return &diff.FileDiff{
+		NewName:  modifiedPath,
+		OrigName: originalPath,
+		Hunks:    hunks,
+	}, nil
+}
+
+func diffpatchmatchToHunk(fragments []diffmatchpatch.Diff) ([]*diff.Hunk, error) {
+	origLine := 1
+	modifiedLine := 1
+
+	var hunks []*diff.Hunk
+
+	for _, fragment := range fragments {
+		switch fragment.Type {
+		case diffmatchpatch.DiffEqual:
+			// No change, just move the lines forward
+			origLine += strings.Count(fragment.Text, "\n")
+			modifiedLine += strings.Count(fragment.Text, "\n")
+		case diffmatchpatch.DiffInsert:
+			// Lines added in modified file
+			newLines := strings.Split(fragment.Text, "\n")
+			newLinesPlus := make([]string, len(newLines))
+			for i, line := range newLines {
+				newLinesPlus[i] = "+" + line
+			}
+			hunks = append(hunks, &diff.Hunk{
+				OrigStartLine: int32(origLine),
+				OrigLines:     0,
+				NewStartLine:  int32(modifiedLine),
+				NewLines:      int32(len(newLines)),
+				Body:          []byte(strings.Join(newLinesPlus, "\n")),
+			})
+			modifiedLine += len(newLines)
+		case diffmatchpatch.DiffDelete:
+			// Lines removed from original file
+			rmLines := strings.Split(fragment.Text, "\n")
+			rmLinesMinus := make([]string, len(rmLines))
+			for i, line := range rmLines {
+				rmLinesMinus[i] = "-" + line
+			}
+			hunks = append(hunks, &diff.Hunk{
+				OrigStartLine: int32(origLine),
+				OrigLines:     int32(len(rmLines)),
+				NewStartLine:  int32(modifiedLine),
+				NewLines:      0,
+				Body:          []byte(strings.Join(rmLinesMinus, "\n")),
+			})
+			modifiedLine += len(rmLines)
+		default:
+			return nil, fmt.Errorf("unknown diff type %d", fragment.Type)
+		}
+	}
+
+	return hunks, nil
 }
