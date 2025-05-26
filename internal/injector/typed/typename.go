@@ -14,6 +14,20 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 )
 
+// Common built-in type definitions for convenience.
+// These pre-defined TypeName instances help avoid repeated string literals
+// and potential typos when referring to common Go built-in types.
+var (
+	// Basic types currently used in the codebase
+	Any    = MustTypeName("any")
+	Bool   = MustTypeName("bool")
+	String = MustTypeName("string")
+	// Uncomment these when we used.
+	// Byte   = MustTypeName("byte")
+	// Int    = MustTypeName("int")
+	// Error  = MustTypeName("error")
+)
+
 // TypeName represents a parsed Go type name, potentially including a package path and pointer indicator.
 type TypeName struct {
 	// ImportPath is the import Path that provides the type, or an empty string if the
@@ -35,13 +49,13 @@ func NewTypeName(n string) (tn TypeName, err error) {
 	matches := typeNameRe.FindStringSubmatch(n)
 	if matches == nil {
 		err = fmt.Errorf("invalid TypeName syntax: %q", n)
-		return
+		return tn, err
 	}
 
 	tn.Pointer = matches[1] == "*"
 	tn.ImportPath = matches[2]
 	tn.Name = matches[3]
-	return
+	return tn, nil
 }
 
 // MustTypeName is the same as NewTypeName, except it panics in case of an error.
@@ -50,7 +64,7 @@ func MustTypeName(n string) (tn TypeName) {
 	if tn, err = NewTypeName(n); err != nil {
 		panic(err)
 	}
-	return
+	return tn
 }
 
 // Matches determines whether the provided AST expression node represents the same type

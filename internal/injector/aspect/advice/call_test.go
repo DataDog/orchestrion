@@ -26,7 +26,7 @@ func TestAppendArgs(t *testing.T) {
 
 		testCases := map[string]testCase{
 			"imports-none": {
-				argType: typed.MustTypeName("any"),
+				argType: typed.Any,
 				args:    []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 			},
 			"imports-from-arg-type": {
@@ -35,7 +35,7 @@ func TestAppendArgs(t *testing.T) {
 				expectedImports: []string{"net/http"},
 			},
 			"imports-from-templates": {
-				argType: typed.MustTypeName("any"),
+				argType: typed.Any,
 				args: []*code.Template{
 					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/foo"}, context.GoLangVersion{}),
 					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/bar"}, context.GoLangVersion{}),

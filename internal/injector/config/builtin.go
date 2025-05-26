@@ -22,7 +22,7 @@ var builtIn = configGo{
 				ID:             "built.WithOrchestrion",
 				TracerInternal: true, // This is safe to apply in the tracer itself
 				JoinPoint: join.AllOf(
-					join.ValueDeclaration(typed.MustTypeName("bool")),
+					join.ValueDeclaration(typed.Bool),
 					join.OneOf(
 						join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrion"),
 						join.Directive("orchestrion:enabled"),
@@ -39,7 +39,7 @@ var builtIn = configGo{
 				ID:             "built.WithOrchestrionVersion",
 				TracerInternal: true, // This is safe to apply in the tracer itself
 				JoinPoint: join.AllOf(
-					join.ValueDeclaration(typed.MustTypeName("string")),
+					join.ValueDeclaration(typed.String),
 					join.OneOf(
 						join.DeclarationOf("github.com/DataDog/orchestrion/runtime/built", "WithOrchestrionVersion"),
 						join.Directive("orchestrion:version"),
