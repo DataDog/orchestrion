@@ -253,5 +253,294 @@ func returnsErrorThenString() (__result__0 error, _ string) {
   return errors.New("error in non-final position"), "final non-error value"
 }
 
+// ========== GENERIC TYPE TESTS ==========
+
+// Generic type implementing io.Reader
+type GenericBuffer[T any] struct {
+  data T
+}
+
+func (gb GenericBuffer[T]) Read(p []byte) (int, error) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+  // Simplified implementation
+//line input.go:128
+  dataStr := fmt.Sprintf("%v", gb.data)
+  n := copy(p, []byte(dataStr))
+  return n, io.EOF
+}
+
+// Function returning generic type that implements io.Reader
+func returnsGenericBufferString() GenericBuffer[string] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:135
+  fmt.Println("Executing returnsGenericBufferString")
+  return GenericBuffer[string]{data: "generic string data"}
+}
+
+func returnsGenericBufferInt() GenericBuffer[int] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:140
+  fmt.Println("Executing returnsGenericBufferInt")
+  return GenericBuffer[int]{data: 42}
+}
+
+// Generic error type
+type GenericError[T any] struct {
+  value T
+  msg   string
+}
+
+func (e GenericError[T]) Error() string {
+  return fmt.Sprintf("generic error: %s (value: %v)", e.msg, e.value)
+}
+
+// Functions returning generic error types
+func returnsGenericErrorInt() GenericError[int] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:156
+  fmt.Println("Executing returnsGenericErrorInt")
+  return GenericError[int]{value: 404, msg: "not found"}
+}
+
+func returnsGenericErrorString() GenericError[string] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:161
+  fmt.Println("Executing returnsGenericErrorString")
+  return GenericError[string]{value: "test", msg: "test error"}
+}
+
+// Generic interface and implementation
+type Processor[T any] interface {
+  Process(T) error
+}
+
+type StringProcessor struct{}
+
+func (sp StringProcessor) Process(s string) error {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:173
+  fmt.Printf("Processing string: %s\n", s)
+  return nil
+}
+
+// Note: This doesn't implement Processor[T] directly, but demonstrates a concrete type
+func returnsStringProcessor() StringProcessor {
+  fmt.Println("Executing returnsStringProcessor")
+  return StringProcessor{}
+}
+
+// Multiple type parameters
+type Pair[K comparable, V any] struct {
+  key   K
+  value V
+}
+
+// Implement error interface for Pair
+func (p Pair[K, V]) Error() string {
+  return fmt.Sprintf("pair error: key=%v, value=%v", p.key, p.value)
+}
+
+func returnsPairStringInt() Pair[string, int] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:195
+  fmt.Println("Executing returnsPairStringInt")
+  return Pair[string, int]{key: "age", value: 30}
+}
+
+// Type with constraints
+type Number interface {
+  ~int | ~int32 | ~int64 | ~float32 | ~float64
+}
+
+type Calculator[T Number] struct {
+  value T
+}
+
+// Implement io.Reader for Calculator
+func (c Calculator[T]) Read(p []byte) (int, error) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:210
+  data := fmt.Sprintf("Calculator value: %v", c.value)
+  n := copy(p, []byte(data))
+  return n, io.EOF
+}
+
+func returnsCalculatorInt() Calculator[int] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:216
+  fmt.Println("Executing returnsCalculatorInt")
+  return Calculator[int]{value: 100}
+}
+
+func returnsCalculatorFloat64() Calculator[float64] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:221
+  fmt.Println("Executing returnsCalculatorFloat64")
+  return Calculator[float64]{value: 3.14}
+}
+
+// Generic type with pointer receiver implementing error
+type GenericPointerError[T any] struct {
+  data T
+}
+
+func (e *GenericPointerError[T]) Error() string {
+  return fmt.Sprintf("pointer error: %v", e.data)
+}
+
+func returnsGenericPointerError() *GenericPointerError[bool] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsError implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:235
+  fmt.Println("Executing returnsGenericPointerError")
+  return &GenericPointerError[bool]{data: true}
+}
+
+// Multiple returns with generics
+func returnsIntAndGenericBuffer() (int, GenericBuffer[string]) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:241
+  fmt.Println("Executing returnsIntAndGenericBuffer")
+  return 42, GenericBuffer[string]{data: "multi-return generic"}
+}
+
+func returnsGenericErrorAndString() (GenericError[int], string) {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented returnsError implementer")
+
+  }
+//line input.go:246
+  fmt.Println("Executing returnsGenericErrorAndString")
+  return GenericError[int]{value: 500, msg: "server error"}, "additional info"
+}
+
+// Generic function with generic return type
+func createGenericBuffer[T any](data T) GenericBuffer[T] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:252
+  fmt.Printf("Executing createGenericBuffer with type %T\n", data)
+  return GenericBuffer[T]{data: data}
+}
+
+// Test function that uses the generic function
+func returnsGenericBufferViaGenericFunc() GenericBuffer[[]byte] {
+//line <generated>:1
+  {
+    fmt.Println("Success: instrumented final returnsReader implementer")
+
+  }
+  {
+    fmt.Println("Success: instrumented returnsReader implementer")
+
+  }
+//line input.go:258
+  fmt.Println("Executing returnsGenericBufferViaGenericFunc")
+  return createGenericBuffer([]byte("byte slice data"))
+}
+
 // Main - needed for compilation by the test harness.
 func main() {}

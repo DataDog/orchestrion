@@ -27,6 +27,7 @@ func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []p
 
 	pkg := types.NewPackage(i.ImportPath, i.Name)
 	typeInfo := types.Info{
+		Types:  make(map[ast.Expr]types.TypeAndValue),
 		Uses:   make(map[*ast.Ident]types.Object),
 		Scopes: make(map[ast.Node]*types.Scope),
 	}

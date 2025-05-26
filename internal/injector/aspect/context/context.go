@@ -328,5 +328,19 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 		}
 	}
 
+	// For index expressions (generic type instantiations like Type[T])
+	if indexExpr, ok := astExpr.(*ast.IndexExpr); ok {
+		if t, ok := c.typeInfo.Types[indexExpr]; ok {
+			return t.Type
+		}
+	}
+
+	// For index list expressions (generic types with multiple parameters like Type[T, U])
+	if indexListExpr, ok := astExpr.(*ast.IndexListExpr); ok {
+		if t, ok := c.typeInfo.Types[indexListExpr]; ok {
+			return t.Type
+		}
+	}
+
 	return nil
 }
