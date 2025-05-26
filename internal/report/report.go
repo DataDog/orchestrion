@@ -110,6 +110,9 @@ func (r Report) diff(writer io.Writer, modifiedPath string) error {
 		"-d",            // Try harder to minimize the diff
 		"-a",            // Treat all files as text
 		"--color",       // Change the output to colored diff if possible
+		"-w",            // Ignore whitespace changes
+		"-E",            // Ignore tab characters
+		"-B",            // Ignore blank lines
 		"-I", "^//line", // Don't print line directives in the diff when they would end up being alone in a fragment
 		originalPath, modifiedPath)
 
