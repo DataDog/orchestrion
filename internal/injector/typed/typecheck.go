@@ -30,7 +30,6 @@ func ExprImplements(resolver TypeResolver, expr dst.Expr, iface *types.Interface
 }
 
 // typeImplements checks if a type implements an interface.
-// (Moved from dot_function.go)
 func typeImplements(t types.Type, iface *types.Interface) bool {
 	if t == nil || iface == nil {
 		return false
@@ -42,12 +41,10 @@ func typeImplements(t types.Type, iface *types.Interface) bool {
 	}
 
 	// types.Implements handles pointer receivers implicitly, so no need for explicit pointer check.
-
 	return false
 }
 
 // ResolveInterfaceTypeByName takes an interface name as a string and resolves it to an interface type.
-// (Moved from dot_function.go)
 func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
 	// Handle built-in types.
 	if obj := types.Universe.Lookup(name); obj != nil {
@@ -113,7 +110,6 @@ func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
 // into its package path and local name.
 // Returns ("", "error") for built-in "error".
 // Returns ("", "MyType") for unqualified "MyType".
-// (Moved from function.go / dot_function.go)
 func SplitPackageAndName(fullName string) (pkgPath string, localName string) {
 	if !strings.Contains(fullName, ".") {
 		// Assume built-in type (like "error") or unqualified local type.
