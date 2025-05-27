@@ -112,12 +112,6 @@ func validateTypeNameIsInterface(obj types.Object, fullName string, pkgPath stri
 		return nil, fmt.Errorf("type %s is not an interface", fullName)
 	}
 
-	// Use .Underlying() to get the *types.Interface.
-	iface, ok := typ.Underlying().(*types.Interface)
-	if !ok {
-		// This should ideally not happen if types.IsInterface passed, but check defensively.
-		return nil, fmt.Errorf("type %s is an interface but failed to get underlying *types.Interface", fullName)
-	}
-
-	return iface, nil
+	// Since types.IsInterface passed, we can safely cast typ.Underlying() to *types.Interface
+	return typ.Underlying().(*types.Interface), nil
 }
