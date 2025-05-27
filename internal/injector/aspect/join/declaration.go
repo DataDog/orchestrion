@@ -73,10 +73,10 @@ func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
 }
 
 type valueDeclaration struct {
-	TypeName typed.TypeName
+	TypeName *typed.NamedType
 }
 
-func ValueDeclaration(typeName typed.TypeName) *valueDeclaration {
+func ValueDeclaration(typeName *typed.NamedType) *valueDeclaration {
 	return &valueDeclaration{typeName}
 }
 
@@ -141,9 +141,9 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := typed.NewTypeName(typeName)
+		tn, err := typed.NewNamedType(typeName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid type %q: %w", typeName, err)
 		}
 
 		return ValueDeclaration(tn), nil
