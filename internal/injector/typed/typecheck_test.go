@@ -129,6 +129,79 @@ func TestSplitPackageAndName(t *testing.T) {
 			expectedPkg:   "k8s.io/client-go/kubernetes",
 			expectedLocal: "Clientset",
 		},
+		// Generic type test cases
+		{
+			name:          "simple generic type",
+			fullName:      "iter.Seq[T]",
+			expectedPkg:   "iter",
+			expectedLocal: "Seq[T]",
+		},
+		{
+			name:          "generic with qualified type parameter",
+			fullName:      "iter.Seq[io.Reader]",
+			expectedPkg:   "iter",
+			expectedLocal: "Seq[io.Reader]",
+		},
+		{
+			name:          "generic with multiple type parameters",
+			fullName:      "maps.Map[string, int]",
+			expectedPkg:   "maps",
+			expectedLocal: "Map[string, int]",
+		},
+		{
+			name:          "nested generic types",
+			fullName:      "container.List[maps.Map[string, io.Reader]]",
+			expectedPkg:   "container",
+			expectedLocal: "List[maps.Map[string, io.Reader]]",
+		},
+		{
+			name:          "generic with slice type parameter",
+			fullName:      "sync.Pool[[]byte]",
+			expectedPkg:   "sync",
+			expectedLocal: "Pool[[]byte]",
+		},
+		{
+			name:          "generic with pointer type parameter",
+			fullName:      "atomic.Pointer[*sync.Mutex]",
+			expectedPkg:   "atomic",
+			expectedLocal: "Pointer[*sync.Mutex]",
+		},
+		{
+			name:          "generic from versioned package",
+			fullName:      "github.com/user/pkg/v2.Container[T]",
+			expectedPkg:   "github.com/user/pkg/v2",
+			expectedLocal: "Container[T]",
+		},
+		{
+			name:          "complex generic with multiple qualified parameters",
+			fullName:      "github.com/example/collections.Map[database/sql.DB, net/http.Client]",
+			expectedPkg:   "github.com/example/collections",
+			expectedLocal: "Map[database/sql.DB, net/http.Client]",
+		},
+		{
+			name:          "generic with map type parameter",
+			fullName:      "container.Set[map[string]interface{}]",
+			expectedPkg:   "container",
+			expectedLocal: "Set[map[string]interface{}]",
+		},
+		{
+			name:          "generic with channel type parameter",
+			fullName:      "async.Queue[chan error]",
+			expectedPkg:   "async",
+			expectedLocal: "Queue[chan error]",
+		},
+		{
+			name:          "unqualified generic type",
+			fullName:      "MyGeneric[T]",
+			expectedPkg:   "",
+			expectedLocal: "MyGeneric[T]",
+		},
+		{
+			name:          "generic with function type parameter",
+			fullName:      "functional.Option[func(io.Writer) error]",
+			expectedPkg:   "functional",
+			expectedLocal: "Option[func(io.Writer) error]",
+		},
 	}
 
 	for _, tc := range testCases {
