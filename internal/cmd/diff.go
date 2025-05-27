@@ -14,13 +14,13 @@ import (
 
 var (
 	filenameFlag = cli.BoolFlag{
-		Name:  "filename",
+		Name:  "files",
 		Usage: "Only show file paths created by orchestrion instead of diff output",
 	}
 
 	filterFlag = cli.StringFlag{
 		Name:  "filter",
-		Usage: "Filter the diff to a regex matched on the package paths from the package builded.",
+		Usage: "Filter the diff to a regex matched on the package or file paths from the build.",
 	}
 
 	packageFlag = cli.BoolFlag{
@@ -53,14 +53,17 @@ var (
 			}
 
 			if filter := clictx.String(filterFlag.Name); filter != "" {
-				report, err = report.WithFilter(".*/orchestrion/src/" + filter + "/.*")
+				report, err = report.WithFilter(filter)
 				if err != nil {
 					return cli.Exit(fmt.Sprintf("failed to filter files: %s", err), 1)
 				}
 			}
 
 			if clictx.Bool(packageFlag.Name) {
-
+				for pkg := range report.Packages() {
+					fmt.Fprintln(clictx.App.Writer, pkg)
+				}
+				return nil
 			}
 
 			if clictx.Bool(filenameFlag.Name) {

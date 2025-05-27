@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -120,4 +121,30 @@ func (r Report) diff(writer io.Writer, modifiedPath string) error {
 	cmd.Stderr = os.Stderr
 	_ = cmd.Run()
 	return nil
+}
+
+// Packages returns an iterator over the unique package names found in the report.
+// It extracts the package names from the file paths, assuming they follow the convention of being
+// constructed as "<work-dir>/orchestrion/src/<github.com/my/repo>/<file.go>".
+func (r Report) Packages() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		pkgs := make(map[string]bool)
+		for _, file := range r.Files {
+			dir := filepath.Dir(file)
+			_, pkg, found := strings.Cut(dir, "orchestrion/src/")
+			if !found {
+				continue
+			}
+
+			pkg = strings.Trim(pkg, "/")
+			if pkgs[pkg] {
+				continue
+			}
+
+			pkgs[pkg] = true
+			if !yield(pkg) {
+				return
+			}
+		}
+	}
 }
