@@ -10,21 +10,22 @@ import (
 	"fmt"
 	"go/token"
 
+	"github.com/dave/dst"
+	"github.com/goccy/go-yaml/ast"
+
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
-	"github.com/dave/dst"
-	"github.com/goccy/go-yaml/ast"
 )
 
 type structDefinition struct {
-	TypeName typed.TypeName
+	TypeName typed.NamedType
 }
 
 // StructDefinition matches the definition of a particular struct given its fully qualified name.
-func StructDefinition(typeName typed.TypeName) *structDefinition {
+func StructDefinition(typeName typed.NamedType) *structDefinition {
 	return &structDefinition{
 		TypeName: typeName,
 	}
@@ -50,11 +51,6 @@ func (*structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {
 }
 
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
-	if s.TypeName.Pointer {
-		// We can't ever match a pointer definition
-		return false
-	}
-
 	spec, ok := ctx.Node().(*dst.TypeSpec)
 	if !ok || spec.Name == nil || spec.Name.Name != s.TypeName.Name {
 		return false
@@ -74,7 +70,7 @@ func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
 type (
 	StructLiteralMatch int
 	structLiteral      struct {
-		TypeName typed.TypeName
+		TypeName typed.NamedType
 		Field    string
 		Match    StructLiteralMatch
 	}
@@ -94,7 +90,7 @@ const (
 )
 
 // StructLiteralField matches a specific field in struct literals of the designated type.
-func StructLiteralField(typeName typed.TypeName, field string) *structLiteral {
+func StructLiteralField(typeName typed.NamedType, field string) *structLiteral {
 	return &structLiteral{
 		TypeName: typeName,
 		Field:    field,
@@ -103,7 +99,7 @@ func StructLiteralField(typeName typed.TypeName, field string) *structLiteral {
 
 // StructLiteral matches struct literal expressions of the designated type, filtered by the
 // specified match type.
-func StructLiteral(typeName typed.TypeName, match StructLiteralMatch) *structLiteral {
+func StructLiteral(typeName typed.NamedType, match StructLiteralMatch) *structLiteral {
 	return &structLiteral{
 		TypeName: typeName,
 		Match:    match,
@@ -186,15 +182,16 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := typed.NewTypeName(spec)
+		t, err := typed.NewType(spec)
 		if err != nil {
 			return nil, err
 		}
-		if tn.Pointer {
+		tn, ok := t.(*typed.NamedType)
+		if !ok {
 			return nil, fmt.Errorf("struct-definition type must not be a pointer (got %q)", spec)
 		}
 
-		return StructDefinition(tn), nil
+		return StructDefinition(*tn), nil
 	}
 	unmarshalers["struct-literal"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var spec struct {
@@ -206,19 +203,19 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := typed.NewTypeName(spec.Type)
+		tn, err := typed.NewNamedType(spec.Type)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("struct-literal type must be a named type or pointer to named type (got %q): %w", spec.Type, err)
 		}
 
 		if spec.Field != "" {
 			if spec.Match != StructLiteralMatchAny {
 				return nil, fmt.Errorf("struct-literal.field is not allowed with struct-literal.match: %s", spec.Match)
 			}
-			return StructLiteralField(tn, spec.Field), nil
+			return StructLiteralField(*tn, spec.Field), nil
 		}
 
-		return StructLiteral(tn, spec.Match), nil
+		return StructLiteral(*tn, spec.Match), nil
 	}
 }
 
