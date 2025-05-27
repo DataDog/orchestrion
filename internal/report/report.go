@@ -6,6 +6,7 @@
 package report
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -106,6 +107,11 @@ func (r Report) diff(writer io.Writer, modifiedPath string) error {
 		return fmt.Errorf("consume line directive: %w", err)
 	}
 
+	// If originalPath does not exists, it means that we have cgo files in there, just skip it
+	if _, err := os.Stat(originalPath); os.IsNotExist(err) {
+		return nil
+	}
+
 	cmd := exec.Command("diff",
 		"-u",            // Unified diff format
 		"-d",            // Try harder to minimize the diff
@@ -117,9 +123,21 @@ func (r Report) diff(writer io.Writer, modifiedPath string) error {
 		"-I", "^//line", // Don't print line directives in the diff when they would end up being alone in a fragment
 		originalPath, modifiedPath)
 
+	var buf bytes.Buffer
+
 	cmd.Stdout = writer
-	cmd.Stderr = os.Stderr
-	_ = cmd.Run()
+	cmd.Stderr = &buf
+
+	if err := cmd.Run(); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if exitErr.ExitCode() == 1 {
+				return nil // Differences were found, thanks sherlock.
+			}
+		}
+		return fmt.Errorf("running diff command: %w (stderr: %s)", err, buf.String())
+	}
+
 	return nil
 }
 
