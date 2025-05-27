@@ -19,11 +19,11 @@ import (
 
 type addStructField struct {
 	Name     string
-	TypeName typed.TypeName
+	TypeName *typed.NamedType
 }
 
 // AddStructField adds a new synthetic field at the tail end of a struct declaration.
-func AddStructField(fieldName string, fieldType typed.TypeName) *addStructField {
+func AddStructField(fieldName string, fieldType *typed.NamedType) *addStructField {
 	return &addStructField{fieldName, fieldType}
 }
 
@@ -76,11 +76,11 @@ func init() {
 		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
 		}
-		tn, err := typed.NewTypeName(spec.Type)
+		namedType, err := typed.NewNamedType(spec.Type)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid type %q: %w", spec.Type, err)
 		}
 
-		return AddStructField(spec.Name, tn), nil
+		return AddStructField(spec.Name, namedType), nil
 	}
 }

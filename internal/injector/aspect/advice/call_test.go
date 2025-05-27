@@ -19,7 +19,7 @@ import (
 func TestAppendArgs(t *testing.T) {
 	t.Run("AddedImports", func(t *testing.T) {
 		type testCase struct {
-			argType         typed.TypeName
+			argType         *typed.NamedType
 			args            []*code.Template
 			expectedImports []string
 		}
@@ -30,7 +30,7 @@ func TestAppendArgs(t *testing.T) {
 				args:    []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 			},
 			"imports-from-arg-type": {
-				argType:         typed.MustTypeName("*net/http.Request"),
+				argType:         typed.MustNamedType("*net/http.Request"),
 				args:            []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 				expectedImports: []string{"net/http"},
 			},

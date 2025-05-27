@@ -20,17 +20,17 @@ import (
 func TestSignatureContains(t *testing.T) {
 	tests := []struct {
 		name     string
-		args     []typed.TypeName
-		ret      []typed.TypeName
+		args     []*typed.NamedType
+		ret      []*typed.NamedType
 		funcInfo functionInformation
 		want     bool
 	}{
 		{
 			name: "single argument matches",
-			args: []typed.TypeName{
+			args: []*typed.NamedType{
 				{Name: "string"},
 			},
-			ret: make([]typed.TypeName, 0),
+			ret: make([]*typed.NamedType, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -48,8 +48,8 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "single return matches",
-			args: make([]typed.TypeName, 0),
-			ret: []typed.TypeName{
+			args: make([]*typed.NamedType, 0),
+			ret: []*typed.NamedType{
 				{Name: "error"},
 			},
 			funcInfo: functionInformation{
@@ -68,10 +68,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "argument in any position matches",
-			args: []typed.TypeName{
+			args: []*typed.NamedType{
 				{Name: "string"},
 			},
-			ret: make([]typed.TypeName, 0),
+			ret: make([]*typed.NamedType, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -89,8 +89,8 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "return in any position matches",
-			args: make([]typed.TypeName, 0),
-			ret: []typed.TypeName{
+			args: make([]*typed.NamedType, 0),
+			ret: []*typed.NamedType{
 				{Name: "error"},
 			},
 			funcInfo: functionInformation{
@@ -110,10 +110,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "no match for empty fields",
-			args: []typed.TypeName{
+			args: []*typed.NamedType{
 				{Name: "string"},
 			},
-			ret: make([]typed.TypeName, 0),
+			ret: make([]*typed.NamedType, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params:  nil,
@@ -124,10 +124,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "no match for different type",
-			args: []typed.TypeName{
+			args: []*typed.NamedType{
 				{Name: "float64"},
 			},
-			ret: []typed.TypeName{
+			ret: []*typed.NamedType{
 				{Name: "byte"},
 			},
 			funcInfo: functionInformation{
@@ -148,10 +148,10 @@ func TestSignatureContains(t *testing.T) {
 		},
 		{
 			name: "complex type match",
-			args: []typed.TypeName{
+			args: []*typed.NamedType{
 				{Name: "CustomType", ImportPath: "pkg"},
 			},
-			ret: make([]typed.TypeName, 0),
+			ret: make([]*typed.NamedType, 0),
 			funcInfo: functionInformation{
 				Type: &dst.FuncType{
 					Params: &dst.FieldList{
@@ -183,8 +183,8 @@ func TestSignatureContains(t *testing.T) {
 }
 
 func TestSignatureContainsHash(t *testing.T) {
-	args := []typed.TypeName{{Name: "string"}, {Name: "int"}}
-	ret := []typed.TypeName{{Name: "error"}}
+	args := []*typed.NamedType{{Name: "string"}, {Name: "int"}}
+	ret := []*typed.NamedType{{Name: "error"}}
 
 	fo := SignatureContains(args, ret)
 
@@ -203,7 +203,7 @@ func TestSignatureContainsHash(t *testing.T) {
 
 	assert.Equal(t, fp1, fp2, "Hash() gave different results for identical signatures")
 
-	fo3 := SignatureContains([]typed.TypeName{{Name: "float64"}}, ret)
+	fo3 := SignatureContains([]*typed.NamedType{{Name: "float64"}}, ret)
 	h3 := fingerprint.New()
 	err = fo3.Hash(h3)
 	require.NoError(t, err, "Hash failed")

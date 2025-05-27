@@ -21,13 +21,13 @@ import (
 )
 
 type appendArgs struct {
-	TypeName  typed.TypeName
+	TypeName  *typed.NamedType
 	Templates []*code.Template
 }
 
 // AppendArgs appends arguments of a given type to the end of a function call. All arguments must be
 // of the same type, as they may be appended at the tail end of a variadic call.
-func AppendArgs(typeName typed.TypeName, templates ...*code.Template) *appendArgs {
+func AppendArgs(typeName *typed.NamedType, templates ...*code.Template) *appendArgs {
 	return &appendArgs{typeName, templates}
 }
 
@@ -168,12 +168,12 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := typed.NewTypeName(args.TypeName)
+		namedType, err := typed.NewNamedType(args.TypeName)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid type %q: %w", args.TypeName, err)
 		}
 
-		return AppendArgs(tn, args.Values...), nil
+		return AppendArgs(namedType, args.Values...), nil
 	}
 	unmarshalers["replace-function"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var (

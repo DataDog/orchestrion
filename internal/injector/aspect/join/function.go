@@ -145,13 +145,13 @@ func (fo functionName) Hash(h *fingerprint.Hasher) error {
 }
 
 type signature struct {
-	Arguments []typed.TypeName
-	Results   []typed.TypeName
+	Arguments []*typed.NamedType
+	Results   []*typed.NamedType
 }
 
 // Signature matches function declarations based on their arguments and return
 // value types.
-func Signature(args []typed.TypeName, ret []typed.TypeName) FunctionOption {
+func Signature(args []*typed.NamedType, ret []*typed.NamedType) FunctionOption {
 	return &signature{Arguments: args, Results: ret}
 }
 
@@ -225,8 +225,8 @@ func (fo *signature) evaluate(info functionInformation) bool {
 func (fo *signature) Hash(h *fingerprint.Hasher) error {
 	return h.Named(
 		"signature",
-		fingerprint.List[typed.TypeName](fo.Arguments),
-		fingerprint.List[typed.TypeName](fo.Results),
+		fingerprint.List[*typed.NamedType](fo.Arguments),
+		fingerprint.List[*typed.NamedType](fo.Results),
 	)
 }
 
@@ -236,15 +236,15 @@ type signatureContains struct {
 
 // SignatureContains matches function declarations based on their arguments and
 // return value types in any order and does not require all arguments or return values to be present.
-func SignatureContains(args []typed.TypeName, ret []typed.TypeName) FunctionOption {
+func SignatureContains(args []*typed.NamedType, ret []*typed.NamedType) FunctionOption {
 	return &signatureContains{signature{Arguments: args, Results: ret}}
 }
 
 func (fo *signatureContains) Hash(h *fingerprint.Hasher) error {
 	return h.Named(
 		"signature-contains",
-		fingerprint.List[typed.TypeName](fo.Arguments),
-		fingerprint.List[typed.TypeName](fo.Results),
+		fingerprint.List[*typed.NamedType](fo.Arguments),
+		fingerprint.List[*typed.NamedType](fo.Results),
 	)
 }
 
@@ -262,7 +262,7 @@ func (fo *signatureContains) evaluate(info functionInformation) bool {
 
 // containsAnyType checks if any of the expected types match any of the actual types in the field list.
 // Returns false if either slice is empty or nil.
-func containsAnyType(expectedTypes []typed.TypeName, fieldList *dst.FieldList) bool {
+func containsAnyType(expectedTypes []*typed.NamedType, fieldList *dst.FieldList) bool {
 	// Quick return if either side is empty.
 	if len(expectedTypes) == 0 || fieldList == nil || len(fieldList.List) == 0 {
 		return false
@@ -281,10 +281,10 @@ func containsAnyType(expectedTypes []typed.TypeName, fieldList *dst.FieldList) b
 }
 
 type receiver struct {
-	TypeName typed.TypeName
+	TypeName *typed.NamedType
 }
 
-func Receiver(typeName typed.TypeName) FunctionOption {
+func Receiver(typeName *typed.NamedType) FunctionOption {
 	return &receiver{typeName}
 }
 
@@ -393,18 +393,18 @@ func (_ *resultImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
 
 // evaluateFieldListImplements checks if any field in the list matches the interfaceName,
 // either by exact type name or by interface implementation.
-func evaluateFieldListImplements(fields *dst.FieldList, interfaceName string, info functionInformation) bool {
+func evaluateFieldListImplements(typeResolver typeResolver, fields *dst.FieldList, interfaceName string) bool {
 	if fields == nil || len(fields.List) == 0 {
 		return false
 	}
 
 	// Optimization: First, check for an exact match using the helper.
-	if _, found := typed.FindMatchingTypeName(fields, interfaceName); found {
+	if _, found := typed.FindMatchingType(fields, interfaceName); found {
 		return true // Found direct match
 	}
 
 	// If no exact match, check implementation (requires type resolver).
-	if info.typeResolver == nil {
+	if typeResolver == nil {
 		return false // Cannot check implementation without resolver.
 	}
 
@@ -414,7 +414,7 @@ func evaluateFieldListImplements(fields *dst.FieldList, interfaceName string, in
 	}
 
 	for _, field := range fields.List {
-		if typed.ExprImplements(info.typeResolver, field.Type, targetInterface) {
+		if typed.ExprImplements(typeResolver, field.Type, targetInterface) {
 			return true // Found an implementing type.
 		}
 	}
@@ -423,7 +423,7 @@ func evaluateFieldListImplements(fields *dst.FieldList, interfaceName string, in
 }
 
 func (fo *resultImplements) evaluate(info functionInformation) bool {
-	return evaluateFieldListImplements(info.Type.Results, fo.InterfaceName, info)
+	return evaluateFieldListImplements(info.typeResolver, info.Type.Results, fo.InterfaceName)
 }
 
 func (fo *resultImplements) Hash(h *fingerprint.Hasher) error {
@@ -467,10 +467,10 @@ func (fo *finalResultImplements) evaluate(info functionInformation) bool {
 		return false
 	}
 
-	// Optimization: First, check for an exact match using TypeName parsing.
-	if tn, err := typed.NewTypeName(fo.InterfaceName); err == nil {
+	// Optimization: First, check for an exact match using Type parsing.
+	if t, err := typed.NewType(fo.InterfaceName); err == nil {
 		lastField := info.Type.Results.List[len(info.Type.Results.List)-1]
-		if tn.Matches(lastField.Type) {
+		if t.Matches(lastField.Type) {
 			return true // Found direct match
 		}
 	} // If parsing failed or no match, fall through to type resolution.
@@ -508,11 +508,9 @@ func ArgumentImplements(interfaceName string) FunctionOption {
 	return &argumentImplements{InterfaceName: interfaceName}
 }
 
-func (fo *argumentImplements) impliesImported() []string {
-	pkgPath, _ := typed.SplitPackageAndName(fo.InterfaceName)
-	if pkgPath != "" {
-		return []string{pkgPath}
-	}
+func (*argumentImplements) impliesImported() []string {
+	// A type can implement an interface without importing the interface's package
+	// due to Go's structural typing system.
 	return nil
 }
 
@@ -530,7 +528,7 @@ func (_ *argumentImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
 }
 
 func (fo *argumentImplements) evaluate(info functionInformation) bool {
-	return evaluateFieldListImplements(info.Type.Params, fo.InterfaceName, info)
+	return evaluateFieldListImplements(info.typeResolver, info.Type.Params, fo.InterfaceName)
 }
 
 func (fo *argumentImplements) Hash(h *fingerprint.Hasher) error {
@@ -590,9 +588,9 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &arg); err != nil {
 			return err
 		}
-		tn, err := typed.NewTypeName(arg)
+		tn, err := typed.NewNamedType(arg)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid receiver type %q: %w", arg, err)
 		}
 		o.FunctionOption = Receiver(tn)
 	case "signature", "signature-contains":
@@ -614,25 +612,27 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 			return fmt.Errorf("unexpected keys: %s", strings.Join(keys, ", "))
 		}
 
-		var args []typed.TypeName
+		var args []*typed.NamedType
 		if len(sig.Args) > 0 {
-			args = make([]typed.TypeName, len(sig.Args))
+			args = make([]*typed.NamedType, len(sig.Args))
 			for i, a := range sig.Args {
-				var err error
-				if args[i], err = typed.NewTypeName(a); err != nil {
-					return err
+				tn, err := typed.NewNamedType(a)
+				if err != nil {
+					return fmt.Errorf("invalid argument type %q at position %d: %w", a, i, err)
 				}
+				args[i] = tn
 			}
 		}
 
-		var ret []typed.TypeName
+		var ret []*typed.NamedType
 		if len(sig.Ret) > 0 {
-			ret = make([]typed.TypeName, len(sig.Ret))
+			ret = make([]*typed.NamedType, len(sig.Ret))
 			for i, r := range sig.Ret {
-				var err error
-				if ret[i], err = typed.NewTypeName(r); err != nil {
-					return err
+				tn, err := typed.NewNamedType(r)
+				if err != nil {
+					return fmt.Errorf("invalid return type %q at position %d: %w", r, i, err)
 				}
+				ret[i] = tn
 			}
 		}
 
