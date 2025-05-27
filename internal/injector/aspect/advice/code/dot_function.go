@@ -160,7 +160,7 @@ func (s signature) ResultThatImplements(name string) (string, error) {
 	}
 
 	// Optimization: First, check for an exact match using the helper.
-	if index, found := typed.FindMatchingTypeName(s.Results, name); found {
+	if index, found := typed.FindMatchingType(s.Results, name); found {
 		return fieldAt(s.Results, index, "result")
 	} // If not found, fall through to type resolution.
 
@@ -196,7 +196,7 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 
 	// Optimization: First, check for an exact match using TypeName parsing, finding the last one.
 	lastMatchIndex := -1
-	if tn, err := typed.NewTypeName(name); err == nil {
+	if tn, err := typed.NewType(name); err == nil {
 		currentIndex := 0
 		for _, field := range s.Results.List {
 			if tn.Matches(field.Type) {
@@ -286,7 +286,7 @@ func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
 }
 
 func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, error) {
-	tn, err := typed.NewTypeName(typeName)
+	t, err := typed.NewType(typeName)
 	if err != nil {
 		return "", err
 	}
@@ -298,7 +298,7 @@ func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, er
 
 	index := 0
 	for _, field := range fields.List {
-		if tn.Matches(field.Type) {
+		if t.Matches(field.Type) {
 			return fieldAt(fields, index, use)
 		}
 
@@ -322,9 +322,9 @@ func (s signature) FinalResultImplements(interfaceName string) (bool, error) {
 	lastField := s.Results.List[len(s.Results.List)-1]
 
 	// Optimization: First, check for an exact match using TypeName parsing.
-	// Note: Not using FindMatchingTypeName as we only need to check the last field.
-	if tn, err := typed.NewTypeName(interfaceName); err == nil {
-		if tn.Matches(lastField.Type) {
+	// Note: Not using FindMatchingType as we only need to check the last field.
+	if t, err := typed.NewType(interfaceName); err == nil {
+		if t.Matches(lastField.Type) {
 			return true, nil
 		}
 	} // If parsing failed or no match, fall through to type resolution.
