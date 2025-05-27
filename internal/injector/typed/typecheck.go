@@ -83,12 +83,31 @@ func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
 // into its package path and local name.
 // Returns ("", "error") for built-in "error".
 // Returns ("", "MyType") for unqualified "MyType".
+// For generic types like "iter.Seq[T]" or "iter.Seq[io.Reader]", the type parameters
+// are included in the local name, so it returns ("iter", "Seq[T]") and ("iter", "Seq[io.Reader]").
 func SplitPackageAndName(fullName string) (pkgPath string, localName string) {
 	if !strings.Contains(fullName, ".") {
 		// Assume built-in type (like "error") or unqualified local type.
 		return "", fullName
 	}
-	lastDot := strings.LastIndex(fullName, ".")
+
+	// Find the position of the first '[' which indicates generic type parameters
+	bracketPos := strings.IndexByte(fullName, '[')
+
+	// Determine the substring to search for the last dot
+	searchStr := fullName
+	if bracketPos != -1 {
+		// Only search for dots before the generic type parameters
+		searchStr = fullName[:bracketPos]
+	}
+
+	// Find the last dot in the search string
+	lastDot := strings.LastIndex(searchStr, ".")
+	if lastDot == -1 {
+		// No dot found (shouldn't happen given the initial check, but be safe)
+		return "", fullName
+	}
+
 	pkgPath = fullName[:lastDot]
 	localName = fullName[lastDot+1:]
 	return pkgPath, localName
