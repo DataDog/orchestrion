@@ -146,7 +146,8 @@ func (r Report) diff(writer io.Writer, modifiedPath string) error {
 // constructed as "<work-dir>/orchestrion/src/<github.com/my/repo>/<file.go>".
 func (r Report) Packages() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		pkgs := make(map[string]bool)
+		// synthetic is a special path that is always present in orchestrion builds.
+		pkgs := map[string]bool{"synthetic": true}
 		for _, file := range r.Files {
 			dir := filepath.Dir(file)
 			_, pkg, found := strings.Cut(dir, "orchestrion/src/")
