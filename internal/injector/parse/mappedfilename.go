@@ -13,15 +13,24 @@ import (
 // ConsumeLineDirective consumes the first line from r if it's a "//line"
 // directive that either does not have line/column information or has it set to
 // line 1 (and column 1). If the directive is consumed, the filename it refers
-// to is returned. Otherwise, the reader is rewinded to its original position.
-func ConsumeLineDirective(r io.ReadSeeker) (string, error) {
+// to is returned. Otherwise, the reader is rewinded to its original position
+// if the provided reader supports the [io.Seeker] interface.
+func ConsumeLineDirective(r io.Reader) (string, error) {
+	seeker, ok := r.(io.Seeker)
+	seek := func(offset int64, whence int) (int64, error) {
+		if !ok {
+			return 0, nil
+		}
+		return seeker.Seek(offset, whence)
+	}
+
 	var buf [7]byte
 	n, err := r.Read(buf[:])
 	if err != nil {
 		return "", err
 	}
 	if string(buf[:n]) != "//line " {
-		_, err := r.Seek(0, io.SeekStart)
+		_, err := seek(0, io.SeekStart)
 		return "", err
 	}
 
@@ -43,7 +52,7 @@ func ConsumeLineDirective(r io.ReadSeeker) (string, error) {
 		default:
 			if wasCR {
 				// We saw a CR and this is not an LF, so we rewind one byte and bail out.
-				if _, err := r.Seek(-1, io.SeekCurrent); err != nil {
+				if _, err := seek(-1, io.SeekCurrent); err != nil {
 					return "", err
 				}
 				done = true
@@ -58,13 +67,13 @@ func ConsumeLineDirective(r io.ReadSeeker) (string, error) {
 		return string(rest), nil
 	} else if pos != 1 {
 		// It was not at position 1, so it's not the directive we're looking for.
-		_, err := r.Seek(0, io.SeekStart)
+		_, err := seek(0, io.SeekStart)
 		return "", err
 	} else if rest, pos, hadPos := cutPositionSuffix(rest); !hadPos || pos == 1 {
 		return string(rest), nil
 	}
 	// It was not at position 1, so it's not the directive we're looking for.
-	_, err = r.Seek(0, io.SeekStart)
+	_, err = seek(0, io.SeekStart)
 	return "", err
 }
 
