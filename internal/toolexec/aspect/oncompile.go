@@ -58,6 +58,9 @@ func (sc *specialCase) matches(importPath string) bool {
 	return sc.prefix && strings.HasPrefix(importPath, sc.path+"/")
 }
 
+// OrchestrionDirPathElement is the prefix for orchestrion source files in the build output directory.
+var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
+
 // weavingSpecialCase defines special behavior to be applied to certain package
 // paths. They are evaluated in order, and the first matching override is
 // applied, stopping evaluation of any further overrides.
@@ -84,7 +87,6 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
-	outputDir := filepath.Dir(cmd.Flags.Output)
 	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
@@ -145,7 +147,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		ImportMap:  imports.PackageFile,
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
-			return ModifiedFilePath(outputDir, cmd.Flags.Package, file)
+			return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
 		},
 	}
 
@@ -234,14 +236,6 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	}
 
 	return nil
-}
-
-// OrchestrionDirPathElement is the prefix for orchestrion source files in the build output directory.
-var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
-
-// ModifiedFilePath returns the path to a modified file, given the output directory, package name and file name.
-func ModifiedFilePath(output, pkg, file string) string {
-	return filepath.Join(output, OrchestrionDirPathElement, pkg, filepath.Base(file))
 }
 
 func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, filename string) (err error) {
