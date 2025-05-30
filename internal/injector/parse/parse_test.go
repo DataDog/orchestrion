@@ -52,7 +52,7 @@ func TestConsumeLineDirective(t *testing.T) {
 					buffer.Write(sourceBytes)
 
 					reader := bytes.NewReader(buffer.Bytes())
-					filename, err := consumeLineDirective(reader)
+					filename, err := ConsumeLineDirective(reader)
 					require.NoError(t, err)
 					require.Equal(t, expectedOutcome, filename)
 

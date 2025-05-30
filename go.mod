@@ -11,6 +11,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/goccy/go-yaml v1.17.1
 	github.com/google/uuid v1.6.0
+	github.com/liamg/memoryfs v1.6.0
 	github.com/nats-io/nats-server/v2 v2.11.1
 	github.com/nats-io/nats.go v1.41.1
 	github.com/otiai10/copy v1.14.1
