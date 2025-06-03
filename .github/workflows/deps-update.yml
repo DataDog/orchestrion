@@ -108,14 +108,22 @@ jobs:
           git push origin "${{ github.sha }}":"refs/heads/${branch}"
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
           git fetch origin "${branch}"
+
+      - name: Generate a GitHub token
+        id: generate-token
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+        with:
+          app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
+          private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
+
       - name: Create Commit # Adds a commit to the branch we created above
         uses: planetscale/ghcommit-action@6a383e778f6620afde4bf4b45069d3c6983c1ae2 # v0.2.15
         with:
           commit_message: "chore: update all dependencies"
-          repo: ${{ github.repository }}
+          repo: ${{ steps.generate-token.outputs.token }}
           branch: ${{ steps.create-branch.outputs.branch }}
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Create PR
         run: |-
@@ -126,18 +134,4 @@ jobs:
                        --body "Updated all go.mod dependencies to latest." \
                        --head="${{ steps.create-branch.outputs.branch }}"
         env:
-          # Create the PR as "github-actions[bot]" so that even the owner of the mutator token can
-          # approve the PR.
-          GITHUB_TOKEN: ${{ github.token }}
-
-      # The standard GitHub Token will not trigger downstream workflows, so in order to kick off CI,
-      # we'll push a blank commit to the PR branch with the mutator token.
-      - name: Trigger CI
-        uses: planetscale/ghcommit-action@6a383e778f6620afde4bf4b45069d3c6983c1ae2 # v0.2.15
-        with:
-          commit_message: "blank: trigger CI"
-          repo: ${{ github.repository }}
-          branch: ${{ steps.create-branch.outputs.branch }}
-          empty: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
