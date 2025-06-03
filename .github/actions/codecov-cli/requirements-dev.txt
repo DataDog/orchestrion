@@ -1,4 +1,4 @@
-codecov-cli==10.4.0
+codecov-cli==11.0.3
 ## The following requirements were added by pip freeze:
 anyio==4.9.0
 certifi==2025.4.26
