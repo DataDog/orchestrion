@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changes-needed: ${{ steps.is-tree-dirty.outputs.result }}
-    env:
-      GOTOOLCHAIN: local # Prohibits adding `toolchain` directives to go.mod files.
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
