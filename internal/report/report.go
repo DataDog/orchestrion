@@ -111,8 +111,12 @@ func NewModifiedFile(fsys fs.FS, modifiedPath string) (ModifiedFile, error) {
 		return ModifiedFile{}, fmt.Errorf("consume line directive: %w", err)
 	}
 
+	if originalPath != "" {
+		originalPath = filepath.Clean(originalPath)
+	}
+
 	return ModifiedFile{
-		original: filepath.Clean(originalPath),
+		original: originalPath,
 		modified: filepath.Clean(modifiedPath),
 	}, nil
 }

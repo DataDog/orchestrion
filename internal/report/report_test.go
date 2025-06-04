@@ -132,7 +132,7 @@ func TestFromWorkFS(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got.files, tt.want) {
-				t.Errorf("fromWorkFS() got = %#v, want %#v", got, tt.want)
+				t.Errorf("fromWorkFS() got = %#v, want %#v", got.files, tt.want)
 			}
 		})
 	}
