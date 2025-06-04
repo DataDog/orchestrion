@@ -19,8 +19,9 @@ jobs:
         with:
           go-version: oldstable
           cache-dependency-path: '**/go.mod'
+
       - name: Assign Labels
         run: go -C _tools run ./conventionalcommit
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 

@@ -123,6 +123,14 @@ jobs:
       - name: Apply patch
         run: |-
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
+
+      - name: Generate a GitHub token
+        id: generate-token
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+        with:
+          app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
+          private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
+
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
         uses: planetscale/ghcommit-action@6a383e778f6620afde4bf4b45069d3c6983c1ae2 # v0.2.15
@@ -131,7 +139,7 @@ jobs:
           repo: ${{ github.event.pull_request.head.repo.full_name }}
           branch: ${{ github.event.pull_request.head.ref }}
         env:
-          GITHUB_TOKEN: ${{ secrets.MUTATOR_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
   ##############################################################################
   # Run the various linters we have set up...
@@ -270,7 +278,7 @@ jobs:
           set -euo pipefail
           go test -bench=. -timeout=1h -run=^$ . | tee ${{ runner.temp }}/benchmarks-${{ matrix.run_number }}.txt
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Upload benchmark report (raw)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
