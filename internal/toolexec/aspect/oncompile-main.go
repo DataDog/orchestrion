@@ -24,6 +24,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// SyntheticPackageName is the name of the synthetic package that will be created when the compilation of the main
+// package is performed. This folder contains blank imports for all link-time dependencies that are not already
+// in the build tree
+var SyntheticPackageName = "synthetic"
+
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for
 // any linkdeps dependencies that are not yet satisfied by the importcfg file (this is the case for
 // link-time dependencies implied by use of the go:linkname directive, which are used to avoid
@@ -120,7 +125,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		fileAST.Imports[idx] = spec
 	}
 
-	genDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion", "src", "synthetic")
+	genDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion", "src", SyntheticPackageName)
 	genFile := filepath.Join(genDir, "link_deps_imports.go")
 	log.Trace().Str("path", genFile).Msg("Writing new blank imports source file")
 	if err := os.MkdirAll(genDir, 0o755); err != nil {

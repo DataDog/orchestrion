@@ -51,12 +51,12 @@ func fromWorkFS(ctx context.Context, root string, fsys fs.FS) (Report, error) {
 				}
 
 				log.Debug().Str("path", path).Msg("found orchestrion file")
-				original, err := inferOriginalPath(fsys, path)
+				file, err := NewModifiedFile(fsys, path)
 				if err != nil {
 					return fmt.Errorf("infer original path for %s: %w", path, err)
 				}
 
-				files = append(files, ModifiedFile{OriginalPath: original, ModifiedPath: path})
+				files = append(files, file)
 				return nil
 			},
 		)
@@ -97,6 +97,38 @@ type (
 	}
 )
 
+// NewModifiedFile creates a new ModifiedFile from the given file system and modified path.
+// If the modified file contains a line directive, it will parse it to find the original path.
+func NewModifiedFile(fsys fs.FS, modifiedPath string) (ModifiedFile, error) {
+	modifiedFile, err := fsys.Open(modifiedPath)
+	if err != nil {
+		return ModifiedFile{}, fmt.Errorf("open %s: %w", modifiedPath, err)
+	}
+
+	defer modifiedFile.Close()
+
+	originalPath, err := parse.ConsumeLineDirective(modifiedFile)
+	if err != nil {
+		return ModifiedFile{}, fmt.Errorf("consume line directive: %w", err)
+	}
+
+	return ModifiedFile{
+		OriginalPath: originalPath,
+		ModifiedPath: modifiedPath,
+	}, nil
+}
+
+// ImportPath converts the modified file path to an import path.
+func (m ModifiedFile) ImportPath() string {
+	dir := filepath.Dir(m.ModifiedPath)
+	_, pkg, found := strings.Cut(dir, aspect.OrchestrionDirPathElement)
+	if !found {
+		return ""
+	}
+
+	return strings.Trim(pkg, "/")
+}
+
 var _ fs.FS = (*Report)(nil)
 
 func (r Report) Open(name string) (fs.File, error) {
@@ -112,21 +144,32 @@ func (r Report) Open(name string) (fs.File, error) {
 
 var _ fs.FS = (*Report)(nil)
 
-// WithFilter filters the files in the report based on a regex pattern.
-func (r Report) WithFilter(regex string) (Report, error) {
+// WithRegexFilter filters the files in the report based on a regex pattern.
+func (r Report) WithRegexFilter(regex string) (Report, error) {
 	cmpRegex, err := regexp.Compile(regex)
 	if err != nil {
 		return Report{}, fmt.Errorf("invalid regex %q: %w", regex, err)
 	}
 
-	var filteredFiles []ModifiedFile
-	for _, file := range r.Files {
-		if cmpRegex.MatchString(file.ModifiedPath) {
-			filteredFiles = append(filteredFiles, file)
-		}
-	}
+	return Report{
+		Files: slices.DeleteFunc(r.Files, func(file ModifiedFile) bool {
+			return !cmpRegex.MatchString(file.ModifiedPath)
+		}),
+	}, nil
+}
 
-	return Report{Files: filteredFiles}, nil
+// WithSpecialCasesFilter filters the files in the report to include only those that are not weaver special cases
+func (r Report) WithSpecialCasesFilter() Report {
+	return Report{
+		Files: slices.DeleteFunc(r.Files, func(file ModifiedFile) bool {
+			pkgPath := file.ImportPath()
+			if pkgPath == "synthetic" {
+				return true
+			}
+			behaviour, isSpecial := aspect.FindBehaviorOverride(pkgPath)
+			return isSpecial && behaviour != aspect.NoOverride
+		}),
+	}
 }
 
 // Diff generates a diff between the original and modified files and writes it to the writer.
@@ -147,41 +190,19 @@ func (r Report) Diff(writer io.Writer) error {
 	return errors.Join(errs...)
 }
 
-// InferOriginalPath attempts to infer the original file path from a modified file path using the //line directive that
-// Orchestrion puts in the modified files. It reads the first line of the file to find the original path.
-func InferOriginalPath(modifiedPath string) (string, error) {
-	return inferOriginalPath(os.DirFS("/"), modifiedPath)
-}
-
-func inferOriginalPath(fsys fs.FS, modifiedPath string) (string, error) {
-	modifiedFile, err := fsys.Open(modifiedPath)
-	if err != nil {
-		return "", fmt.Errorf("open %s: %w", modifiedPath, err)
-	}
-
-	defer modifiedFile.Close()
-
-	originalPath, err := parse.ConsumeLineDirective(modifiedFile)
-	if err != nil {
-		return "", fmt.Errorf("consume line directive: %w", err)
-	}
-
-	return originalPath, nil
-}
-
 func (r Report) diff(writer io.Writer, file ModifiedFile) error {
 	// If originalPath does not exists, it means that we have cgo files in there, just skip it
 	if _, err := os.Open(file.OriginalPath); os.IsNotExist(err) {
 		return nil
 	}
 
+	// When adding options, always make sure this is supported on all platforms.
 	cmd := exec.Command("diff",
 		"-u",            // Use the unified context diff format
 		"-d",            // Try harder to minimize the diff
 		"-a",            // Treat all files as text
 		"--color",       // Change the output to colored diff if possible
-		"-w",            // Ignore whitespace changes
-		"-E",            // Ignore tab characters
+		"-w",            // Ignore whitespace and tab changes
 		"-B",            // Ignore blank lines
 		"-I", "^//line", // Don't print line directives in the diff when they would end up being alone in a fragment
 		"--label", file.OriginalPath, // Label the original file without timestamp for reproducibility
@@ -211,16 +232,9 @@ func (r Report) diff(writer io.Writer, file ModifiedFile) error {
 // constructed as "<work-dir>/orchestrion/src/<github.com/my/repo>/<file.go>".
 func (r Report) Packages() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		// synthetic is a special path that is always present in orchestrion builds.
-		pkgs := map[string]bool{"synthetic": true}
+		pkgs := make(map[string]bool)
 		for _, file := range r.Files {
-			dir := filepath.Dir(file.ModifiedPath)
-			_, pkg, found := strings.Cut(dir, aspect.OrchestrionDirPathElement)
-			if !found {
-				continue
-			}
-
-			pkg = strings.Trim(pkg, "/")
+			pkg := file.ImportPath()
 			if pkgs[pkg] {
 				continue
 			}

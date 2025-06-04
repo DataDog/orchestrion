@@ -28,6 +28,11 @@ var (
 		Usage: "Print package names instead of printing the diff",
 	}
 
+	debugFlag = cli.BoolFlag{
+		Name:  "debug",
+		Usage: "Also print synthetic and tracer weaved packages",
+	}
+
 	Diff = &cli.Command{
 		Name:  "diff",
 		Usage: "Generates a diff between a nominal and orchestrion-instrumented build using a go work directory that can be obtained running `orchestrion go build -work -a`. This does work with -cover builds.",
@@ -36,6 +41,7 @@ var (
 			&filenameFlag,
 			&filterFlag,
 			&packageFlag,
+			&debugFlag,
 		},
 		Action: func(clictx *cli.Context) (err error) {
 			workFolder := clictx.Args().First()
@@ -52,8 +58,12 @@ var (
 				return cli.Exit("no files to diff (did you forgot the -a flag during build?)", 1)
 			}
 
+			if !clictx.Bool(debugFlag.Name) {
+				report = report.WithSpecialCasesFilter()
+			}
+
 			if filter := clictx.String(filterFlag.Name); filter != "" {
-				report, err = report.WithFilter(filter)
+				report, err = report.WithRegexFilter(filter)
 				if err != nil {
 					return cli.Exit(fmt.Sprintf("failed to filter files: %s", err), 1)
 				}
@@ -68,7 +78,7 @@ var (
 
 			if clictx.Bool(filenameFlag.Name) {
 				for _, file := range report.Files {
-					fmt.Fprintln(clictx.App.Writer, file)
+					fmt.Fprintln(clictx.App.Writer, file.ModifiedPath)
 				}
 				return nil
 			}

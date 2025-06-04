@@ -30,18 +30,23 @@ This is achieved using the following steps:
 {{% steps %}}
 
 ### Step 1
+
 Install Orchestrion in your environment:
+
 ```console
 $ go install github.com/DataDog/orchestrion@latest
 ```
 
 If necessary, also add the `GOBIN` directory to your `PATH`:
+
 ```console
 $ export PATH="$PATH:$(go env GOBIN)"
 ```
 
 ### Step 2
+
 Register `orchestrion` in your project's `go.mod` to ensure reproducible builds:
+
 ```console
 $ orchestrion pin
 ```
@@ -52,7 +57,7 @@ Be sure to check the updated files into source control!
 
 * **Option 1 (Recommended):**
 
-   Use `orchestrion go` instead of just `go`:
+  Use `orchestrion go` instead of just `go`:
    ```console
    $ orchestrion go build .
    $ orchestrion go run .
@@ -61,7 +66,7 @@ Be sure to check the updated files into source control!
 
 * **Option 2:**
 
-   Manually specify the `-toolexec` argument to `go` commands:
+  Manually specify the `-toolexec` argument to `go` commands:
    ```console
    $ go build -toolexec 'orchestrion toolexec' .
    $ go run -toolexec 'orchestrion toolexec' .
@@ -70,17 +75,41 @@ Be sure to check the updated files into source control!
 
 * **Option 3:**
 
-   Add the `-toolexec` argument to the `GOFLAGS` environment variable (_be sure to include the
-   quoting as this is required by the `go` toolchain when a flag value includes white space_):
+  Add the `-toolexec` argument to the `GOFLAGS` environment variable (_be sure to include the
+  quoting as this is required by the `go` toolchain when a flag value includes white space_):
    ```console
    $ export GOFLAGS="${GOFLAGS} '-toolexec=orchestrion toolexec'"
    ```
 
-   Then use `go` commands normally:
+  Then use `go` commands normally:
    ```console
    $ go build .
    $ go run .
    $ go test ./...
    ```
+
+### Step 4 (Optional)
+
+Print what packages are instrumented by Orchestrion in your build. Add the `-work` and the `-a`
+flag to your go build command. For example using option 2:
+
+```console
+$ go build -work -a -toolexec 'orchestrion toolexec' .
+WORK=/tmp/go-build123456789
+```
+
+The previous command can take more time because the `-a` flag forces a full rebuild of all packages.
+
+Now use the `WORK` directory to find the instrumented packages:
+
+```console
+$ orchestrion diff --package /tmp/go-build123456789
+os
+runtime
+testing
+net/http
+log/slog
+[...]
+```
 
 {{% /steps %}}
