@@ -35,7 +35,7 @@ var (
 
 	Diff = &cli.Command{
 		Name:  "diff",
-		Usage: "Generates a diff between a nominal and orchestrion-instrumented build using a go work directory that can be obtained running `orchestrion go build -work -a`. This does work with -cover builds.",
+		Usage: "Generates a diff between a nominal and orchestrion-instrumented build using a go work directory that can be obtained running `orchestrion go build -work -a`. This is incompatible with coverage related flags.",
 		Args:  true,
 		Flags: []cli.Flag{
 			&filenameFlag,
