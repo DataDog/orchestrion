@@ -54,7 +54,7 @@ var (
 				return cli.Exit(fmt.Sprintf("failed to read work dir: %s (did you forgot the -work flag during build ?)", err), 1)
 			}
 
-			if len(report.Files) == 0 {
+			if report.IsEmpty() {
 				return cli.Exit("no files to diff (did you forgot the -a flag during build?)", 1)
 			}
 
@@ -70,15 +70,15 @@ var (
 			}
 
 			if clictx.Bool(packageFlag.Name) {
-				for pkg := range report.Packages() {
+				for _, pkg := range report.Packages() {
 					fmt.Fprintln(clictx.App.Writer, pkg)
 				}
 				return nil
 			}
 
 			if clictx.Bool(filenameFlag.Name) {
-				for _, file := range report.Files {
-					fmt.Fprintln(clictx.App.Writer, file.ModifiedPath)
+				for _, file := range report.Files() {
+					fmt.Fprintln(clictx.App.Writer, file)
 				}
 				return nil
 			}
