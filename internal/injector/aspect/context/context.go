@@ -6,11 +6,16 @@
 package context
 
 import (
+	gocontext "context"
+	"go/ast"
+	"go/types"
 	"sync"
 
-	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
+	"github.com/rs/zerolog"
+
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 type AspectContext interface {
@@ -71,10 +76,15 @@ type AdviceContext interface {
 	// EnsureMinGoLang ensures that the current compile unit uses at least the
 	// specified language level when passed to the compiler.
 	EnsureMinGoLang(GoLangVersion)
+
+	// ResolveType resolves a dst.Expr to its corresponding types.Type.
+	ResolveType(dst.Expr) types.Type
 }
 
 type (
 	context struct {
+		log *zerolog.Logger
+
 		*NodeChain
 		cursor *dstutil.Cursor
 
@@ -85,6 +95,8 @@ type (
 		sourceParser SourceParser
 		importPath   string
 		testMain     bool
+		typeInfo     types.Info
+		nodeMap      map[dst.Node]ast.Node
 	}
 
 	SourceParser interface {
@@ -112,23 +124,32 @@ type ContextArgs struct {
 	MinGoLang *GoLangVersion
 	// TestMain is true when injecting into a synthetic main package.
 	TestMain bool
+	// TypeInfo contains type information about the AST.
+	TypeInfo types.Info
+	// NodeMap maps dst.Node to ast.Node.
+	NodeMap map[dst.Node]ast.Node
 }
 
 // Context returns a new [*context] instance that represents the ndoe at the
 // provided cursor. The [context.Release] function should be called on values
 // returned by this function to allow for memory re-use, which can significantly
 // reduce allocations performed during AST traversal.
-func (n *NodeChain) Context(args ContextArgs) *context {
+func (n *NodeChain) Context(ctx gocontext.Context, args ContextArgs) *context {
 	c, _ := contextPool.Get().(*context)
 	*c = context{
-		NodeChain:    n,
-		cursor:       args.Cursor,
+		log: zerolog.Ctx(ctx),
+
+		NodeChain: n,
+		cursor:    args.Cursor,
+
 		file:         args.File,
 		refMap:       args.RefMap,
 		minGoLang:    args.MinGoLang,
 		sourceParser: args.SourceParser,
 		importPath:   args.ImportPath,
 		testMain:     args.TestMain,
+		typeInfo:     args.TypeInfo,
+		nodeMap:      args.NodeMap,
 	}
 
 	return c
@@ -150,6 +171,8 @@ func (c *context) Release() {
 func (c *context) Child(node dst.Node, property string, index int) AdviceContext {
 	r, _ := contextPool.Get().(*context)
 	*r = context{
+		log: c.log,
+
 		NodeChain: &NodeChain{
 			parent: c.NodeChain,
 			node:   node,
@@ -163,6 +186,8 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		sourceParser: c.sourceParser,
 		importPath:   c.importPath,
 		testMain:     c.testMain,
+		typeInfo:     c.typeInfo,
+		nodeMap:      c.nodeMap,
 	}
 
 	return r
@@ -191,6 +216,8 @@ func (c *context) Parent() AspectContext {
 		file:       c.file,
 		refMap:     c.refMap,
 		importPath: c.importPath,
+		typeInfo:   c.typeInfo,
+		nodeMap:    c.nodeMap,
 	}
 
 	return p
@@ -239,4 +266,67 @@ func (c *context) AddLink(path string) bool {
 
 func (c *context) EnsureMinGoLang(lang GoLangVersion) {
 	c.minGoLang.SetAtLeast(lang)
+}
+
+// ResolveType resolves a dst.Expr to its corresponding types.Type within the
+// current context.
+func (c *context) ResolveType(expr dst.Expr) types.Type {
+	// Convert dst.Expr to ast.Expr using the nodeMap.
+	astNode, ok := c.nodeMap[expr]
+	if !ok {
+		return nil
+	}
+
+	// Convert ast.Node to ast.Expr.
+	astExpr, ok := astNode.(ast.Expr)
+	if !ok {
+		c.log.Error().Msgf("node %v is not an ast.Expr", astNode)
+		return nil
+	}
+
+	// Get the type from the typeInfo map.
+	if t, ok := c.typeInfo.Types[astExpr]; ok {
+		return t.Type
+	}
+
+	// For identifiers, try to get the type from Uses.
+	if astIdent, ok := astExpr.(*ast.Ident); ok {
+		if obj, ok := c.typeInfo.Uses[astIdent]; ok {
+			return obj.Type()
+		}
+	}
+
+	// For selector expressions (pkg.Type), try Uses on the selector.
+	if selExpr, ok := astExpr.(*ast.SelectorExpr); ok {
+		if obj, ok := c.typeInfo.Uses[selExpr.Sel]; ok {
+			return obj.Type()
+		}
+	}
+
+	// For star expressions (*Type), resolve the underlying type and return a pointer.
+	// Need to convert back from ast.Expr to dst.Expr to use nodeMap recursively.
+	if starExpr, ok := astExpr.(*ast.StarExpr); ok {
+		// Find the corresponding dst.Node for starExpr.X
+		var dstX dst.Expr
+		// Iterate through nodeMap to find the dst.Node corresponding to ast.Node starExpr.X
+		// This is inefficient but necessary as we don't have a direct reverse mapping.
+		// Consider optimizing if performance becomes an issue.
+		for dNode, aNode := range c.nodeMap {
+			if aNode == starExpr.X {
+				if dExpr, ok := dNode.(dst.Expr); ok {
+					dstX = dExpr
+					break
+				}
+			}
+		}
+
+		if dstX != nil {
+			underlyingType := c.ResolveType(dstX)
+			if underlyingType != nil {
+				return types.NewPointer(underlyingType)
+			}
+		}
+	}
+
+	return nil
 }

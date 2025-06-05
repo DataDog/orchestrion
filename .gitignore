@@ -3,6 +3,7 @@
 *.iml
 /bin
 /errors
+/tmp
 *.swp
 orchestrion
 coverage/
