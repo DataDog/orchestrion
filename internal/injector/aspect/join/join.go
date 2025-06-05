@@ -33,5 +33,3 @@ type Point interface {
 
 	fingerprint.Hashable
 }
-
-// TypeName struct and methods moved to internal/injector/typed/typename.go
