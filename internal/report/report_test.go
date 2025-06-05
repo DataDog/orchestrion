@@ -55,7 +55,7 @@ func TestFromWorkFS(t *testing.T) {
 			want: []ModifiedFile{
 				{
 					modified: filepath.Join("b001", aspect.OrchestrionDirPathElement, "foo", "bar.go"),
-					original: "foo/bar.go",
+					original: filepath.Join("foo", "bar.go"),
 				},
 			},
 		},
@@ -70,7 +70,7 @@ func TestFromWorkFS(t *testing.T) {
 			want: []ModifiedFile{
 				{
 					modified: filepath.Join("b001", aspect.OrchestrionDirPathElement, "github.com", "DataDog", "test", "bar.go"),
-					original: "/home/test/go/pkg/mod/github.com/!data!dog/test/bar.go",
+					original: filepath.Join("/home", "test", "go", "pkg", "mod", "github.com", "!data!dog", "test", "bar.go"),
 				},
 			},
 		},
@@ -86,11 +86,11 @@ func TestFromWorkFS(t *testing.T) {
 			want: []ModifiedFile{
 				{
 					modified: filepath.Join("b001", aspect.OrchestrionDirPathElement, "pkg", "file1.go"),
-					original: "pkg/file1.go",
+					original: filepath.Join("pkg", "file1.go"),
 				},
 				{
 					modified: filepath.Join("b001", aspect.OrchestrionDirPathElement, "pkg", "file2.go"),
-					original: "pkg/file2.go",
+					original: filepath.Join("pkg", "file2.go"),
 				},
 			},
 		},
@@ -119,7 +119,7 @@ func TestFromWorkFS(t *testing.T) {
 			want: []ModifiedFile{
 				{
 					modified: filepath.Join("b001", aspect.OrchestrionDirPathElement, "pkg", "subpkg", "file.go"),
-					original: "pkg/subpkg/file.go",
+					original: filepath.Join("pkg", "subpkg", "file.go"),
 				},
 			},
 		},
