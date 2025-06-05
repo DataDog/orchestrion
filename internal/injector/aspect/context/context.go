@@ -171,6 +171,8 @@ func (c *context) Release() {
 func (c *context) Child(node dst.Node, property string, index int) AdviceContext {
 	r, _ := contextPool.Get().(*context)
 	*r = context{
+		log: c.log,
+
 		NodeChain: &NodeChain{
 			parent: c.NodeChain,
 			node:   node,
