@@ -3,7 +3,7 @@ module github.com/DataDog/orchestrion
 go 1.23.0
 
 require (
-	github.com/DataDog/dd-trace-go/v2 v2.0.0-rc.23
+	github.com/DataDog/dd-trace-go/v2 v2.0.0
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/dave/dst v0.27.3
@@ -12,7 +12,7 @@ require (
 	github.com/goccy/go-yaml v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/nats-io/nats-server/v2 v2.11.4
-	github.com/nats-io/nats.go v1.42.0
+	github.com/nats-io/nats.go v1.43.0
 	github.com/otiai10/copy v1.14.1
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
@@ -124,7 +124,7 @@ require (
 	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
 	google.golang.org/grpc v1.72.2 // indirect

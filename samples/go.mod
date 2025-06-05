@@ -61,7 +61,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.66.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.66.0 // indirect
 	github.com/DataDog/datadog-go/v5 v5.6.0 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.1.0-dev // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.0.0 // indirect
 	github.com/DataDog/go-libddwaf/v3 v3.5.4 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250319104955-81009b9bad14 // indirect
 	github.com/DataDog/go-sqllexer v0.1.6 // indirect
@@ -69,6 +69,7 @@ require (
 	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/DataDog/opentelemetry-mapping-go/pkg/otlp/attributes v0.28.0 // indirect
 	github.com/DataDog/sketches-go v1.4.7 // indirect
+	github.com/Masterminds/semver/v3 v3.3.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
@@ -193,7 +194,7 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nats-io/jwt/v2 v2.7.4 // indirect
 	github.com/nats-io/nats-server/v2 v2.11.4 // indirect
-	github.com/nats-io/nats.go v1.42.0 // indirect
+	github.com/nats-io/nats.go v1.43.0 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
@@ -266,7 +267,7 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.228.0 // indirect
 	google.golang.org/genproto v0.0.0-20250409194420-de1ac958c67a // indirect
