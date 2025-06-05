@@ -22,6 +22,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // FromWorkDir reads the orchestrion files from a `go build -work` directory and creates a [Report] out of it.
@@ -31,6 +32,8 @@ func FromWorkDir(ctx context.Context, dir string) (Report, error) {
 
 func fromWorkFS(ctx context.Context, root string, fsys fs.FS) (Report, error) {
 	log := zerolog.Ctx(ctx)
+
+	log.Debug().Str("root", root).Msg("reading orchestrion files from work directory")
 
 	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
@@ -163,6 +166,8 @@ func (r Report) WithRegexFilter(regex string) (Report, error) {
 	}
 
 	return Report{
+		root: r.root,
+		fs:   r.fs,
 		files: slices.DeleteFunc(r.files, func(file ModifiedFile) bool {
 			return !cmpRegex.MatchString(file.modified)
 		}),
@@ -172,6 +177,8 @@ func (r Report) WithRegexFilter(regex string) (Report, error) {
 // WithSpecialCasesFilter filters the files in the report to include only those that are not weaver special cases
 func (r Report) WithSpecialCasesFilter() Report {
 	return Report{
+		root: r.root,
+		fs:   r.fs,
 		files: slices.DeleteFunc(r.files, func(file ModifiedFile) bool {
 			pkgPath := file.ImportPath()
 			if pkgPath == "synthetic" {
@@ -208,7 +215,7 @@ func (r Report) diff(writer io.Writer, file ModifiedFile) error {
 	}
 
 	// When adding options, always make sure this is supported on all platforms.
-	cmd := exec.Command("diff",
+	args := []string{
 		"-u",            // Use the unified context diff format
 		"-d",            // Try harder to minimize the diff
 		"-a",            // Treat all files as text
@@ -218,7 +225,11 @@ func (r Report) diff(writer io.Writer, file ModifiedFile) error {
 		"-I", "^//line", // Don't print line directives in the diff when they would end up being alone in a fragment
 		"--label", file.original, // Label the original file without timestamp for reproducibility
 		"--label", file.modified, // Label the modified file without timestamp for reproducibility
-		file.original, filepath.Join(r.root, file.modified))
+		file.original, filepath.Join(r.root, file.modified),
+	}
+
+	log.Trace().Any("args", args).Str("root", r.root).Msg("running diff command")
+	cmd := exec.Command("diff", args...)
 
 	var buf bytes.Buffer
 
