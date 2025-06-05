@@ -47,7 +47,7 @@ func TestDirective(t *testing.T) {
 		"assignment-declaration": {
 			statement: "foo := func(...int) {}(1, 2, 3)",
 			expectMatches: []string{
-				"foo", // Matches because it's being defined here
+				"foo", // matches because it's being defined here
 				"func(...int) {}",
 				"func(...int) {}(1, 2, 3)",
 			},

@@ -28,52 +28,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-type (
-	specialCase struct {
-		path     string
-		prefix   bool
-		behavior behaviorOverride
-	}
-
-	behaviorOverride int
-)
-
-const (
-	// noOverride does not change the injector behavior, but prevents further
-	// rules from being applied.
-	noOverride behaviorOverride = iota
-	// neverWeave completely disables injecting into the designated package
-	// path(s).
-	neverWeave
-	// weaveTracerInternal limits weaving to only aspects that have the
-	// `tracer-internal` flag set.
-	weaveTracerInternal
-)
-
-// matches returns true if the importPath is matched by this special case.
-func (sc *specialCase) matches(importPath string) bool {
-	if importPath == sc.path {
-		return true
-	}
-	return sc.prefix && strings.HasPrefix(importPath, sc.path+"/")
-}
-
-// weavingSpecialCase defines special behavior to be applied to certain package
-// paths. They are evaluated in order, and the first matching override is
-// applied, stopping evaluation of any further overrides.
-var weavingSpecialCase = []specialCase{
-	// Weaving inside of orchestrion packages themselves
-	{path: "github.com/DataDog/orchestrion/runtime", prefix: true, behavior: noOverride},
-	{path: "github.com/DataDog/orchestrion", prefix: true, behavior: neverWeave},
-	// V1 of the Datadog Go tracer library
-	{path: "gopkg.in/DataDog/dd-trace-go.v1", prefix: true, behavior: weaveTracerInternal},
-	// V2 of the Datadog Go tracer library
-	{path: "github.com/DataDog/dd-trace-go/internal/orchestrion/_integration", prefix: true, behavior: noOverride},    // The dd-trace-go integration test suite
-	{path: "github.com/DataDog/dd-trace-go/v2/internal/orchestrion/_integration", prefix: true, behavior: noOverride}, // The dd-trace-go integration test suite
-	{path: "github.com/DataDog/dd-trace-go", prefix: true, behavior: weaveTracerInternal},
-	// Misc. other Datadog packages that can cause circular weaving to happen
-	{path: "github.com/DataDog/go-tuf/client", prefix: false, behavior: neverWeave},
-}
+// OrchestrionDirPathElement is the prefix for orchestrion source files in the build output directory.
+var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile",
@@ -84,7 +40,6 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
-	orchestrionDir := filepath.Join(filepath.Dir(cmd.Flags.Output), "orchestrion")
 	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
@@ -109,32 +64,26 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	}
 
 	aspects := cfg.Aspects()
-	for _, sc := range weavingSpecialCase {
-		if !sc.matches(w.ImportPath) {
-			continue
-		}
-
-		switch sc.behavior {
-		case neverWeave:
+	specialBehavior, isSpecial := FindBehaviorOverride(w.ImportPath)
+	if isSpecial {
+		switch specialBehavior {
+		case NeverWeave:
 			log.Debug().Str("import-path", w.ImportPath).Msg("Not weaving aspects to prevent circular instrumentation")
 			return nil
 
-		case weaveTracerInternal:
+		case WeaveTracerInternal:
 			log.Debug().Str("import-path", w.ImportPath).Msg("Enabling tracer-internal mode")
 			aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
 				return !a.TracerInternal
 			})
 
-		case noOverride:
+		case NoOverride:
 			// No-op
 
 		default:
 			// Unreachable
-			panic(fmt.Sprintf("un-handled behavior override: %d", sc.behavior))
+			panic(fmt.Sprintf("un-handled behavior override: %d", specialBehavior))
 		}
-
-		// We matched an override; so we'll not evaluate any other.
-		break
 	}
 
 	injector := injector.Injector{
@@ -145,7 +94,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		ImportMap:  imports.PackageFile,
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
-			return filepath.Join(orchestrionDir, "src", cmd.Flags.Package, filepath.Base(file))
+			return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
 		},
 	}
 
