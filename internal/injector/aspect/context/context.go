@@ -11,11 +11,10 @@ import (
 	"go/types"
 	"sync"
 
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"github.com/rs/zerolog"
-
-	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
 type AspectContext interface {
@@ -51,6 +50,9 @@ type AspectContext interface {
 	// Release returns this context to the memory pool so that it can be reused
 	// later.
 	Release()
+
+	// ResolveType resolves a dst.Expr to its corresponding types.Type.
+	ResolveType(dst.Expr) types.Type
 }
 
 type AdviceContext interface {
@@ -76,9 +78,6 @@ type AdviceContext interface {
 	// EnsureMinGoLang ensures that the current compile unit uses at least the
 	// specified language level when passed to the compiler.
 	EnsureMinGoLang(GoLangVersion)
-
-	// ResolveType resolves a dst.Expr to its corresponding types.Type.
-	ResolveType(dst.Expr) types.Type
 }
 
 type (
@@ -325,6 +324,20 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 			if underlyingType != nil {
 				return types.NewPointer(underlyingType)
 			}
+		}
+	}
+
+	// For index expressions (generic type instantiations like Type[T])
+	if indexExpr, ok := astExpr.(*ast.IndexExpr); ok {
+		if t, ok := c.typeInfo.Types[indexExpr]; ok {
+			return t.Type
+		}
+	}
+
+	// For index list expressions (generic types with multiple parameters like Type[T, U])
+	if indexListExpr, ok := astExpr.(*ast.IndexListExpr); ok {
+		if t, ok := c.typeInfo.Types[indexListExpr]; ok {
+			return t.Type
 		}
 	}
 

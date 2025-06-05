@@ -9,22 +9,31 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"go/types"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
 	"github.com/goccy/go-yaml/ast"
 )
 
 type (
+	// typeResolver defines the capability to resolve a dst expression to its go/types type.
+	typeResolver interface {
+		ResolveType(dst.Expr) types.Type
+	}
+
 	functionInformation struct {
 		Receiver   dst.Expr      // The receiver if this is a method declaration
 		Type       *dst.FuncType // The function's type signature
 		ImportPath string        // The import path of the package containing the function
 		Name       string        // The name of the function (blank for function literal expressions)
+
+		typeResolver typeResolver // The type resolver to use for type checking
 	}
 
 	FunctionOption interface {
@@ -80,7 +89,8 @@ func (s *functionDeclaration) FileMayMatch(ctx *may.FileContext) may.MatchType {
 
 func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
 	info := functionInformation{
-		ImportPath: ctx.ImportPath(),
+		ImportPath:   ctx.ImportPath(),
+		typeResolver: ctx,
 	}
 
 	if decl, ok := ctx.Node().(*dst.FuncDecl); ok {
@@ -350,6 +360,129 @@ func (s *functionBody) Hash(h *fingerprint.Hasher) error {
 	return h.Named("function-body", s.Function)
 }
 
+// resultImplements matches functions where at least one return value's type
+// implements the specified interface.
+type resultImplements struct {
+	InterfaceName string
+}
+
+// ResultImplements creates a FunctionOption that matches functions where at least one
+// return value implements the named interface.
+func ResultImplements(interfaceName string) FunctionOption {
+	return &resultImplements{InterfaceName: interfaceName}
+}
+
+func (*resultImplements) impliesImported() []string {
+	// A type can implement an interface without importing the interface's package
+	// due to Go's structural typing system.
+	return nil
+}
+
+func (_ *resultImplements) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on package imports
+	// due to structural typing. A type can implement an interface without
+	// importing the interface's package.
+	return may.Unknown
+}
+
+func (_ *resultImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on file contents
+	// due to structural typing and type aliases.
+	return may.Unknown
+}
+
+func (fo *resultImplements) evaluate(info functionInformation) bool {
+	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
+		// No return values, no match.
+		return false
+	}
+
+	// Ensure the type resolver is available.
+	if info.typeResolver == nil {
+		return false
+	}
+
+	// Resolve the target interface name (e.g., "io.Reader", "error") to a types.Interface.
+	targetInterface, err := typed.ResolveInterfaceTypeByName(fo.InterfaceName)
+	if err != nil {
+		// If the interface name is invalid or cannot be resolved, we cannot match.
+		return false
+	}
+
+	for _, field := range info.Type.Results.List {
+		// For each return type (dst.Expr), resolve it to types.Type using the provided resolver
+		// and check if it implements the target interface.
+		if typed.ExprImplements(info.typeResolver, field.Type, targetInterface) {
+			return true // Found at least one implementing type, match!
+		}
+	}
+
+	// No return type matched.
+	return false
+}
+
+func (fo *resultImplements) Hash(h *fingerprint.Hasher) error {
+	return h.Named("result-implements", fingerprint.String(fo.InterfaceName))
+}
+
+// finalResultImplements matches functions where specifically the final return value
+// implements the specified interface.
+type finalResultImplements struct {
+	InterfaceName string
+}
+
+// FinalResultImplements creates a FunctionOption that matches functions where the final
+// return value implements the named interface.
+func FinalResultImplements(interfaceName string) FunctionOption {
+	return &finalResultImplements{InterfaceName: interfaceName}
+}
+
+func (*finalResultImplements) impliesImported() []string {
+	// A type can implement an interface without importing the interface's package
+	// due to Go's structural typing system.
+	return nil
+}
+
+func (_ *finalResultImplements) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on package imports
+	// due to structural typing. A type can implement an interface without
+	// importing the interface's package.
+	return may.Unknown
+}
+
+func (_ *finalResultImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on file contents
+	// due to structural typing and type aliases.
+	return may.Unknown
+}
+
+func (fo *finalResultImplements) evaluate(info functionInformation) bool {
+	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
+		// No return values, no match.
+		return false
+	}
+
+	// Ensure the type resolver is available.
+	if info.typeResolver == nil {
+		return false
+	}
+
+	// Resolve the target interface name (e.g., "io.Reader", "error") to a types.Interface.
+	targetInterface, err := typed.ResolveInterfaceTypeByName(fo.InterfaceName)
+	if err != nil {
+		// If the interface name is invalid or cannot be resolved, we cannot match.
+		return false
+	}
+
+	// Check if the last field implements the interface.
+	lastField := info.Type.Results.List[len(info.Type.Results.List)-1]
+	return typed.ExprImplements(info.typeResolver, lastField.Type, targetInterface)
+}
+
+func (fo *finalResultImplements) Hash(h *fingerprint.Hasher) error {
+	return h.Named("final-result-implements", fingerprint.String(fo.InterfaceName))
+}
+
 func init() {
 	unmarshalers["function-body"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		up, err := FromYAML(ctx, node)
@@ -455,6 +588,26 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		case "signature-contains":
 			o.FunctionOption = SignatureContains(args, ret)
 		}
+	case "result-implements":
+		var ifaceName string
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &ifaceName); err != nil {
+			return err
+		}
+		if ifaceName == "" {
+			return fmt.Errorf("line %d: 'result-implements' cannot be empty", node.GetToken().Position.Line)
+		}
+		// NOTE: Validation happens later during type resolution.
+		o.FunctionOption = ResultImplements(ifaceName)
+	case "final-result-implements":
+		var ifaceName string
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &ifaceName); err != nil {
+			return err
+		}
+		if ifaceName == "" {
+			return fmt.Errorf("line %d: 'final-result-implements' cannot be empty", node.GetToken().Position.Line)
+		}
+		// NOTE: Validation happens later during type resolution.
+		o.FunctionOption = FinalResultImplements(ifaceName)
 	default:
 		return fmt.Errorf("unknown FuncDeclOption name: %q", key)
 	}

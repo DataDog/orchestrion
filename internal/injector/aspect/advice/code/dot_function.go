@@ -12,10 +12,10 @@ import (
 	"go/types"
 	"strings"
 
-	"github.com/dave/dst"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/dave/dst"
 )
 
 type (
@@ -162,8 +162,8 @@ func (s signature) ResultThatImplements(name string) (string, error) {
 		return "", nil
 	}
 
-	// Resolve the interface type
-	iface, err := resolveInterfaceTypeByName(name)
+	// Resolve the interface type.
+	iface, err := typed.ResolveInterfaceTypeByName(name)
 	if err != nil {
 		return "", fmt.Errorf("resolving interface type %q: %w", name, err)
 	}
@@ -171,7 +171,7 @@ func (s signature) ResultThatImplements(name string) (string, error) {
 	// Check each result.
 	index := 0
 	for _, field := range s.Results.List {
-		if exprImplements(s.context, field.Type, iface) {
+		if typed.ExprImplements(s.context, field.Type, iface) {
 			return fieldAt(s.Results, index, "result")
 		}
 
@@ -193,7 +193,7 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 	}
 
 	// Resolve the interface type.
-	iface, err := resolveInterfaceTypeByName(name)
+	iface, err := typed.ResolveInterfaceTypeByName(name)
 	if err != nil {
 		return "", fmt.Errorf("resolving interface type %q: %w", name, err)
 	}
@@ -216,7 +216,7 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 	// Loop backward through the results list.
 	for i := len(s.Results.List) - 1; i >= 0; i-- {
 		field := s.Results.List[i]
-		if exprImplements(s.context, field.Type, iface) {
+		if typed.ExprImplements(s.context, field.Type, iface) {
 			// Found a match, return the corresponding field.
 			return fieldAt(s.Results, fieldIndices[field], "result")
 		}
@@ -237,7 +237,7 @@ func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
 	for _, field := range fields.List {
 		if len(field.Names) == 0 {
 			anonymous = true
-			// Give a name to all items (if there are unnamed items, all items are unnamed)
+			// Give a name to all items (if there are unnamed items, all items are unnamed).
 			field.Names = []*dst.Ident{dst.NewIdent("_")}
 		}
 

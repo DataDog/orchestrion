@@ -3,7 +3,7 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package code
+package typed
 
 import (
 	"testing"
@@ -47,7 +47,7 @@ func TestResolveInterfaceTypeByName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			iface, err := resolveInterfaceTypeByName(tc.interfaceName)
+			iface, err := ResolveInterfaceTypeByName(tc.interfaceName)
 
 			if !tc.shouldSucceed {
 				require.Error(t, err)
@@ -133,7 +133,7 @@ func TestSplitPackageAndName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pkg, local := splitPackageAndName(tc.fullName)
+			pkg, local := SplitPackageAndName(tc.fullName)
 			assert.Equal(t, tc.expectedPkg, pkg, "Package path should match")
 			assert.Equal(t, tc.expectedLocal, local, "Local name should match")
 		})
