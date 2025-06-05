@@ -11,7 +11,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice/code"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,23 +19,23 @@ import (
 func TestAppendArgs(t *testing.T) {
 	t.Run("AddedImports", func(t *testing.T) {
 		type testCase struct {
-			argType         join.TypeName
+			argType         typed.TypeName
 			args            []*code.Template
 			expectedImports []string
 		}
 
 		testCases := map[string]testCase{
 			"imports-none": {
-				argType: join.MustTypeName("any"),
+				argType: typed.Any,
 				args:    []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 			},
 			"imports-from-arg-type": {
-				argType:         join.MustTypeName("*net/http.Request"),
+				argType:         typed.MustTypeName("*net/http.Request"),
 				args:            []*code.Template{code.MustTemplate("true", nil, context.GoLangVersion{})},
 				expectedImports: []string{"net/http"},
 			},
 			"imports-from-templates": {
-				argType: join.MustTypeName("any"),
+				argType: typed.Any,
 				args: []*code.Template{
 					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/foo"}, context.GoLangVersion{}),
 					code.MustTemplate("imp.Value", map[string]string{"imp": "github.com/namespace/bar"}, context.GoLangVersion{}),

@@ -11,7 +11,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
-	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
 	"github.com/goccy/go-yaml/ast"
@@ -19,11 +19,11 @@ import (
 
 type addStructField struct {
 	Name     string
-	TypeName join.TypeName
+	TypeName typed.TypeName
 }
 
 // AddStructField adds a new synthetic field at the tail end of a struct declaration.
-func AddStructField(fieldName string, fieldType join.TypeName) *addStructField {
+func AddStructField(fieldName string, fieldType typed.TypeName) *addStructField {
 	return &addStructField{fieldName, fieldType}
 }
 
@@ -47,7 +47,7 @@ func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 		Type:  a.TypeName.AsNode(),
 	})
 
-	if importPath := a.TypeName.ImportPath(); importPath != "" {
+	if importPath := a.TypeName.ImportPath; importPath != "" {
 		// If the type name is qualified, we may need to import the package, too.
 		_ = ctx.AddImport(importPath, inferPkgName(importPath))
 	}
@@ -60,7 +60,7 @@ func (a *addStructField) Hash(h *fingerprint.Hasher) error {
 }
 
 func (a *addStructField) AddedImports() []string {
-	if path := a.TypeName.ImportPath(); path != "" {
+	if path := a.TypeName.ImportPath; path != "" {
 		return []string{path}
 	}
 	return nil
@@ -76,7 +76,7 @@ func init() {
 		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
 		}
-		tn, err := join.NewTypeName(spec.Type)
+		tn, err := typed.NewTypeName(spec.Type)
 		if err != nil {
 			return nil, err
 		}

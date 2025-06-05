@@ -13,31 +13,32 @@ import (
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/dave/dst"
 	"github.com/goccy/go-yaml/ast"
 )
 
 type structDefinition struct {
-	TypeName TypeName
+	TypeName typed.TypeName
 }
 
 // StructDefinition matches the definition of a particular struct given its fully qualified name.
-func StructDefinition(typeName TypeName) *structDefinition {
+func StructDefinition(typeName typed.TypeName) *structDefinition {
 	return &structDefinition{
 		TypeName: typeName,
 	}
 }
 
 func (s *structDefinition) ImpliesImported() []string {
-	if path := s.TypeName.ImportPath(); path != "" {
+	if path := s.TypeName.ImportPath; path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (s *structDefinition) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	if ctx.ImportPath == s.TypeName.ImportPath() {
+	if ctx.ImportPath == s.TypeName.ImportPath {
 		return may.Match
 	}
 
@@ -49,13 +50,13 @@ func (*structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {
 }
 
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
-	if s.TypeName.pointer {
+	if s.TypeName.Pointer {
 		// We can't ever match a pointer definition
 		return false
 	}
 
 	spec, ok := ctx.Node().(*dst.TypeSpec)
-	if !ok || spec.Name == nil || spec.Name.Name != s.TypeName.name {
+	if !ok || spec.Name == nil || spec.Name.Name != s.TypeName.Name {
 		return false
 	}
 
@@ -63,7 +64,7 @@ func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	return ctx.ImportPath() == s.TypeName.path
+	return ctx.ImportPath() == s.TypeName.ImportPath
 }
 
 func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
@@ -73,7 +74,7 @@ func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
 type (
 	StructLiteralMatch int
 	structLiteral      struct {
-		TypeName TypeName
+		TypeName typed.TypeName
 		Field    string
 		Match    StructLiteralMatch
 	}
@@ -93,7 +94,7 @@ const (
 )
 
 // StructLiteralField matches a specific field in struct literals of the designated type.
-func StructLiteralField(typeName TypeName, field string) *structLiteral {
+func StructLiteralField(typeName typed.TypeName, field string) *structLiteral {
 	return &structLiteral{
 		TypeName: typeName,
 		Field:    field,
@@ -102,7 +103,7 @@ func StructLiteralField(typeName TypeName, field string) *structLiteral {
 
 // StructLiteral matches struct literal expressions of the designated type, filtered by the
 // specified match type.
-func StructLiteral(typeName TypeName, match StructLiteralMatch) *structLiteral {
+func StructLiteral(typeName typed.TypeName, match StructLiteralMatch) *structLiteral {
 	return &structLiteral{
 		TypeName: typeName,
 		Match:    match,
@@ -110,14 +111,14 @@ func StructLiteral(typeName TypeName, match StructLiteralMatch) *structLiteral {
 }
 
 func (s *structLiteral) ImpliesImported() []string {
-	if path := s.TypeName.ImportPath(); path != "" {
+	if path := s.TypeName.ImportPath; path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (s *structLiteral) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	return ctx.PackageImports(s.TypeName.ImportPath())
+	return ctx.PackageImports(s.TypeName.ImportPath)
 }
 
 func (*structLiteral) FileMayMatch(_ *may.FileContext) may.MatchType {
@@ -185,11 +186,11 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := NewTypeName(spec)
+		tn, err := typed.NewTypeName(spec)
 		if err != nil {
 			return nil, err
 		}
-		if tn.pointer {
+		if tn.Pointer {
 			return nil, fmt.Errorf("struct-definition type must not be a pointer (got %q)", spec)
 		}
 
@@ -205,7 +206,7 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := NewTypeName(spec.Type)
+		tn, err := typed.NewTypeName(spec.Type)
 		if err != nil {
 			return nil, err
 		}

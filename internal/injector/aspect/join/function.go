@@ -145,26 +145,26 @@ func (fo functionName) Hash(h *fingerprint.Hasher) error {
 }
 
 type signature struct {
-	Arguments []TypeName
-	Results   []TypeName
+	Arguments []typed.TypeName
+	Results   []typed.TypeName
 }
 
 // Signature matches function declarations based on their arguments and return
 // value types.
-func Signature(args []TypeName, ret []TypeName) FunctionOption {
+func Signature(args []typed.TypeName, ret []typed.TypeName) FunctionOption {
 	return &signature{Arguments: args, Results: ret}
 }
 
 func (fo *signature) packageMayMatch(ctx *may.PackageContext) may.MatchType {
 	sum := may.Match
 	for _, candidate := range fo.Arguments {
-		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
+		sum = sum.And(ctx.PackageImports(candidate.ImportPath))
 		if sum == may.NeverMatch {
 			return may.NeverMatch
 		}
 	}
 	for _, candidate := range fo.Results {
-		sum = sum.And(ctx.PackageImports(candidate.ImportPath()))
+		sum = sum.And(ctx.PackageImports(candidate.ImportPath))
 		if sum == may.NeverMatch {
 			return may.NeverMatch
 		}
@@ -178,12 +178,12 @@ func (*signature) fileMayMatch(_ *may.FileContext) may.MatchType {
 
 func (fo *signature) impliesImported() (list []string) {
 	for _, tn := range fo.Arguments {
-		if path := tn.ImportPath(); path != "" {
+		if path := tn.ImportPath; path != "" {
 			list = append(list, path)
 		}
 	}
 	for _, tn := range fo.Results {
-		if path := tn.ImportPath(); path != "" {
+		if path := tn.ImportPath; path != "" {
 			list = append(list, path)
 		}
 	}
@@ -225,8 +225,8 @@ func (fo *signature) evaluate(info functionInformation) bool {
 func (fo *signature) Hash(h *fingerprint.Hasher) error {
 	return h.Named(
 		"signature",
-		fingerprint.List[TypeName](fo.Arguments),
-		fingerprint.List[TypeName](fo.Results),
+		fingerprint.List[typed.TypeName](fo.Arguments),
+		fingerprint.List[typed.TypeName](fo.Results),
 	)
 }
 
@@ -236,15 +236,15 @@ type signatureContains struct {
 
 // SignatureContains matches function declarations based on their arguments and
 // return value types in any order and does not require all arguments or return values to be present.
-func SignatureContains(args []TypeName, ret []TypeName) FunctionOption {
+func SignatureContains(args []typed.TypeName, ret []typed.TypeName) FunctionOption {
 	return &signatureContains{signature{Arguments: args, Results: ret}}
 }
 
 func (fo *signatureContains) Hash(h *fingerprint.Hasher) error {
 	return h.Named(
 		"signature-contains",
-		fingerprint.List[TypeName](fo.Arguments),
-		fingerprint.List[TypeName](fo.Results),
+		fingerprint.List[typed.TypeName](fo.Arguments),
+		fingerprint.List[typed.TypeName](fo.Results),
 	)
 }
 
@@ -262,7 +262,7 @@ func (fo *signatureContains) evaluate(info functionInformation) bool {
 
 // containsAnyType checks if any of the expected types match any of the actual types in the field list.
 // Returns false if either slice is empty or nil.
-func containsAnyType(expectedTypes []TypeName, fieldList *dst.FieldList) bool {
+func containsAnyType(expectedTypes []typed.TypeName, fieldList *dst.FieldList) bool {
 	// Quick return if either side is empty.
 	if len(expectedTypes) == 0 || fieldList == nil || len(fieldList.List) == 0 {
 		return false
@@ -281,15 +281,15 @@ func containsAnyType(expectedTypes []TypeName, fieldList *dst.FieldList) bool {
 }
 
 type receiver struct {
-	TypeName TypeName
+	TypeName typed.TypeName
 }
 
-func Receiver(typeName TypeName) FunctionOption {
+func Receiver(typeName typed.TypeName) FunctionOption {
 	return &receiver{typeName}
 }
 
 func (fo *receiver) packageMayMatch(ctx *may.PackageContext) may.MatchType {
-	if ctx.ImportPath == fo.TypeName.ImportPath() {
+	if ctx.ImportPath == fo.TypeName.ImportPath {
 		return may.Match
 	}
 
@@ -297,7 +297,7 @@ func (fo *receiver) packageMayMatch(ctx *may.PackageContext) may.MatchType {
 }
 
 func (fo *receiver) fileMayMatch(ctx *may.FileContext) may.MatchType {
-	return ctx.FileContains(fo.TypeName.Name())
+	return ctx.FileContains(fo.TypeName.Name)
 }
 
 func (fo *receiver) evaluate(info functionInformation) bool {
@@ -305,7 +305,7 @@ func (fo *receiver) evaluate(info functionInformation) bool {
 }
 
 func (fo *receiver) impliesImported() []string {
-	return []string{fo.TypeName.ImportPath()}
+	return []string{fo.TypeName.ImportPath}
 }
 
 func (fo *receiver) Hash(h *fingerprint.Hasher) error {
@@ -397,6 +397,11 @@ func (fo *resultImplements) evaluate(info functionInformation) bool {
 		return false
 	}
 
+	// Optimization: First, check for an exact match using the helper.
+	if _, found := typed.FindMatchingTypeName(info.Type.Results, fo.InterfaceName); found {
+		return true // Found direct match
+	} // If not found, fall through to type resolution.
+
 	// Ensure the type resolver is available.
 	if info.typeResolver == nil {
 		return false
@@ -461,6 +466,14 @@ func (fo *finalResultImplements) evaluate(info functionInformation) bool {
 		// No return values, no match.
 		return false
 	}
+
+	// Optimization: First, check for an exact match using TypeName parsing.
+	if tn, err := typed.NewTypeName(fo.InterfaceName); err == nil {
+		lastField := info.Type.Results.List[len(info.Type.Results.List)-1]
+		if tn.Matches(lastField.Type) {
+			return true // Found direct match
+		}
+	} // If parsing failed or no match, fall through to type resolution.
 
 	// Ensure the type resolver is available.
 	if info.typeResolver == nil {
@@ -536,7 +549,7 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &arg); err != nil {
 			return err
 		}
-		tn, err := NewTypeName(arg)
+		tn, err := typed.NewTypeName(arg)
 		if err != nil {
 			return err
 		}
@@ -560,23 +573,23 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 			return fmt.Errorf("unexpected keys: %s", strings.Join(keys, ", "))
 		}
 
-		var args []TypeName
+		var args []typed.TypeName
 		if len(sig.Args) > 0 {
-			args = make([]TypeName, len(sig.Args))
+			args = make([]typed.TypeName, len(sig.Args))
 			for i, a := range sig.Args {
 				var err error
-				if args[i], err = NewTypeName(a); err != nil {
+				if args[i], err = typed.NewTypeName(a); err != nil {
 					return err
 				}
 			}
 		}
 
-		var ret []TypeName
+		var ret []typed.TypeName
 		if len(sig.Ret) > 0 {
-			ret = make([]TypeName, len(sig.Ret))
+			ret = make([]typed.TypeName, len(sig.Ret))
 			for i, r := range sig.Ret {
 				var err error
-				if ret[i], err = NewTypeName(r); err != nil {
+				if ret[i], err = typed.NewTypeName(r); err != nil {
 					return err
 				}
 			}
