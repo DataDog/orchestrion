@@ -12,14 +12,13 @@ import (
 	"go/types"
 	"strings"
 
-	"github.com/dave/dst"
-	"github.com/goccy/go-yaml/ast"
-
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/yaml"
+	"github.com/dave/dst"
+	"github.com/goccy/go-yaml/ast"
 )
 
 type (
@@ -373,11 +372,9 @@ func ResultImplements(interfaceName string) FunctionOption {
 	return &resultImplements{InterfaceName: interfaceName}
 }
 
-func (fo *resultImplements) impliesImported() []string {
-	pkgPath, _ := typed.SplitPackageAndName(fo.InterfaceName)
-	if pkgPath != "" {
-		return []string{pkgPath}
-	}
+func (*resultImplements) impliesImported() []string {
+	// A type can implement an interface without importing the interface's package
+	// due to Go's structural typing system.
 	return nil
 }
 
@@ -440,11 +437,9 @@ func FinalResultImplements(interfaceName string) FunctionOption {
 	return &finalResultImplements{InterfaceName: interfaceName}
 }
 
-func (fo *finalResultImplements) impliesImported() []string {
-	pkgPath, _ := typed.SplitPackageAndName(fo.InterfaceName)
-	if pkgPath != "" {
-		return []string{pkgPath}
-	}
+func (*finalResultImplements) impliesImported() []string {
+	// A type can implement an interface without importing the interface's package
+	// due to Go's structural typing system.
 	return nil
 }
 

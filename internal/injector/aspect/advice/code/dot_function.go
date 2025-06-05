@@ -12,11 +12,10 @@ import (
 	"go/types"
 	"strings"
 
-	"github.com/dave/dst"
-
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
+	"github.com/dave/dst"
 )
 
 type (
