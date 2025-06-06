@@ -8,6 +8,7 @@ package code
 import (
 	"errors"
 	"fmt"
+	"go/types"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
@@ -28,6 +29,9 @@ type (
 		// ArgumentOfType returns the name of the first argument in this function that has the provided
 		// type, or an empty string if none is found.
 		ArgumentOfType(string) (string, error)
+		// ArgumentThatImplements returns the name of the first argument in this function that implements
+		// the provided interface type, or an empty string if none is found.
+		ArgumentThatImplements(string) (string, error)
 
 		// Result returns the name of the return value at the given index in this function's type,
 		// returning an error if the index is out of bounds.
@@ -111,6 +115,10 @@ func (noFunc) ArgumentOfType(string) (string, error) {
 	return "", errNoFunction
 }
 
+func (noFunc) ArgumentThatImplements(string) (string, error) {
+	return "", errNoFunction
+}
+
 func (noFunc) Result(int) (string, error) {
 	return "", errNoFunction
 }
@@ -144,6 +152,10 @@ func (s signature) ArgumentOfType(name string) (string, error) {
 	return fieldOfType(s.Params, name, "argument")
 }
 
+func (s signature) ArgumentThatImplements(interfaceName string) (string, error) {
+	return findImplementingField(s.context, s.Params, interfaceName, "argument")
+}
+
 func (s signature) Result(index int) (name string, err error) {
 	return fieldAt(s.Results, index, "result")
 }
@@ -152,39 +164,8 @@ func (s signature) ResultOfType(name string) (string, error) {
 	return fieldOfType(s.Results, name, "result")
 }
 
-func (s signature) ResultThatImplements(name string) (string, error) {
-	// Return blank if there are no results.
-	if s.Results == nil {
-		return "", nil
-	}
-
-	// Optimization: First, check for an exact match using the helper.
-	if index, found := typed.FindMatchingTypeName(s.Results, name); found {
-		return fieldAt(s.Results, index, "result")
-	} // If not found, fall through to type resolution.
-
-	// Resolve the interface type.
-	iface, err := typed.ResolveInterfaceTypeByName(name)
-	if err != nil {
-		return "", fmt.Errorf("resolving interface type %q: %w", name, err)
-	}
-
-	// Check each result.
-	index := 0
-	for _, field := range s.Results.List {
-		if typed.ExprImplements(s.context, field.Type, iface) {
-			return fieldAt(s.Results, index, "result")
-		}
-
-		count := len(field.Names)
-		if count == 0 {
-			count = 1
-		}
-		index += count
-	}
-
-	// Not found.
-	return "", nil
+func (s signature) ResultThatImplements(interfaceName string) (string, error) {
+	return findImplementingField(s.context, s.Results, interfaceName, "result")
 }
 
 func (s signature) LastResultThatImplements(name string) (string, error) {
@@ -277,11 +258,19 @@ func fieldAt(fields *dst.FieldList, index int, use string) (string, error) {
 		}
 	}
 
-	if idx < index {
-		return "", fmt.Errorf("index out of bounds: %d (only %d items)", index, idx+1)
+	if idx <= index { // Use <= to catch index being exactly the number of items
+		return "", fmt.Errorf("index out of bounds: %d (only %d items)", index, idx)
 	}
 
-	return name, nil
+	// If anonymous, we should have assigned the synthetic name earlier.
+	// If named, it should have been returned immediately.
+	// If we reach here and it was anonymous, we return the generated name.
+	if anonymous {
+		return name, nil
+	}
+
+	// This path should ideally not be reached for named parameters if logic is correct.
+	return "", fmt.Errorf("fieldAt: failed to find field at index %d", index)
 }
 
 func fieldOfType(fields *dst.FieldList, typeName string, use string) (string, error) {
@@ -335,4 +324,43 @@ func (s signature) FinalResultImplements(interfaceName string) (bool, error) {
 
 	// Check if the last field type implements the interface.
 	return typed.ExprImplements(s.context, lastField.Type, iface), nil
+}
+
+// findImplementingField is a helper to find the first field in a list that matches
+// an interface, either by exact type name or by implementation.
+func findImplementingField(ctx context.AdviceContext, fields *dst.FieldList, interfaceName string, fieldKind string) (string, error) {
+	if fields == nil {
+		return "", nil // No fields, no match.
+	}
+
+	// 1. Check for exact type name match first.
+	if index, found := typed.FindMatchingTypeName(fields, interfaceName); found {
+		return fieldAt(fields, index, fieldKind)
+	}
+
+	// 2. If no exact name match, check for interface implementation.
+	iface, err := typed.ResolveInterfaceTypeByName(interfaceName)
+	if err != nil {
+		// Invalid interface name, cannot proceed with implementation check.
+		return "", fmt.Errorf("resolving interface type %q: %w", interfaceName, err)
+	}
+
+	// Iterate through fields to check for implementation.
+	currentIndex := 0
+	for _, field := range fields.List {
+		actualType := ctx.ResolveType(field.Type)
+		if actualType != nil && types.Implements(actualType, iface) {
+			return fieldAt(fields, currentIndex, fieldKind)
+		}
+
+		// Increment index based on field names.
+		count := len(field.Names)
+		if count == 0 {
+			count = 1
+		}
+		currentIndex += count
+	}
+
+	// 3. No match found.
+	return "", nil
 }

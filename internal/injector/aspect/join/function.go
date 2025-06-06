@@ -391,39 +391,39 @@ func (_ *resultImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Unknown
 }
 
-func (fo *resultImplements) evaluate(info functionInformation) bool {
-	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
-		// No return values, no match.
+// evaluateFieldListImplements checks if any field in the list matches the interfaceName,
+// either by exact type name or by interface implementation.
+func evaluateFieldListImplements(fields *dst.FieldList, interfaceName string, info functionInformation) bool {
+	if fields == nil || len(fields.List) == 0 {
 		return false
 	}
 
 	// Optimization: First, check for an exact match using the helper.
-	if _, found := typed.FindMatchingTypeName(info.Type.Results, fo.InterfaceName); found {
+	if _, found := typed.FindMatchingTypeName(fields, interfaceName); found {
 		return true // Found direct match
-	} // If not found, fall through to type resolution.
+	}
 
-	// Ensure the type resolver is available.
+	// If no exact match, check implementation (requires type resolver).
 	if info.typeResolver == nil {
-		return false
+		return false // Cannot check implementation without resolver.
 	}
 
-	// Resolve the target interface name (e.g., "io.Reader", "error") to a types.Interface.
-	targetInterface, err := typed.ResolveInterfaceTypeByName(fo.InterfaceName)
+	targetInterface, err := typed.ResolveInterfaceTypeByName(interfaceName)
 	if err != nil {
-		// If the interface name is invalid or cannot be resolved, we cannot match.
-		return false
+		return false // Invalid interface name.
 	}
 
-	for _, field := range info.Type.Results.List {
-		// For each return type (dst.Expr), resolve it to types.Type using the provided resolver
-		// and check if it implements the target interface.
+	for _, field := range fields.List {
 		if typed.ExprImplements(info.typeResolver, field.Type, targetInterface) {
-			return true // Found at least one implementing type, match!
+			return true // Found an implementing type.
 		}
 	}
 
-	// No return type matched.
-	return false
+	return false // No match found.
+}
+
+func (fo *resultImplements) evaluate(info functionInformation) bool {
+	return evaluateFieldListImplements(info.Type.Results, fo.InterfaceName, info)
 }
 
 func (fo *resultImplements) Hash(h *fingerprint.Hasher) error {
@@ -494,6 +494,47 @@ func (fo *finalResultImplements) evaluate(info functionInformation) bool {
 
 func (fo *finalResultImplements) Hash(h *fingerprint.Hasher) error {
 	return h.Named("final-result-implements", fingerprint.String(fo.InterfaceName))
+}
+
+// argumentImplements matches functions where at least one argument's type
+// implements the specified interface.
+type argumentImplements struct {
+	InterfaceName string
+}
+
+// ArgumentImplements creates a FunctionOption that matches functions where at least one
+// argument implements the named interface.
+func ArgumentImplements(interfaceName string) FunctionOption {
+	return &argumentImplements{InterfaceName: interfaceName}
+}
+
+func (fo *argumentImplements) impliesImported() []string {
+	pkgPath, _ := typed.SplitPackageAndName(fo.InterfaceName)
+	if pkgPath != "" {
+		return []string{pkgPath}
+	}
+	return nil
+}
+
+func (_ *argumentImplements) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on package imports
+	// due to structural typing. A type can implement an interface without
+	// importing the interface's package.
+	return may.Unknown
+}
+
+func (_ *argumentImplements) fileMayMatch(_ *may.FileContext) may.MatchType {
+	// Cannot reliably determine possibility of match based on file contents
+	// due to structural typing and type aliases.
+	return may.Unknown
+}
+
+func (fo *argumentImplements) evaluate(info functionInformation) bool {
+	return evaluateFieldListImplements(info.Type.Params, fo.InterfaceName, info)
+}
+
+func (fo *argumentImplements) Hash(h *fingerprint.Hasher) error {
+	return h.Named("argument-implements", fingerprint.String(fo.InterfaceName))
 }
 
 func init() {
@@ -621,6 +662,15 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		}
 		// NOTE: Validation happens later during type resolution.
 		o.FunctionOption = FinalResultImplements(ifaceName)
+	case "argument-implements":
+		var ifaceName string
+		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &ifaceName); err != nil {
+			return err
+		}
+		if ifaceName == "" {
+			return fmt.Errorf("line %d: 'argument-implements' cannot be empty", node.GetToken().Position.Line)
+		}
+		o.FunctionOption = ArgumentImplements(ifaceName)
 	default:
 		return fmt.Errorf("unknown FuncDeclOption name: %q", key)
 	}
