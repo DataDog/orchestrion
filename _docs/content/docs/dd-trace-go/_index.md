@@ -44,7 +44,7 @@ import (
 
 Once `orchestrion pin` has been run, you can replace the import of
 {{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1">}} with imports for
-specific integration packages (see the [Integrations](./integrations) section
+specific integration packages (see the [Integrations](./v2) section
 for a list of available packages).
 
 For example, the below only activates integrations for the core tracer library,
