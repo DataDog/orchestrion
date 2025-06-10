@@ -25,7 +25,7 @@ require (
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gocql/gocql v1.7.0
-	github.com/gofiber/fiber/v2 v2.52.6
+	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/gomodule/redigo v1.9.2
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/jackc/pgx/v5 v5.7.4

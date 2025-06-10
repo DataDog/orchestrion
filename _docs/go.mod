@@ -31,7 +31,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/goccy/go-yaml v1.17.1
 	github.com/gocql/gocql v1.7.0
-	github.com/gofiber/fiber/v2 v2.52.6
+	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/gohugoio/hugo v0.143.1
 	github.com/gomodule/redigo v1.9.2
 	github.com/gorilla/mux v1.8.1
