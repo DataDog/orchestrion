@@ -11,8 +11,8 @@ import (
 	"log"
 	"net/http"
 //line <generated>:1
-	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
+	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	__orchestrion_profiler "github.com/DataDog/dd-trace-go/v2/profiler"
 	__orchestrion_os "os"
 )
 
@@ -64,9 +64,7 @@ func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 // comment that is just hanging out unattached
 //
 //line <generated>:1
-func init() {
-	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-}
+func init() { __orchestrion_tracer.Start() }
 func init() {
 	switch __orchestrion_os.Getenv("DD_PROFILING_ENABLED") {
 	case "1", "true", "auto":

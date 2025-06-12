@@ -7,10 +7,10 @@
 
 package instrument
 
-// This merely forwards integrations from the `gopkg.in/DataDog/dd-trace-go.v1`
+// This merely forwards integrations from the `github.com/DataDog/dd-trace-go/orchestrion/all/v2`
 // package. This is only present as a way to ease migrations of the integrations
 // to the `dd-trace-go` package.
 import (
-	_ "github.com/DataDog/orchestrion"  // integration
-	_ "gopkg.in/DataDog/dd-trace-go.v1" // integration
+	_ "github.com/DataDog/dd-trace-go/orchestrion/all/v2" // integration
+	_ "github.com/DataDog/orchestrion"                    // integration
 )

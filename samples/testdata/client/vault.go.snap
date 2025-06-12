@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 //line <generated>:1
-	__orchestrion_vaulttrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault"
+	__orchestrion_vaulttrace "github.com/DataDog/dd-trace-go/contrib/hashicorp/vault/v2"
 )
 
 //line samples/client/vault.go:14

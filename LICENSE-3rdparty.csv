@@ -10,7 +10,7 @@ orchestrion,github.com/DataDog/datadog-agent/pkg/util/scrubber,Apache-2.0,"Copyr
 orchestrion,github.com/DataDog/datadog-agent/pkg/version,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-go/v5/statsd,MIT,"Copyright (c) 2015 Datadog, Inc"
 orchestrion,github.com/DataDog/dd-trace-go/v2,Apache-2.0,"Copyright 2016 Datadog, Inc. | Copyright (c) 2016-Present, Datadog <info@datadoghq.com> | Copyright 2016-Present Datadog, Inc."
-orchestrion,github.com/DataDog/go-libddwaf/v3,Apache-2.0,"Copyright 2016-present Datadog, Inc."
+orchestrion,github.com/DataDog/go-libddwaf/v4,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/go-runtime-metrics-internal/pkg/runtimemetrics,Apache-2.0,"Copyright 2024-2024 Datadog, Inc."
 orchestrion,github.com/DataDog/go-sqllexer,MIT,"Copyright (c) 2023 Datadog, Inc."
 orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,"Copyright (c) 2014-2020 Prime Directive, Inc. All rights reserved."

@@ -74,8 +74,7 @@ is the case for:
 
 {{<callout type="info">}}
 This feature is provided by the core tracer integration:
-- Tracer v1: [`gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer`](../v1/ddtrace-tracer)
-- Tracer v2: [`github.com/DataDog/dd-trace-go/v2/ddtrace/tracer`](../v2/ddtrace-tracer)
+[`github.com/DataDog/dd-trace-go/v2/ddtrace/tracer`](../v2/ddtrace-tracer)
 {{</callout>}}
 
 Any function annotated with the `//dd:span` directive will result in a trace

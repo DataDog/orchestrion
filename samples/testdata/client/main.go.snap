@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 //line <generated>:1
-	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
-	__orchestrion_profiler "gopkg.in/DataDog/dd-trace-go.v1/profiler"
+	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	__orchestrion_profiler "github.com/DataDog/dd-trace-go/v2/profiler"
 	__orchestrion_log "log"
 )
 
@@ -29,7 +29,7 @@ func main() {
 	}
 	{
 		ctx := context.TODO()
-		var span __orchestrion_tracer.Span
+		var span *__orchestrion_tracer.Span
 		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "main",
 			__orchestrion_tracer.Tag("function-name", "main"),
 		)
@@ -69,9 +69,7 @@ func main() {
 }
 
 //line <generated>:1
-func init() {
-	__orchestrion_tracer.Start(__orchestrion_tracer.WithOrchestrion(map[string]string{"version": "<version.Tag>"}))
-}
+func init() { __orchestrion_tracer.Start() }
 func init() {
 	switch os.Getenv("DD_PROFILING_ENABLED") {
 	case "1", "true", "auto":

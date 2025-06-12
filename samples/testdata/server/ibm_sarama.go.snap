@@ -10,7 +10,7 @@ import (
 	"github.com/IBM/sarama"
 
 //line <generated>:1
-	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1"
+	__orchestrion_saramatrace "github.com/DataDog/dd-trace-go/contrib/IBM/sarama/v2"
 )
 
 //line samples/server/ibm_sarama.go:10

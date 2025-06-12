@@ -15,7 +15,7 @@ import (
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 //line <generated>:1
-	__orchestrion_gqlgentrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen"
+	__orchestrion_gqlgentrace "github.com/DataDog/dd-trace-go/contrib/99designs/gqlgen/v2"
 )
 
 //line samples/server/graphqlgen.go:18

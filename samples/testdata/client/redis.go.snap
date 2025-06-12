@@ -17,11 +17,11 @@ import (
 	redigo "github.com/gomodule/redigo/redis"
 	redisv9 "github.com/redis/go-redis/v9"
 //line <generated>:1
-	__orchestrion_trace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis"
-	__orchestrion_trace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7"
-	__orchestrion_trace2 "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
-	__orchestrion_redigotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo"
-	__orchestrion_trace3 "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9"
+	__orchestrion_trace "github.com/DataDog/dd-trace-go/contrib/go-redis/redis.v7/v2"
+	__orchestrion_trace1 "github.com/DataDog/dd-trace-go/contrib/go-redis/redis.v8/v2"
+	__orchestrion_trace2 "github.com/DataDog/dd-trace-go/contrib/go-redis/redis/v2"
+	__orchestrion_redigotrace "github.com/DataDog/dd-trace-go/contrib/gomodule/redigo/v2"
+	__orchestrion_trace3 "github.com/DataDog/dd-trace-go/contrib/redis/go-redis.v9/v2"
 )
 
 //line samples/client/redis.go:20
@@ -33,7 +33,7 @@ func redisV0Client() {
 //line samples/client/redis.go:21
 				redisv0.NewClient(&redisv0.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>:1
-			__orchestrion_trace.WrapClient(client)
+			__orchestrion_trace2.WrapClient(client)
 			return
 		}()
 //line samples/client/redis.go:22
@@ -51,7 +51,7 @@ func redisV7Client() {
 //line samples/client/redis.go:29
 				redisv7.NewClient(&redisv7.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>:1
-			__orchestrion_trace1.WrapClient(client)
+			__orchestrion_trace.WrapClient(client)
 			return
 		}()
 //line samples/client/redis.go:30
@@ -69,7 +69,7 @@ func redisV8Client(ctx context.Context) {
 //line samples/client/redis.go:37
 				redisv8.NewClient(&redisv8.Options{Addr: "127.0.0.1", Password: "", DB: 0})
 //line <generated>:1
-			__orchestrion_trace2.WrapClient(client)
+			__orchestrion_trace1.WrapClient(client)
 			return
 		}()
 //line samples/client/redis.go:38

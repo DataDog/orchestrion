@@ -24,13 +24,11 @@ jobs:
           go-version: oldstable # Minimum supported go release
           cache-dependency-path: '**/go.mod'
 
-      # Select the latest available version of gopkg.in/DataDog/dd-trace-go.v1, while ignoring all
-      # the `v1.999.*` versions, which are experimental pre-releases.
-      - name: Determine gopkg.in/DataDog/dd-trace-go.v1 version
+      - name: Determine latest github.com/DataDog/dd-trace-go/v2 version
         id: dd-trace-go
         run: |-
           set -euo pipefail
-          version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions gopkg.in/DataDog/dd-trace-go.v1 | grep -v -E '^v1\.999\.' | tail -n 1)
+          version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions github.com/DataDog/dd-trace-go/v2 | tail -n 1)
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
@@ -41,7 +39,7 @@ jobs:
         run: |-
           for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
             dir="$(dirname "${gomod}")"
-            go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "gopkg.in/DataDog/dd-trace-go.v1@${{ steps.dd-trace-go.outputs.version }}" ./...
+            go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "github.com/DataDog/dd-trace-go/v2@${{ steps.dd-trace-go.outputs.version }}" ./...
           done
       - name: Run go mod tidy
         run: |-
