@@ -23,11 +23,10 @@ code, and will disable all `orchestrion` instrumentation in the annotated syntax
 tree.
 
 {{<callout emoji="⚠️">}}
-Library-side (also known as callee-side) instrumentation cannot be opted out of
-using `//orchestrion:ignore`. Refer to the [README document][readme] to learn
-about which integrations are library-side.
+Beware that not all integrations can be opted out for using `//orchestrion:ignore`. Please refer to
+[remove an integration][remove] for more information.
 
-[readme]: https://github.com/DataDog/orchestrion#supported-libraries
+[remove]: ../configuration.md#remove-an-integration
 {{</callout>}}
 
 For example:
