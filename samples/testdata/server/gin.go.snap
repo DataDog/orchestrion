@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 //line <generated>:1
-	__orchestrion_gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
+	__orchestrion_gintrace "github.com/DataDog/dd-trace-go/contrib/gin-gonic/gin/v2"
 )
 
 //line samples/server/gin.go:14

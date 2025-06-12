@@ -772,14 +772,14 @@
           {
             "prepend-statements": {
               "imports": {
-                "ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
-                "ext": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext",
-                "globalconfig": "gopkg.in/DataDog/dd-trace-go.v1/internal/globalconfig",
+                "ddtrace": "github.com/DataDog/dd-trace-go/v2/ddtrace",
+                "ext": "github.com/DataDog/dd-trace-go/v2/ddtrace/ext",
+                "globalconfig": "github.com/DataDog/dd-trace-go/v2/internal/globalconfig",
                 "http": "net/http",
-                "internal": "gopkg.in/DataDog/dd-trace-go.v1/internal",
+                "internal": "github.com/DataDog/dd-trace-go/v2/internal",
                 "math": "math",
-                "namingschema": "gopkg.in/DataDog/dd-trace-go.v1/internal/namingschema",
-                "tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+                "namingschema": "github.com/DataDog/dd-trace-go/v2/internal/namingschema",
+                "tracer": "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
               },
               "template": "{{- $res := .Function.Result 0 -}}\ndefer func() {\n  var analyticsRate float64\n  if internal.BoolEnv(\"DD_TRACE_MUX_ANALYTICS_ENABLED\", false) {\n    analyticsRate = 1.0\n  } else {\n    analyticsRate = globalconfig.AnalyticsRate()\n  }\n\n  {{ $res }}.__dd_config.headerTags = globalconfig.HeaderTagMap()\n  {{ $res }}.__dd_config.ignoreRequest = func(*http.Request) bool { return false }\n  {{ $res }}.__dd_config.resourceNamer = ddDefaultResourceNamer\n  {{ $res }}.__dd_config.serviceName = namingschema.ServiceName(\"mux.router\")\n  {{ $res }}.__dd_config.spanOpts = []ddtrace.StartSpanOption{\n    tracer.Tag(ext.Component, \"gorilla/mux\"),\n    tracer.Tag(ext.SpanKind, ext.SpanKindServer),\n  }\n  if !math.IsNaN(analyticsRate) {\n    {{ $res }}.__dd_config.spanOpts = append(\n      {{ $res }}.__dd_config.spanOpts,\n      tracer.Tag(ext.EventSampleRate, analyticsRate),\n    )\n  }\n}()"
             }
@@ -821,14 +821,14 @@
                 {
                   "imports": {
                     "grpc": "google.golang.org/grpc",
-                    "grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+                    "grpctrace": "github.com/DataDog/dd-trace-go/contrib/google.golang.org/grpc/v2"
                   },
                   "template": "grpc.WithStreamInterceptor(grpctrace.StreamClientInterceptor())"
                 },
                 {
                   "imports": {
                     "grpc": "google.golang.org/grpc",
-                    "grpctrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+                    "grpctrace": "github.com/DataDog/dd-trace-go/contrib/google.golang.org/grpc/v2"
                   },
                   "template": "grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor())"
                 }
@@ -849,7 +849,7 @@
         },
         "examples": [
           {
-            "replace-function": "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1.Open"
+            "replace-function": "github.com/DataDog/dd-trace-go/contrib/gorm.io/gorm.v1/v2.Open"
           }
         ]
       },
@@ -894,24 +894,24 @@
             "inject-declarations": {
               "imports": {
                 "context": "context",
-                "ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace"
+                "ddtrace": "github.com/DataDog/dd-trace-go/v2/ddtrace"
               },
               "links": [
-                "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec",
-                "gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec",
-                "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+                "github.com/DataDog/dd-trace-go/v2/internal/appsec",
+                "github.com/DataDog/dd-trace-go/v2/internal/appsec/emitter/httpsec",
+                "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
               ],
-              "template": "//go:linkname __dd_appsec_RASPEnabled gopkg.in/DataDog/dd-trace-go.v1/internal/appsec.RASPEnabled\nfunc __dd_appsec_RASPEnabled() bool\n\n//go:linkname __dd_httpsec_ProtectRoundTrip gopkg.in/DataDog/dd-trace-go.v1/internal/appsec/emitter/httpsec.ProtectRoundTrip\nfunc __dd_httpsec_ProtectRoundTrip(context.Context, string) error\n\n//go:linkname __dd_tracer_SpanType gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.SpanType\nfunc __dd_tracer_SpanType(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_ResourceName gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.ResourceName\nfunc __dd_tracer_ResourceName(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_Tag gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Tag\nfunc __dd_tracer_Tag(string, any) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_StartSpanFromContext gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.StartSpanFromContext\nfunc __dd_tracer_StartSpanFromContext(context.Context, string, ...ddtrace.StartSpanOption) (ddtrace.Span, context.Context)\n\n//go:linkname __dd_tracer_WithError gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.WithError\nfunc __dd_tracer_WithError(error) ddtrace.FinishOption\n\n//go:linkname __dd_tracer_Inject gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer.Inject\nfunc __dd_tracer_Inject(ddtrace.SpanContext, any) error\n\ntype __dd_tracer_HTTPHeadersCarrier Header\nfunc (c __dd_tracer_HTTPHeadersCarrier) Set(key, val string) {\n  Header(c).Set(key, val)\n}\n"
+              "template": "//go:linkname __dd_appsec_RASPEnabled github.com/DataDog/dd-trace-go/v2/internal/appsec.RASPEnabled\nfunc __dd_appsec_RASPEnabled() bool\n\n//go:linkname __dd_httpsec_ProtectRoundTrip github.com/DataDog/dd-trace-go/v2/internal/appsec/emitter/httpsec.ProtectRoundTrip\nfunc __dd_httpsec_ProtectRoundTrip(context.Context, string) error\n\n//go:linkname __dd_tracer_SpanType github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.SpanType\nfunc __dd_tracer_SpanType(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_ResourceName github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.ResourceName\nfunc __dd_tracer_ResourceName(string) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_Tag github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.Tag\nfunc __dd_tracer_Tag(string, any) ddtrace.StartSpanOption\n\n//go:linkname __dd_tracer_StartSpanFromContext github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.StartSpanFromContext\nfunc __dd_tracer_StartSpanFromContext(context.Context, string, ...ddtrace.StartSpanOption) (ddtrace.Span, context.Context)\n\n//go:linkname __dd_tracer_WithError github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.WithError\nfunc __dd_tracer_WithError(error) ddtrace.FinishOption\n\n//go:linkname __dd_tracer_Inject github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.Inject\nfunc __dd_tracer_Inject(ddtrace.SpanContext, any) error\n\ntype __dd_tracer_HTTPHeadersCarrier Header\nfunc (c __dd_tracer_HTTPHeadersCarrier) Set(key, val string) {\n  Header(c).Set(key, val)\n}\n"
             }
           },
           {
             "inject-declarations": {
               "imports": {
-                "ddtrace": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace",
+                "ddtrace": "github.com/DataDog/dd-trace-go/v2/ddtrace",
                 "http": "net/http",
-                "internal": "gopkg.in/DataDog/dd-trace-go.v1/internal",
-                "telemetry": "gopkg.in/DataDog/dd-trace-go.v1/internal/telemetry",
-                "tracer": "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+                "internal": "github.com/DataDog/dd-trace-go/v2/internal",
+                "telemetry": "github.com/DataDog/dd-trace-go/v2/internal/telemetry",
+                "tracer": "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
               },
               "template": "type ddRouterConfig struct {\n  ignoreRequest func(*http.Request) bool\n  headerTags    *internal.LockMap\n  resourceNamer func(*Router, *http.Request) string\n  serviceName   string\n  spanOpts      []ddtrace.StartSpanOption\n}\n\nfunc ddDefaultResourceNamer(router *Router, req *http.Request) string {\n  var (\n    match RouteMatch\n    route = \"unknown\"\n  )\n  if router.Match(req, &match) && match.Route != nil {\n    if r, err := match.Route.GetPathTemplate(); err == nil {\n      route = r\n    }\n  }\n  return fmt.Sprintf(\"%s %s\", req.Method, route)\n}\n\nfunc init() {\n  telemetry.LoadIntegration(\"gorilla/mux\")\n  tracer.MarkIntegrationImported(\"github.com/gorilla/mux\")\n}"
             }
@@ -950,7 +950,7 @@
           {
             "add-struct-field": {
               "name": "clientOptions",
-              "type": "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6.ClientOption"
+              "type": "github.com/DataDog/dd-trace-go/contrib/elastic/v2/go-elasticsearch.v6.ClientOption"
             }
           }
         ]
@@ -971,7 +971,7 @@
             "wrap-expression": {
               "imports": {
                 "options": "go.mongodb.org/mongo-driver/mongo/options",
-                "mongotrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo"
+                "mongotrace": "github.com/DataDog/dd-trace-go/contrib/go.mongodb.org/mongo-driver/v2/mongo"
               },
               "template": "{{ . }}.SetMonitor(mongotrace.NewMonitor())"
             }
@@ -980,7 +980,7 @@
             "wrap-expression": {
               "imports": {
                 "chi": "github.com/go-chi/chi",
-                "chitrace": "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi"
+                "chitrace": "github.com/DataDog/dd-trace-go/contrib/go-chi/chi/v2"
               },
               "template": "func() *chi.Mux {\n\tmux := {{ . }}\n\tmux.Use(chitrace.Middleware())\n\treturn mux\n}()"
             }

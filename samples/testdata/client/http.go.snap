@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"strings"
 //line <generated>:1
-	__orchestrion_client "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http/client"
+	__orchestrion_client "github.com/DataDog/dd-trace-go/contrib/net/http/v2/client"
 )
 
 //line samples/client/http.go:16

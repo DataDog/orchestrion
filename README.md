@@ -40,14 +40,14 @@ Information on how to get started quickly with orchestrion can be found on the [
 
 ## Datadog Tracer Integrations
 
-Importing `gopkg.in/DataDog/dd-trace-go.v1` (version `v1.72.0-rc.1` or later is required) in the project root's
+Importing `github.com/DataDog/dd-trace-go/v2` in the project root's
 `orchestrion.tool.go` file enables automatic instrumentation of all supported integrations, which are listed on the
 [documentation site][docsite]. You can cherry-pick which integrations are enabled by `orchestrion` by importing the
 desired integrations' package paths instead of importing the tracer's root module.
 
 > [!TIP]
 > Orchestrion is a vendor-agnostic tool. By default, `orchestrion pin` enables Datadog's tracer integrations by
-> importing `gopkg.in/DataDog/dd-trace-go.v1` in `orchestrion.tool.go`, but other vendors (such as OpenTelemetry) may
+> importing `github.com/DataDog/dd-trace-go/v2` in `orchestrion.tool.go`, but other vendors (such as OpenTelemetry) may
 > provide alternate integrations that can be used instead.
 
 [docsite]: https://docs.datadoghq.com/tracing/trace_collection/compatibility/go/?tab=v1

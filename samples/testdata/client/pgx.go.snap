@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 //line <generated>:1
-	__orchestrion_pgx "gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5"
+	__orchestrion_v2 "github.com/DataDog/dd-trace-go/contrib/jackc/pgx.v5/v2"
 )
 
 //line samples/client/pgx.go:15
@@ -24,7 +24,7 @@ func pgxExample() {
 		err  error
 	)
 
-	conn, err = __orchestrion_pgx.Connect(ctx, dbURL)
+	conn, err = __orchestrion_v2.Connect(ctx, dbURL)
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +32,7 @@ func pgxExample() {
 	if err != nil {
 		panic(err)
 	}
-	conn, err = __orchestrion_pgx.ConnectConfig(ctx, cfg)
+	conn, err = __orchestrion_v2.ConnectConfig(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func pgxPoolExample() {
 		err  error
 	)
 
-	pool, err = __orchestrion_pgx.NewPool(ctx, dbURL)
+	pool, err = __orchestrion_v2.NewPool(ctx, dbURL)
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func pgxPoolExample() {
 	if err != nil {
 		panic(err)
 	}
-	pool, err = __orchestrion_pgx.NewPoolWithConfig(ctx, cfg)
+	pool, err = __orchestrion_v2.NewPoolWithConfig(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}

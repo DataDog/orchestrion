@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 //line <generated>:1
-	__orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 )
 
 //line samples/server/other_handlers.go:18
@@ -80,7 +80,7 @@ func buildHandlers() {
 func myFunc(__argument__0 context.Context, name string) {
 //line <generated>:1
 	{
-		var span __orchestrion_tracer.Span
+		var span *__orchestrion_tracer.Span
 		span, __argument__0 = __orchestrion_tracer.StartSpanFromContext(__argument__0, "myFunc",
 			__orchestrion_tracer.Tag("function-name", "myFunc"),
 			__orchestrion_tracer.Tag("foo", "bar"),
@@ -98,7 +98,7 @@ func myFunc2(name string, __argument__1 *http.Request) {
 //line <generated>:1
 	{
 		ctx := __argument__1.Context()
-		var span __orchestrion_tracer.Span
+		var span *__orchestrion_tracer.Span
 		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "myFunc2",
 			__orchestrion_tracer.Tag("function-name", "myFunc2"),
 			__orchestrion_tracer.Tag("foo2", "bar2"),
@@ -117,7 +117,7 @@ func myFunc3(name string) (__result__0 error) {
 //line <generated>:1
 	{
 		ctx := context.TODO()
-		var span __orchestrion_tracer.Span
+		var span *__orchestrion_tracer.Span
 		span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "customName",
 			__orchestrion_tracer.Tag("function-name", "myFunc3"),
 			__orchestrion_tracer.Tag("foo3", "bar3"),

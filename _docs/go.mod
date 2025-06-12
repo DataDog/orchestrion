@@ -120,6 +120,7 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/sirupsen/logrus/v2 v2.0.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2 v2.0.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.0.0 // indirect
+	github.com/DataDog/dd-trace-go/instrumentation/testutils/grpc/v2 v2.0.0 // indirect
 	github.com/DataDog/dd-trace-go/v2 v2.0.0 // indirect
 	github.com/DataDog/go-libddwaf/v3 v3.5.4 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250319104955-81009b9bad14 // indirect
@@ -416,7 +417,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250409194420-de1ac958c67a // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
-	gopkg.in/DataDog/dd-trace-go.v1 v1.73.1 // indirect
+	gopkg.in/DataDog/dd-trace-go.v1 v1.74.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
