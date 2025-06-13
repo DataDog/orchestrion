@@ -8,282 +8,7 @@ imports:
         - built.WithOrchestrionVersion
   - pkgpath: gopkg.in/DataDog/dd-trace-go.v1
     imports:
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - New
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewConsumer
-            - NewSyncProducer
-            - NewAsyncProducer
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewConsumer
-            - NewSyncProducer
-            - NewAsyncProducer
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Config
-            - '*Config'
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - session.NewSession
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Subscription.Receive
-            - PublishResult
-            - Topic.Publish
-            - PublishResult.Get
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Consumer
-            - NewConsumer
-            - Consumer.Close
-            - Consumer.Events
-            - Consumer.Poll
-            - Consumer.Commit
-            - Consumer.CommitMessage
-            - Consumer.CommitOffsets
-            - Producer
-            - Producer.Events
-            - Producer.ProduceChannel
-            - Producer.Close
-            - Producer.Produce
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Consumer
-            - NewConsumer
-            - Consumer.Close
-            - Consumer.Events
-            - Consumer.Poll
-            - Consumer.Commit
-            - Consumer.CommitMessage
-            - Consumer.CommitOffsets
-            - Producer
-            - Producer.Events
-            - Producer.ProduceChannel
-            - Producer.Close
-            - Producer.Produce
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - sql.Register
-            - sql.Open
-            - sql.OpenDB
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - v6.Config
-            - '*v6.Config'
-            - v7.Config
-            - '*v7.Config'
-            - v8.Config
-            - '*v8.Config'
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - New
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewMux
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewMux
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewClient
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewClient
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewClient
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Client
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - ClusterConfig
-            - '*ClusterConfig'
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - New
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Dial
-            - DialContext
-            - DialURL
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Client
-            - Server
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Router.__dd_config
-            - NewRouter
-            - Router.ServeHTTP
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Open
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - ParseSchema
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewSchema
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Config
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Connect
-            - ConnectConfig
-            - pgxpool.New
-            - pgxpool.NewWithConfig
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Open
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Router.__dd_config
-            - Router.ServeHTTP
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - rest.Config
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - New
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - New
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http
-        yaml:
-          name: orchestrion.yml
-          extends:
-            - name: ./orchestrion.client.yml
-              aspects:
-                - Transport.DD__tracer_internal
-                - Transport.DD__tracer_internal=true
-                - Transport.RoundTrip
-                - Get|Head|Post|PostForm
-            - name: ./orchestrion.server.yml
-              aspects:
-                - Server.Serve
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/os
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - OpenFile
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewClient
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/rueidis
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewClient
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Reader
-            - Reader.FetchMessage
-            - Reader.Close
-            - Writer
-            - Writer.WriteMessages
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/sirupsen/logrus
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - DDContextLogHook
-            - New
-            - '*logrus.Logger'
-            - logrus.Logger
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - Server
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/valkey-go
-        yaml:
-          name: orchestrion.yml
-          aspects:
-            - NewClient
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
-        yaml:
-          name: orchestrion.yml
-          extends:
-            - name: ../../internal/orchestrion/gls.orchestrion.yml
-              aspects:
-                - __dd_gls
-                - goexit1
-          aspects:
-            - func main()
-            - //dd:span
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/internal/civisibility/integrations/gotesting
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/civisibility
         yaml:
           name: orchestrion.yml
           aspects:
@@ -300,10 +25,408 @@ imports:
             - common.Skipf
             - common.SkipNow
             - testify.suite.Run
-      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/profiler
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/99designs/gqlgen
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/99designs/gqlgen/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - New
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/IBM/sarama.v1
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/IBM/sarama/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewConsumer
+                - NewSyncProducer
+                - NewAsyncProducer
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/Shopify/sarama/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewConsumer
+                - NewSyncProducer
+                - NewAsyncProducer
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go-v2/aws
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/aws/aws-sdk-go-v2/v2/aws
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Config
+                - '*Config'
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/aws/aws-sdk-go/v2/aws
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - session.NewSession
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/cloud.google.com/go/pubsub.v1
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/cloud.google.com/go/pubsub.v1/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Subscription.Receive
+                - PublishResult
+                - Topic.Publish
+                - PublishResult.Get
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/confluentinc/confluent-kafka-go/kafka/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Consumer
+                - NewConsumer
+                - Consumer.Close
+                - Consumer.Events
+                - Consumer.Poll
+                - Consumer.Commit
+                - Consumer.CommitMessage
+                - Consumer.CommitOffsets
+                - Producer
+                - Producer.Events
+                - Producer.ProduceChannel
+                - Producer.Close
+                - Producer.Produce
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/confluentinc/confluent-kafka-go/kafka.v2
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/confluentinc/confluent-kafka-go/kafka.v2/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Consumer
+                - NewConsumer
+                - Consumer.Close
+                - Consumer.Events
+                - Consumer.Poll
+                - Consumer.Commit
+                - Consumer.CommitMessage
+                - Consumer.CommitOffsets
+                - Producer
+                - Producer.Events
+                - Producer.ProduceChannel
+                - Producer.Close
+                - Producer.Produce
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/database/sql/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - sql.Register
+                - sql.Open
+                - sql.OpenDB
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/elastic/go-elasticsearch.v6/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - v6.Config
+                - '*v6.Config'
+                - v7.Config
+                - '*v7.Config'
+                - v8.Config
+                - '*v8.Config'
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/gin-gonic/gin/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - New
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/go-chi/chi/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewMux
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/go-chi/chi.v5/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewMux
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/go-redis/redis/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewClient
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v7
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/go-redis/redis.v7/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewClient
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/go-redis/redis.v8/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewClient
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/go.mongodb.org/mongo-driver/v2/mongo
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Client
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gocql/gocql
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/gocql/gocql/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - ClusterConfig
+                - '*ClusterConfig'
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/gofiber/fiber.v2/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - New
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gomodule/redigo
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/gomodule/redigo/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Dial
+                - DialContext
+                - DialURL
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/google.golang.org/grpc/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Client
+                - Server
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/gorilla/mux/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Router.__dd_config
+                - NewRouter
+                - Router.ServeHTTP
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/gorm.io/gorm.v1/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Open
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/graph-gophers/graphql-go
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/graph-gophers/graphql-go/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - ParseSchema
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/graphql-go/graphql
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/graphql-go/graphql/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewSchema
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/hashicorp/vault
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/hashicorp/vault/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Config
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/jackc/pgx.v5
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/jackc/pgx.v5/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Connect
+                - ConnectConfig
+                - pgxpool.New
+                - pgxpool.NewWithConfig
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm
         yaml:
           name: orchestrion.yml
           aspects:
-            - func main()
+            - Open
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/julienschmidt/httprouter
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/julienschmidt/httprouter/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Router.__dd_config
+                - Router.ServeHTTP
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/k8s.io/client-go/kubernetes
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/k8s.io/client-go/v2/kubernetes
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - rest.Config
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/labstack/echo.v4/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - New
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/log/slog
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/log/slog/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - New
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/net/http/v2
+            yaml:
+              name: orchestrion.yml
+              extends:
+                - name: ./orchestrion.client.yml
+                  aspects:
+                    - Transport.DD__tracer_internal
+                    - Transport.DD__tracer_internal=true
+                    - Transport.RoundTrip
+                    - Get|Head|Post|PostForm
+                - name: ./orchestrion.server.yml
+                  aspects:
+                    - Server.Serve
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/os
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/v2/contrib/os
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - OpenFile
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/redis/go-redis.v9/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewClient
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/rueidis
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/redis/rueidis/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewClient
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/segmentio/kafka.go.v0
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/segmentio/kafka-go/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Reader
+                - Reader.FetchMessage
+                - Reader.Close
+                - Writer
+                - Writer.WriteMessages
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/sirupsen/logrus
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/sirupsen/logrus/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - DDContextLogHook
+                - New
+                - '*logrus.Logger'
+                - logrus.Logger
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - Server
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/contrib/valkey-go
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - NewClient
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/v2/ddtrace/tracer
+            yaml:
+              name: orchestrion.yml
+              extends:
+                - name: ../../internal/orchestrion/gls.orchestrion.yml
+                  aspects:
+                    - __dd_gls_v2
+                    - goexit1
+              aspects:
+                - func main()
+                - //dd:span
+        yaml: null
+      - pkgpath: gopkg.in/DataDog/dd-trace-go.v1/profiler
+        imports:
+          - pkgpath: github.com/DataDog/dd-trace-go/v2/profiler
+            yaml:
+              name: orchestrion.yml
+              aspects:
+                - func main()
+        yaml: null
     yaml: null
 yaml: null

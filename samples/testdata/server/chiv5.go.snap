@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 //line <generated>:1
-	__orchestrion_chitrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-chi/chi.v5"
+	__orchestrion_chitrace "github.com/DataDog/dd-trace-go/contrib/go-chi/chi.v5/v2"
 )
 
 //line samples/server/chiv5.go:14

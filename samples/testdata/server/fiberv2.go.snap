@@ -9,7 +9,7 @@ package main
 import (
 	"github.com/gofiber/fiber/v2"
 //line <generated>:1
-	__orchestrion_fibertrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gofiber/fiber.v2"
+	__orchestrion_fibertrace "github.com/DataDog/dd-trace-go/contrib/gofiber/fiber.v2/v2"
 )
 
 //line samples/server/fiberv2.go:12

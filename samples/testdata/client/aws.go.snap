@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 //line <generated>:1
-	__orchestrion_awstrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/aws/aws-sdk-go/aws"
+	__orchestrion_awstrace "github.com/DataDog/dd-trace-go/contrib/aws/aws-sdk-go/v2/aws"
 )
 
 //line samples/client/aws.go:14

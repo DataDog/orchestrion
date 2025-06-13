@@ -16,14 +16,14 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 //line <generated>:1
-	__orchestrion_sql "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
-	__orchestrion_gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
+	__orchestrion_v2 "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"
+	__orchestrion_gormtrace "github.com/DataDog/dd-trace-go/contrib/gorm.io/gorm.v1/v2"
 	__orchestrion_gormtrace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 )
 
 //line samples/client/gorm.go:19
 func gormClient() {
-	sqlDB, err := __orchestrion_sql.Open("sqlite3", "file::memory:?cache=shared")
+	sqlDB, err := __orchestrion_v2.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		log.Fatal(err)
 	}
