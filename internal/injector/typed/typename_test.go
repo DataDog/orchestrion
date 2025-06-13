@@ -16,9 +16,12 @@ import (
 
 func TestTypeName(t *testing.T) {
 	for name, err := range map[string]error{
-		"0":                       errors.New(`invalid TypeName syntax: "0"`),
-		"net/http.ResponseWriter": nil,
-		"*net/http.Request":       nil,
+		"0":                          errors.New(`invalid TypeName syntax: "0"`),
+		"any":                        nil,
+		"net/http.ResponseWriter":    nil,
+		"*net/http.Request":          nil,
+		"*123domain.com/foo.Bar":     nil,
+		"*123domain.com/456/bar.Baz": nil,
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, e := NewTypeName(name)

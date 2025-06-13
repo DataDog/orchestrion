@@ -41,7 +41,7 @@ type TypeName struct {
 
 // FIXME: this does not support all the type syntax, like: "chan Event"
 // It primarily handles identifiers, qualified identifiers, and pointers to those.
-var typeNameRe = regexp.MustCompile(`\A(\*)?\s*(?:([A-Za-z_][A-Za-z0-9_.-]+(?:/[A-Za-z_.-][A-Za-z0-9_.-]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
+var typeNameRe = regexp.MustCompile(`\A(\*)?\s*(?:([A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
 
 // NewTypeName parses a string representation of a type name into a TypeName struct.
 // It returns an error if the syntax is invalid according to its limited regular expression.
