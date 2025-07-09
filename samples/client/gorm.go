@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"log"
 
-	jinzhu "github.com/jinzhu/gorm"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -33,18 +32,4 @@ func gormClient() {
 		Name string
 	}
 	db.Where("name = ?", "gorm.io").First(&user)
-}
-
-func jinzhuGormClient() {
-	db, err := jinzhu.Open("sqlite3", "file::memory:?cache=shared")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	var user struct {
-		jinzhu.Model
-		Name string
-	}
-	db.Where("name = ?", "jinzhu").First(&user)
 }

@@ -10,7 +10,6 @@ import (
 //line samples/client/gorm.go:10
 	"log"
 
-	jinzhu "github.com/jinzhu/gorm"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -18,10 +17,9 @@ import (
 //line <generated>:1
 	__orchestrion_v2 "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"
 	__orchestrion_gormtrace "github.com/DataDog/dd-trace-go/contrib/gorm.io/gorm.v1/v2"
-	__orchestrion_gormtrace1 "gopkg.in/DataDog/dd-trace-go.v1/contrib/jinzhu/gorm"
 )
 
-//line samples/client/gorm.go:19
+//line samples/client/gorm.go:18
 func gormClient() {
 	sqlDB, err := __orchestrion_v2.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
@@ -33,7 +31,7 @@ func gormClient() {
 //line <generated>:1
 		func() (*gorm.DB, error) {
 			db, err :=
-//line samples/client/gorm.go:26
+//line samples/client/gorm.go:25
 				gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
 //line <generated>:1
 			if err != nil {
@@ -44,7 +42,7 @@ func gormClient() {
 			}
 			return db, nil
 		}()
-//line samples/client/gorm.go:27
+//line samples/client/gorm.go:26
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,30 +52,4 @@ func gormClient() {
 		Name string
 	}
 	db.Where("name = ?", "gorm.io").First(&user)
-}
-
-func jinzhuGormClient() {
-	db, err :=
-//line <generated>:1
-		func() (*jinzhu.DB, error) {
-			db, err :=
-//line samples/client/gorm.go:39
-				jinzhu.Open("sqlite3", "file::memory:?cache=shared")
-//line <generated>:1
-			if err != nil {
-				return nil, err
-			}
-			return __orchestrion_gormtrace1.WithCallbacks(db), err
-		}()
-//line samples/client/gorm.go:40
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	var user struct {
-		jinzhu.Model
-		Name string
-	}
-	db.Where("name = ?", "jinzhu").First(&user)
 }

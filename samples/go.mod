@@ -29,7 +29,6 @@ require (
 	github.com/gomodule/redigo v1.9.2
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/jackc/pgx/v5 v5.7.4
-	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/mattn/go-sqlite3 v1.14.27
 	github.com/redis/go-redis/v9 v9.7.3
