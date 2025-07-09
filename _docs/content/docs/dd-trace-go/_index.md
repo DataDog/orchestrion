@@ -8,9 +8,9 @@ next: /docs/dd-trace-go/integrations
 ## Default configuration
 
 Orchestrion is complemented by the Datadog tracing library,
-{{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1">}} starting with
-`v1.72.0-rc.1`. It provides compile-time integrations for many popular Go
-libraries; and is enabled by default when running `orchestrion pin`.
+{{<godoc import-path="github.com/DataDog/dd-trace-go/v2">}}. It provides
+compile-time integrations for many popular Go libraries; and is enabled by
+default when running `orchestrion pin`.
 
 The integrations being loaded are configured by your project's root
 `orchestrion.tool.go` file, which `orchestrion pin` initializes to something
@@ -36,15 +36,15 @@ import (
 
 	// Provides integrations for essential `orchestrion` features. Most users
 	// should not remove this integration.
-	_ "gopkg.in/DataDog/dd-trace-go.v1" // integration
+	_ "github.com/DataDog/dd-trace-go/orchestrion/all/v2" // integration
 )
 ```
 
 ## Choosing integrations
 
 Once `orchestrion pin` has been run, you can replace the import of
-{{<godoc import-path="gopkg.in/DataDog/dd-trace-go.v1">}} with imports for
-specific integration packages (see the [Integrations](./v2) section
+{{<godoc import-path="github.com/DataDog/dd-trace-go/orchestrion/all/v2">}} with
+imports for specific integration packages (see the [Integrations](./v2) section
 for a list of available packages).
 
 For example, the below only activates integrations for the core tracer library,

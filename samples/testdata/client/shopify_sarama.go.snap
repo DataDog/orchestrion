@@ -10,7 +10,7 @@ import (
 	"github.com/Shopify/sarama"
 
 //line <generated>:1
-	__orchestrion_saramatrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/Shopify/sarama"
+	__orchestrion_saramatrace "github.com/DataDog/dd-trace-go/contrib/Shopify/sarama/v2"
 )
 
 //line samples/client/shopify_sarama.go:10

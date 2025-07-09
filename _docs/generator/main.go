@@ -16,19 +16,8 @@ import (
 func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
 
-	// Document the V1 integrations
-	gen := Generator{
-		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "v1"),
-		ConfigSource: filepath.Join(thisFile, "..", "..", "..", "instrument"),
-		Validate:     true,
-		CommonPrefix: "gopkg.in/DataDog/dd-trace-go.v1/",
-	}
-	if err := gen.Generate(); err != nil {
-		log.Fatalln(err)
-	}
-
 	// Document the V2 integrations
-	gen = Generator{
+	gen := Generator{
 		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "v2"),
 		ConfigSource: filepath.Join(thisFile, "..", ".."),
 		Validate:     false, // Currently one aspect is not valid in V2 (rueidis)

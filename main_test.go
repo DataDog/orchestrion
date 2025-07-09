@@ -110,6 +110,13 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")
 		}
+		// traefik fails to build if ./webui/static does not exist, so just create an empty folder
+		if repo == "traefik" {
+			if stat, err := os.Stat(filepath.Join(tc.dir, "webui")); err == nil && stat.IsDir() {
+				tc.exec(b, "mkdir", "-p", "./webui/static")
+				tc.exec(b, "touch", "./webui/static/index.html")
+			}
+		}
 		tc.exec(b, buildOrchestrion(b), "pin")
 
 		return tc

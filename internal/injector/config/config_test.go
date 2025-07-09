@@ -195,18 +195,6 @@ func TestLoad(t *testing.T) {
 		golden.Assert(t, buf.String(), "required.snap.yml")
 	})
 
-	t.Run("instrument", func(t *testing.T) {
-		loader := NewLoader(nil, filepath.Join(repoRoot, "instrument"), true)
-		cfg, err := loader.Load(context.Background())
-		require.NoError(t, err)
-
-		var buf bytes.Buffer
-		enc := yaml.NewEncoder(&buf, yaml.Indent(2), yaml.IndentSequence(true), yaml.UseSingleQuote(true))
-		defer func() { require.NoError(t, enc.Close()) }()
-		require.NoError(t, enc.Encode(cfg))
-		golden.Assert(t, buf.String(), "instrument.snap.yml")
-	})
-
 	t.Run("recursive", func(t *testing.T) {
 		tmp := t.TempDir()
 		runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test")

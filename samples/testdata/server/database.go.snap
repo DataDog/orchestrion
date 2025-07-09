@@ -13,7 +13,7 @@ import (
 	"errors"
 	"log"
 //line <generated>:1
-	__orchestrion_sql "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	__orchestrion_v2 "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"
 )
 
 //line samples/server/database.go:16
@@ -21,7 +21,7 @@ func init() {
 //line <generated>:1
 	func(driverName string, driver driver.Driver) {
 		sql.Register(driverName, driver)
-		__orchestrion_sql.Register(driverName, driver)
+		__orchestrion_v2.Register(driverName, driver)
 	}(
 //line samples/server/database.go:17
 		"test", &testDriver{})
@@ -58,14 +58,14 @@ func (*testConnector) Driver() driver.Driver {
 }
 
 func openDatabase() (*sql.DB, error) {
-	_, err := __orchestrion_sql.Open("test", "mypath")
+	_, err := __orchestrion_v2.Open("test", "mypath")
 	if err != nil {
 		log.Printf("Some error: %v", err)
 	}
-	return __orchestrion_sql.Open("test", "mypath")
+	return __orchestrion_v2.Open("test", "mypath")
 }
 
 func openDatabase2() *sql.DB {
-	_ = __orchestrion_sql.OpenDB(&testConnector{})
-	return __orchestrion_sql.OpenDB(&testConnector{})
+	_ = __orchestrion_v2.OpenDB(&testConnector{})
+	return __orchestrion_v2.OpenDB(&testConnector{})
 }

@@ -11,7 +11,7 @@ import (
 
 	"github.com/twitchtv/twirp"
 //line <generated>:1
-	__orchestrion_twirptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/twitchtv/twirp"
+	__orchestrion_twirptrace "github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2"
 )
 
 //line samples/server/twirp.go:14

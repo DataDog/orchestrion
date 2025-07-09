@@ -14,7 +14,7 @@ import (
 	esv7 "github.com/elastic/go-elasticsearch/v7"
 	esv8 "github.com/elastic/go-elasticsearch/v8"
 //line <generated>:1
-	__orchestrion_elastictrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/elastic/go-elasticsearch.v6"
+	__orchestrion_elastictrace "github.com/DataDog/dd-trace-go/contrib/elastic/go-elasticsearch.v6/v2"
 )
 
 //line samples/client/elasticsearch.go:17

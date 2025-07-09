@@ -33,7 +33,7 @@ import (
 
 const (
 	orchestrionImportPath = "github.com/DataDog/orchestrion"
-	datadogTracerV1       = "gopkg.in/DataDog/dd-trace-go.v1"
+	datadogTracerV2       = "github.com/DataDog/dd-trace-go/orchestrion/all/v2"
 )
 
 type Options struct {
@@ -120,10 +120,10 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
 
-	if ver, found := curMod.requires(datadogTracerV1); !found || semver.Compare(ver, "v1.72.2") < 0 {
-		log.Info().Msg("Installing or upgrading " + datadogTracerV1)
-		if err := runGoGet(ctx, goMod, datadogTracerV1+"@latest"); err != nil {
-			return fmt.Errorf("go get "+datadogTracerV1+": %w", err)
+	if ver, found := curMod.requires(datadogTracerV2); !found || semver.Compare(ver, "v2.1.0-rc.4") < 0 {
+		log.Info().Msg("Installing or upgrading " + datadogTracerV2)
+		if err := runGoGet(ctx, goMod, datadogTracerV2+"@v2.1.0-rc.4"); err != nil {
+			return fmt.Errorf("go get "+datadogTracerV2+": %w", err)
 		}
 	}
 
@@ -219,7 +219,7 @@ func updateToolFile(file *dst.File) (*importSet, error) {
 	}
 	spec.Decs.End.Replace("// integration")
 
-	spec, _ = importSet.Add(datadogTracerV1)
+	spec, _ = importSet.Add(datadogTracerV2)
 	spec.Decs.Before = dst.EmptyLine
 	spec.Decs.End.Replace("// integration")
 
