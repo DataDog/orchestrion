@@ -14,7 +14,7 @@ layout: hextra-home
   Transparently add <a href="https://datadoghq.com">Datadog</a> instrumentation to your go
   applications to achieve maximum coverage for both
   <abbr title="Application Performance Monitoring">APM</abbr> and
-  <abbr title="Application Security Managemenr">ASM</abbr>, and never worry about coverage again!
+  <abbr title="App & API Protection">AAP</abbr>, and never worry about coverage again!
   {{</hextra/hero-subtitle>}}
 </div>
 
