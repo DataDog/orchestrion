@@ -58,6 +58,6 @@ may require you to opt for finer grain instrumentation like described in the pre
 
 {{<callout type="warning">}}
 Some auto instrumentation integrations (notably caller-side) may automatically be neutered by using the corresponding
-SDK integration but this is not guaranteed. If you are using an SDK integration, and you want to ensure that
+manual instrumentation but this is not guaranteed. If you are using manual instrumentation, and you want to ensure that
 2 similar spans are not created, you should remove the corresponding import from `orchestrion.tool.go`.
 {{</callout>}}
