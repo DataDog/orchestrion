@@ -123,7 +123,7 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	}
 
 	if ver, found := curMod.requires(datadogTracerV1); found && semver.Compare(ver, "v1.74.0") < 0 {
-		log.Info().Str("current", ver).Msg("Updaring " + datadogTracerV1 + " to v1.74+")
+		log.Info().Str("current", ver).Msg("Updating " + datadogTracerV1 + " to v1.74+")
 		if err := runGoGet(ctx, goMod, datadogTracerV1+"@latest"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+"@latest: %w", err)
 		}
