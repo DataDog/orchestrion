@@ -18,6 +18,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/mod/semver"
 )
 
 func TestPin(t *testing.T) {
@@ -47,6 +48,44 @@ func TestPin(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, string(content), "//go:generate")
+	})
+
+	t.Run("upgrade:dd-trace-go", func(t *testing.T) {
+		tmp := scaffold(t, map[string]string{datadogTracerV1: "v1.73.2"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "gopkg.in/DataDog/dd-trace-go.v1"
+)
+`), 0o644))
+		// Artificial main.go to retain a reference to "gopkg.in/DataDog/dd-trace-go.v1"
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "main.go"), []byte(`package main
+
+import (
+	_ "gopkg.in/DataDog/dd-trace-go.v1"
+)
+
+func main() {}
+`), 0o644))
+		require.NoError(t, runGoMod(ctx, "tidy", filepath.Join(tmp, "go.mod"), io.Discard))
+		chdir(t, tmp)
+
+		// WHEN
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
+
+		// THEN
+		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+		ver, found := data.requires(datadogTracerV1)
+		assert.True(t, found)
+		assert.True(t, semver.Compare(ver, "v1.74.0") >= 0)
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		assert.Contains(t, string(content), datadogTracerV2All)
+		assert.NotContains(t, string(content), datadogTracerV1)
 	})
 
 	t.Run("another-version", func(t *testing.T) {
