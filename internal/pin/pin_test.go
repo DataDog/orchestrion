@@ -80,7 +80,7 @@ func main() {}
 		require.NoError(t, err)
 		ver, found := data.requires(datadogTracerV1)
 		assert.True(t, found)
-		assert.True(t, semver.Compare(ver, "v1.74.0") >= 0)
+		assert.GreaterOrEqual(t, semver.Compare(ver, "v1.74.0"), 0)
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
