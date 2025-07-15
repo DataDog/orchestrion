@@ -130,8 +130,10 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	}
 
 	if ver, found := curMod.requires(datadogTracerV2); !found || semver.Compare(ver, "v2.1.0") < 0 {
-		log.Info().Str("current", ver).Msg("Installing or upgrading " + datadogTracerV2)
-		if err := runGoGet(ctx, goMod, datadogTracerV2+"@latest"); err != nil {
+		// We install/upgrade the `orchestrion/all/v2` module as it includes all interesting contribs in its dependency
+		// closure, so we don't have to manually verify all of them. The `go mod tidy` later will clean up if needed.
+		log.Info().Str("current", ver).Msg("Installing or upgrading " + datadogTracerV2 + " (via " + datadogTracerV2All + ")")
+		if err := runGoGet(ctx, goMod, datadogTracerV2All+"@latest"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV2+"@latest: %w", err)
 		}
 	}
