@@ -21,14 +21,16 @@ jobs:
         id: setup-go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
-          go-version: oldstable # Minimum supported go release
+          # Run with current stable so we can evaluate all possible versions; as the Go toolchain
+          # will bail out if it encounters a "candidate" that requires a newer release.
+          go-version: stable
           cache-dependency-path: '**/go.mod'
 
       - name: Determine latest github.com/DataDog/dd-trace-go/v2 version
         id: dd-trace-go
         run: |-
           set -euo pipefail
-          version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions github.com/DataDog/dd-trace-go/v2 | tail -n 1)
+          version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions github.com/DataDog/dd-trace-go/v2 | grep -v '-' | tail -n 1)
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
