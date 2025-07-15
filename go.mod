@@ -35,7 +35,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.68.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/proto v0.68.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.68.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.68.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.66.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/log v0.68.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.68.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.68.0 // indirect
@@ -111,6 +111,7 @@ require (
 	go.opentelemetry.io/collector/internal/telemetry v0.130.0 // indirect
 	go.opentelemetry.io/collector/pdata v1.36.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.130.0 // indirect
+	go.opentelemetry.io/collector/semconv v0.125.0 // indirect
 	go.opentelemetry.io/contrib/bridges/otelzap v0.12.0 // indirect
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/log v0.13.0 // indirect
