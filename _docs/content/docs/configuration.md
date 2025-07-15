@@ -5,25 +5,25 @@ weight: 20
 
 ## Configuration
 
-Orchestrion uses the file `orchestrion.tool.go` in the project root to imports its configuration. This file is
+Orchestrion uses the file `orchestrion.tool.go` in the project root to import its configuration. This file is
 used to specify which integrations are enabled, and which features are activated but also as a way to connect
-orchestrion integrations to your `go.mod` file to be able to version them.
+orchestrion integrations to your `go.mod` file so they are appropriately versioned.
 
 The file is a Go source file, and it must be valid Go code. If your project does not already contain one, you may run
 `orchestrion pin` to create it.
 
 {{<callout type="info">}}
 Orchestrion is a vendor-agnostic tool. By default, `orchestrion pin` enables Datadog's tracer integrations by
-importing `github.com/DataDog/dd-trace-go/v2` in `orchestrion.tool.go`, but other vendors (such as OpenTelemetry) may
+importing `github.com/DataDog/dd-trace-go/orchestrion/all/v2` in `orchestrion.tool.go`, but other vendors (such as OpenTelemetry) may
 provide alternate integrations that can be used instead.
 {{</callout>}}
 
 ### Loading
 
-Configuration is loaded from the `orchestrion.tool.go` alongside your `go.mod` file. Each import in this file
+Configuration is loaded from the `orchestrion.tool.go` located in the same directory as your application's `go.mod` file. Each import in this file
 will be processed by orchestrion and will enable the corresponding integration. Configuration loading happens
 recursively and will load all the integrations that are imported by `orchestrion.tool.go` in the imported package in a
-tree-like structure.
+tree-like structure (packages are de-duplicated so you don't have to worry about a package being transitively imported by multiple integrations).
 
 ```mermaid
 flowchart TD
@@ -42,8 +42,8 @@ are the auto-instrumentation configuration backbone that modify your codebase. P
 
 ### Finer grain instrumentation
 
-The default `orchestrion.tool.go` imports all integrations provided by the `github.com/DataDog/dd-trace-go/v2`
-repository. But this can be cumbersome if you only want to use a subset of the integrations. You can expand the default
+The default `orchestrion.tool.go` imports all integrations provided by the `github.com/DataDog/dd-trace-go/orchestrion/all/v2`
+package. But this can be cumbersome if you only want to use a subset of the integrations. You can expand the default
 `orchestrion.tool.go` by replacing the import of `github.com/DataDog/dd-trace-go/v2` with the specific integrations you
 want to use from the list available at one level deeper in the configuration loading tree [here][orchestrion-all].
 
