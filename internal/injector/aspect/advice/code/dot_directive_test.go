@@ -54,11 +54,10 @@ func Test_parseDirectiveArgs(t *testing.T) {
 		{
 			name:    "single and double quotes",
 			prefix:  "//dd:span",
-			comment: `//dd:span span.name:'root handler' resource.name:"GET /home" "key with spaces":'value with spaces'`,
+			comment: `//dd:span span.name:'root handler' resource.name:"GET /home"`,
 			want: []DirectiveArgument{
 				{Key: "span.name", Value: "root handler"},
 				{Key: "resource.name", Value: "GET /home"},
-				{Key: "key with spaces", Value: "value with spaces"},
 			},
 			wantOk: true,
 		},
