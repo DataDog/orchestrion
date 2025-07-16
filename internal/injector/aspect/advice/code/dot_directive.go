@@ -25,7 +25,7 @@ var spaces = regexp.MustCompile(`\s+`)
 // between; followed by optional arguments formatted as `key:value`, separated by spaces.
 //
 // Values might contain spaces, and in that case they need to be quoted either using single or double quotes as
-// `key:"value with spaces"` or `key:'value wiht spaces'`.
+// `key:"value with spaces"` or `key:'value with spaces'`.
 func (d *dot) DirectiveArgs(directive string) []DirectiveArgument {
 	prefix := "//" + directive
 
@@ -40,7 +40,7 @@ func (d *dot) DirectiveArgs(directive string) []DirectiveArgument {
 	return nil
 }
 
-func parseDirectiveArgs(prefix, comment string) ([]DirectiveArgument, bool) {
+func parseDirectiveArgs(prefix string, comment string) ([]DirectiveArgument, bool) {
 	if !strings.HasPrefix(comment, prefix) {
 		return nil, false
 	}
@@ -53,7 +53,7 @@ func parseDirectiveArgs(prefix, comment string) ([]DirectiveArgument, bool) {
 	// Strip the prefix from the comment.
 	argsStr := strings.TrimSpace(strings.TrimPrefix(comment, prefix))
 	if argsStr == "" {
-		return []DirectiveArgument{}, true
+		return nil, true
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(argsStr))

@@ -88,7 +88,7 @@ func Test_parseDirectiveArgs(t *testing.T) {
 			name:    "only prefix with no arguments",
 			prefix:  "//dd:span",
 			comment: "//dd:span",
-			want:    []DirectiveArgument{},
+			want:    nil,
 			wantOk:  true,
 		},
 		{
