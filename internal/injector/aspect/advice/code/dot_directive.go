@@ -6,6 +6,7 @@
 package code
 
 import (
+	"bufio"
 	"regexp"
 	"strings"
 )
@@ -22,25 +23,85 @@ var spaces = regexp.MustCompile(`\s+`)
 // DirectiveArgs returns arguments provided to the named directive. A directive is a single-line
 // comment with the directive immediately following the leading `//`, without any spacing in
 // between; followed by optional arguments formatted as `key:value`, separated by spaces.
-func (d *dot) DirectiveArgs(directive string) (args []DirectiveArgument) {
+//
+// Values might contain spaces, and in that case they need to be quoted either using single or double quotes as
+// `key:"value with spaces"` or `key:'value wiht spaces'`.
+func (d *dot) DirectiveArgs(directive string) []DirectiveArgument {
 	prefix := "//" + directive
 
 	for curr := d.context.Chain(); curr != nil; curr = curr.Parent() {
 		for _, dec := range curr.Node().Decorations().Start {
-			if !strings.HasPrefix(dec, prefix) {
-				continue
+			args, ok := parseDirectiveArgs(prefix, dec)
+			if ok {
+				return args
 			}
-			parts := spaces.Split(dec, -1)
-			if parts[0] != prefix {
-				// This is not the directive we're looking for -- its name only starts the same.
-				continue
-			}
-			for _, part := range parts[1:] {
-				key, value, _ := strings.Cut(part, ":")
-				args = append(args, DirectiveArgument{Key: key, Value: value})
-			}
-			return
 		}
 	}
-	return
+	return nil
+}
+
+func parseDirectiveArgs(prefix, comment string) ([]DirectiveArgument, bool) {
+	if !strings.HasPrefix(comment, prefix) {
+		return nil, false
+	}
+	parts := spaces.Split(comment, -1)
+	if parts[0] != prefix {
+		// This is not the directive we're looking for -- its name only starts the same.
+		return nil, false
+	}
+
+	// Strip the prefix from the comment.
+	argsStr := strings.TrimSpace(strings.TrimPrefix(comment, prefix))
+	if argsStr == "" {
+		return []DirectiveArgument{}, true
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(argsStr))
+	scanner.Split(splitArgs)
+
+	var res []DirectiveArgument
+	for scanner.Scan() {
+		part := scanner.Text()
+		if key, value, ok := strings.Cut(part, ":"); ok {
+			if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
+				(strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
+				value = value[1 : len(value)-1]
+			}
+			res = append(res, DirectiveArgument{Key: key, Value: value})
+		} else {
+			res = append(res, DirectiveArgument{Key: part, Value: ""})
+		}
+	}
+	return res, true
+}
+
+func splitArgs(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	var (
+		doubleQuote = false
+		singleQuote = false
+		start       = 0
+	)
+	for i := 0; i < len(data); i++ {
+		switch data[i] {
+		case '"':
+			if !singleQuote {
+				doubleQuote = !doubleQuote
+			}
+		case '\'':
+			if !doubleQuote {
+				singleQuote = !singleQuote
+			}
+		case ' ':
+			if !doubleQuote && !singleQuote {
+				if start < i {
+					return i + 1, data[start:i], nil
+				}
+				start = i + 1
+			}
+		}
+	}
+	if atEOF && start < len(data) {
+		return len(data), data[start:], nil
+	}
+	return 0, nil, nil
 }
