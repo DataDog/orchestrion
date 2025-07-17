@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/mod/semver"
 )
 
 func TestBuildFromModuleSubdirectory(t *testing.T) {
@@ -110,12 +109,9 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")
 		}
-		// traefik fails to build if ./webui/static does not exist, so just create an empty folder
+		// traefik fails to build if we don't upgrade the version go.opentelemetry.io/otel/sdk/log
 		if repo == "traefik" {
-			if stat, err := os.Stat(filepath.Join(tc.dir, "webui")); err == nil && stat.IsDir() {
-				tc.exec(b, "mkdir", "-p", "./webui/static")
-				tc.exec(b, "touch", "./webui/static/index.html")
-			}
+			tc.exec(b, "go", "get", "go.opentelemetry.io/otel/sdk/log@latest")
 		}
 		tc.exec(b, buildOrchestrion(b), "pin")
 
@@ -197,11 +193,9 @@ func (r *runner) exec(tb testing.TB, name string, args ...string) {
 }
 
 func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo string) string {
-	b.Helper()
-
 	// NB -- Default page size is 30, and releases are sorted by creation date... We should be able to rely on the tag
 	// we are looking for being present in the first page, ergo we don't bother traversing all pages.
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", owner, repo), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo), nil)
 	require.NoError(b, err)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
@@ -215,27 +209,13 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 
 	require.Equal(b, http.StatusOK, resp.StatusCode, "error response body:\n%s", contentString{resp.Body})
 
-	var payload []struct {
-		Prerelease bool   `json:"prerelease"`
-		TagName    string `json:"tag_name"`
+	var payload struct {
+		TagName string `json:"tag_name"`
 	}
 	require.NoError(b, json.NewDecoder(resp.Body).Decode(&payload))
 	require.NotEmpty(b, payload)
 
-	var tagName string
-	for _, release := range payload {
-		if release.Prerelease {
-			// We're excluding pre-releases, just because.
-			continue
-		}
-		if tagName == "" || semver.Compare(tagName, release.TagName) < 0 {
-			tagName = release.TagName
-		}
-	}
-
-	require.NotEmpty(b, tagName)
-
-	return tagName
+	return payload.TagName
 }
 
 func getGithubToken() (string, bool) {
