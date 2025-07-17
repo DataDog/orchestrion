@@ -213,7 +213,7 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 
 	require.NoError(b, json.NewDecoder(resp.Body).Decode(&payload))
 	require.NotEmpty(b, payload)
-  
+
 	return payload.TagName
 }
 
