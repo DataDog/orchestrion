@@ -96,8 +96,6 @@ type benchGithub struct {
 
 func benchmarkGithub(owner string, repo string, build string, testbuild bool) func(b *testing.B) benchCase {
 	return func(b *testing.B) benchCase {
-		b.Helper()
-
 		tc := &benchGithub{harness{build: build, testbuild: testbuild}}
 
 		tag := tc.findLatestGithubReleaseTag(b, owner, repo)
@@ -225,7 +223,7 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 	var tagName string
 	for _, release := range payload {
 		if release.Prerelease {
-			// We're excluding pre-releases, just because.
+			// We're excluding pre-releases because they break
 			continue
 		}
 		if tagName == "" || semver.Compare(tagName, release.TagName) < 0 {
