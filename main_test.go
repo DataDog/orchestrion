@@ -210,6 +210,7 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 	var payload struct {
 		TagName string `json:"tag_name"`
 	}
+
 	require.NoError(b, json.NewDecoder(resp.Body).Decode(&payload))
 	require.NotEmpty(b, payload)
   
