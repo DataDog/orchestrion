@@ -95,8 +95,6 @@ type benchGithub struct {
 
 func benchmarkGithub(owner string, repo string, build string, testbuild bool) func(b *testing.B) benchCase {
 	return func(b *testing.B) benchCase {
-		b.Helper()
-
 		tc := &benchGithub{harness{build: build, testbuild: testbuild}}
 
 		tag := tc.findLatestGithubReleaseTag(b, owner, repo)
@@ -214,7 +212,7 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 	}
 	require.NoError(b, json.NewDecoder(resp.Body).Decode(&payload))
 	require.NotEmpty(b, payload)
-
+  
 	return payload.TagName
 }
 
