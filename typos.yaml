@@ -1,0 +1,25 @@
+
+# typos configuration file
+# See https://github.com/crate-ci/typos/blob/master/docs/config.md for more options
+
+[default.extend-words]
+Hashi = "Hashi"
+Nd = "Nd"
+Tio = "Tio"
+Tre = "Tre"
+Typ = "Typ"
+Unknwon = "Unknwon"
+chanel = "chanel"
+deamonized = "deamonized"
+duplicted = "duplicted"
+fo = "fo"
+maches = "maches"
+macth = "macth"
+mathces = "mathces"
+ndoe = "ndoe"
+perfomed = "perfomed"
+qualifed = "qualifed"
+runnning = "runnning"
+specifid = "specifid"
+typ = "typ"
+unknow = "unknow"
