@@ -26,7 +26,7 @@ func GOMOD(dir string) (string, error) {
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("runnning %q: %w", cmd.Args, err)
+		return "", fmt.Errorf("running %q: %w", cmd.Args, err)
 	}
 	if goMod := strings.TrimSpace(stdout.String()); goMod != "" && goMod != os.DevNull {
 		return goMod, nil

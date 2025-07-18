@@ -1,10 +1,13 @@
 
-name: typos
+name: Spelling
 
 on: [push, pull_request]
 
+env:
+  CLICOLOR: 1
+
 jobs:
-  typos:
+  spelling:
     name: Spell Check with Typos
     runs-on: ubuntu-latest
     steps:
