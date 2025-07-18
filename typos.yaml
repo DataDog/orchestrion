@@ -1,6 +1,6 @@
 
 # typos configuration file
-# See https://github.com/crate-ci/typos/blob/master/docs/config.md for more options
+# See https://github.com/crate-ci/typos/blob/master/docs/reference.md for more options
 
 [default.extend-words]
 Hashi = "Hashi"
