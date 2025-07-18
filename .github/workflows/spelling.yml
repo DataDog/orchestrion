@@ -3,9 +3,6 @@ name: Spelling
 
 on: [push, pull_request]
 
-env:
-  CLICOLOR: 1
-
 jobs:
   spelling:
     name: Spell Check with Typos
