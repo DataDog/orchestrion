@@ -85,7 +85,7 @@ func (d directive) matchesChain(chain *context.NodeChain) bool {
 			return true
 		}
 	case *dst.SendStmt:
-		// For chanel send statements, the directive only applies to the value being sent, not to the
+		// For channel send statements, the directive only applies to the value being sent, not to the
 		// receiving channel.
 		if chain.PropertyName() == "Value" && d.matchesChain(parent) {
 			return true

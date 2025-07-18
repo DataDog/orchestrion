@@ -59,7 +59,7 @@ func (a *Aspect) AddedImports() (imports []string) {
 
 // InjectedPaths returns the list of import paths that may be injected by the
 // supplied list of aspects. The output list is not sorted in any particular way
-// but does not contain duplicted entries.
+// but does not contain duplicated entries.
 func InjectedPaths(list []*Aspect) []string {
 	var res []string
 	dedup := make(map[string]struct{})

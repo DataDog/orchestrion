@@ -102,7 +102,7 @@ func (f CommandFlags) Except(remove ...string) CommandFlags {
 // Slice returns the command flags as a string slice
 // - long flags are returned as a string of the form '-flagName="flagVal"'
 // - short flags are returned as a string of the form '-flagName'
-// - unknow flags and values are ignored
+// - unknown flags and values are ignored
 func (f CommandFlags) Slice() []string {
 	flags := make([]string, 0, len(f.Long)+len(f.Short))
 	for flag, val := range f.Long {
