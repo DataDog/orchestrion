@@ -18,8 +18,8 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
           template: |-
             {{ $err := .Function.ResultOfType "error" -}}
-              err := errortrace.Wrap($err)              
-            {{- end -}}
+            {{- $err = "err" -}}
+            err := errortrace.Wrap($err)  
 
   # Aspect 2: go.uber.org/multierr type
   - id: "wrap-gouber-multierr-errors"
@@ -34,9 +34,9 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
             multierr: go.uber.org/multierr
           template: |-
-            {{ $err := .Function.ResultOfType "multierr.Invoker" -}}
-              err := errortrace.Wrap($err)              
-            {{- end -}}
+            {{ $err := .Function.ResultOfType "multierr.Invoker" }}
+            {{- $err = "err" -}}
+            err := errortrace.Wrap($err)  
   
   # Aspect 3: go-errors/errors type
   - id: "wrap-goerrors-errors"
@@ -51,9 +51,9 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
             goerrors: github.com/go-errors/errors
           template: |-
-            {{ $err := .Function.ResultOfType "goerrors.Error" -}}
-              err := errortrace.Wrap($err)              
-            {{- end -}}
+            {{ $err := .Function.ResultOfType "goerrors.Error" }}
+            {{- $err = "err" -}}
+            err := errortrace.Wrap($err)  
 
   # Aspect 4: joomcode/errorx type
   - id: "wrap-joomcode-errorx-errors"
@@ -68,9 +68,9 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
             errorx: github.com/joomcode/errorx
           template: |-
-            {{ $err := .Function.ResultOfType "errorx.Error" -}}
-              err := errortrace.Wrap($err)              
-            {{- end -}}
+            {{ $err := .Function.ResultOfType "errorx.Error" }}
+            {{- $err = "err" -}}
+            err := errortrace.Wrap($err)  
 
   # Aspect 5: ztrue/tracerr type
   - id: "wrap-ztrue-tracerr-errors"
@@ -85,9 +85,9 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
             tracerr: github.com/ztrue/tracerr
           template: |-
-            {{ $err := .Function.ResultOfType "tracerr.Error" -}}
-              err := errortrace.Wrap($err)              
-            {{- end -}}
+            {{ $err := .Function.ResultOfType "tracerr.Error" }}
+            {{- $err = "err" -}}
+            err := errortrace.Wrap($err)  
 
   # Aspect 6: braces.dev/errtrace type
   - id: "wrap-bracesdev-errtrace-errors"
@@ -102,9 +102,9 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
             errtrace: braces.dev/errtrace
           template: |-
-            {{ $err := .Function.ResultOfType "errtrace.Error" -}}
-              err := errortrace.Wrap($err)              
-            {{- end -}}
+            {{ $err := .Function.ResultOfType "errtrace.Error" }}
+            {{- $err = "err" -}}
+            err := errortrace.Wrap($err)  
 
 code: |-
   package test
