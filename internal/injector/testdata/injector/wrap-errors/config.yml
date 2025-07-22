@@ -16,7 +16,9 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
           template: |-
             {{- $ret := .Function.ResultThatImplements "error" -}}
-            {{ $ret }} = errortrace.Wrap({{ $ret }})
+            defer func() {
+              {{ $ret }} = errortrace.Wrap({{ $ret }})
+            }()
 
 syntheticReferences:
   github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace: true
@@ -62,34 +64,34 @@ code: |-
 
   // go-errors/errors =========================================================
   // Returns go-errors/errors.Error
-  func withGoErrorsError() *goerrors.Error {
+  func withGoErrorsError() error {
     return goerrors.New("goerrors")
   }
 
   // Returns multiple values, including goerrors.Error
-  func multipleWithGoerrors() (string, *goerrors.Error) {
+  func multipleWithGoerrors() (string, error) {
     return "", goerrors.New("goerrors")
   }
 
   // joomcode/errorx =========================================================
   // Returns errorx.Error
-  func withErrorxError() *errorx.Error {
+  func withErrorxError() error {
     return errorx.Cast(errors.New("errorx"))
   }
 
   // Returns multiple values, including errorx.Error
-  func multipleWithErrorx() (string, *errorx.Error) {
+  func multipleWithErrorx() (string, error) {
     return "", errorx.Cast(errors.New("errorx"))
   }
 
   // ztrue/tracerr =========================================================
   // Return tracerr.Error
-  func withTracerrError() tracerr.Error {
+  func withTracerrError() error {
     return tracerr.New("tracerr")
   }
 
   // Return multiple value, including tracerr.Error
-  func multipleWithTracerr() (string, tracerr.Error) {
+  func multipleWithTracerr() (string, error) {
     return "", tracerr.New("tracerr")
   }
 

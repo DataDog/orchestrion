@@ -19,7 +19,9 @@ import (
 func withError() (__result__0 error) {
 //line <generated>:1
   {
-    __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    }()
   }
 //line input.go:15
   return errors.New("some error")
@@ -29,7 +31,9 @@ func withError() (__result__0 error) {
 func withMultipleReturn() (_ string, __result__1 error) {
 //line <generated>:1
   {
-    __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    }()
   }
 //line input.go:20
   return "some string", errors.New("some error")
@@ -45,7 +49,9 @@ func noMatch(val uint32) string {
 func withMultierrInvoker() (__result__0 error) {
 //line <generated>:1
   {
-    __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    }()
   }
 //line input.go:31
   return multierr.Combine(errors.New("1"), errors.New("2"))
@@ -55,7 +61,9 @@ func withMultierrInvoker() (__result__0 error) {
 func multipleWithInvoker() (_ string, __result__1 error) {
 //line <generated>:1
   {
-    __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    }()
   }
 //line input.go:36
   return "", multierr.Combine(errors.New("1"), errors.New("2"))
@@ -63,20 +71,24 @@ func multipleWithInvoker() (_ string, __result__1 error) {
 
 // go-errors/errors =========================================================
 // Returns go-errors/errors.Error
-func withGoErrorsError() (__result__0 *goerrors.Error) {
+func withGoErrorsError() (__result__0 error) {
 //line <generated>:1
   {
-    __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    }()
   }
 //line input.go:42
   return goerrors.New("goerrors")
 }
 
 // Returns multiple values, including goerrors.Error
-func multipleWithGoerrors() (_ string, __result__1 *goerrors.Error) {
+func multipleWithGoerrors() (_ string, __result__1 error) {
 //line <generated>:1
   {
-    __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    }()
   }
 //line input.go:47
   return "", goerrors.New("goerrors")
@@ -84,20 +96,24 @@ func multipleWithGoerrors() (_ string, __result__1 *goerrors.Error) {
 
 // joomcode/errorx =========================================================
 // Returns errorx.Error
-func withErrorxError() (__result__0 *errorx.Error) {
+func withErrorxError() (__result__0 error) {
 //line <generated>:1
   {
-    __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    }()
   }
 //line input.go:53
   return errorx.Cast(errors.New("errorx"))
 }
 
 // Returns multiple values, including errorx.Error
-func multipleWithErrorx() (_ string, __result__1 *errorx.Error) {
+func multipleWithErrorx() (_ string, __result__1 error) {
 //line <generated>:1
   {
-    __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    }()
   }
 //line input.go:58
   return "", errorx.Cast(errors.New("errorx"))
@@ -105,20 +121,24 @@ func multipleWithErrorx() (_ string, __result__1 *errorx.Error) {
 
 // ztrue/tracerr =========================================================
 // Return tracerr.Error
-func withTracerrError() (__result__0 tracerr.Error) {
+func withTracerrError() (__result__0 error) {
 //line <generated>:1
   {
-    __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    }()
   }
 //line input.go:64
   return tracerr.New("tracerr")
 }
 
 // Return multiple value, including tracerr.Error
-func multipleWithTracerr() (_ string, __result__1 tracerr.Error) {
+func multipleWithTracerr() (_ string, __result__1 error) {
 //line <generated>:1
   {
-    __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    }()
   }
 //line input.go:69
   return "", tracerr.New("tracerr")
@@ -129,7 +149,9 @@ func multipleWithTracerr() (_ string, __result__1 tracerr.Error) {
 func withErrtraceWrapped() (__result__0 error) {
 //line <generated>:1
   {
-    __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+    }()
   }
 //line input.go:75
   return errtrace.Wrap(errors.New("errtrace"))
@@ -139,7 +161,9 @@ func withErrtraceWrapped() (__result__0 error) {
 func withErrtraceNew() (_ string, __result__1 error) {
 //line <generated>:1
   {
-    __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+    }()
   }
 //line input.go:80
   return "", errtrace.Wrap(errors.New("errtrace"))
