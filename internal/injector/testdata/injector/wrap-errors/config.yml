@@ -5,106 +5,21 @@
 %YAML 1.1
 ---
 aspects:
-  # Aspect 1: standard library error
   - id: "wrap-standard-errors"
     join-point:
       function-body:
         function:
-          - signature-contains:
-              returns: [error]
+          - result-implements: "error"
     advice:
       - prepend-statements:
           imports:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
           template: |-
-            {{ $err := .Function.ResultOfType "error" -}}
-            {{- $err = "err" -}}
-            err := errortrace.Wrap($err)  
+            {{- $ret := .Function.ResultThatImplements "error" -}}
+            {{ $ret }} = errortrace.Wrap({{ $ret }})
 
-  # Aspect 2: go.uber.org/multierr type
-  - id: "wrap-gouber-multierr-errors"
-    join-point:
-      function-body:
-        function:
-          - signature-contains:
-              returns: [error]
-    advice:
-      - prepend-statements:
-          imports:
-            errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
-            multierr: go.uber.org/multierr
-          template: |-
-            {{ $err := .Function.ResultOfType "multierr.Invoker" }}
-            {{- $err = "err" -}}
-            err := errortrace.Wrap($err)  
-  
-  # Aspect 3: go-errors/errors type
-  - id: "wrap-goerrors-errors"
-    join-point:
-      function-body:
-        function:
-          - signature-contains:
-              returns: [error]
-    advice:
-      - prepend-statements:
-          imports:
-            errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
-            goerrors: github.com/go-errors/errors
-          template: |-
-            {{ $err := .Function.ResultOfType "goerrors.Error" }}
-            {{- $err = "err" -}}
-            err := errortrace.Wrap($err)  
-
-  # Aspect 4: joomcode/errorx type
-  - id: "wrap-joomcode-errorx-errors"
-    join-point:
-      function-body:
-        function:
-          - signature-contains:
-              returns: [error]
-    advice:
-      - prepend-statements:
-          imports:
-            errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
-            errorx: github.com/joomcode/errorx
-          template: |-
-            {{ $err := .Function.ResultOfType "errorx.Error" }}
-            {{- $err = "err" -}}
-            err := errortrace.Wrap($err)  
-
-  # Aspect 5: ztrue/tracerr type
-  - id: "wrap-ztrue-tracerr-errors"
-    join-point:
-      function-body:
-        function:
-          - signature-contains:
-              returns: [error]
-    advice:
-      - prepend-statements:
-          imports:
-            errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
-            tracerr: github.com/ztrue/tracerr
-          template: |-
-            {{ $err := .Function.ResultOfType "tracerr.Error" }}
-            {{- $err = "err" -}}
-            err := errortrace.Wrap($err)  
-
-  # Aspect 6: braces.dev/errtrace type
-  - id: "wrap-bracesdev-errtrace-errors"
-    join-point:
-      function-body:
-        function:
-          - signature-contains:
-              returns: [error]
-    advice:
-      - prepend-statements:
-          imports:
-            errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
-            errtrace: braces.dev/errtrace
-          template: |-
-            {{ $err := .Function.ResultOfType "errtrace.Error" }}
-            {{- $err = "err" -}}
-            err := errortrace.Wrap($err)  
+syntheticReferences:
+  github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace: true
 
 code: |-
   package test
@@ -119,73 +34,72 @@ code: |-
     "braces.dev/errtrace"
   )
 
-  // standard library =========================================================
   // Returns a single error
-  func withError() (error) {
-    return nil
+  func withError() error {
+    return errors.New("some error")
   }
 
   // Returns multiple values, including an error
   func withMultipleReturn() (string, error) {
-    return "", nil
+    return "some string", errors.New("some error")
   }
 
-  // No matches
+  // No matches - doesn't return error
   func noMatch(val uint32) string {
     return ""
   }
 
   // uber-go/multierr =========================================================
-  // Returns multierr.Invoker
-  func withMultierrInvoker() multierr.Invoker {
-    return nil
+  // Returns error from multierr
+  func withMultierrInvoker() error {
+    return multierr.Combine(errors.New("1"), errors.New("2"))
   }
 
-  // Returns multiple values, including multierr.Invoker
-  func multipleWithInvoker() (string, multierr.Invoker) {
-    return "", nil
+  // Returns multiple values, including error
+  func multipleWithInvoker() (string, error) {
+    return "", multierr.Combine(errors.New("1"), errors.New("2"))
   }
 
   // go-errors/errors =========================================================
   // Returns go-errors/errors.Error
   func withGoErrorsError() *goerrors.Error {
-    return nil
+    return goerrors.New("goerrors")
   }
 
-  // Returns multiple values, including *errors.Error
+  // Returns multiple values, including goerrors.Error
   func multipleWithGoerrors() (string, *goerrors.Error) {
-    return "", nil
+    return "", goerrors.New("goerrors")
   }
 
   // joomcode/errorx =========================================================
   // Returns errorx.Error
   func withErrorxError() *errorx.Error {
-    return nil
+    return errorx.Cast(errors.New("errorx"))
   }
 
   // Returns multiple values, including errorx.Error
   func multipleWithErrorx() (string, *errorx.Error) {
-    return "", nil
+    return "", errorx.Cast(errors.New("errorx"))
   }
 
   // ztrue/tracerr =========================================================
   // Return tracerr.Error
-  func withTracerrError() *tracerr.Error {
-    return nil
+  func withTracerrError() tracerr.Error {
+    return tracerr.New("tracerr")
   }
 
   // Return multiple value, including tracerr.Error
-  func multipleWithTracerr() (string, *tracerr.Error) {
-    return "", nil
+  func multipleWithTracerr() (string, tracerr.Error) {
+    return "", tracerr.New("tracerr")
   }
 
   // bracesdev/errtrace ========================================================
-  // Return errtrace.Error
-  func withErrtraceWrapped() *errtrace.Error {
-    return nil
+  // Return error from errtrace
+  func withErrtraceWrapped() error {
+    return errtrace.Wrap(errors.New("errtrace"))
   }
 
-  // Return multiple values, including *errtrace.Error
-  func withErrtraceNew() (string, *errtrace.Error) {
-    return "", nil
+  // Return multiple values, including error
+  func withErrtraceNew() (string, error) {
+    return "", errtrace.Wrap(errors.New("errtrace"))
   }
