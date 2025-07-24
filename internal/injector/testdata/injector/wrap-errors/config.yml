@@ -14,6 +14,7 @@ aspects:
       - prepend-statements:
           imports:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
+            fmt: fmt
           template: |-
             {{- $ret := .Function.ResultThatImplements "error" -}}
             defer func() {
@@ -28,6 +29,7 @@ code: |-
 
   import (
     "errors"
+    "fmt"
 
     "go.uber.org/multierr"
     goerrors "github.com/go-errors/errors"
@@ -46,6 +48,21 @@ code: |-
     return "some string", errors.New("some error")
   }
 
+  // Returns a wrapped error
+  func withWrappedError() error {
+    return fmt.Errorf("some error")
+  }
+
+  // Returns error in first position
+  func withErrorFirst() (error, string) {
+    return errors.New("some error"), "some string"
+  }
+
+  // Returns error in second position
+  func withErrorSecond() (string, error, string) {
+    return "first", errors.New("some error"), "last"
+  }
+
   // No matches - doesn't return error
   func noMatch(val uint32) string {
     return ""
@@ -60,6 +77,21 @@ code: |-
   // Returns multiple values, including error
   func multipleWithInvoker() (string, error) {
     return "", multierr.Combine(errors.New("1"), errors.New("2"))
+  }
+
+  // Returns a multierr Error with append
+  func withMultierrAppend() error {
+      var err error
+      err = multierr.Append(err, errors.New("first"))
+      err = multierr.Append(err, errors.New("second"))
+      return err
+  }
+
+  // Returns multiple return values, including multierr.Append error
+  func multipleWithMultierrAppend() (string, error) {
+      var err error
+      err = multierr.Append(err, errors.New("first"))
+      return "", err
   }
 
   // go-errors/errors =========================================================
@@ -84,6 +116,16 @@ code: |-
     return "", errorx.Cast(errors.New("errorx"))
   }
 
+  // Returns errorx.Error with Decorate
+  func withErrorxDecorate() error {
+    return errorx.Decorate(errors.New("decorated"), "context")
+  }
+
+  // Returns multiple values, including errorx.Error with Decorate
+  func multipleWithErrorxDecorate() (string, error) {
+    return "", errorx.Decorate(errors.New("decorated"), "context")
+  }
+
   // ztrue/tracerr =========================================================
   // Return tracerr.Error
   func withTracerrError() error {
@@ -95,13 +137,53 @@ code: |-
     return "", tracerr.New("tracerr")
   }
 
+  // Returns tracerr.Error with Wrap
+  func withTracerrStack() error {
+    return tracerr.Wrap(errors.New("wrapped"))
+  }
+
+  // Returns multiple values, including tracerr.Error with Wrap
+  func multipleWithTracerrStack() (string, error) {
+    return "", tracerr.Wrap(errors.New("wrapped"))
+  }
+
   // bracesdev/errtrace ========================================================
-  // Return error from errtrace
+  // Returns error from errtrace
+  func withErrtraceNew() error {
+    return errtrace.New("errtrace")
+  }
+
+  // Returns multiple values, including error from errtrace
+  func multipleWithErrtrace() (string, error) {
+    return "", errtrace.New("errtrace")
+  }
+
+  // Return error from errtrace.Wrap
   func withErrtraceWrapped() error {
     return errtrace.Wrap(errors.New("errtrace"))
   }
 
   // Return multiple values, including error
-  func withErrtraceNew() (string, error) {
+  func multipleWithErrtraceWrapped() (string, error) {
     return "", errtrace.Wrap(errors.New("errtrace"))
+  }
+
+  // custom error type ========================================================
+  type customError struct {
+    msg string
+  }
+
+  func (c customError) Error() string {
+    return fmt.Sprintf("error: %s", c.msg)
+  }
+
+  // Return custom error
+  func withCustomError() customError {
+    return customError {
+      msg: "hello",
+    }
+  }
+
+  func multipleWithCustomError() (string, customError) {
+    return "", customError{msg: "hello"}
   }
