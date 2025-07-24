@@ -71,14 +71,14 @@ var (
 
 			if clictx.Bool(packageFlag.Name) {
 				for _, pkg := range report.Packages() {
-					fmt.Fprintln(clictx.App.Writer, pkg)
+					_, _ = fmt.Fprintln(clictx.App.Writer, pkg)
 				}
 				return nil
 			}
 
 			if clictx.Bool(filenameFlag.Name) {
 				for _, file := range report.Files() {
-					fmt.Fprintln(clictx.App.Writer, file)
+					_, _ = fmt.Fprintln(clictx.App.Writer, file)
 				}
 				return nil
 			}
