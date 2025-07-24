@@ -109,6 +109,42 @@ func Test_parseDirectiveArgs(t *testing.T) {
 			},
 			wantOk: true,
 		},
+		{
+			name:    "unclosed double quote value",
+			prefix:  "//dd:span",
+			comment: `//dd:span service.name:"my-service`,
+			want: []DirectiveArgument{
+				{Key: "service.name", Value: `"my-service`},
+			},
+			wantOk: true,
+		},
+		{
+			name:    "unclosed single quote value",
+			prefix:  "//dd:span",
+			comment: `//dd:span service.name:'my-service`,
+			want: []DirectiveArgument{
+				{Key: "service.name", Value: "'my-service"},
+			},
+			wantOk: true,
+		},
+		{
+			name:    "missing space between quoted args",
+			prefix:  "//dd:span",
+			comment: `//dd:span service.name:"my-service"resource.name:"GET /"`,
+			want: []DirectiveArgument{
+				{Key: "service.name", Value: `my-service"resource.name:"GET /`},
+			},
+			wantOk: true,
+		},
+		{
+			name:    "quote starts but ends with different quote type",
+			prefix:  "//dd:span",
+			comment: `//dd:span service.name:"my-service'`,
+			want: []DirectiveArgument{
+				{Key: "service.name", Value: `"my-service'`},
+			},
+			wantOk: true,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
