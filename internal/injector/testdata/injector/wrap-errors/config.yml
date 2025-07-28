@@ -16,7 +16,7 @@ aspects:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
             fmt: fmt
           template: |-
-            {{- $ret := .Function.ResultThatImplements "error" -}}
+            {{ $ret := .Function.LastResultThatImplements "error" }}
             defer func() {
               {{ $ret }} = errortrace.Wrap({{ $ret }})
             }()
@@ -37,6 +37,9 @@ code: |-
     "github.com/ztrue/tracerr"
     "braces.dev/errtrace"
   )
+
+  var pkgLevelError error
+  var initializedError error = errors.New("outside function")
 
   // Returns a single error
   func withError() error {
@@ -61,6 +64,22 @@ code: |-
   // Returns error in second position
   func withErrorSecond() (string, error, string) {
     return "first", errors.New("some error"), "last"
+  }
+
+  // Return multiple errors
+  func withMultipleErrors() (error, error) {
+    return errors.New("first"), errors.New("second")
+  }
+
+  // Return an error that was declared at the package level
+  func packageDeclaredLevelError() error {
+    pkgLevelError = errors.New("inside function")
+    return pkgLevelError
+  }
+
+  // Return an error that was initialized at the package level
+  func packageInitializedLevelError() error {
+    return initializedError
   }
 
   // No matches - doesn't return error
