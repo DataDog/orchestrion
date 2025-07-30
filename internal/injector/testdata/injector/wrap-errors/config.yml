@@ -14,7 +14,6 @@ aspects:
       - prepend-statements:
           imports:
             errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
-            fmt: fmt
           template: |-
             {{ $ret := .Function.LastResultThatImplements "error" }}
             defer func() {
