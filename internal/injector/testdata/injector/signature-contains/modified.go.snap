@@ -3,13 +3,22 @@ package test
 
 import (
   "context"
+  "errors"
+  "fmt"
+
+  "braces.dev/errtrace"
+  goerrors "github.com/go-errors/errors"
+  "github.com/joomcode/errorx"
+  "github.com/ztrue/tracerr"
+  "go.uber.org/multierr"
 //line <generated>:1
-  __orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+  __orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+  __orchestrion_errortrace "github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace"
 )
 
 // Matches both: has context in args and error in returns
 //
-//line input.go:8
+//line input.go:16
 func withContextAndError(ctx context.Context, data []byte) (_ string, __result__1 error) {
 //line <generated>:1
   {
@@ -19,11 +28,12 @@ func withContextAndError(ctx context.Context, data []byte) (_ string, __result__
     )
 
     defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
       span.Finish(__orchestrion_tracer.WithError(__result__1))
     }()
 
   }
-//line input.go:9
+//line input.go:17
   return "", nil
 }
 
@@ -37,11 +47,12 @@ func withContextInMiddle(data []byte, ctx context.Context, moreData []byte) (_ s
     )
 
     defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
       span.Finish(__orchestrion_tracer.WithError(__result__1))
     }()
 
   }
-//line input.go:14
+//line input.go:22
   return "", nil
 }
 
@@ -56,11 +67,12 @@ func onlyError(data []byte) (_ string, __result__1 error) {
     )
 
     defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
       span.Finish(__orchestrion_tracer.WithError(__result__1))
     }()
 
   }
-//line input.go:19
+//line input.go:27
   return "", nil
 }
 
@@ -72,14 +84,569 @@ func onlyContext(data []byte, ctx context.Context, moreData []byte) string {
     span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "onlyContext",
       __orchestrion_tracer.Tag("function-name", "onlyContext"),
     )
-
     defer span.Finish()
   }
-//line input.go:24
+//line input.go:32
   return ""
 }
 
 // Matches neither
 func noMatch(data []byte) string {
   return ""
+}
+
+// wrapping errors testing
+
+var pkgLevelError error
+var initializedError error = errors.New("outside function")
+
+// Returns a single error
+func withError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withError",
+      __orchestrion_tracer.Tag("function-name", "withError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:47
+  return errors.New("some error")
+}
+
+// Returns multiple values, including an error
+func withMultipleReturn() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withMultipleReturn",
+      __orchestrion_tracer.Tag("function-name", "withMultipleReturn"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:52
+  return "some string", errors.New("some error")
+}
+
+// Returns a wrapped error
+func withWrappedError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withWrappedError",
+      __orchestrion_tracer.Tag("function-name", "withWrappedError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:57
+  return fmt.Errorf("some error")
+}
+
+// Returns error in first position
+func withErrorFirst() (__result__0 error, _ string) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withErrorFirst",
+      __orchestrion_tracer.Tag("function-name", "withErrorFirst"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:62
+  return errors.New("some error"), "some string"
+}
+
+// Returns error in second position
+func withErrorSecond() (_ string, __result__1 error, _ string) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withErrorSecond",
+      __orchestrion_tracer.Tag("function-name", "withErrorSecond"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:67
+  return "first", errors.New("some error"), "last"
+}
+
+// Return multiple errors
+func withMultipleErrors() (_ error, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withMultipleErrors",
+      __orchestrion_tracer.Tag("function-name", "withMultipleErrors"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:72
+  return errors.New("first"), errors.New("second")
+}
+
+// Return an error that was declared at the package level
+func packageDeclaredLevelError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "packageDeclaredLevelError",
+      __orchestrion_tracer.Tag("function-name", "packageDeclaredLevelError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:77
+  pkgLevelError = errors.New("inside function")
+  return pkgLevelError
+}
+
+// Return an error that was initialized at the package level
+func packageInitializedLevelError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "packageInitializedLevelError",
+      __orchestrion_tracer.Tag("function-name", "packageInitializedLevelError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:83
+  return initializedError
+}
+
+// uber-go/multierr =========================================================
+// Returns error from multierr
+func withMultierrInvoker() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withMultierrInvoker",
+      __orchestrion_tracer.Tag("function-name", "withMultierrInvoker"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:89
+  return multierr.Combine(errors.New("1"), errors.New("2"))
+}
+
+// Returns multiple values, including error
+func multipleWithInvoker() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithInvoker",
+      __orchestrion_tracer.Tag("function-name", "multipleWithInvoker"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:94
+  return "", multierr.Combine(errors.New("1"), errors.New("2"))
+}
+
+// Returns a multierr Error with append
+func withMultierrAppend() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withMultierrAppend",
+      __orchestrion_tracer.Tag("function-name", "withMultierrAppend"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:99
+  var err error
+  err = multierr.Append(err, errors.New("first"))
+  err = multierr.Append(err, errors.New("second"))
+  return err
+}
+
+// Returns multiple return values, including multierr.Append error
+func multipleWithMultierrAppend() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithMultierrAppend",
+      __orchestrion_tracer.Tag("function-name", "multipleWithMultierrAppend"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:107
+  var err error
+  err = multierr.Append(err, errors.New("first"))
+  return "", err
+}
+
+// go-errors/errors =========================================================
+// Returns go-errors/errors.Error
+func withGoErrorsError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withGoErrorsError",
+      __orchestrion_tracer.Tag("function-name", "withGoErrorsError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:115
+  return goerrors.New("goerrors")
+}
+
+// Returns multiple values, including goerrors.Error
+func multipleWithGoerrors() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithGoerrors",
+      __orchestrion_tracer.Tag("function-name", "multipleWithGoerrors"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:120
+  return "", goerrors.New("goerrors")
+}
+
+// joomcode/errorx =========================================================
+// Returns errorx.Error
+func withErrorxError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withErrorxError",
+      __orchestrion_tracer.Tag("function-name", "withErrorxError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:126
+  return errorx.Cast(errors.New("errorx"))
+}
+
+// Returns multiple values, including errorx.Error
+func multipleWithErrorx() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithErrorx",
+      __orchestrion_tracer.Tag("function-name", "multipleWithErrorx"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:131
+  return "", errorx.Cast(errors.New("errorx"))
+}
+
+// Returns errorx.Error with Decorate
+func withErrorxDecorate() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withErrorxDecorate",
+      __orchestrion_tracer.Tag("function-name", "withErrorxDecorate"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:136
+  return errorx.Decorate(errors.New("decorated"), "context")
+}
+
+// Returns multiple values, including errorx.Error with Decorate
+func multipleWithErrorxDecorate() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithErrorxDecorate",
+      __orchestrion_tracer.Tag("function-name", "multipleWithErrorxDecorate"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:141
+  return "", errorx.Decorate(errors.New("decorated"), "context")
+}
+
+// ztrue/tracerr =========================================================
+// Return tracerr.Error
+func withTracerrError() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withTracerrError",
+      __orchestrion_tracer.Tag("function-name", "withTracerrError"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:147
+  return tracerr.New("tracerr")
+}
+
+// Return multiple value, including tracerr.Error
+func multipleWithTracerr() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithTracerr",
+      __orchestrion_tracer.Tag("function-name", "multipleWithTracerr"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:152
+  return "", tracerr.New("tracerr")
+}
+
+// Returns tracerr.Error with Wrap
+func withTracerrStack() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withTracerrStack",
+      __orchestrion_tracer.Tag("function-name", "withTracerrStack"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:157
+  return tracerr.Wrap(errors.New("wrapped"))
+}
+
+// Returns multiple values, including tracerr.Error with Wrap
+func multipleWithTracerrStack() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithTracerrStack",
+      __orchestrion_tracer.Tag("function-name", "multipleWithTracerrStack"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:162
+  return "", tracerr.Wrap(errors.New("wrapped"))
+}
+
+// bracesdev/errtrace ========================================================
+// Returns error from errtrace
+func withErrtraceNew() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withErrtraceNew",
+      __orchestrion_tracer.Tag("function-name", "withErrtraceNew"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:168
+  return errtrace.New("errtrace")
+}
+
+// Returns multiple values, including error from errtrace
+func multipleWithErrtrace() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithErrtrace",
+      __orchestrion_tracer.Tag("function-name", "multipleWithErrtrace"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:173
+  return "", errtrace.New("errtrace")
+}
+
+// Return error from errtrace.Wrap
+func withErrtraceWrapped() (__result__0 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "withErrtraceWrapped",
+      __orchestrion_tracer.Tag("function-name", "withErrtraceWrapped"),
+    )
+
+    defer func() {
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0)
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:178
+  return errtrace.Wrap(errors.New("errtrace"))
+}
+
+// Return multiple values, including error
+func multipleWithErrtraceWrapped() (_ string, __result__1 error) {
+//line <generated>:1
+  {
+    ctx := context.TODO()
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "multipleWithErrtraceWrapped",
+      __orchestrion_tracer.Tag("function-name", "multipleWithErrtraceWrapped"),
+    )
+
+    defer func() {
+      __result__1 = __orchestrion_errortrace.Wrap(__result__1)
+      span.Finish(__orchestrion_tracer.WithError(__result__1))
+    }()
+
+  }
+//line input.go:183
+  return "", errtrace.Wrap(errors.New("errtrace"))
+}
+
+// custom error type ========================================================
+type customError struct {
+  msg string
+}
+
+func (c customError) Error() string {
+  return fmt.Sprintf("error: %s", c.msg)
+}
+
+// Return custom error
+func withCustomError() customError {
+  return customError{
+    msg: "hello",
+  }
+}
+
+func multipleWithCustomError() (string, customError) {
+  return "", customError{msg: "hello"}
 }
