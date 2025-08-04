@@ -115,7 +115,7 @@ jobs:
           private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
 
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@7c35caed9937939812c7d4242ffab823e9b3b1fa # v0.2.16
+        uses: planetscale/ghcommit-action@322be9669498a4be9ce66efc1169f8f43f6bd883 # v0.2.17
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ steps.generate-token.outputs.token }}

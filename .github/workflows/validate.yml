@@ -133,7 +133,7 @@ jobs:
 
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        uses: planetscale/ghcommit-action@7c35caed9937939812c7d4242ffab823e9b3b1fa # v0.2.16
+        uses: planetscale/ghcommit-action@322be9669498a4be9ce66efc1169f8f43f6bd883 # v0.2.17
         with:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
@@ -160,7 +160,7 @@ jobs:
       - name: vet
         run: go vet ./...
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@392b78fe18a52790c53f42456e46124f77346842 # v1.34.0
+        uses: crate-ci/typos@a9ccf76b53d1ace194871d216f9ff058599a86db # v1.35.1
         with:
           files: |
             _docs/
