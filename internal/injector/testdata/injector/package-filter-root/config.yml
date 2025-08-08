@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      package-filter:
+        module: "root"
+        pattern: "internal/*"
+    advice:
+      - add-blank-import: "context"
+
+syntheticReferences:
+  context: true
+
+import-path: github.com/DataDog/orchestrion/internal/example
+
+code: |-
+  package example
+
+  import "fmt"
+
+  func main() {
+    fmt.Println("Hello from root module!")
+  }
