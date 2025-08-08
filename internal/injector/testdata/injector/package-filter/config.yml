@@ -1,0 +1,21 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      package-filter: "github.com/ACME/*/*/my*"
+    advice:
+      - add-blank-import: "unsafe"
+
+syntheticReferences:
+  unsafe: true
+
+import-path: github.com/ACME/internal/my-component/mypackage
+
+code: |-
+  package mypackage
+
+  import "fmt"
+
+  func main() {
+    fmt.Println("Hello World!")
+  }

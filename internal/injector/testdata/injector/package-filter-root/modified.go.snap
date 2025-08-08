@@ -1,0 +1,14 @@
+//line input.go:1:1
+package example
+
+import (
+  "fmt"
+
+//line <generated>:1
+  _ "context"
+)
+
+//line input.go:5
+func main() {
+  fmt.Println("Hello from root module!")
+}
