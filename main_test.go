@@ -107,9 +107,23 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")
 		}
-		// traefik fails to build if we don't upgrade the version go.opentelemetry.io/otel/sdk/log
+		// traefik needs a few tweaks in order to build successfully
 		if repo == "traefik" {
+			// it fails to build if we don't upgrade the version go.opentelemetry.io/otel/sdk/log
 			tc.exec(b, "go", "get", "go.opentelemetry.io/otel/sdk/log@latest")
+
+			// it fails to build if ./webui/static does not exist, so just create a folder with mock content
+			webuiPath := filepath.Join(tc.dir, "webui")
+			if stat, err := os.Stat(webuiPath); err == nil && stat.IsDir() {
+				staticPath := filepath.Join(webuiPath, "static")
+				err := os.MkdirAll(staticPath, 0755)
+				require.NoError(b, err, "failed to create static directory for traefik build: %s", staticPath)
+
+				indexFile := filepath.Join(staticPath, "index.html")
+				f, err := os.Create(indexFile)
+				require.NoError(b, err, "failed to create mock content for traefik build: %s", indexFile)
+				require.NoError(b, f.Close())
+			}
 		}
 		tc.exec(b, buildOrchestrion(b), "pin")
 
