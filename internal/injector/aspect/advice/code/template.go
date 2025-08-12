@@ -177,6 +177,9 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 			return true
 		}
 
+		// FIXME: this is wrongly assuming the SelectorExpr comes from an import.
+		// 	We could check ident.Path == "" and early return in this case, but cannot do it
+		//  because node provide to this function is not parsed in "import-aware" mode.
 		path, found := t.Imports[ident.Name]
 		if !found {
 			return true
