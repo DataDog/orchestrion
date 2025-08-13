@@ -147,20 +147,18 @@ func (t *Template) compileTemplate(ctx context.AdviceContext, name string) ([]ds
 		if decl, ok := decl.(*dst.GenDecl); ok && decl.Tok == token.IMPORT {
 			return nil, errors.New("code templates must not contain import declarations, use the imports map instead")
 		}
+		// IMPORTANT: process imports BEFORE replacing placeholders, so we never replace a symbol from the original AST.
+		decl = t.processImports(ctx, decl)
 		decls = append(decls, dot.placeholders.replaceAllIn(decl).(dst.Decl))
-	}
-
-	for i := range decls {
-		decls[i] = t.processImports(ctx, decls[i])
 	}
 
 	return decls, nil
 }
 
-// processImports replaces all *dst.SelectorExpr based on one of the names
-// present in the t.imports map with a qualified *dst.Ident node, so that the
-// import-enabled decorator.Restorer can emit the correct code, and knows not to
-// remove the inserted import statements.
+// processImports replaces all [*dst.SelectorExpr] based on one of the names
+// present in the [Template.Imports] map with a qualified [*dst.Ident] node, so
+// that the import-enabled decorator.Restorer can emit the correct code, and
+// knows not to remove the inserted import statements.
 func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.Decl {
 	if len(t.Imports) == 0 {
 		return node
@@ -177,9 +175,6 @@ func (t *Template) processImports(ctx context.AdviceContext, node dst.Decl) dst.
 			return true
 		}
 
-		// FIXME: this is wrongly assuming the SelectorExpr comes from an import.
-		// 	We could check ident.Path == "" and early return in this case, but cannot do it
-		//  because node provide to this function is not parsed in "import-aware" mode.
 		path, found := t.Imports[ident.Name]
 		if !found {
 			return true
