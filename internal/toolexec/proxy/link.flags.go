@@ -10,8 +10,8 @@ package proxy
 import "flag"
 
 func (f *linkFlagSet) parse(args []string) ([]string, error) {
-	flagSet := flag.NewFlagSet("link version go1.23", flag.ContinueOnError)
-	flagSet.String("B", "", "set ELF NT_GNU_BUILD_ID note or Mach-O UUID; use \"gobuildid\" to generate it from the Go build ID")
+	flagSet := flag.NewFlagSet("link version go1.24", flag.ContinueOnError)
+	flagSet.String("B", "", "set ELF NT_GNU_BUILD_ID note or Mach-O UUID; use \"gobuildid\" to generate it from the Go build ID; \"none\" to disable")
 	flagSet.String("E", "", "set entry symbol name")
 	flagSet.String("H", "", "set header type")
 	flagSet.String("I", "", "use linker as ELF dynamic linker")
@@ -45,6 +45,7 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.String("extld", "", "use linker when linking in external mode")
 	flagSet.String("extldflags", "", "pass flags to external linker")
 	flagSet.Bool("f", false, "ignore version mismatch")
+	flagSet.String("fipso", "", "write fips module to file")
 	flagSet.Bool("g", false, "disable go package data checks")
 	flagSet.Bool("h", false, "halt on error")
 	flagSet.StringVar(&f.ImportCfg, "importcfg", "", "read import configuration from file")
