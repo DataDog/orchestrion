@@ -139,7 +139,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 
 		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
 			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
-			// typically used to avoid creating dependency cycles. Corrollary to this, the `link.deps`
+			// typically used to avoid creating dependency cycles. Corollary to this, the `link.deps`
 			// file will not contain transitive closures for these packages, so we need to resolve these
 			// at link-time. If the package being built is "main", then we can ignore this, as we are at
 			// the top-level of a dependency tree anyway, and if we cannot resolve a dependency, then we

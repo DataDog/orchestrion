@@ -13,7 +13,7 @@ import (
 )
 
 func TestFilterExtraneousImports(t *testing.T) {
-	qualifedImport := func(name string) *dst.ImportSpec {
+	qualifiedImport := func(name string) *dst.ImportSpec {
 		return &dst.ImportSpec{Name: &dst.Ident{Name: name}}
 	}
 
@@ -25,58 +25,58 @@ func TestFilterExtraneousImports(t *testing.T) {
 		{
 			name: "simple",
 			in: []*dst.ImportSpec{
-				qualifedImport("test"),
+				qualifiedImport("test"),
 			},
-			expected: qualifedImport("test"),
+			expected: qualifiedImport("test"),
 		},
 		{
 			name: "multiple-qualified",
 			in: []*dst.ImportSpec{
-				qualifedImport("test1"),
-				qualifedImport("test2"),
+				qualifiedImport("test1"),
+				qualifiedImport("test2"),
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 		{
 			name: "one-qualified-first",
 			in: []*dst.ImportSpec{
-				qualifedImport("test1"),
+				qualifiedImport("test1"),
 				{Name: &dst.Ident{Name: "_"}},
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 		{
 			name: "one-qualified-last",
 			in: []*dst.ImportSpec{
-				qualifedImport("test1"),
+				qualifiedImport("test1"),
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 		{
 			name: "one-qualified-first-with-nil",
 			in: []*dst.ImportSpec{
-				qualifedImport("test1"),
+				qualifiedImport("test1"),
 				{Name: nil},
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 		{
 			name: "one-qualified-last-with-nil",
 			in: []*dst.ImportSpec{
 				{Name: nil},
-				qualifedImport("test1"),
+				qualifiedImport("test1"),
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 		{
 			name: "complex-1",
 			in: []*dst.ImportSpec{
 				{Name: nil},
 				{Name: &dst.Ident{Name: "_"}},
-				qualifedImport("test1"),
+				qualifiedImport("test1"),
 				{Name: nil},
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 		{
 			name: "complex-2",
@@ -109,12 +109,12 @@ func TestFilterExtraneousImports(t *testing.T) {
 			name: "complex-5",
 			in: []*dst.ImportSpec{
 				{Name: nil},
-				qualifedImport("test1"),
+				qualifiedImport("test1"),
 				{Name: &dst.Ident{Name: "_"}},
 				{Name: nil},
-				qualifedImport("test2"),
+				qualifiedImport("test2"),
 			},
-			expected: qualifedImport("test1"),
+			expected: qualifiedImport("test1"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

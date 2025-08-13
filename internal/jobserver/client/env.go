@@ -85,7 +85,7 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 	cmd.Stdout, _ = os.Create(urlFilePath + ".stdout.log")
 	log.Trace().
 		Strs("args", cmd.Args).
-		Msg("Starting deamonized jobserver process...")
+		Msg("Starting daemonized jobserver process...")
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
