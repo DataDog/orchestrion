@@ -87,7 +87,7 @@ func init() {
 			// The tracer and profiler already use the stdlib logger, so
 			// we're not adding anything new. But users might be using a
 			// different logger.
-			__orchestrion_log.Printf("failed to start profiling: %s", err)
+			__orchestrion_log.Printf("failed to start profiling: %s", err.Error())
 		}
 	}
 }
