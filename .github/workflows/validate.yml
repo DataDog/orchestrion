@@ -4,8 +4,6 @@ on:
     branches: ['**']
   merge_group:
     branches: [main]
-  push:
-    branches: [main]
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || ((github.event_name == 'push' && github.sha) || github.ref) }}
   cancel-in-progress: true
