@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      package-filter:
+        module: "github.com/external/library"
+        pattern: "internal/*"
+    advice:
+      - add-blank-import: "time"
+
+syntheticReferences:
+  time: true
+
+import-path: github.com/external/library/public/api
+
+code: |-
+  package api
+
+  import "fmt"
+
+  func PublicAPI() {
+    fmt.Println("This is a public API - should not match internal/* pattern")
+  }
