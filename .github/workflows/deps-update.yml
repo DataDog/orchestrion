@@ -118,7 +118,7 @@ jobs:
         uses: planetscale/ghcommit-action@322be9669498a4be9ce66efc1169f8f43f6bd883 # v0.2.17
         with:
           commit_message: "chore: update all dependencies"
-          repo: ${{ steps.generate-token.outputs.token }}
+          repo: ${{ github.repository }}
           branch: ${{ steps.create-branch.outputs.branch }}
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
