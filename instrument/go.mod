@@ -18,14 +18,14 @@ require (
 	cloud.google.com/go/pubsub v1.49.0 // indirect
 	github.com/99designs/gqlgen v0.17.70 // indirect
 	github.com/DataDog/appsec-internal-go v1.13.0 // indirect
-	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/obfuscate v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/version v0.68.3 // indirect
+	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/obfuscate v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/version v0.69.0 // indirect
 	github.com/DataDog/datadog-go/v5 v5.6.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/99designs/gqlgen/v2 v2.1.0-rc.3 // indirect
 	github.com/DataDog/dd-trace-go/contrib/IBM/sarama/v2 v2.1.0-rc.3 // indirect
@@ -104,7 +104,7 @@ require (
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charmbracelet/colorprofile v0.3.1 // indirect
+	github.com/charmbracelet/colorprofile v0.3.2 // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.10.1 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
@@ -209,7 +209,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nats-io/jwt/v2 v2.8.0 // indirect
-	github.com/nats-io/nats-server/v2 v2.11.7 // indirect
+	github.com/nats-io/nats-server/v2 v2.11.8 // indirect
 	github.com/nats-io/nats.go v1.44.0 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
@@ -277,7 +277,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/exp v0.0.0-20250811191247-51f88131bc50 // indirect
+	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
