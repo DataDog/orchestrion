@@ -12,7 +12,7 @@ require (
 	github.com/goccy/go-yaml v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/liamg/memoryfs v1.6.0
-	github.com/nats-io/nats-server/v2 v2.11.7
+	github.com/nats-io/nats-server/v2 v2.11.8
 	github.com/nats-io/nats.go v1.44.0
 	github.com/otiai10/copy v1.14.1
 	github.com/rs/zerolog v1.34.0
@@ -31,14 +31,14 @@ require (
 
 require (
 	github.com/DataDog/appsec-internal-go v1.13.0 // indirect
-	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/obfuscate v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.68.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/version v0.68.3 // indirect
+	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/obfuscate v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.69.0 // indirect
+	github.com/DataDog/datadog-agent/pkg/version v0.69.0 // indirect
 	github.com/DataDog/datadog-go/v5 v5.6.0 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.4.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 // indirect
@@ -50,7 +50,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charmbracelet/colorprofile v0.3.1 // indirect
+	github.com/charmbracelet/colorprofile v0.3.2 // indirect
 	github.com/charmbracelet/x/ansi v0.10.1 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
@@ -121,7 +121,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/exp v0.0.0-20250811191247-51f88131bc50 // indirect
+	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
