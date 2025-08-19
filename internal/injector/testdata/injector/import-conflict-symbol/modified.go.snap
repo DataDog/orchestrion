@@ -1,0 +1,14 @@
+//line input.go:1:1
+package example
+
+import (
+  "net/http"
+)
+
+type httpClient struct {
+  serverHost string
+}
+
+func (client *httpClient) Get(path string) (*http.Response, error) {
+  return http.Get("http://" + client.serverHost + path)
+}

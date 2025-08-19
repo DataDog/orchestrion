@@ -340,7 +340,7 @@
           "minLength": 1
         },
         "join-point": {
-          "description": "The join point that this aspect will macth with.",
+          "description": "The join point that this aspect will match with.",
           "$ref": "#/$defs/JoinPoint"
         },
         "advice": {
@@ -388,7 +388,7 @@
         "properties": {
           "all-of": {
             "title": "Intersection of multiple join points",
-            "markdownDescription": "The `all-of` join point matches any AST node that maches **all** of the children join points. This is typically useful to combine node-agnostic join points (`import-path`, `package`, `directive`, ...) with another join point.",
+            "markdownDescription": "The `all-of` join point matches any AST node that matches **all** of the children join points. This is typically useful to combine node-agnostic join points (`import-path`, `package`, `directive`, ...) with another join point.",
             "type": "array",
             "items": { "$ref": "#/$defs/JoinPoint" },
             "minItems": 2
@@ -543,7 +543,7 @@
         "properties": {
           "function-call": {
             "title": "Target function calls",
-            "markdownDescription": "The `function-call` join point matches function call nodes that represent a call to the specified function. It only mathces `Call` nodes.",
+            "markdownDescription": "The `function-call` join point matches function call nodes that represent a call to the specified function. It only matches `Call` nodes.",
             "$ref": "#/$defs/go/qualified-identifier"
           }
         },
@@ -704,7 +704,7 @@
         "properties": {
           "value-declaration": {
             "title": "Package-level `var` and `const` declarations",
-            "markdownDescription": "The `value-declaration` join point matches package-level `var` and `const` declarations of the specifid type. It is often used in combination with `directive`, to replace the initial value of these declarations. This join point only matches `GenDecl` nodes.",
+            "markdownDescription": "The `value-declaration` join point matches package-level `var` and `const` declarations of the specified type. It is often used in combination with `directive`, to replace the initial value of these declarations. This join point only matches `GenDecl` nodes.",
             "$ref": "#/$defs/go/type-ref"
           }
         },

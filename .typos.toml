@@ -1,0 +1,13 @@
+
+# typos configuration file
+# See https://github.com/crate-ci/typos/blob/master/docs/reference.md for more options
+
+[default.extend-words]
+Hashi = "Hashi"
+Nd = "Nd"
+Tio = "Tio"
+Tre = "Tre"
+Typ = "Typ"
+fo = "fo"
+typ = "typ"
+Unknwon = "Unknwon"

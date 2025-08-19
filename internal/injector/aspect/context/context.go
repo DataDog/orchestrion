@@ -129,7 +129,7 @@ type ContextArgs struct {
 	NodeMap map[dst.Node]ast.Node
 }
 
-// Context returns a new [*context] instance that represents the ndoe at the
+// Context returns a new [*context] instance that represents the node at the
 // provided cursor. The [context.Release] function should be called on values
 // returned by this function to allow for memory re-use, which can significantly
 // reduce allocations performed during AST traversal.
@@ -155,7 +155,7 @@ func (n *NodeChain) Context(ctx gocontext.Context, args ContextArgs) *context {
 }
 
 // Release returns the [*context] to the pool so that it can be reused later.
-// Proper use can significantly reduce memory allocations perfomed during AST
+// Proper use can significantly reduce memory allocations performed during AST
 // traversal.
 func (c *context) Release() {
 	*c = context{} // Zero it off
