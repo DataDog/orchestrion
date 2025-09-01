@@ -100,7 +100,7 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 			shouldMatch: false,
 		},
 
-		// No cross-separator matching (filepath.Match limitation)
+		// No cross-separator matching
 		{
 			name:        "wildcard cannot cross separators",
 			pattern:     "github.com/myorg/*",
@@ -410,9 +410,6 @@ func TestPackageFilterYAMLUnmarshaling(t *testing.T) {
 }
 
 func TestPackageFilterDebugCase(t *testing.T) {
-	// Debug the specific case from the integration test
-	// Note: filepath.Match cannot cross path separators, so ** patterns won't work
-	// We need to use a pattern that fits filepath.Match semantics
 	pattern := "github.com/ACME/*/*/my*"
 	importPath := "github.com/ACME/internal/my-component/mypackage"
 

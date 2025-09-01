@@ -8,6 +8,7 @@ package join
 import (
 	gocontext "context"
 	"errors"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -105,23 +106,23 @@ func PackageFilter(root bool, pattern string) packageFilter {
 	return packageFilter{root: root, pattern: pattern}
 }
 
-// globMatch extends filepath.Match to support ** (globstar) patterns.
-func globMatch(pattern string, path string) (bool, error) {
+// globMatch extends path.Match to support ** (globstar) patterns.
+func globMatch(pattern string, importPath string) (bool, error) {
 	if !strings.Contains(pattern, "**") {
-		return filepath.Match(pattern, path)
+		return path.Match(pattern, importPath)
 	}
 
-	return matchWithGlobstar(pattern, path)
+	return matchWithGlobstar(pattern, importPath)
 }
 
 // matchWithGlobstar handles patterns containing ** using segment-by-segment matching.
-func matchWithGlobstar(pattern string, path string) (bool, error) {
+func matchWithGlobstar(pattern string, importPath string) (bool, error) {
 	if pattern == "**" {
 		return true, nil
 	}
 
 	patternSegments := strings.Split(pattern, "/")
-	pathSegments := strings.Split(path, "/")
+	pathSegments := strings.Split(importPath, "/")
 
 	return matchSegments(patternSegments, pathSegments)
 }
@@ -152,7 +153,7 @@ func matchSegments(patternSegments []string, pathSegments []string) (bool, error
 			return false, nil
 		}
 
-		matched, err := filepath.Match(patternSegments[patternIdx], pathSegments[pathIdx])
+		matched, err := path.Match(patternSegments[patternIdx], pathSegments[pathIdx])
 		if err != nil {
 			return false, err
 		}
