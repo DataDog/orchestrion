@@ -87,12 +87,12 @@ orchestrion,go.opentelemetry.io/collector/component,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/featuregate,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/internal/telemetry,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/pdata,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/contrib/bridges/otelzap,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/otel,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/otel/log,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/otel/metric,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/otel/sdk,Apache-2.0,unknown
-orchestrion,go.opentelemetry.io/otel/trace,Apache-2.0,unknown
+orchestrion,go.opentelemetry.io/contrib/bridges/otelzap,Apache-2.0,Copyright 2009 The Go Authors.
+orchestrion,go.opentelemetry.io/otel,Apache-2.0,Copyright 2009 The Go Authors.
+orchestrion,go.opentelemetry.io/otel/log,Apache-2.0,Copyright 2009 The Go Authors.
+orchestrion,go.opentelemetry.io/otel/metric,Apache-2.0,Copyright 2009 The Go Authors.
+orchestrion,go.opentelemetry.io/otel/sdk,Apache-2.0,Copyright 2009 The Go Authors.
+orchestrion,go.opentelemetry.io/otel/trace,Apache-2.0,Copyright 2009 The Go Authors.
 orchestrion,go.uber.org/atomic,MIT,"Copyright (c) 2016 Uber Technologies, Inc."
 orchestrion,go.uber.org/multierr,MIT,"Copyright (c) 2017-2021 Uber Technologies, Inc."
 orchestrion,go.uber.org/zap,MIT,"Copyright (c) 2016-2017 Uber Technologies, Inc."
