@@ -1,0 +1,22 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      package-filter:
+        pattern: "github.com/external/library/internal/*"
+    advice:
+      - add-blank-import: "sync"
+
+syntheticReferences:
+  sync: true
+
+import-path: github.com/external/library/internal/utils
+
+code: |-
+  package utils
+
+  import "fmt"
+
+  func Process() {
+    fmt.Println("Processing data from external library internal package")
+  }

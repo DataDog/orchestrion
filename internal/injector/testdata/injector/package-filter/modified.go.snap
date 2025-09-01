@@ -1,0 +1,14 @@
+//line input.go:1:1
+package mypackage
+
+import (
+  "fmt"
+
+//line <generated>:1
+  _ "unsafe"
+)
+
+//line input.go:5
+func main() {
+  fmt.Println("Hello World!")
+}
