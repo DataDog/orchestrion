@@ -3,8 +3,8 @@
 aspects:
   - join-point:
       package-filter:
-        module: "github.com/external/library"
-        pattern: "internal/*"
+        root: true
+        pattern: "*"
     advice:
       - add-blank-import: "time"
 
