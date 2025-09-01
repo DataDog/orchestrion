@@ -108,6 +108,50 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 			shouldMatch: false,
 		},
 
+		// Globstar ** tests (recursive matching across path segments)
+		{
+			name:        "globstar matches deep paths",
+			pattern:     "github.com/myorg/**/internal/*",
+			importPath:  "github.com/myorg/service/internal/api",
+			shouldMatch: true,
+		},
+		{
+			name:        "globstar matches immediate child",
+			pattern:     "github.com/myorg/**/internal",
+			importPath:  "github.com/myorg/internal",
+			shouldMatch: true,
+		},
+		{
+			name:        "globstar matches multiple levels",
+			pattern:     "github.com/**/internal/**",
+			importPath:  "github.com/myorg/service/internal/api/v1",
+			shouldMatch: true,
+		},
+		{
+			name:        "globstar no match wrong prefix",
+			pattern:     "github.com/myorg/**/internal/*",
+			importPath:  "github.com/other/service/internal/api",
+			shouldMatch: false,
+		},
+		{
+			name:        "globstar trailing matches anything",
+			pattern:     "github.com/myorg/**",
+			importPath:  "github.com/myorg/service/api/v1/handler",
+			shouldMatch: true,
+		},
+		{
+			name:        "globstar leading matches anything",
+			pattern:     "**/internal/*",
+			importPath:  "github.com/myorg/service/internal/api",
+			shouldMatch: true,
+		},
+		{
+			name:        "just globstar matches everything",
+			pattern:     "**",
+			importPath:  "github.com/myorg/service/api/v1",
+			shouldMatch: true,
+		},
+
 		// Edge cases
 		{
 			name:        "empty pattern",

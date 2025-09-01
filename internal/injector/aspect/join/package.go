@@ -9,6 +9,7 @@ import (
 	gocontext "context"
 	"errors"
 	"path/filepath"
+	"strings"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	"github.com/DataDog/orchestrion/internal/goenv"
@@ -80,27 +81,94 @@ func (p packageName) Hash(h *fingerprint.Hasher) error {
 
 type packageFilter struct {
 	root    bool   // true if targeting the root module only, false for global matching
-	pattern string // glob pattern for import path matching (uses filepath.Match)
+	pattern string // glob pattern with ** support for import path matching
 }
 
 // PackageFilter creates a package filter join point that matches import paths using glob patterns.
 //
 // If root is true, only matches packages within the current Go module and applies the pattern
-// to relative paths within the module.
-// If root is false, matches packages from any module
+// to relative paths within the module. If root is false, matches packages from any module
 // using the full import path.
+//
+// Supports standard glob patterns plus ** (globstar) for recursive matching:
+//   - * matches any sequence within a path segment
+//   - ** matches any sequence across multiple path segments
+//   - ? matches any single character except path separator
+//   - [class] matches any character in the character class
 //
 // Examples:
 //
-//	PackageFilter(true, "internal/*")  - matches internal packages in root module only
-//	PackageFilter(false, "*/internal/*") - matches internal packages in any module
-//	PackageFilter(false, "github.com/myorg/*") - matches any package in myorg
+//	PackageFilter(true, "internal/*")         - matches internal packages in root module only
+//	PackageFilter(false, "**/internal/*")    - matches internal packages at any depth
+//	PackageFilter(false, "github.com/myorg/**") - matches any package under myorg
 func PackageFilter(root bool, pattern string) packageFilter {
 	return packageFilter{root: root, pattern: pattern}
 }
 
+// globMatch extends filepath.Match to support ** (globstar) patterns.
+func globMatch(pattern string, path string) (bool, error) {
+	if !strings.Contains(pattern, "**") {
+		return filepath.Match(pattern, path)
+	}
+
+	return matchWithGlobstar(pattern, path)
+}
+
+// matchWithGlobstar handles patterns containing ** using segment-by-segment matching.
+func matchWithGlobstar(pattern string, path string) (bool, error) {
+	if pattern == "**" {
+		return true, nil
+	}
+
+	patternSegments := strings.Split(pattern, "/")
+	pathSegments := strings.Split(path, "/")
+
+	return matchSegments(patternSegments, pathSegments)
+}
+
+func matchSegments(patternSegments []string, pathSegments []string) (bool, error) {
+	patternIdx, pathIdx := 0, 0
+
+	for patternIdx < len(patternSegments) {
+		if patternSegments[patternIdx] == "**" {
+			if patternIdx == len(patternSegments)-1 {
+				return true, nil
+			}
+
+			for pathIdx <= len(pathSegments) {
+				matched, err := matchSegments(patternSegments[patternIdx+1:], pathSegments[pathIdx:])
+				if err != nil {
+					return false, err
+				}
+				if matched {
+					return true, nil
+				}
+				pathIdx++
+			}
+			return false, nil
+		}
+
+		if pathIdx >= len(pathSegments) {
+			return false, nil
+		}
+
+		matched, err := filepath.Match(patternSegments[patternIdx], pathSegments[pathIdx])
+		if err != nil {
+			return false, err
+		}
+		if !matched {
+			return false, nil
+		}
+
+		patternIdx++
+		pathIdx++
+	}
+
+	return pathIdx == len(pathSegments), nil
+}
+
 func (_ packageFilter) ImpliesImported() []string {
-	return nil // Cannot determine specific imports from a pattern
+	return nil
 }
 
 func (pf packageFilter) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
@@ -126,28 +194,29 @@ func (pf packageFilter) Hash(h *fingerprint.Hasher) error {
 }
 
 func (pf packageFilter) matchesPattern(importPath string) bool {
-	pathToMatch := importPath
+	if pf.pattern == "" || importPath == "" {
+		return false
+	}
+
+	targetPath := importPath
 	if pf.root {
-		// Root module filtering - only match packages in the root module
-		rootPath, err := goenv.RootModulePath(gocontext.Background())
+		rootModulePath, err := goenv.RootModulePath(gocontext.Background())
 		if err != nil {
-			return false // If we can't determine root module, assume no match
+			return false
 		}
 
-		// Check if the import path belongs to the root module
 		if !isInRootModule(importPath) {
 			return false
 		}
 
-		// Use relative path within the root module for pattern matching
-		pathToMatch = getRelativePathInModule(importPath, rootPath)
+		targetPath = getRelativePathInModule(importPath, rootModulePath)
 	}
 
 	if pf.pattern == "*" {
 		return true
 	}
 
-	matched, err := filepath.Match(pf.pattern, pathToMatch)
+	matched, err := globMatch(pf.pattern, targetPath)
 	if err != nil {
 		return false
 	}
