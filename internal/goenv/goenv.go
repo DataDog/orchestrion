@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+
+	"golang.org/x/tools/go/packages"
 )
 
 var (
@@ -53,8 +55,8 @@ func GOMOD(dir string) (string, error) {
 	return "", fmt.Errorf("in %q: %w", wd, ErrNoGoMod)
 }
 
-// ModulePath returns the module path of the current module (from running `go list -m`).
-// Results are cached to avoid repeated calls to go list.
+// ModulePath returns the module path of the current module using go/packages API.
+// Results are cached to avoid repeated package loading calls.
 func ModulePath(ctx context.Context, dir string) (string, error) {
 	modulePathMutex.RLock()
 	if cached, exists := modulePathCache[dir]; exists {
@@ -63,15 +65,22 @@ func ModulePath(ctx context.Context, dir string) (string, error) {
 	}
 	modulePathMutex.RUnlock()
 
-	cmd := exec.CommandContext(ctx, "go", "list", "-m")
-	cmd.Dir = dir
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("running %q: %w", cmd.Args, err)
+	cfg := &packages.Config{
+		Context: ctx,
+		Dir:     dir,
+		Mode:    packages.NeedModule,
 	}
 
-	modulePath := strings.TrimSpace(stdout.String())
+	pkgs, err := packages.Load(cfg, ".")
+	if err != nil {
+		return "", fmt.Errorf("loading package in %q: %w", dir, err)
+	}
+
+	if len(pkgs) == 0 || pkgs[0].Module == nil {
+		return "", fmt.Errorf("in %q: %w", dir, ErrNoModulePath)
+	}
+
+	modulePath := pkgs[0].Module.Path
 	if modulePath == "" {
 		return "", fmt.Errorf("in %q: %w", dir, ErrNoModulePath)
 	}

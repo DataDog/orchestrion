@@ -79,6 +79,12 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 			importPath:  "github.com/myorg/service12",
 			shouldMatch: false,
 		},
+		{
+			name:        "question mark not match on separator",
+			pattern:     "github.com/myorg?service1",
+			importPath:  "github.com/myorg/service1",
+			shouldMatch: false,
+		},
 
 		// Character class tests [class]
 		{
@@ -119,7 +125,7 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pf := PackageFilter("", tt.pattern)
+			pf := PackageFilter(false, tt.pattern)
 			result := pf.matchesPattern(tt.importPath)
 			assert.Equal(t, tt.shouldMatch, result, "Pattern %q should match %q: %v", tt.pattern, tt.importPath, tt.shouldMatch)
 		})
@@ -161,7 +167,7 @@ func TestPackageFilterMatches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pf := PackageFilter("", tt.pattern)
+			pf := PackageFilter(false, tt.pattern)
 			result := pf.Matches(mockCtx)
 			assert.Equal(t, tt.shouldMatch, result)
 		})
@@ -197,7 +203,7 @@ func TestPackageFilterPackageMayMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pf := PackageFilter("", tt.pattern)
+			pf := PackageFilter(false, tt.pattern)
 			ctx := &may.PackageContext{
 				ImportPath: tt.importPath,
 			}
@@ -210,28 +216,28 @@ func TestPackageFilterPackageMayMatch(t *testing.T) {
 func TestPackageFilterRootModule(t *testing.T) {
 	tests := []struct {
 		name        string
-		module      string
+		root        bool
 		pattern     string
 		importPath  string
 		shouldMatch bool
 	}{
 		{
-			name:        "no module filter",
-			module:      "",
+			name:        "no root filter",
+			root:        false,
 			pattern:     "*",
 			importPath:  "github.com/myorg/service",
 			shouldMatch: true,
 		},
 		{
 			name:        "root module with internal package",
-			module:      "root",
+			root:        true,
 			pattern:     "internal/*",
 			importPath:  "internal/service",
 			shouldMatch: true, // This test will depend on actual module setup
 		},
 		{
 			name:        "root module with external package",
-			module:      "root",
+			root:        true,
 			pattern:     "*",
 			importPath:  "github.com/external/service",
 			shouldMatch: false, // External packages shouldn't match root filter
@@ -240,7 +246,7 @@ func TestPackageFilterRootModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pf := PackageFilter(tt.module, tt.pattern)
+			pf := PackageFilter(tt.root, tt.pattern)
 			result := pf.matchesPattern(tt.importPath)
 
 			if tt.name == "root module with internal package" || tt.name == "root module with external package" {
@@ -256,29 +262,29 @@ func TestPackageFilterRootModule(t *testing.T) {
 func TestPackageFilterSpecificModule(t *testing.T) {
 	tests := []struct {
 		name        string
-		module      string
+		root        bool
 		pattern     string
 		importPath  string
 		shouldMatch bool
 	}{
 		{
 			name:        "specific module with internal pattern",
-			module:      "github.com/myorg/mymodule",
-			pattern:     "internal/*",
+			root:        false,
+			pattern:     "github.com/myorg/mymodule/internal/*",
 			importPath:  "github.com/myorg/mymodule/internal/service",
 			shouldMatch: true,
 		},
 		{
 			name:        "specific module no match",
-			module:      "github.com/myorg/mymodule",
-			pattern:     "internal/*",
+			root:        false,
+			pattern:     "github.com/myorg/mymodule/internal/*",
 			importPath:  "github.com/other/module/internal/service",
 			shouldMatch: false,
 		},
 		{
 			name:        "specific module exact match",
-			module:      "github.com/myorg/mymodule",
-			pattern:     ".",
+			root:        false,
+			pattern:     "github.com/myorg/mymodule",
 			importPath:  "github.com/myorg/mymodule",
 			shouldMatch: true,
 		},
@@ -286,10 +292,10 @@ func TestPackageFilterSpecificModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pf := PackageFilter(tt.module, tt.pattern)
+			pf := PackageFilter(tt.root, tt.pattern)
 			result := pf.matchesPattern(tt.importPath)
-			assert.Equal(t, tt.shouldMatch, result, "Module %q with pattern %q should match %q: %v",
-				tt.module, tt.pattern, tt.importPath, tt.shouldMatch)
+			assert.Equal(t, tt.shouldMatch, result, "Root %v with pattern %q should match %q: %v",
+				tt.root, tt.pattern, tt.importPath, tt.shouldMatch)
 		})
 	}
 }
@@ -304,28 +310,28 @@ func TestPackageFilterYAMLUnmarshaling(t *testing.T) {
 		{
 			name:     "string syntax",
 			yaml:     `package-filter: "github.com/myorg/**"`,
-			expected: PackageFilter("", "github.com/myorg/**"),
+			expected: PackageFilter(false, "github.com/myorg/**"),
 			wantErr:  false,
 		},
 		{
-			name: "object syntax with module",
+			name: "object syntax with root",
 			yaml: `package-filter:
-  module: "root"
+  root: true
   pattern: "internal/**"`,
-			expected: PackageFilter("root", "internal/**"),
+			expected: PackageFilter(true, "internal/**"),
 			wantErr:  false,
 		},
 		{
-			name: "object syntax without module",
+			name: "object syntax without root",
 			yaml: `package-filter:
   pattern: "github.com/myorg/**"`,
-			expected: PackageFilter("", "github.com/myorg/**"),
+			expected: PackageFilter(false, "github.com/myorg/**"),
 			wantErr:  false,
 		},
 		{
 			name: "object syntax missing pattern",
 			yaml: `package-filter:
-  module: "root"`,
+  root: true`,
 			wantErr: true,
 		},
 		{
@@ -366,7 +372,7 @@ func TestPackageFilterDebugCase(t *testing.T) {
 	pattern := "github.com/ACME/*/*/my*"
 	importPath := "github.com/ACME/internal/my-component/mypackage"
 
-	pf := PackageFilter("", pattern)
+	pf := PackageFilter(false, pattern)
 	result := pf.matchesPattern(importPath)
 
 	t.Logf("Pattern: %q", pattern)

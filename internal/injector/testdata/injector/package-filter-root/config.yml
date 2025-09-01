@@ -3,7 +3,7 @@
 aspects:
   - join-point:
       package-filter:
-        module: "root"
+        root: true
         pattern: "internal/*"
     advice:
       - add-blank-import: "context"
