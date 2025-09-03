@@ -145,6 +145,7 @@ func main() {
 			cmd.Version,
 			cmd.Server,
 			cmd.Diff,
+			cmd.Lint,
 		},
 		Before: func(ctx *cli.Context) error {
 			profiles := ctx.StringSlice("profile")
