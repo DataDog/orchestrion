@@ -2,6 +2,8 @@ module github.com/DataDog/orchestrion
 
 go 1.24.0
 
+replace github.com/polyfloyd/go-errorlint => github.com/kakkoyun/go-errorlint v0.0.0-20250903093155-8eaa0fc8fca5
+
 require (
 	github.com/DataDog/dd-trace-go/v2 v2.2.3
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
@@ -15,6 +17,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.11.8
 	github.com/nats-io/nats.go v1.45.0
 	github.com/otiai10/copy v1.14.1
+	github.com/polyfloyd/go-errorlint v1.8.0
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/shirou/gopsutil/v4 v4.25.8
