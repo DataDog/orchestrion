@@ -303,3 +303,5 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e // indirect
 )
+
+replace github.com/DataDog/dd-trace-go/instrumentation/net/http/pattern => github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.1

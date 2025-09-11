@@ -3,6 +3,7 @@ module github.com/DataDog/orchestrion/_samples
 go 1.24.0
 
 replace (
+	github.com/DataDog/dd-trace-go/instrumentation/net/http/pattern => github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.1
 	github.com/DataDog/orchestrion => ..
 	github.com/DataDog/orchestrion/instrument => ../instrument
 )

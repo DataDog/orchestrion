@@ -34,3 +34,5 @@ require (
 	golang.org/x/tools v0.33.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 )
+
+replace github.com/DataDog/dd-trace-go/instrumentation/net/http/pattern => github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.1

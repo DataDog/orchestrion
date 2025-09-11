@@ -437,3 +437,5 @@ require (
 	software.sslmate.com/src/go-pkcs12 v0.5.0 // indirect
 	tags.cncf.io/container-device-interface v0.8.1 // indirect
 )
+
+replace github.com/DataDog/dd-trace-go/instrumentation/net/http/pattern => github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.1
