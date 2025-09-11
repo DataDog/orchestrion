@@ -9,7 +9,6 @@ import (
 	gocontext "context"
 	"errors"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
@@ -195,7 +194,16 @@ func (pf packageFilter) Hash(h *fingerprint.Hasher) error {
 }
 
 func (pf packageFilter) matchesPattern(importPath string) bool {
-	if pf.pattern == "" || importPath == "" {
+	if importPath == "" {
+		return false
+	}
+
+	// For root-only filters without pattern, match all packages in root module
+	if pf.pattern == "" && pf.root {
+		return isInRootModule(importPath)
+	}
+
+	if pf.pattern == "" {
 		return false
 	}
 
@@ -231,7 +239,10 @@ func isInRootModule(importPath string) bool {
 		return false // If we can't determine, assume it doesn't match
 	}
 
-	return filepath.HasPrefix(importPath, rootPath)
+	if importPath == rootPath {
+		return true
+	}
+	return strings.HasPrefix(importPath, rootPath+"/")
 }
 
 // getRelativePathInModule returns the relative path of an import path within its module.
@@ -240,7 +251,7 @@ func getRelativePathInModule(importPath string, rootModulePath string) string {
 		return "."
 	}
 
-	if filepath.HasPrefix(importPath, rootModulePath) {
+	if importPath == rootModulePath || strings.HasPrefix(importPath, rootModulePath+"/") {
 		relative := importPath[len(rootModulePath):]
 		if len(relative) > 0 && relative[0] == '/' {
 			relative = relative[1:]
@@ -281,7 +292,7 @@ func init() {
 			return nil, err
 		}
 
-		if config.Pattern == "" {
+		if config.Pattern == "" && !config.Root {
 			return nil, errors.New("package-filter requires a 'pattern' field")
 		}
 

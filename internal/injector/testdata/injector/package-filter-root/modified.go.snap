@@ -2,13 +2,40 @@
 package example
 
 import (
+  "context"
   "fmt"
-
 //line <generated>:1
-  _ "context"
+  __orchestrion_time "time"
 )
 
-//line input.go:5
+//line input.go:8
 func main() {
   fmt.Println("Hello from root module!")
+}
+
+func helloWorld(ctx context.Context) error {
+//line <generated>:1
+  {
+    ctx, cancel := context.WithTimeout(ctx, 1*__orchestrion_time.Second)
+    defer cancel()
+    _ = ctx // Use the context to avoid unused variable
+  }
+//line input.go:13
+  return printWithContext(ctx, "Hello from root module!")
+}
+
+func printWithContext(ctx context.Context, msg string) (err error) {
+//line <generated>:1
+  {
+    ctx, cancel := context.WithTimeout(ctx, 1*__orchestrion_time.Second)
+    defer cancel()
+    _ = ctx // Use the context to avoid unused variable
+  }
+//line input.go:17
+  if ctx.Err() != nil {
+    return ctx.Err()
+  }
+
+  fmt.Println(msg)
+  return nil
 }

@@ -373,9 +373,16 @@ func TestPackageFilterYAMLUnmarshaling(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "object syntax missing pattern",
+			name: "object syntax only root",
 			yaml: `package-filter:
   root: true`,
+			expected: PackageFilter(true, ""),
+			wantErr:  false,
+		},
+		{
+			name: "object syntax missing pattern",
+			yaml: `package-filter:
+  root: false`,
 			wantErr: true,
 		},
 		{

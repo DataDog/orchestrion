@@ -7,13 +7,12 @@ aspects:
             root: true
         - function-body:
             function:
-              - signature-contains:
-                  args: [context.Context]
-                  returns: [error]
+              - argument-implements: "context.Context"
+              - result-implements: "error"
     advice:
       - prepend-statements:
           imports:
-            time: time
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
           template: |-
             {{ $ctx := .Function.ArgumentOfType "context.Context" -}}
             {{- if (eq $ctx "") -}}
@@ -21,12 +20,19 @@ aspects:
               ctx := context.TODO()
             {{ end -}}
 
-            {{ $ctx }}, cancel := context.WithTimeout({{ $ctx }}, 1*time.Second)
-            defer cancel()
-            _ = {{ $ctx }} // Use the context to avoid unused variable
+            var span tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf "%q" .Function.Name }})
+
+            {{ with .Function.ResultOfType "error" -}}
+              defer func() {
+                span.Finish(tracer.WithError({{ . }}))
+              }()
+            {{ else -}}
+              defer span.Finish()
+            {{- end -}}
 
 syntheticReferences:
-  time: true
+  gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer: true
 
 import-path: github.com/DataDog/orchestrion/internal/example
 
@@ -53,4 +59,12 @@ code: |-
 
     fmt.Println(msg)
     return nil
+  }
+
+  func withContextOnly(ctx context.Context) {
+    fmt.Println("Has context but no error return")
+  }
+
+  func withErrorOnly() error {
+    return fmt.Errorf("has error return but no context")
   }
