@@ -15,6 +15,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.11.8
 	github.com/nats-io/nats.go v1.45.0
 	github.com/otiai10/copy v1.14.1
+	github.com/polyfloyd/go-errorlint v1.8.1-0.20250906200200-9b25878c4dea
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/shirou/gopsutil/v4 v4.25.8
