@@ -53,6 +53,7 @@ import (
 	_ "github.com/twitchtv/twirp"
 	_ "github.com/valkey-io/valkey-go"
 	_ "go.mongodb.org/mongo-driver/mongo/options"
+	_ "go.mongodb.org/mongo-driver/v2/mongo/options"
 	_ "google.golang.org/grpc"
 	_ "gorm.io/gorm"
 	_ "k8s.io/client-go/rest"
