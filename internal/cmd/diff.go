@@ -7,7 +7,9 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/binpath"
@@ -124,7 +126,7 @@ func prepareBuildArgs(args []string) []string {
 	}
 
 	if len(flags) > 0 {
-		args = append(args[:1], append(flags, args[1:]...)...)
+		args = slices.Concat(args[:1], flags, args[1:])
 	}
 
 	return args
@@ -170,7 +172,6 @@ func executeBuildAndCaptureWorkDir(clictx *cli.Context, buildArgs []string) (str
 	buildErr := goproxy.Run(clictx.Context, buildArgs, goproxy.WithToolexec(binpath.Orchestrion, "toolexec"))
 
 	os.Stderr = originalStderr
-	tmpFile.Close()
 
 	if buildErr != nil {
 		return "", cli.Exit(fmt.Sprintf("build failed: %v", buildErr), 1)
@@ -195,4 +196,49 @@ func extractWorkDirFromOutput(output string) string {
 		}
 	}
 	return ""
+}
+
+// ReportInterface defines the interface for report objects used in testing
+type ReportInterface interface {
+	IsEmpty() bool
+	WithSpecialCasesFilter() ReportInterface
+	WithRegexFilter(pattern string) (ReportInterface, error)
+	Packages() []string
+	Files() []string
+	Diff(io.Writer) error
+}
+
+// Test helper functions for testing internal functionality
+
+// PrepareBuildArgsForTest exposes prepareBuildArgs for testing
+func PrepareBuildArgsForTest(args []string) []string {
+	return prepareBuildArgs(args)
+}
+
+// ExtractWorkDirFromOutputForTest exposes extractWorkDirFromOutput for testing
+func ExtractWorkDirFromOutputForTest(output string) string {
+	return extractWorkDirFromOutput(output)
+}
+
+// OutputReportForTest exposes outputReport functionality for testing
+func OutputReportForTest(writer io.Writer, flags map[string]bool, rpt ReportInterface) error {
+	if flags["package"] {
+		for _, pkg := range rpt.Packages() {
+			_, _ = fmt.Fprintln(writer, pkg)
+		}
+		return nil
+	}
+
+	if flags["files"] {
+		for _, file := range rpt.Files() {
+			_, _ = fmt.Fprintln(writer, file)
+		}
+		return nil
+	}
+
+	if err := rpt.Diff(writer); err != nil {
+		return cli.Exit(fmt.Sprintf("failed to generate diff: %s", err), 1)
+	}
+
+	return nil
 }
