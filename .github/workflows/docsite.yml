@@ -24,7 +24,7 @@ jobs:
           lfs: true
           submodules: recursive
       - name: Setup go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
         with:
           cache-dependency-path: '**/go.mod'
       - name: Run doc generator
@@ -64,7 +64,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v3
         with:
           path: _docs/public/
       - name: Deploy to Github Pages
