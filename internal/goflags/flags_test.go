@@ -54,6 +54,8 @@ func TestParse(t *testing.T) {
 		flags    []string
 		goflags  string
 		expected CommandFlags
+		// If true, do not override the shortFlags and logFlags internals, instead use the standard values.
+		useStdFlags bool
 	}{
 		"short": {
 			flags:    []string{"run", "-short1", "--short2"},
@@ -137,6 +139,20 @@ func TestParse(t *testing.T) {
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
+		"coverpkg-relative-with-goflags": {
+			flags:   []string{"test", "./...", "-timeout", "30m", "-cover", "-covermode=atomic", "-coverprofile=coverage.out", "-coverpkg", "./..."},
+			goflags: `"-toolexec=orchestrion toolexec"`,
+			expected: CommandFlags{
+				Long: map[string]string{
+					"-covermode": "atomic",
+					"-coverpkg":  "github.com/DataDog/orchestrion/internal/goflags,github.com/DataDog/orchestrion/internal/goflags/quoted",
+					"-toolexec":  "orchestrion toolexec",
+				},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-timeout", "30m", "-coverprofile=coverage.out"},
+			},
+			useStdFlags: true,
+		},
 	} {
 		// Make sure the expected outcomes are non-nil, makes it easier to validate afterwards.
 		if tc.expected.Short == nil {
@@ -147,11 +163,13 @@ func TestParse(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
-			defer restore(shortFlags, longFlags)
-			shortFlags = tc.expected.Short
-			longFlags = make(map[string]struct{})
-			for flag := range tc.expected.Long {
-				longFlags[flag] = struct{}{}
+			if !tc.useStdFlags {
+				defer restore(shortFlags, longFlags)
+				shortFlags = tc.expected.Short
+				longFlags = make(map[string]struct{}, len(tc.expected.Long))
+				for flag := range tc.expected.Long {
+					longFlags[flag] = struct{}{}
+				}
 			}
 
 			t.Setenv("GOFLAGS", tc.goflags)

@@ -166,15 +166,14 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 
 		// Any argument after "--" is a positional argument, so we are done parsing.
 		if arg == "--" {
-			positional = args[i+1:]
+			positional = append(positional, args[i+1:]...)
 			break
 		}
 
-		// Any argument without a leading "-" is a positional argument, and the go CLI demands all flags are placed before
-		// positional arguments, so we are done parsing.
+		// Any argument without a leading "-" is a positional argument (until proven otherwise).
 		if !strings.HasPrefix(arg, "-") {
-			positional = args[i:]
-			break
+			positional = append(positional, arg)
+			continue
 		}
 
 		normArg := arg
