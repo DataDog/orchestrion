@@ -1,0 +1,55 @@
+%YAML 1.1
+---
+# Test mixed ordering scenarios
+# Combines ordered and unordered advice with default values
+aspects:
+  - id: Mixed Ordering Test
+    join-point:
+      function-body:
+        function:
+          - name: TestFunction
+    advice:
+      # Explicit namespace and order
+      - prepend-statements:
+          namespace: "explicit"
+          order: 20
+          template: |-
+            _ = "2) Explicit: namespace explicit, order 20 (applied 4)"
+
+      # No namespace/order specified - uses defaults (namespace="default", order=0)
+      - prepend-statements:
+          template: |-
+            _ = "5) Default: namespace default, order 0 (applied 1)"
+
+      # Only namespace specified, order defaults to 0
+      - prepend-statements:
+          namespace: "partial"
+          template: |-
+            _ = "1) Partial: namespace partial, order 0 (applied 5)"
+
+      # Only order specified, namespace defaults to "default"
+      - prepend-statements:
+          order: 15
+          template: |-
+            _ = "4) Order only: namespace default, order 15 (applied 2)"
+
+      # Another explicit one
+      - prepend-statements:
+          namespace: "explicit"
+          order: 10
+          template: |-
+            _ = "3) Explicit: namespace explicit, order 10 (applied 3)"
+
+# Expected execution order:
+# 1. Default namespace, order 0: "Default: namespace "default", order 0"
+# 2. Default namespace, order 15: "Order only: namespace "default" (default), order 15"
+# 3. Explicit namespace, order 10: "Explicit: namespace "explicit", order 10"
+# 4. Explicit namespace, order 20: "Explicit: namespace "explicit", order 20"
+# 5. Partial namespace, order 0: "Partial: namespace "partial", order 0 (default)"
+
+code: |-
+  package test
+
+  func TestFunction() {
+    // Original function body
+  }

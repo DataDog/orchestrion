@@ -27,3 +27,16 @@ type Advice interface {
 
 	fingerprint.Hashable
 }
+
+// OrderableAdvice is an optional interface that advice can implement to provide
+// ordering information for deterministic execution order.
+type OrderableAdvice interface {
+	Advice
+
+	// Order returns the execution order within the namespace.
+	// Lower values execute first.
+	Order() int
+
+	// Namespace returns the logical grouping namespace for this advice.
+	Namespace() string
+}

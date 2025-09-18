@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+func TestFunction() {
+  // Original function body
+//line <generated>:1
+  {
+    _ = "1) Application order: 3"
+  }
+  {
+    _ = "2) Application order: 2"
+  }
+  {
+    _ = "3) Application order: 1"
+  }
+}

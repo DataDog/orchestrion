@@ -881,8 +881,22 @@
           "prepend-statements": {
             "title": "Add new logic before a node",
             "markdownDescription": "The `prepend-statements` advice inserts new statements rendered by the provided code template before the matched AST node. This is often used to add logic in the preamble of function implementations, and the `defer` keyword can be used to also introduce epilogue logic.",
-            "$ref": "#/$defs/code-template",
-            "unevaluatedProperties": false
+            "unevaluatedProperties": false,
+            "allOf": [
+              { "$ref": "#/$defs/code-template" },
+              {
+                "properties": {
+                  "order": {
+                    "description": "The execution order within the namespace. Lower values execute first.",
+                    "type": "integer"
+                  },
+                  "namespace": {
+                    "description": "The logical grouping namespace for this advice.",
+                    "type": "string"
+                  }
+                }
+              }
+            ]
           }
         },
         "examples": [
