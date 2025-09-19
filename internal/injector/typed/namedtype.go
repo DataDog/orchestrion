@@ -7,7 +7,6 @@ package typed
 
 import (
 	"fmt"
-	"regexp"
 
 	"github.com/dave/dst"
 
@@ -60,32 +59,6 @@ func MustNamedType(n string) *NamedType {
 	return nt
 }
 
-// FIXME: this does not support all the type syntax, like: "chan Event"
-// It primarily handles identifiers, qualified identifiers, and pointers to those.
-var typeNameRe = regexp.MustCompile(`\A(\*)?\s*(?:([A-Za-z_][A-Za-z0-9_.-]+(?:/[A-Za-z_.-][A-Za-z0-9_.-]+)*)\.)?([A-Za-z_][A-Za-z0-9_]*)\z`)
-
-// NewNamedTypeOnly parses a string representation of a type name into a NamedType struct.
-// It returns an error if the syntax is invalid according to its limited regular expression.
-// For pointer types, use NewType which returns a PointerType.
-// This is the original NewNamedType function that rejects pointer types.
-func NewNamedTypeOnly(n string) (nt NamedType, err error) {
-	matches := typeNameRe.FindStringSubmatch(n)
-	if matches == nil {
-		err = fmt.Errorf("invalid NamedType syntax: %q", n)
-		return nt, err
-	}
-
-	// Check if it's a pointer type
-	if matches[1] == "*" {
-		err = fmt.Errorf("pointer types should use NewType instead: %q", n)
-		return nt, err
-	}
-
-	nt.ImportPath = matches[2]
-	nt.Name = matches[3]
-	return nt, nil
-}
-
 // NewType parses a string representation of a type and returns a Type interface.
 // It supports pointer types, slices, arrays, and maps.
 func NewType(n string) (Type, error) {
@@ -104,7 +77,7 @@ func MustType(n string) Type {
 // Matches determines whether the provided AST expression node represents the same type
 // as this NamedType. This performs a structural comparison based on the limited types
 // supported by the parsing regex (identifiers, selectors, empty interface).
-func (n NamedType) Matches(node dst.Expr) bool {
+func (n *NamedType) Matches(node dst.Expr) bool {
 	switch node := node.(type) {
 	case *dst.Ident:
 		return n.ImportPath == node.Path && n.Name == node.Name
@@ -145,7 +118,7 @@ func (n NamedType) Matches(node dst.Expr) bool {
 // MatchesDefinition determines whether the provided node matches the definition
 // of this NamedType. The `importPath` argument determines the context in which
 // the assertion is made.
-func (n NamedType) MatchesDefinition(node dst.Expr, importPath string) bool {
+func (n *NamedType) MatchesDefinition(node dst.Expr, importPath string) bool {
 	if n.ImportPath != importPath {
 		return false
 	}

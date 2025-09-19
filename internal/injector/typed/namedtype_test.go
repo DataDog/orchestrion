@@ -67,17 +67,6 @@ func TestNamedType(t *testing.T) {
 			}
 		})
 	}
-
-	// Test NewNamedTypeOnly which rejects pointer types
-	t.Run("NewNamedTypeOnly", func(t *testing.T) {
-		_, err := NewNamedTypeOnly("*net/http.Request")
-		require.Error(t, err)
-		require.EqualError(t, err, `pointer types should use NewType instead: "*net/http.Request"`)
-
-		result, err := NewNamedTypeOnly("net/http.ResponseWriter")
-		require.NoError(t, err)
-		require.Equal(t, NamedType{ImportPath: "net/http", Name: "ResponseWriter"}, result)
-	})
 }
 
 func TestNamedType_Matches(t *testing.T) {
