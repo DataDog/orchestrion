@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+func TestFunction() {
+  // Original function body
+//line <generated>:1
+  {
+    _ = "1) Tracing: namespace tracing, order 20 (applied 4)"
+  }
+  {
+    _ = "2) Metrics: namespace metrics, order 30 (applied 3)"
+  }
+  {
+    _ = "3) Error handling: namespace error-handling, order 10 (applied 2)"
+  }
+  {
+    _ = "4) Authentication: namespace authentication, order 5 (applied 1)"
+  }
+}

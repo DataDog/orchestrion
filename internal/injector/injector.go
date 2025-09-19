@@ -19,6 +19,7 @@ import (
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
@@ -287,20 +288,31 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
 func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, err error) {
+	var orderedAdvices []*advice.OrderedAdvice
+	var index int
 	for _, inj := range aspects {
 		if !inj.JoinPoint.Matches(ctx) {
 			continue
 		}
 
-		for idx, act := range inj.Advice {
-			var changed bool
-			changed, err := act.Apply(ctx)
-			mod = mod || changed
-			if err != nil {
-				return mod, fmt.Errorf("%q[%d]: %w", inj.ID, idx, err)
-			}
+		for _, adv := range inj.Advice {
+			orderedAdvices = append(orderedAdvices, advice.NewOrderedAdvice(inj.ID, adv, index))
+			index++
 		}
 	}
 
+	if len(orderedAdvices) == 0 {
+		return false, nil
+	}
+
+	advice.Sort(orderedAdvices)
+	for _, act := range orderedAdvices {
+		var changed bool
+		changed, err := act.Apply(ctx)
+		mod = mod || changed
+		if err != nil {
+			return mod, fmt.Errorf("%q[%d]: %w", act.AspectID, act.Index, err)
+		}
+	}
 	return mod, nil
 }

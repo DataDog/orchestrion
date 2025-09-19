@@ -19,13 +19,31 @@ import (
 
 type prependStatements struct {
 	Template *code.Template
+
+	order     int
+	namespace string
 }
 
 // PrependStmts prepends statements to the matched *dst.BlockStmt. This action
 // can only be used if the selector matches on a *dst.BlockStmt. The prepended
 // statements are wrapped in a new block statement to prevent scope leakage.
 func PrependStmts(template *code.Template) *prependStatements {
-	return &prependStatements{Template: template}
+	return &prependStatements{
+		Template: template,
+
+		order:     DefaultOrder,
+		namespace: DefaultNamespace,
+	}
+}
+
+// PrependStmtsWithOrder creates a prepend-statements advice with explicit ordering
+func PrependStmtsWithOrder(template *code.Template, namespace string, order int) *prependStatements {
+	return &prependStatements{
+		Template: template,
+
+		order:     order,
+		namespace: namespace,
+	}
 }
 
 func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
@@ -50,20 +68,44 @@ func (a *prependStatements) Apply(ctx context.AdviceContext) (bool, error) {
 }
 
 func (a *prependStatements) Hash(h *fingerprint.Hasher) error {
-	return h.Named("prepend-statements", a.Template)
+	return h.Named("prepend-statements", a.Template, fingerprint.Int(a.order), fingerprint.String(a.namespace))
 }
 
 func (a *prependStatements) AddedImports() []string {
 	return a.Template.AddedImports()
 }
 
+func (a *prependStatements) Order() int {
+	if a.order == 0 {
+		return DefaultOrder
+	}
+	return a.order
+}
+
+func (a *prependStatements) Namespace() string {
+	if a.namespace == "" {
+		return DefaultNamespace
+	}
+	return a.namespace
+}
+
 func init() {
 	unmarshalers["prepend-statements"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
-		var template code.Template
-		if err := yaml.NodeToValueContext(ctx, node, &template); err != nil {
+		var config struct {
+			Template  code.Template `yaml:",inline"`
+			Order     int           `yaml:"order,omitempty"`
+			Namespace string        `yaml:"namespace,omitempty"`
+		}
+
+		if err := yaml.NodeToValueContext(ctx, node, &config); err != nil {
 			return nil, err
 		}
 
-		return PrependStmts(&template), nil
+		return &prependStatements{
+			Template: &config.Template,
+
+			order:     config.Order, // defaults to 0 if not specified.
+			namespace: config.Namespace,
+		}, nil
 	}
 }

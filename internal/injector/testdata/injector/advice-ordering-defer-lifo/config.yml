@@ -1,0 +1,72 @@
+%YAML 1.1
+---
+# Test defer LIFO execution order - the critical real-world use case
+# This demonstrates the error tracking + span creation problem from the ADR
+aspects:
+  - id: Span Creation
+    join-point:
+      function-body:
+        function:
+          - signature-contains:
+              returns: [error]
+    advice:
+      - prepend-statements:
+          imports:
+            tracer: github.com/DataDog/dd-trace-go/v2/ddtrace/tracer
+          template: |-
+            {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{ $ret := .Function.LastResultThatImplements "error" }}
+            {{ with $ret }}
+            var span *tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, "getError")
+            defer func() {
+              // 2) LIFO: This is applied LAST - captures processed error
+              span.Finish(tracer.WithError({{ $ret }}))  // Captures processed error
+            }()
+            {{- end -}}
+
+  - id: Error Processing
+    join-point:
+      function-body:
+        function:
+          - signature-contains:
+              returns: [error]
+    advice:
+      - prepend-statements:
+          order: 20 # Execute second in aspect definition order
+          imports:
+            errortrace: github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace
+          template: |-
+            {{ $ret := .Function.LastResultThatImplements "error" }}
+            {{ with $ret }}
+            defer func() {
+              // 1) LIFO: This applied FIRST - processes error
+              {{ $ret }} = errortrace.Wrap({{ $ret }})  // Processes error
+            }()
+            {{- end -}}
+
+# Expected execution order due to namespace alphabetical sorting:
+# 1. "error-handling" namespace (order 20) - processes error
+# 2. "tracing" namespace (order 10) - captures processed error
+#
+# Due to defer LIFO execution:
+# - Span creation defer is added first (but executes LAST)
+# - Error processing defer is added second (but executes FIRST)
+#
+# This ensures span.Finish() captures the wrapped/processed error!
+
+syntheticReferences:
+  github.com/DataDog/dd-trace-go/v2/ddtrace/tracer: true
+  github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace: true
+
+code: |-
+  package test
+
+  import (
+    "context"
+  )
+
+  func getError(ctx context.Context) error {
+    // Function that returns an error
+    return nil
+  }

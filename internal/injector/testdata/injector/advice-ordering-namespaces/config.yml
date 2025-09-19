@@ -1,0 +1,65 @@
+%YAML 1.1
+---
+# Test namespace-based ordering across multiple aspects
+# Advice should be sorted alphabetically by namespace, then by order within namespace
+aspects:
+  - id: Tracing Aspect
+    join-point:
+      function-body:
+        function:
+          - name: TestFunction
+    advice:
+      - prepend-statements:
+          namespace: "tracing"
+          order: 20
+          template: |-
+            _ = "1) Tracing: namespace tracing, order 20 (applied 4)"
+
+  - id: Error Handling Aspect
+    join-point:
+      function-body:
+        function:
+          - name: TestFunction
+    advice:
+      - prepend-statements:
+          namespace: "error-handling"
+          order: 10
+          template: |-
+            _ = "3) Error handling: namespace error-handling, order 10 (applied 2)"
+
+  - id: Metrics Aspect
+    join-point:
+      function-body:
+        function:
+          - name: TestFunction
+    advice:
+      - prepend-statements:
+          namespace: "metrics"
+          order: 30
+          template: |-
+            _ = "2) Metrics: namespace metrics, order 30 (applied 3)"
+
+  - id: Authentication Aspect
+    join-point:
+      function-body:
+        function:
+          - name: TestFunction
+    advice:
+      - prepend-statements:
+          namespace: "authentication"
+          order: 5
+          template: |-
+            _ = "4) Authentication: namespace authentication, order 5 (applied 1)"
+
+# Expected execution order (alphabetically by namespace):
+# 1. authentication (order: 5)
+# 2. error-handling (order: 10)
+# 3. metrics (order: 30)
+# 4. tracing (order: 20)
+
+code: |-
+  package test
+
+  func TestFunction() {
+    // Original function body
+  }
