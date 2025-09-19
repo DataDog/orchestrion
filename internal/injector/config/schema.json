@@ -481,7 +481,13 @@
             "minItems": 1
           }
         },
-        "examples": [{ "function": [{ "name": "main" }, { "signature": {} }] }],
+        "examples": [
+          { "function": [{ "name": "main" }, { "signature": {} }] },
+          { "function": [{ "signature-contains": { "args": ["context.Context"], "returns": ["error"] } }] },
+          { "function": [{ "result-implements": "io.Reader" }] },
+          { "function": [{ "final-result-implements": "error" }] },
+          { "function": [{ "argument-implements": "context.Context" }] }
+        ],
         "$defs": {
           "option": {
             "type": "object",
@@ -530,6 +536,59 @@
                       }
                     },
                     "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "required": ["signature-contains"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "signature-contains": {
+                    "description": "Matches functions based on their arguments and return value types in any order and does not require all arguments or return values to be present.",
+                    "type": "object",
+                    "properties": {
+                      "args": {
+                        "description": "The types of arguments that should be present in the function signature.",
+                        "type": "array",
+                        "items": { "$ref": "#/$defs/go/qualified-identifier" }
+                      },
+                      "returns": {
+                        "description": "The types of values that should be present in the function's return values.",
+                        "type": "array",
+                        "items": { "$ref": "#/$defs/go/qualified-identifier" }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "required": ["result-implements"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "result-implements": {
+                    "description": "Matches functions where at least one return value implements the specified interface.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  }
+                }
+              },
+              {
+                "required": ["final-result-implements"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "final-result-implements": {
+                    "description": "Matches functions where specifically the final return value implements the specified interface.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  }
+                }
+              },
+              {
+                "required": ["argument-implements"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "argument-implements": {
+                    "description": "Matches functions where at least one argument implements the specified interface.",
+                    "$ref": "#/$defs/go/qualified-identifier"
                   }
                 }
               }
