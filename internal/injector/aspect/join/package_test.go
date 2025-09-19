@@ -39,6 +39,12 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 			importPath:  "github.com/myorg/other",
 			shouldMatch: false,
 		},
+		{
+			name:        "exact no match prefix",
+			pattern:     "github.com/myorg/mypackage",
+			importPath:  "github.com/myorg/mypackage/suffix",
+			shouldMatch: false,
+		},
 
 		// Wildcard * tests (matches any sequence of non-separator characters)
 		{
@@ -134,6 +140,12 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 			shouldMatch: false,
 		},
 		{
+			name:        "globstar trailing partial matches anything",
+			pattern:     "github.com/myorg/service**",
+			importPath:  "github.com/myorg/service2/api/v1/handler",
+			shouldMatch: true,
+		},
+		{
 			name:        "globstar trailing matches anything",
 			pattern:     "github.com/myorg/**",
 			importPath:  "github.com/myorg/service/api/v1/handler",
@@ -150,6 +162,30 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 			pattern:     "**",
 			importPath:  "github.com/myorg/service/api/v1",
 			shouldMatch: true,
+		},
+		{
+			name:        "globstar prefix partial matches anything",
+			pattern:     "**service/api",
+			importPath:  "github.com/myorg/myservice/api",
+			shouldMatch: true,
+		},
+		{
+			name:        "globstar prefix partial no match",
+			pattern:     "**service/api",
+			importPath:  "github.com/myorg/other/handler",
+			shouldMatch: false,
+		},
+		{
+			name:        "globstar middle partial matches segments",
+			pattern:     "github.com/myorg/service**handler/v1",
+			importPath:  "github.com/myorg/service2/api/handler/v1",
+			shouldMatch: true,
+		},
+		{
+			name:        "globstar middle partial no match",
+			pattern:     "github.com/myorg/service**handler/v1",
+			importPath:  "github.com/myorg/service2/api/other/v1",
+			shouldMatch: false,
 		},
 
 		// Edge cases
@@ -435,13 +471,13 @@ type mockAspectContext struct {
 	importPath string
 }
 
-func (_ *mockAspectContext) Chain() *context.NodeChain       { return nil }
-func (_ *mockAspectContext) Node() dst.Node                  { return nil }
-func (_ *mockAspectContext) Parent() context.AspectContext   { return nil }
-func (_ *mockAspectContext) Config(string) (string, bool)    { return "", false }
-func (_ *mockAspectContext) File() *dst.File                 { return nil }
-func (m *mockAspectContext) ImportPath() string              { return m.importPath }
-func (_ *mockAspectContext) Package() string                 { return "" }
-func (_ *mockAspectContext) TestMain() bool                  { return false }
-func (_ *mockAspectContext) Release()                        {}
-func (_ *mockAspectContext) ResolveType(dst.Expr) types.Type { return nil }
+func (*mockAspectContext) Chain() *context.NodeChain       { return nil }
+func (*mockAspectContext) Node() dst.Node                  { return nil }
+func (*mockAspectContext) Parent() context.AspectContext   { return nil }
+func (*mockAspectContext) Config(string) (string, bool)    { return "", false }
+func (*mockAspectContext) File() *dst.File                 { return nil }
+func (m *mockAspectContext) ImportPath() string            { return m.importPath }
+func (*mockAspectContext) Package() string                 { return "" }
+func (*mockAspectContext) TestMain() bool                  { return false }
+func (*mockAspectContext) Release()                        {}
+func (*mockAspectContext) ResolveType(dst.Expr) types.Type { return nil }

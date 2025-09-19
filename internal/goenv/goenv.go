@@ -33,9 +33,9 @@ type Module struct {
 }
 
 var (
+	muCache sync.RWMutex
 	// Cache for module path lookups to avoid repeated calls to go list.
 	modulePathCache = make(map[string]string)
-	modulePathMutex sync.RWMutex
 )
 
 // GOMOD returns the current GOMOD environment variable (from running `go env GOMOD`).
@@ -55,15 +55,15 @@ func GOMOD(dir string) (string, error) {
 	return "", fmt.Errorf("in %q: %w", wd, ErrNoGoMod)
 }
 
-// ModulePath returns the module path of the current module using go/packages API.
+// modulePath returns the module path of the current module using go/packages API.
 // Results are cached to avoid repeated package loading calls.
-func ModulePath(ctx context.Context, dir string) (string, error) {
-	modulePathMutex.RLock()
-	if cached, exists := modulePathCache[dir]; exists {
-		modulePathMutex.RUnlock()
+func modulePath(ctx context.Context, dir string) (string, error) {
+	muCache.RLock()
+	cached, exists := modulePathCache[dir]
+	muCache.RUnlock()
+	if exists {
 		return cached, nil
 	}
-	modulePathMutex.RUnlock()
 
 	cfg := &packages.Config{
 		Context: ctx,
@@ -85,9 +85,9 @@ func ModulePath(ctx context.Context, dir string) (string, error) {
 		return "", fmt.Errorf("in %q: %w", dir, ErrNoModulePath)
 	}
 
-	modulePathMutex.Lock()
+	muCache.Lock()
+	defer muCache.Unlock()
 	modulePathCache[dir] = modulePath
-	modulePathMutex.Unlock()
 
 	return modulePath, nil
 }
@@ -95,9 +95,10 @@ func ModulePath(ctx context.Context, dir string) (string, error) {
 // RootModulePath returns the root module path for the current working directory.
 // This is a convenience function that calls ModulePath with the current directory.
 func RootModulePath(ctx context.Context) (string, error) {
+	// Getwd returns an absolute path name corresponding to the current directory.
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("getting working directory: %w", err)
 	}
-	return ModulePath(ctx, wd)
+	return modulePath(ctx, wd)
 }

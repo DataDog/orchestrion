@@ -375,6 +375,7 @@
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
+        { "$ref": "#/$defs/join-point/package-filter" },
         { "$ref": "#/$defs/join-point/struct-definition" },
         { "$ref": "#/$defs/join-point/struct-literal" },
         { "$ref": "#/$defs/join-point/test-main" },
@@ -616,6 +617,63 @@
           }
         },
         "examples": [{ "package-name": "main" }]
+      },
+      "package-filter": {
+        "required": ["package-filter"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "package-filter": {
+            "title": "Filter packages using glob patterns",
+            "markdownDescription": "The `package-filter` join point is node-agnostic. It matches any node within packages whose import paths match the specified glob pattern.\\n\\nSupports two formats:\\n- **String format**: matches packages globally using the pattern\\n- **Object format**: allows specifying `root` to limit matching to the current module only\\n\\nSupports glob patterns including:\\n- `*` matches any sequence within a path segment\\n- `**` matches any sequence across multiple path segments (globstar)\\n- `?` matches any single character except path separator\\n- `[class]` matches any character in the character class\\n\\nWhen `root: true`, only matches packages within the current Go module and applies the pattern to relative paths within the module. When `root: false` (default), matches packages from any module using the full import path.",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "description": "Glob pattern to match against import paths globally"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "anyOf": [
+                  { "required": ["pattern"] },
+                  { "required": ["root"], "properties": { "root": { "const": true } } }
+                ],
+                "properties": {
+                  "root": {
+                    "description": "If true, only matches packages within the current Go module and applies pattern to relative paths. If false (default), matches packages from any module using full import path.",
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "pattern": {
+                    "description": "Glob pattern to match against import paths. Supports *, **, ?, and [class] patterns. When omitted and root is true, matches all packages in root module.",
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "examples": [
+          { "package-filter": "github.com/ACME/*/*/my*" },
+          { "package-filter": "**/internal/*" },
+          {
+            "package-filter": {
+              "pattern": "github.com/external/library/internal/*"
+            }
+          },
+          {
+            "package-filter": {
+              "root": true,
+              "pattern": "internal/*"
+            }
+          },
+          {
+            "package-filter": {
+              "root": true
+            }
+          }
+        ]
       },
       "struct-definition": {
         "required": ["struct-definition"],

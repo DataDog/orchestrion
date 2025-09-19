@@ -123,7 +123,70 @@ func matchWithGlobstar(pattern string, importPath string) (bool, error) {
 	patternSegments := strings.Split(pattern, "/")
 	pathSegments := strings.Split(importPath, "/")
 
-	return matchSegments(patternSegments, pathSegments)
+	return matchSegments(expandGlobstarSegments(patternSegments), pathSegments)
+}
+
+// expandGlobstarSegments processes pattern segments to handle ** within segments.
+// For example, "service**" becomes ["service*", "**"]
+func expandGlobstarSegments(patternSegments []string) []string {
+	var expanded []string
+
+	for _, segment := range patternSegments {
+		expanded = append(expanded, expandSingleSegment(segment)...)
+	}
+
+	return expanded
+}
+
+// expandSingleSegment handles the expansion logic for a single pattern segment
+func expandSingleSegment(segment string) []string {
+	if segment == "**" {
+		// Pure globstar segment, keep as is.
+		return []string{segment}
+	}
+
+	if prefix, found := strings.CutSuffix(segment, "**"); found && prefix != "" {
+		// Mixed segment like "service**", split it.
+		return []string{prefix + "*", "**"}
+	}
+
+	if suffix, found := strings.CutPrefix(segment, "**"); found && suffix != "" {
+		// Mixed segment like "**service", split it.
+		return []string{"**", "*" + suffix}
+	}
+
+	if strings.Contains(segment, "**") {
+		// Handle ** in the middle of a segment by splitting around it.
+		return expandMiddleGlobstar(segment)
+	}
+
+	// Regular segment, keep as is.
+	return []string{segment}
+}
+
+// expandMiddleGlobstar handles segments with ** in the middle
+func expandMiddleGlobstar(segment string) []string {
+	var (
+		result []string
+		parts  = strings.Split(segment, "**")
+	)
+	for i, part := range parts {
+		if i > 0 {
+			result = append(result, "**")
+		}
+		if part != "" {
+			switch {
+			case i == 0:
+				result = append(result, part+"*")
+			case i == len(parts)-1:
+				result = append(result, "*"+part)
+			default:
+				result = append(result, "*"+part+"*")
+			}
+		}
+	}
+
+	return result
 }
 
 func matchSegments(patternSegments []string, pathSegments []string) (bool, error) {
@@ -198,7 +261,7 @@ func (pf packageFilter) matchesPattern(importPath string) bool {
 		return false
 	}
 
-	// For root-only filters without pattern, match all packages in root module
+	// For root-only filters without pattern, match all packages in root module.
 	if pf.pattern == "" && pf.root {
 		return isInRootModule(importPath)
 	}
