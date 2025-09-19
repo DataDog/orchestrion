@@ -3,15 +3,16 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
-package cmd_test
+package cmd
 
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/cmd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -97,7 +98,7 @@ func TestPrepareBuildArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Use internal access to test the function
-			result := cmd.PrepareBuildArgsForTest(tt.input)
+			result := prepareBuildArgs(tt.input, true)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -179,7 +180,7 @@ WORK=/tmp/second`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := cmd.ExtractWorkDirFromOutputForTest(tt.output)
+			result := extractWorkDirFromOutput(tt.output)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -197,11 +198,11 @@ func (m *mockReport) IsEmpty() bool {
 	return m.isEmpty
 }
 
-func (m *mockReport) WithSpecialCasesFilter() cmd.ReportInterface {
+func (m *mockReport) WithSpecialCasesFilter() *mockReport {
 	return m
 }
 
-func (m *mockReport) WithRegexFilter(pattern string) (cmd.ReportInterface, error) {
+func (m *mockReport) WithRegexFilter(pattern string) (*mockReport, error) {
 	if pattern == "invalid[" {
 		return nil, errors.New("invalid regex pattern")
 	}
@@ -222,6 +223,29 @@ func (m *mockReport) Diff(w io.Writer) error {
 	}
 	_, err := w.Write([]byte("mock diff output"))
 	return err
+}
+
+// Helper function to test outputReport functionality
+func outputReportForTest(writer io.Writer, flags map[string]bool, rpt *mockReport) error {
+	if flags["package"] {
+		for _, pkg := range rpt.Packages() {
+			_, _ = fmt.Fprintln(writer, pkg)
+		}
+		return nil
+	}
+
+	if flags["files"] {
+		for _, file := range rpt.Files() {
+			_, _ = fmt.Fprintln(writer, file)
+		}
+		return nil
+	}
+
+	if err := rpt.Diff(writer); err != nil {
+		return fmt.Errorf("failed to generate diff: %s", err)
+	}
+
+	return nil
 }
 
 func TestOutputReport(t *testing.T) {
@@ -302,7 +326,7 @@ func TestOutputReport(t *testing.T) {
 				flags["files"] = true
 			}
 
-			err := cmd.OutputReportForTest(&output, flags, tt.report)
+			err := outputReportForTest(&output, flags, tt.report)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)
@@ -328,7 +352,7 @@ func TestOutputReport_PriorityFlags(t *testing.T) {
 		"files":   true,
 	}
 
-	err := cmd.OutputReportForTest(&output, flags, report)
+	err := outputReportForTest(&output, flags, report)
 	require.NoError(t, err)
 
 	// Should output packages, not files
@@ -366,9 +390,95 @@ func TestOutputReport_EmptyResults(t *testing.T) {
 				flags["files"] = true
 			}
 
-			err := cmd.OutputReportForTest(&output, flags, tt.report)
+			err := outputReportForTest(&output, flags, tt.report)
 			require.NoError(t, err)
 			assert.Empty(t, output.String())
+		})
+	}
+}
+
+func TestPrepareBuildArgsWithCache(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        []string
+		forceRebuild bool
+		expected     []string
+	}{
+		{
+			name:         "no cache flag - no -a added",
+			input:        []string{"build", "main.go"},
+			forceRebuild: false,
+			expected:     []string{"build", "-work", "main.go"},
+		},
+		{
+			name:         "force rebuild - adds -a flag",
+			input:        []string{"build", "main.go"},
+			forceRebuild: true,
+			expected:     []string{"build", "-work", "-a", "main.go"},
+		},
+		{
+			name:         "existing -a flag preserved when no cache",
+			input:        []string{"build", "-a", "main.go"},
+			forceRebuild: false,
+			expected:     []string{"build", "-work", "-a", "main.go"},
+		},
+		{
+			name:         "existing -a flag preserved when force rebuild",
+			input:        []string{"build", "-a", "main.go"},
+			forceRebuild: true,
+			expected:     []string{"build", "-work", "-a", "main.go"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := prepareBuildArgs(tt.input, tt.forceRebuild)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestTeeReaderWorkDirCapture(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           string
+		expectedOutput  string
+		expectedWorkDir string
+	}{
+		{
+			name:            "captures work directory and forwards output",
+			input:           "WORK=/tmp/go-build123456789\nsome other output\n",
+			expectedOutput:  "WORK=/tmp/go-build123456789\nsome other output\n",
+			expectedWorkDir: "/tmp/go-build123456789",
+		},
+		{
+			name:            "no work directory in output",
+			input:           "some build output\nerror message\n",
+			expectedOutput:  "some build output\nerror message\n",
+			expectedWorkDir: "",
+		},
+		{
+			name:            "work directory with mixed output",
+			input:           "building...\nWORK=/tmp/work-dir\ncompiling main.go\n",
+			expectedOutput:  "building...\nWORK=/tmp/work-dir\ncompiling main.go\n",
+			expectedWorkDir: "/tmp/work-dir",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var outputBuf bytes.Buffer
+			var workDirBuf strings.Builder
+
+			reader := strings.NewReader(tt.input)
+			teeReader := io.TeeReader(reader, io.MultiWriter(&outputBuf, &workDirBuf))
+
+			_, err := io.Copy(io.Discard, teeReader)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expectedOutput, outputBuf.String())
+			workDir := extractWorkDirFromOutput(workDirBuf.String())
+			assert.Equal(t, tt.expectedWorkDir, workDir)
 		})
 	}
 }

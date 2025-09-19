@@ -45,6 +45,11 @@ var (
 		Usage: "Execute a build with -work before generating the diff. All remaining arguments after flags are passed to the build command.",
 	}
 
+	noCacheFlag = cli.BoolFlag{
+		Name:  "no-cache",
+		Usage: "Force a rebuild of all packages when using --build (adds -a flag). Useful for ensuring complete instrumentation coverage.",
+	}
+
 	Diff = &cli.Command{
 		Name:  "diff",
 		Usage: "Generates a diff between a nominal and orchestrion-instrumented build. Use --build to execute a build first, or provide a work directory path obtained from `orchestrion go build -work -a`. This is incompatible with coverage related flags.",
@@ -55,9 +60,10 @@ var (
 			&packageFlag,
 			&debugFlag,
 			&buildFlag,
+			&noCacheFlag,
 		},
 		Action: func(clictx *cli.Context) error {
-			workFolder, err := getWorkFolder(clictx)
+			workFolder, err := workFolder(clictx)
 			if err != nil {
 				return err
 			}
@@ -87,7 +93,7 @@ var (
 	}
 )
 
-func getWorkFolder(clictx *cli.Context) (string, error) {
+func workFolder(clictx *cli.Context) (string, error) {
 	if !clictx.Bool(buildFlag.Name) {
 		workFolder := clictx.Args().First()
 		if workFolder == "" {
@@ -96,10 +102,10 @@ func getWorkFolder(clictx *cli.Context) (string, error) {
 		return workFolder, nil
 	}
 
-	return executeBuildAndCaptureWorkDir(clictx, prepareBuildArgs(clictx.Args().Slice()))
+	return executeBuildAndCaptureWorkDir(clictx, prepareBuildArgs(clictx.Args().Slice(), clictx.Bool(noCacheFlag.Name)))
 }
 
-func prepareBuildArgs(args []string) []string {
+func prepareBuildArgs(args []string, forceRebuild bool) []string {
 	switch {
 	case len(args) == 0:
 		args = []string{"build", "./..."}
@@ -121,7 +127,7 @@ func prepareBuildArgs(args []string) []string {
 	if !hasWork {
 		flags = append(flags, "-work")
 	}
-	if !hasAll {
+	if !hasAll && forceRebuild {
 		flags = append(flags, "-a")
 	}
 
@@ -159,34 +165,46 @@ func executeBuildAndCaptureWorkDir(clictx *cli.Context, buildArgs []string) (str
 		return "", cli.Exit(err, -1)
 	}
 
-	tmpFile, err := os.CreateTemp("", "orchestrion-build-output-")
+	cmd, err := goproxy.BuildCmd(clictx.Context, buildArgs, goproxy.WithToolexec(binpath.Orchestrion, "toolexec"))
 	if err != nil {
-		return "", fmt.Errorf("creating temporary file for build output: %w", err)
+		return "", fmt.Errorf("building command: %w", err)
 	}
-	defer tmpFile.Close()
-	defer os.Remove(tmpFile.Name())
 
-	originalStderr := os.Stderr
-	os.Stderr = tmpFile
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", fmt.Errorf("creating pipe: %w", err)
+	}
+	defer r.Close()
+	defer w.Close()
 
-	buildErr := goproxy.Run(clictx.Context, buildArgs, goproxy.WithToolexec(binpath.Orchestrion, "toolexec"))
+	var workDirBuffer strings.Builder
+	teeReader := io.TeeReader(r, io.MultiWriter(clictx.App.ErrWriter, &workDirBuffer))
 
-	os.Stderr = originalStderr
+	cmd.Stderr = w
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, err := io.Copy(io.Discard, teeReader)
+		if err != nil {
+			_, _ = fmt.Fprintf(clictx.App.ErrWriter, "failed to read build output: %v", err)
+		}
+	}()
+
+	buildErr := cmd.Run()
+
+	w.Close()
+	<-done
 
 	if buildErr != nil {
 		return "", cli.Exit(fmt.Sprintf("build failed: %v", buildErr), 1)
 	}
 
-	output, err := os.ReadFile(tmpFile.Name())
-	if err != nil {
-		return "", fmt.Errorf("reading build output: %w", err)
-	}
-
-	wd := extractWorkDirFromOutput(string(output))
-	if wd == "" {
+	workDir := extractWorkDirFromOutput(workDirBuffer.String())
+	if workDir == "" {
 		return "", cli.Exit("could not extract work directory from build output (did the build use -work?)", 1)
 	}
-	return wd, nil
+	return workDir, nil
 }
 
 func extractWorkDirFromOutput(output string) string {
@@ -196,49 +214,4 @@ func extractWorkDirFromOutput(output string) string {
 		}
 	}
 	return ""
-}
-
-// ReportInterface defines the interface for report objects used in testing
-type ReportInterface interface {
-	IsEmpty() bool
-	WithSpecialCasesFilter() ReportInterface
-	WithRegexFilter(pattern string) (ReportInterface, error)
-	Packages() []string
-	Files() []string
-	Diff(io.Writer) error
-}
-
-// Test helper functions for testing internal functionality
-
-// PrepareBuildArgsForTest exposes prepareBuildArgs for testing
-func PrepareBuildArgsForTest(args []string) []string {
-	return prepareBuildArgs(args)
-}
-
-// ExtractWorkDirFromOutputForTest exposes extractWorkDirFromOutput for testing
-func ExtractWorkDirFromOutputForTest(output string) string {
-	return extractWorkDirFromOutput(output)
-}
-
-// OutputReportForTest exposes outputReport functionality for testing
-func OutputReportForTest(writer io.Writer, flags map[string]bool, rpt ReportInterface) error {
-	if flags["package"] {
-		for _, pkg := range rpt.Packages() {
-			_, _ = fmt.Fprintln(writer, pkg)
-		}
-		return nil
-	}
-
-	if flags["files"] {
-		for _, file := range rpt.Files() {
-			_, _ = fmt.Fprintln(writer, file)
-		}
-		return nil
-	}
-
-	if err := rpt.Diff(writer); err != nil {
-		return cli.Exit(fmt.Sprintf("failed to generate diff: %s", err), 1)
-	}
-
-	return nil
 }
