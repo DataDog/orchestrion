@@ -19,11 +19,11 @@ import (
 
 type addStructField struct {
 	Name     string
-	TypeName *typed.NamedType
+	TypeExpr typed.Type
 }
 
 // AddStructField adds a new synthetic field at the tail end of a struct declaration.
-func AddStructField(fieldName string, fieldType *typed.NamedType) *addStructField {
+func AddStructField(fieldName string, fieldType typed.Type) *addStructField {
 	return &addStructField{fieldName, fieldType}
 }
 
@@ -44,24 +44,28 @@ func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 
 	typeDef.Fields.List = append(typeDef.Fields.List, &dst.Field{
 		Names: []*dst.Ident{dst.NewIdent(a.Name)},
-		Type:  a.TypeName.AsNode(),
+		Type:  a.TypeExpr.AsNode(),
 	})
 
-	if importPath := a.TypeName.ImportPath; importPath != "" {
-		// If the type name is qualified, we may need to import the package, too.
-		_ = ctx.AddImport(importPath, inferPkgName(importPath))
+	if namedType, err := typed.ExtractNamedType(a.TypeExpr); err == nil {
+		if importPath := namedType.ImportPath; importPath != "" {
+			// If the type name is qualified, we may need to import the package, too.
+			_ = ctx.AddImport(importPath, inferPkgName(importPath))
+		}
 	}
 
 	return true, nil
 }
 
 func (a *addStructField) Hash(h *fingerprint.Hasher) error {
-	return h.Named("add-struct-field", fingerprint.String(a.Name), a.TypeName)
+	return h.Named("add-struct-field", fingerprint.String(a.Name), a.TypeExpr)
 }
 
 func (a *addStructField) AddedImports() []string {
-	if path := a.TypeName.ImportPath; path != "" {
-		return []string{path}
+	if namedType, err := typed.ExtractNamedType(a.TypeExpr); err == nil {
+		if path := namedType.ImportPath; path != "" {
+			return []string{path}
+		}
 	}
 	return nil
 }
@@ -76,11 +80,12 @@ func init() {
 		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
 		}
-		namedType, err := typed.NewNamedType(spec.Type)
+		// Use NewType instead of NewNamedType to preserve pointer information
+		typeExpr, err := typed.NewType(spec.Type)
 		if err != nil {
 			return nil, fmt.Errorf("invalid type %q: %w", spec.Type, err)
 		}
 
-		return AddStructField(spec.Name, namedType), nil
+		return AddStructField(spec.Name, typeExpr), nil
 	}
 }

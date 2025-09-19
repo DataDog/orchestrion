@@ -261,3 +261,58 @@ func TestNamedType_Matches(t *testing.T) {
 		})
 	}
 }
+
+func TestNewNamedTypePointerHandling(t *testing.T) {
+	testCases := []struct {
+		name    string
+		typeStr string
+		isPtr   bool
+	}{
+		{
+			name:    "value type",
+			typeStr: "string",
+			isPtr:   false,
+		},
+		{
+			name:    "pointer type",
+			typeStr: "*string",
+			isPtr:   true,
+		},
+		{
+			name:    "qualified pointer type",
+			typeStr: "*kafkatrace.Tracer",
+			isPtr:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run("NewNamedType", func(t *testing.T) {
+				namedType, err := NewNamedType(tc.typeStr)
+				require.NoError(t, err)
+
+				node := namedType.AsNode()
+
+				_, isStarExpr := node.(*dst.StarExpr)
+				require.False(t, isStarExpr,
+					"NewNamedType(%s) should strip pointer info but got StarExpr", tc.typeStr)
+			})
+
+			t.Run("NewType", func(t *testing.T) {
+				typeExpr, err := NewType(tc.typeStr)
+				require.NoError(t, err)
+
+				node := typeExpr.AsNode()
+
+				_, isStarExpr := node.(*dst.StarExpr)
+				if tc.isPtr {
+					require.True(t, isStarExpr,
+						"NewType(%s) should preserve pointer info", tc.typeStr)
+				} else {
+					require.False(t, isStarExpr,
+						"NewType(%s) should not be a pointer", tc.typeStr)
+				}
+			})
+		})
+	}
+}
