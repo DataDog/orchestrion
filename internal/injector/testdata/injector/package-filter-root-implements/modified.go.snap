@@ -1,0 +1,57 @@
+//line input.go:1:1
+package example
+
+import (
+  "context"
+  "fmt"
+//line <generated>:1
+  __orchestrion_tracer "gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+)
+
+//line input.go:8
+func main() {
+  fmt.Println("Hello from root module!")
+}
+
+func helloWorld(ctx context.Context) (__result__0 error) {
+//line <generated>:1
+  {
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "helloWorld")
+
+    defer func() {
+      span.Finish(__orchestrion_tracer.WithError(__result__0))
+    }()
+
+  }
+//line input.go:13
+  return printWithContext(ctx, "Hello from root module!")
+}
+
+func printWithContext(ctx context.Context, msg string) (err error) {
+//line <generated>:1
+  {
+    var span __orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "printWithContext")
+
+    defer func() {
+      span.Finish(__orchestrion_tracer.WithError(err))
+    }()
+
+  }
+//line input.go:17
+  if ctx.Err() != nil {
+    return ctx.Err()
+  }
+
+  fmt.Println(msg)
+  return nil
+}
+
+func withContextOnly(ctx context.Context) {
+  fmt.Println("Has context but no error return")
+}
+
+func withErrorOnly() error {
+  return fmt.Errorf("has error return but no context")
+}

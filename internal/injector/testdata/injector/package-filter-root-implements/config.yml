@@ -1,0 +1,70 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      all-of:
+        - package-filter:
+            root: true
+        - function-body:
+            function:
+              - argument-implements: "context.Context"
+              - result-implements: "error"
+    advice:
+      - prepend-statements:
+          imports:
+            tracer: gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer
+          template: |-
+            {{ $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- if (eq $ctx "") -}}
+              {{- $ctx = "ctx" -}}
+              ctx := context.TODO()
+            {{ end -}}
+
+            var span tracer.Span
+            span, {{ $ctx }} = tracer.StartSpanFromContext({{ $ctx }}, {{ printf "%q" .Function.Name }})
+
+            {{ with .Function.ResultOfType "error" -}}
+              defer func() {
+                span.Finish(tracer.WithError({{ . }}))
+              }()
+            {{ else -}}
+              defer span.Finish()
+            {{- end -}}
+
+syntheticReferences:
+  gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer: true
+
+import-path: github.com/DataDog/orchestrion/internal/example
+
+code: |-
+  package example
+
+  import (
+    "context"
+    "fmt"
+  )
+
+  func main() {
+    fmt.Println("Hello from root module!")
+  }
+
+  func helloWorld(ctx context.Context) error {
+    return printWithContext(ctx, "Hello from root module!")
+  }
+
+  func printWithContext(ctx context.Context, msg string) (err error) {
+    if ctx.Err() != nil {
+      return ctx.Err()
+    }
+
+    fmt.Println(msg)
+    return nil
+  }
+
+  func withContextOnly(ctx context.Context) {
+    fmt.Println("Has context but no error return")
+  }
+
+  func withErrorOnly() error {
+    return fmt.Errorf("has error return but no context")
+  }
