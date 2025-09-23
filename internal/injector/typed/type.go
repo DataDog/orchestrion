@@ -41,4 +41,26 @@ type Type interface {
 
 	// Hash contributes the Type's properties to a fingerprint hasher.
 	Hash(h *fingerprint.Hasher) error
+
+	// ImportPath is the import Path that provides the type, or an empty string if the
+	// type is local or built-in (like "error" or "any").
+	ImportPath() string
+
+	// UnqualifiedName is the leaf (un-qualified) name of the type.
+	UnqualifiedName() string
+}
+
+// NewType parses a string representation of a type and returns a Type interface.
+// It supports pointer types, slices, arrays, and maps.
+func NewType(n string) (Type, error) {
+	return parseType(n)
+}
+
+// MustType is the same as NewType, except it panics in case of an error.
+func MustType(n string) Type {
+	t, err := NewType(n)
+	if err != nil {
+		panic(err)
+	}
+	return t
 }

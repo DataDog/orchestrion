@@ -9,3 +9,4 @@ orchestrion
 coverage/
 venv/
 .python-version
+*.log

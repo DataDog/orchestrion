@@ -53,3 +53,12 @@ func (m *MapType) Hash(h *fingerprint.Hasher) error {
 		m.Value,
 	)
 }
+
+func (*MapType) ImportPath() string {
+	return ""
+}
+
+func (*MapType) UnqualifiedName() string {
+	// return "map[" + m.Key.UnqualifiedName() + "]" + m.Value.UnqualifiedName()
+	return ""
+}

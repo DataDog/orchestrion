@@ -39,7 +39,7 @@ func TestPointerType_Matches(t *testing.T) {
 		},
 		{
 			name:     "matches pointer to qualified type",
-			pointer:  &PointerType{Elem: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			pointer:  &PointerType{Elem: &NamedType{Path: "fmt", Name: "Stringer"}},
 			node:     &dst.StarExpr{X: &dst.SelectorExpr{X: dst.NewIdent("fmt"), Sel: dst.NewIdent("Stringer")}},
 			expected: true,
 		},
@@ -68,7 +68,7 @@ func TestPointerType_AsNode(t *testing.T) {
 		},
 		{
 			name:    "pointer to qualified type",
-			pointer: &PointerType{Elem: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			pointer: &PointerType{Elem: &NamedType{Path: "fmt", Name: "Stringer"}},
 			expected: &dst.StarExpr{X: &dst.Ident{
 				Name: "Stringer",
 				Path: "fmt",

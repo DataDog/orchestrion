@@ -46,7 +46,7 @@ func TestSliceType_Matches(t *testing.T) {
 		},
 		{
 			name:     "matches slice of qualified type",
-			slice:    &SliceType{Elem: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			slice:    &SliceType{Elem: &NamedType{Path: "fmt", Name: "Stringer"}},
 			node:     &dst.ArrayType{Elt: &dst.SelectorExpr{X: dst.NewIdent("fmt"), Sel: dst.NewIdent("Stringer")}},
 			expected: true,
 		},
@@ -87,7 +87,7 @@ func TestSliceType_AsNode(t *testing.T) {
 		},
 		{
 			name:  "slice of qualified type",
-			slice: &SliceType{Elem: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			slice: &SliceType{Elem: &NamedType{Path: "fmt", Name: "Stringer"}},
 			expected: &dst.ArrayType{
 				Elt: &dst.Ident{Name: "Stringer", Path: "fmt"},
 			},
@@ -124,7 +124,7 @@ func TestNewType_SliceParsing(t *testing.T) {
 		{
 			name:     "slice of qualified type",
 			input:    "[]net/http.Request",
-			expected: &SliceType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}},
+			expected: &SliceType{Elem: &NamedType{Path: "net/http", Name: "Request"}},
 		},
 		{
 			name:     "slice of pointer",
@@ -134,7 +134,7 @@ func TestNewType_SliceParsing(t *testing.T) {
 		{
 			name:     "slice of pointer to qualified type",
 			input:    "[]*net/http.Request",
-			expected: &SliceType{Elem: &PointerType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}}},
+			expected: &SliceType{Elem: &PointerType{Elem: &NamedType{Path: "net/http", Name: "Request"}}},
 		},
 		{
 			name:     "nested slice",
@@ -144,7 +144,7 @@ func TestNewType_SliceParsing(t *testing.T) {
 		{
 			name:     "complex nested slice",
 			input:    "[][]*net/http.Request",
-			expected: &SliceType{Elem: &SliceType{Elem: &PointerType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}}}},
+			expected: &SliceType{Elem: &SliceType{Elem: &PointerType{Elem: &NamedType{Path: "net/http", Name: "Request"}}}},
 		},
 	}
 

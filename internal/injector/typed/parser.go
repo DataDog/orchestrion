@@ -275,8 +275,8 @@ func (p *typeParser) parseNamedType() (Type, error) {
 		}
 
 		return &NamedType{
-			ImportPath: string(fullType[:lastDotAfterSlash]),
-			Name:       string(fullType[lastDotAfterSlash+1:]),
+			Path: string(fullType[:lastDotAfterSlash]),
+			Name: string(fullType[lastDotAfterSlash+1:]),
 		}, nil
 	}
 
@@ -285,8 +285,8 @@ func (p *typeParser) parseNamedType() (Type, error) {
 	if lastDot > 0 {
 		if isValidIdentifier(fullType[:lastDot]) && isValidIdentifier(fullType[lastDot+1:]) {
 			return &NamedType{
-				ImportPath: string(fullType[:lastDot]),
-				Name:       string(fullType[lastDot+1:]),
+				Path: string(fullType[:lastDot]),
+				Name: string(fullType[lastDot+1:]),
 			}, nil
 		}
 	}

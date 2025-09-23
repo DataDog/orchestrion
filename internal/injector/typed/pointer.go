@@ -41,3 +41,11 @@ func (p *PointerType) Hash(h *fingerprint.Hasher) error {
 		p.Elem,
 	)
 }
+
+func (p *PointerType) ImportPath() string {
+	return p.Elem.ImportPath()
+}
+
+func (p *PointerType) UnqualifiedName() string {
+	return p.Elem.UnqualifiedName()
+}

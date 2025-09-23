@@ -28,7 +28,7 @@ func TestType(t *testing.T) {
 		{
 			name:     "qualified type",
 			typeStr:  "net/http.Request",
-			expected: &NamedType{ImportPath: "net/http", Name: "Request"},
+			expected: &NamedType{Path: "net/http", Name: "Request"},
 		},
 		{
 			name:     "pointer to simple type",
@@ -38,7 +38,7 @@ func TestType(t *testing.T) {
 		{
 			name:     "pointer to qualified type",
 			typeStr:  "*net/http.Request",
-			expected: &PointerType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}},
+			expected: &PointerType{Elem: &NamedType{Path: "net/http", Name: "Request"}},
 		},
 		{
 			name:    "invalid syntax",
@@ -95,7 +95,7 @@ func TestType_Matches(t *testing.T) {
 		},
 		{
 			name:     "pointer to qualified type matches",
-			typ:      &PointerType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}},
+			typ:      &PointerType{Elem: &NamedType{Path: "net/http", Name: "Request"}},
 			node:     &dst.StarExpr{X: &dst.SelectorExpr{X: dst.NewIdent("net/http"), Sel: dst.NewIdent("Request")}},
 			expected: true,
 		},

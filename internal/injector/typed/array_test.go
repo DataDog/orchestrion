@@ -53,7 +53,7 @@ func TestArrayType_Matches(t *testing.T) {
 		},
 		{
 			name:     "matches array of qualified type",
-			array:    &ArrayType{Size: 5, Elem: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			array:    &ArrayType{Size: 5, Elem: &NamedType{Path: "fmt", Name: "Stringer"}},
 			node:     &dst.ArrayType{Len: &dst.BasicLit{Value: "5"}, Elt: &dst.SelectorExpr{X: dst.NewIdent("fmt"), Sel: dst.NewIdent("Stringer")}},
 			expected: true,
 		},
@@ -95,7 +95,7 @@ func TestArrayType_AsNode(t *testing.T) {
 		},
 		{
 			name:  "array of qualified type",
-			array: &ArrayType{Size: 5, Elem: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			array: &ArrayType{Size: 5, Elem: &NamedType{Path: "fmt", Name: "Stringer"}},
 			expected: &dst.ArrayType{
 				Len: &dst.BasicLit{Kind: token.INT, Value: "5"},
 				Elt: &dst.Ident{Name: "Stringer", Path: "fmt"},
@@ -134,7 +134,7 @@ func TestNewType_ArrayParsing(t *testing.T) {
 		{
 			name:     "array of qualified type",
 			input:    "[5]net/http.Request",
-			expected: &ArrayType{Size: 5, Elem: &NamedType{ImportPath: "net/http", Name: "Request"}},
+			expected: &ArrayType{Size: 5, Elem: &NamedType{Path: "net/http", Name: "Request"}},
 		},
 		{
 			name:     "array of pointer",

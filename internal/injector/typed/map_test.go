@@ -46,7 +46,7 @@ func TestMapType_Matches(t *testing.T) {
 		},
 		{
 			name:     "matches map with qualified types",
-			mapType:  &MapType{Key: &NamedType{Name: "string"}, Value: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			mapType:  &MapType{Key: &NamedType{Name: "string"}, Value: &NamedType{Path: "fmt", Name: "Stringer"}},
 			node:     &dst.MapType{Key: dst.NewIdent("string"), Value: &dst.SelectorExpr{X: dst.NewIdent("fmt"), Sel: dst.NewIdent("Stringer")}},
 			expected: true,
 		},
@@ -94,7 +94,7 @@ func TestMapType_AsNode(t *testing.T) {
 		},
 		{
 			name:    "map with qualified value type",
-			mapType: &MapType{Key: &NamedType{Name: "string"}, Value: &NamedType{ImportPath: "fmt", Name: "Stringer"}},
+			mapType: &MapType{Key: &NamedType{Name: "string"}, Value: &NamedType{Path: "fmt", Name: "Stringer"}},
 			expected: &dst.MapType{
 				Key:   &dst.Ident{Name: "string"},
 				Value: &dst.Ident{Name: "Stringer", Path: "fmt"},
@@ -144,7 +144,7 @@ func TestNewType_MapParsing(t *testing.T) {
 		{
 			name:     "map with qualified value",
 			input:    "map[string]net/http.Request",
-			expected: &MapType{Key: &NamedType{Name: "string"}, Value: &NamedType{ImportPath: "net/http", Name: "Request"}},
+			expected: &MapType{Key: &NamedType{Name: "string"}, Value: &NamedType{Path: "net/http", Name: "Request"}},
 		},
 		{
 			name:     "map with pointer value",
@@ -154,7 +154,7 @@ func TestNewType_MapParsing(t *testing.T) {
 		{
 			name:     "map with qualified pointer value",
 			input:    "map[string]*net/http.Request",
-			expected: &MapType{Key: &NamedType{Name: "string"}, Value: &PointerType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}}},
+			expected: &MapType{Key: &NamedType{Name: "string"}, Value: &PointerType{Elem: &NamedType{Path: "net/http", Name: "Request"}}},
 		},
 		{
 			name:     "nested map",

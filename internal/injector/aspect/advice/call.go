@@ -21,14 +21,14 @@ import (
 )
 
 type appendArgs struct {
-	TypeName  *typed.NamedType
+	Type      typed.Type
 	Templates []*code.Template
 }
 
 // AppendArgs appends arguments of a given type to the end of a function call. All arguments must be
 // of the same type, as they may be appended at the tail end of a variadic call.
-func AppendArgs(typeName *typed.NamedType, templates ...*code.Template) *appendArgs {
-	return &appendArgs{typeName, templates}
+func AppendArgs(typeExpr typed.Type, templates ...*code.Template) *appendArgs {
+	return &appendArgs{typeExpr, templates}
 }
 
 func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
@@ -62,12 +62,12 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 				Params: &dst.FieldList{
 					List: []*dst.Field{{
 						Names: []*dst.Ident{dst.NewIdent("opts")},
-						Type:  &dst.Ellipsis{Elt: a.TypeName.AsNode()},
+						Type:  &dst.Ellipsis{Elt: a.Type.AsNode()},
 					}},
 				},
 				Results: &dst.FieldList{
 					List: []*dst.Field{{
-						Type: &dst.ArrayType{Elt: a.TypeName.AsNode()},
+						Type: &dst.ArrayType{Elt: a.Type.AsNode()},
 					}},
 				},
 			},
@@ -92,7 +92,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 		Ellipsis: true,
 	}
 
-	if importPath := a.TypeName.ImportPath; importPath != "" {
+	if importPath := a.Type.ImportPath(); importPath != "" {
 		ctx.AddImport(importPath, inferPkgName(importPath))
 	}
 
@@ -101,7 +101,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 
 func (a *appendArgs) AddedImports() []string {
 	imports := make([]string, 0, len(a.Templates)+1)
-	if argTypeImportPath := a.TypeName.ImportPath; argTypeImportPath != "" {
+	if argTypeImportPath := a.Type.ImportPath(); argTypeImportPath != "" {
 		imports = append(imports, argTypeImportPath)
 	}
 	for _, t := range a.Templates {
@@ -111,7 +111,7 @@ func (a *appendArgs) AddedImports() []string {
 }
 
 func (a *appendArgs) Hash(h *fingerprint.Hasher) error {
-	return h.Named("append-args", a.TypeName, fingerprint.List[*code.Template](a.Templates))
+	return h.Named("append-args", a.Type, fingerprint.List[*code.Template](a.Templates))
 }
 
 type redirectCall struct {
@@ -160,20 +160,20 @@ func (r *redirectCall) AddedImports() []string {
 func init() {
 	unmarshalers["append-args"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var args struct {
-			TypeName string           `yaml:"type"`
-			Values   []*code.Template `yaml:"values"`
+			Type   string           `yaml:"type"`
+			Values []*code.Template `yaml:"values"`
 		}
 
 		if err := yaml.NodeToValueContext(ctx, node, &args); err != nil {
 			return nil, err
 		}
 
-		namedType, err := typed.NewNamedType(args.TypeName)
+		t, err := typed.NewType(args.Type)
 		if err != nil {
-			return nil, fmt.Errorf("invalid type %q: %w", args.TypeName, err)
+			return nil, fmt.Errorf("invalid type %q: %w", args.Type, err)
 		}
 
-		return AppendArgs(namedType, args.Values...), nil
+		return AppendArgs(t, args.Values...), nil
 	}
 	unmarshalers["replace-function"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var (

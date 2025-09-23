@@ -47,11 +47,9 @@ func (a *addStructField) Apply(ctx context.AdviceContext) (bool, error) {
 		Type:  a.TypeExpr.AsNode(),
 	})
 
-	if namedType, err := typed.ExtractNamedType(a.TypeExpr); err == nil {
-		if importPath := namedType.ImportPath; importPath != "" {
-			// If the type name is qualified, we may need to import the package, too.
-			_ = ctx.AddImport(importPath, inferPkgName(importPath))
-		}
+	if importPath := a.TypeExpr.ImportPath(); importPath != "" {
+		// If the type name is qualified, we may need to import the package, too.
+		_ = ctx.AddImport(importPath, inferPkgName(importPath))
 	}
 
 	return true, nil
@@ -62,10 +60,8 @@ func (a *addStructField) Hash(h *fingerprint.Hasher) error {
 }
 
 func (a *addStructField) AddedImports() []string {
-	if namedType, err := typed.ExtractNamedType(a.TypeExpr); err == nil {
-		if path := namedType.ImportPath; path != "" {
-			return []string{path}
-		}
+	if path := a.TypeExpr.ImportPath(); path != "" {
+		return []string{path}
 	}
 	return nil
 }

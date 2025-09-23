@@ -20,25 +20,25 @@ import (
 )
 
 type structDefinition struct {
-	TypeName *typed.NamedType
+	Type typed.Type
 }
 
 // StructDefinition matches the definition of a particular struct given its fully qualified name.
-func StructDefinition(typeName *typed.NamedType) *structDefinition {
+func StructDefinition(typeExpr typed.Type) *structDefinition {
 	return &structDefinition{
-		TypeName: typeName,
+		Type: typeExpr,
 	}
 }
 
 func (s *structDefinition) ImpliesImported() []string {
-	if path := s.TypeName.ImportPath; path != "" {
+	if path := s.Type.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (s *structDefinition) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	if ctx.ImportPath == s.TypeName.ImportPath {
+	if ctx.ImportPath == s.Type.ImportPath() {
 		return may.Match
 	}
 
@@ -50,8 +50,13 @@ func (*structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {
 }
 
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
+	if _, isPtr := s.Type.(*typed.PointerType); isPtr {
+		// We can't ever match a pointer definition
+		return false
+	}
+
 	spec, ok := ctx.Node().(*dst.TypeSpec)
-	if !ok || spec.Name == nil || spec.Name.Name != s.TypeName.Name {
+	if !ok || spec.Name == nil || spec.Name.Name != s.Type.UnqualifiedName() {
 		return false
 	}
 
@@ -59,19 +64,19 @@ func (s *structDefinition) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	return ctx.ImportPath() == s.TypeName.ImportPath
+	return ctx.ImportPath() == s.Type.ImportPath()
 }
 
 func (s *structDefinition) Hash(h *fingerprint.Hasher) error {
-	return h.Named("struct-definition", s.TypeName)
+	return h.Named("struct-definition", s.Type)
 }
 
 type (
 	StructLiteralMatch int
 	structLiteral      struct {
-		TypeName *typed.NamedType
-		Field    string
-		Match    StructLiteralMatch
+		Type  typed.Type
+		Field string
+		Match StructLiteralMatch
 	}
 )
 
@@ -89,31 +94,31 @@ const (
 )
 
 // StructLiteralField matches a specific field in struct literals of the designated type.
-func StructLiteralField(typeName *typed.NamedType, field string) *structLiteral {
+func StructLiteralField(typeExpr typed.Type, field string) *structLiteral {
 	return &structLiteral{
-		TypeName: typeName,
-		Field:    field,
+		Type:  typeExpr,
+		Field: field,
 	}
 }
 
 // StructLiteral matches struct literal expressions of the designated type, filtered by the
 // specified match type.
-func StructLiteral(typeName *typed.NamedType, match StructLiteralMatch) *structLiteral {
+func StructLiteral(typeExpr typed.Type, match StructLiteralMatch) *structLiteral {
 	return &structLiteral{
-		TypeName: typeName,
-		Match:    match,
+		Type:  typeExpr,
+		Match: match,
 	}
 }
 
 func (s *structLiteral) ImpliesImported() []string {
-	if path := s.TypeName.ImportPath; path != "" {
+	if path := s.Type.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (s *structLiteral) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	return ctx.PackageImports(s.TypeName.ImportPath)
+	return ctx.PackageImports(s.Type.ImportPath())
 }
 
 func (*structLiteral) FileMayMatch(_ *may.FileContext) may.MatchType {
@@ -167,11 +172,11 @@ func (s *structLiteral) matchesLiteral(node dst.Node) bool {
 	if !ok {
 		return false
 	}
-	return s.TypeName.Matches(lit.Type)
+	return s.Type.Matches(lit.Type)
 }
 
 func (s *structLiteral) Hash(h *fingerprint.Hasher) error {
-	return h.Named("struct-literal", s.TypeName, fingerprint.String(s.Field), s.Match)
+	return h.Named("struct-literal", s.Type, fingerprint.String(s.Field), s.Match)
 }
 
 func init() {
@@ -185,12 +190,12 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		tn, ok := t.(*typed.NamedType)
-		if !ok {
+
+		if _, isPtr := t.(*typed.PointerType); isPtr {
 			return nil, fmt.Errorf("struct-definition type must not be a pointer (got %q)", spec)
 		}
 
-		return StructDefinition(tn), nil
+		return StructDefinition(t), nil
 	}
 	unmarshalers["struct-literal"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var spec struct {
@@ -202,7 +207,7 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := typed.NewNamedType(spec.Type)
+		typeExpr, err := typed.NewType(spec.Type)
 		if err != nil {
 			return nil, fmt.Errorf("struct-literal type must be a named type or pointer to named type (got %q): %w", spec.Type, err)
 		}
@@ -211,10 +216,10 @@ func init() {
 			if spec.Match != StructLiteralMatchAny {
 				return nil, fmt.Errorf("struct-literal.field is not allowed with struct-literal.match: %s", spec.Match)
 			}
-			return StructLiteralField(tn, spec.Field), nil
+			return StructLiteralField(typeExpr, spec.Field), nil
 		}
 
-		return StructLiteral(tn, spec.Match), nil
+		return StructLiteral(typeExpr, spec.Match), nil
 	}
 }
 

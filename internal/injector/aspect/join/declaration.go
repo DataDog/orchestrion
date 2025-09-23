@@ -73,15 +73,15 @@ func (i *declarationOf) Hash(h *fingerprint.Hasher) error {
 }
 
 type valueDeclaration struct {
-	TypeName *typed.NamedType
+	Type typed.Type
 }
 
-func ValueDeclaration(typeName *typed.NamedType) *valueDeclaration {
-	return &valueDeclaration{typeName}
+func ValueDeclaration(typeExpr typed.Type) *valueDeclaration {
+	return &valueDeclaration{Type: typeExpr}
 }
 
 func (i *valueDeclaration) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	return ctx.PackageImports(i.TypeName.ImportPath)
+	return ctx.PackageImports(i.Type.ImportPath())
 }
 
 func (*valueDeclaration) FileMayMatch(_ *may.FileContext) may.MatchType {
@@ -103,18 +103,18 @@ func (i *valueDeclaration) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	return spec.Type == nil || i.TypeName.Matches(spec.Type)
+	return spec.Type == nil || i.Type.Matches(spec.Type)
 }
 
 func (i *valueDeclaration) ImpliesImported() []string {
-	if path := i.TypeName.ImportPath; path != "" {
+	if path := i.Type.ImportPath(); path != "" {
 		return []string{path}
 	}
 	return nil
 }
 
 func (i *valueDeclaration) Hash(h *fingerprint.Hasher) error {
-	return h.Named("value-declaration", i.TypeName)
+	return h.Named("value-declaration", i.Type)
 }
 
 // See: https://regex101.com/r/OXDfJ1/1
@@ -141,7 +141,7 @@ func init() {
 			return nil, err
 		}
 
-		tn, err := typed.NewNamedType(typeName)
+		tn, err := typed.NewType(typeName)
 		if err != nil {
 			return nil, fmt.Errorf("invalid type %q: %w", typeName, err)
 		}

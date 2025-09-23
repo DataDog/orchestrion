@@ -18,9 +18,9 @@ import (
 // and potential typos when referring to common Go built-in types.
 var (
 	// Basic types currently used in the codebase
-	Any    = &NamedType{ImportPath: "", Name: "any"}
-	Bool   = &NamedType{ImportPath: "", Name: "bool"}
-	String = &NamedType{ImportPath: "", Name: "string"}
+	Any    = &NamedType{Path: "", Name: "any"}
+	Bool   = &NamedType{Path: "", Name: "bool"}
+	String = &NamedType{Path: "", Name: "string"}
 	// Uncomment these when needed.
 	// Byte   = &NamedType{ImportPath: "", Name: "byte"}
 	// Int    = &NamedType{ImportPath: "", Name: "int"}
@@ -29,9 +29,9 @@ var (
 
 // NamedType represents a parsed Go type name, potentially including a package path.
 type NamedType struct {
-	// ImportPath is the import Path that provides the type, or an empty string if the
+	// Path is the import Path that provides the type, or an empty string if the
 	// type is local or built-in (like "error" or "any").
-	ImportPath string
+	Path string
 	// Name is the leaf (un-qualified) name of the type.
 	Name string
 }
@@ -59,28 +59,13 @@ func MustNamedType(n string) *NamedType {
 	return nt
 }
 
-// NewType parses a string representation of a type and returns a Type interface.
-// It supports pointer types, slices, arrays, and maps.
-func NewType(n string) (Type, error) {
-	return parseType(n)
-}
-
-// MustType is the same as NewType, except it panics in case of an error.
-func MustType(n string) Type {
-	t, err := NewType(n)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
 // Matches determines whether the provided AST expression node represents the same type
 // as this NamedType. This performs a structural comparison based on the limited types
 // supported by the parsing regex (identifiers, selectors, empty interface).
 func (n *NamedType) Matches(node dst.Expr) bool {
 	switch node := node.(type) {
 	case *dst.Ident:
-		return n.ImportPath == node.Path && n.Name == node.Name
+		return n.Path == node.Path && n.Name == node.Name
 
 	case *dst.SelectorExpr:
 		var path string
@@ -89,7 +74,7 @@ func (n *NamedType) Matches(node dst.Expr) bool {
 		} else {
 			return false
 		}
-		return n.ImportPath == path && n.Name == node.Sel.Name
+		return n.Path == path && n.Name == node.Sel.Name
 
 	case *dst.StarExpr:
 		// NamedType should not match pointer expressions
@@ -108,7 +93,7 @@ func (n *NamedType) Matches(node dst.Expr) bool {
 		if len(node.Methods.List) != 0 {
 			return false
 		}
-		return n.ImportPath == "" && n.Name == "any"
+		return n.Path == "" && n.Name == "any"
 
 	default:
 		return false
@@ -119,7 +104,7 @@ func (n *NamedType) Matches(node dst.Expr) bool {
 // of this NamedType. The `importPath` argument determines the context in which
 // the assertion is made.
 func (n *NamedType) MatchesDefinition(node dst.Expr, importPath string) bool {
-	if n.ImportPath != importPath {
+	if n.Path != importPath {
 		return false
 	}
 	return (&NamedType{Name: n.Name}).Matches(node)
@@ -129,7 +114,7 @@ func (n *NamedType) MatchesDefinition(node dst.Expr, importPath string) bool {
 // Useful for generating code that refers to this type.
 func (n *NamedType) AsNode() dst.Expr {
 	ident := dst.NewIdent(n.Name)
-	ident.Path = n.ImportPath
+	ident.Path = n.Path
 	return ident
 }
 
@@ -138,8 +123,18 @@ func (n NamedType) Hash(h *fingerprint.Hasher) error {
 	return h.Named(
 		"named-type",
 		fingerprint.String(n.Name),
-		fingerprint.String(n.ImportPath),
+		fingerprint.String(n.Path),
 	)
+}
+
+// ImportPath is the import Path that provides the type, or an empty string if the
+// type is local or built-in (like "error" or "any").
+func (n NamedType) ImportPath() string {
+	return n.Path
+}
+
+func (n NamedType) UnqualifiedName() string {
+	return n.Name
 }
 
 // FindMatchingType parses a type string and searches a field list for the first field whose type matches.

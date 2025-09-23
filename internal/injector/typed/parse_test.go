@@ -29,37 +29,37 @@ func TestNewType_ComprehensiveParsing(t *testing.T) {
 		{
 			name:     "qualified type",
 			input:    "net/http.Request",
-			expected: &NamedType{ImportPath: "net/http", Name: "Request"},
+			expected: &NamedType{Path: "net/http", Name: "Request"},
 		},
 		{
 			name:     "type with dots in package",
 			input:    "github.com/user/repo.Type",
-			expected: &NamedType{ImportPath: "github.com/user/repo", Name: "Type"},
+			expected: &NamedType{Path: "github.com/user/repo", Name: "Type"},
 		},
 		{
 			name:     "type with v2 in package",
 			input:    "github.com/user/repo/v2.Type",
-			expected: &NamedType{ImportPath: "github.com/user/repo/v2", Name: "Type"},
+			expected: &NamedType{Path: "github.com/user/repo/v2", Name: "Type"},
 		},
 		{
 			name:     "type with dashes in package",
 			input:    "github.com/user-name/repo-name.Type",
-			expected: &NamedType{ImportPath: "github.com/user-name/repo-name", Name: "Type"},
+			expected: &NamedType{Path: "github.com/user-name/repo-name", Name: "Type"},
 		},
 		{
 			name:     "simple package.Type (no slash)",
 			input:    "time.Duration",
-			expected: &NamedType{ImportPath: "time", Name: "Duration"},
+			expected: &NamedType{Path: "time", Name: "Duration"},
 		},
 		{
 			name:     "context.Context",
 			input:    "context.Context",
-			expected: &NamedType{ImportPath: "context", Name: "Context"},
+			expected: &NamedType{Path: "context", Name: "Context"},
 		},
 		{
 			name:     "runtime.g",
 			input:    "runtime.g",
-			expected: &NamedType{ImportPath: "runtime", Name: "g"},
+			expected: &NamedType{Path: "runtime", Name: "g"},
 		},
 
 		// Pointer types
@@ -71,7 +71,7 @@ func TestNewType_ComprehensiveParsing(t *testing.T) {
 		{
 			name:     "pointer to qualified type",
 			input:    "*net/http.Request",
-			expected: &PointerType{Elem: &NamedType{ImportPath: "net/http", Name: "Request"}},
+			expected: &PointerType{Elem: &NamedType{Path: "net/http", Name: "Request"}},
 		},
 		{
 			name:     "pointer with spaces",
@@ -247,7 +247,7 @@ func TestNewType_ComprehensiveParsing(t *testing.T) {
 							Key: &NamedType{Name: "int"},
 							Value: &PointerType{
 								Elem: &SliceType{
-									Elem: &NamedType{ImportPath: "net/http", Name: "Request"},
+									Elem: &NamedType{Path: "net/http", Name: "Request"},
 								},
 							},
 						},
@@ -422,12 +422,12 @@ func TestNewType_ComprehensiveParsing(t *testing.T) {
 		{
 			name:     "qualified type with Unicode package",
 			input:    "github.com/用户/项目.类型",
-			expected: &NamedType{ImportPath: "github.com/用户/项目", Name: "类型"},
+			expected: &NamedType{Path: "github.com/用户/项目", Name: "类型"},
 		},
 		{
 			name:     "qualified type with Unicode in path component",
 			input:    "example.com/café/lib.Type",
-			expected: &NamedType{ImportPath: "example.com/café/lib", Name: "Type"},
+			expected: &NamedType{Path: "example.com/café/lib", Name: "Type"},
 		},
 		{
 			name:     "pointer to Unicode type",
@@ -462,7 +462,7 @@ func TestNewType_ComprehensiveParsing(t *testing.T) {
 		{
 			name:     "mixed ASCII and Unicode",
 			input:    "mypackage.世界Type",
-			expected: &NamedType{ImportPath: "mypackage", Name: "世界Type"},
+			expected: &NamedType{Path: "mypackage", Name: "世界Type"},
 		},
 		{
 			name:     "Unicode with numbers",
@@ -472,7 +472,7 @@ func TestNewType_ComprehensiveParsing(t *testing.T) {
 		{
 			name:     "package path with Unicode directory",
 			input:    "github.com/世界/package.MyType",
-			expected: &NamedType{ImportPath: "github.com/世界/package", Name: "MyType"},
+			expected: &NamedType{Path: "github.com/世界/package", Name: "MyType"},
 		},
 		{
 			name:     "right-to-left script",

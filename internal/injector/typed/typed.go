@@ -11,12 +11,10 @@ import "fmt"
 // It follows pointer chains until it finds a non-pointer type.
 // Returns an error if the final type is not a NamedType.
 func ExtractNamedType(t Type) (*NamedType, error) {
-	// Unwrap pointer types
 	for ptr, ok := t.(*PointerType); ok; ptr, ok = t.(*PointerType) {
 		t = ptr.Elem
 	}
 
-	// Check if the final type is a NamedType
 	nt, ok := t.(*NamedType)
 	if !ok {
 		return nil, fmt.Errorf("expected a named type or pointer to named type, got %T", t)

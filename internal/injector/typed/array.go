@@ -75,3 +75,12 @@ func (a *ArrayType) Hash(h *fingerprint.Hasher) error {
 		a.Elem,
 	)
 }
+
+func (a *ArrayType) ImportPath() string {
+	return a.Elem.ImportPath()
+}
+
+func (*ArrayType) UnqualifiedName() string {
+	// return fmt.Sprintf("[%d]%s", a.Size, a.Elem.UnqualifiedName())
+	return ""
+}

@@ -32,13 +32,13 @@ func TestNamedType(t *testing.T) {
 			name:        "simple type",
 			input:       "net/http.ResponseWriter",
 			expectError: false,
-			expected:    &NamedType{ImportPath: "net/http", Name: "ResponseWriter"},
+			expected:    &NamedType{Path: "net/http", Name: "ResponseWriter"},
 		},
 		{
 			name:        "pointer type",
 			input:       "*net/http.Request",
 			expectError: false,
-			expected:    &NamedType{ImportPath: "net/http", Name: "Request"},
+			expected:    &NamedType{Path: "net/http", Name: "Request"},
 		},
 	}
 
@@ -121,7 +121,7 @@ func TestNamedType_Matches(t *testing.T) {
 		// For example: import mypkg "some/package" results in mypkg.Type
 		{
 			name:     "mypkg (alias for some/pkg) matches mypkg.MyType",
-			nt:       &NamedType{ImportPath: "mypkg", Name: "MyType"},
+			nt:       &NamedType{Path: "mypkg", Name: "MyType"},
 			node:     &dst.SelectorExpr{X: dst.NewIdent("mypkg"), Sel: dst.NewIdent("MyType")},
 			expected: true,
 		},
@@ -133,13 +133,13 @@ func TestNamedType_Matches(t *testing.T) {
 		},
 		{
 			name:     "alias for pkg does not match otheralias.MyType",
-			nt:       &NamedType{ImportPath: "pkg", Name: "MyType"},
+			nt:       &NamedType{Path: "pkg", Name: "MyType"},
 			node:     &dst.SelectorExpr{X: dst.NewIdent("otherpkg"), Sel: dst.NewIdent("MyType")},
 			expected: false,
 		},
 		{
 			name:     "alias.MyType does not match alias.OtherType",
-			nt:       &NamedType{ImportPath: "pkg", Name: "MyType"},
+			nt:       &NamedType{Path: "pkg", Name: "MyType"},
 			node:     &dst.SelectorExpr{X: dst.NewIdent("pkg"), Sel: dst.NewIdent("OtherType")},
 			expected: false,
 		},
@@ -191,7 +191,7 @@ func TestNamedType_Matches(t *testing.T) {
 		},
 		{
 			name:     "alias.MyType matches alias.MyType[T]",
-			nt:       &NamedType{ImportPath: "pkg", Name: "MyType"},
+			nt:       &NamedType{Path: "pkg", Name: "MyType"},
 			node:     &dst.IndexExpr{X: &dst.SelectorExpr{X: dst.NewIdent("pkg"), Sel: dst.NewIdent("MyType")}, Index: dst.NewIdent("T")},
 			expected: true,
 		},
@@ -229,7 +229,7 @@ func TestNamedType_Matches(t *testing.T) {
 		},
 		{
 			name:     "alias.MyType matches alias.MyType[T1, T2]",
-			nt:       &NamedType{ImportPath: "pkg", Name: "MyType"},
+			nt:       &NamedType{Path: "pkg", Name: "MyType"},
 			node:     &dst.IndexListExpr{X: &dst.SelectorExpr{X: dst.NewIdent("pkg"), Sel: dst.NewIdent("MyType")}, Indices: []dst.Expr{dst.NewIdent("T1"), dst.NewIdent("T2")}},
 			expected: true,
 		},

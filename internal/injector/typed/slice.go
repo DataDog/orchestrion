@@ -49,3 +49,12 @@ func (s *SliceType) Hash(h *fingerprint.Hasher) error {
 		s.Elem,
 	)
 }
+
+func (s *SliceType) ImportPath() string {
+	return s.Elem.ImportPath()
+}
+
+func (*SliceType) UnqualifiedName() string {
+	// return "[]" + s.Elem.UnqualifiedName()
+	return ""
+}
