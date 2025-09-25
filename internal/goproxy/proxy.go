@@ -54,10 +54,8 @@ func WithToolexec(bin string, args ...string) Option {
 	}
 }
 
-// Run takes a go command ("build", "install", etc...) with its arguments, and
-// applies changes specified through opts to the command before running it in a
-// different process.
-func Run(ctx context.Context, goArgs []string, opts ...Option) error {
+// BuildCmd returns a new exec.BuildCmd that will run the given goArgs, with the given opts applied.
+func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, error) {
 	log := zerolog.Ctx(ctx)
 
 	var cfg config
@@ -67,12 +65,12 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 
 	goArgs, err := processDashC(ctx, goArgs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	goBin, err := goenv.GoBinPath()
 	if err != nil {
-		return fmt.Errorf("locating 'go' binary: %w", err)
+		return nil, fmt.Errorf("locating 'go' binary: %w", err)
 	}
 
 	// Pre-allocate space for extra arguments...
@@ -84,7 +82,11 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 		goArgs...,
 	)
 
-	env := os.Environ()
+	var (
+		server         *jobserver.Server
+		serverStartErr error
+		env            = os.Environ()
+	)
 	if len(argv) > 1 {
 		switch cmd := argv[1]; cmd {
 		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
@@ -101,15 +103,23 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 				argv[2] = "-toolexec"
 				argv[3] = cfg.toolexec
 
-				// We'll need a job server to support toolexec operations
-				server, err := jobserver.New(ctx, nil)
-				if err != nil {
-					return err
-				}
-				defer func() {
-					server.Shutdown()
-					log.Trace().Msg(server.CacheStats.String())
+				serverStarted := make(chan struct{})
+				go func() {
+					// We'll need a job server to support toolexec operations
+					server, serverStartErr = jobserver.New(ctx, nil)
+					if serverStartErr != nil {
+						close(serverStarted)
+						return
+					}
+					defer func() {
+						server.Shutdown()
+						log.Trace().Msg(server.CacheStats.String())
+					}()
+					close(serverStarted)
+
+					<-ctx.Done()
 				}()
+				<-serverStarted
 				env = append(env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, server.ClientURL()))
 
 				// Set the process' goflags, since we know them already...
@@ -117,13 +127,31 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 			}
 		}
 	}
+	if server != nil && serverStartErr != nil {
+		return nil, serverStartErr
+	}
 
 	log.Trace().Strs("command", argv).Msg("exec")
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Env = env
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	return cmd, nil
+}
+
+// Run takes a go command ("build", "install", etc...) with its arguments, and
+// applies changes specified through opts to the command before running it in a
+// different process.
+func Run(ctx context.Context, goArgs []string, opts ...Option) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	cmd, err := BuildCmd(ctx, goArgs, opts...)
+	if err != nil {
+		return fmt.Errorf("building command: %w", err)
+	}
 
 	span, _ := tracer.StartSpanFromContext(ctx, "exec",
 		tracer.ResourceName(cmd.String()),
