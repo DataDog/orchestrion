@@ -14,38 +14,31 @@ aspects:
           namespace: "explicit"
           order: 20
           template: |-
-            _ = "2) Explicit: namespace explicit, order 20 (applied 4)"
+            _ = "4) Explicit: namespace explicit, order 20 (applied 2)"
 
-      # No namespace/order specified - uses defaults (namespace="default", order=0)
+      # No namespace/order specified - uses defaults (namespace=DefaultNamespace, order=0)
       - prepend-statements:
           template: |-
-            _ = "5) Default: namespace default, order 0 (applied 1)"
+            _ = "2) Default: namespace default, order 0 (applied 4)"
 
       # Only namespace specified, order defaults to 0
       - prepend-statements:
           namespace: "partial"
           template: |-
-            _ = "1) Partial: namespace partial, order 0 (applied 5)"
+            _ = "3) Partial: namespace partial, order 0 (applied 3)"
 
-      # Only order specified, namespace defaults to "default"
+      # Only order specified, namespace defaults to DefaultNamespace
       - prepend-statements:
           order: 15
           template: |-
-            _ = "4) Order only: namespace default, order 15 (applied 2)"
+            _ = "1) Order only: namespace default, order 15 (applied 5)"
 
       # Another explicit one
       - prepend-statements:
           namespace: "explicit"
           order: 10
           template: |-
-            _ = "3) Explicit: namespace explicit, order 10 (applied 3)"
-
-# Expected execution order:
-# 1. Default namespace, order 0: "Default: namespace "default", order 0"
-# 2. Default namespace, order 15: "Order only: namespace "default" (default), order 15"
-# 3. Explicit namespace, order 10: "Explicit: namespace "explicit", order 10"
-# 4. Explicit namespace, order 20: "Explicit: namespace "explicit", order 20"
-# 5. Partial namespace, order 0: "Partial: namespace "partial", order 0 (default)"
+            _ = "5) Explicit: namespace explicit, order 10 (applied 1)"
 
 code: |-
   package test

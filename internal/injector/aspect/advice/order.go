@@ -6,12 +6,17 @@
 package advice
 
 import (
-	"sort"
+	"cmp"
+	"slices"
+	"strings"
 )
 
 const (
-	// DefaultNamespace is used when no namespace is specified
-	DefaultNamespace = "default"
+	// DefaultNamespace is used when no namespace is specified.
+	// Uses the highest Unicode code point to ensure default advice
+	// always executes last, giving users full control over execution
+	// order by choosing any explicit namespace.
+	DefaultNamespace = "\U0010ffff"
 
 	// DefaultOrder is used when no order is specified
 	DefaultOrder = 0
@@ -29,7 +34,7 @@ type OrderedAdvice struct {
 	order     int
 }
 
-// NewOrderedAdvices creates a new OrderedAdvice with default values
+// NewOrderedAdvice creates a new OrderedAdvice with default values
 func NewOrderedAdvice(aspectID string, advice Advice, index int) *OrderedAdvice {
 	orderedAdvice := &OrderedAdvice{
 		AspectID: aspectID,
@@ -49,16 +54,18 @@ func NewOrderedAdvice(aspectID string, advice Advice, index int) *OrderedAdvice 
 // Sort sorts advice from multiple aspects and returns them in execution order.
 // It handles both orderable and non-orderable advice, providing deterministic sorting
 // based on namespace, order, and original definition order.
-func Sort(orderedAdvices []*OrderedAdvice) {
-	sort.Slice(orderedAdvices, func(i, j int) bool {
-		if orderedAdvices[i].namespace != orderedAdvices[j].namespace {
-			return orderedAdvices[i].namespace < orderedAdvices[j].namespace
-		}
+func Sort(orderedAdvice []*OrderedAdvice) {
+	slices.SortStableFunc(orderedAdvice, adviceSorter)
+}
 
-		if orderedAdvices[i].order != orderedAdvices[j].order {
-			return orderedAdvices[i].order < orderedAdvices[j].order
-		}
+func adviceSorter(a *OrderedAdvice, b *OrderedAdvice) int {
+	if n := strings.Compare(a.namespace, b.namespace); n != 0 {
+		return n
+	}
 
-		return orderedAdvices[i].Index < orderedAdvices[j].Index
-	})
+	if n := cmp.Compare(a.order, b.order); n != 0 {
+		return n
+	}
+
+	return cmp.Compare(a.Index, b.Index)
 }

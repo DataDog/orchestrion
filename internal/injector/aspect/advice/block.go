@@ -76,16 +76,10 @@ func (a *prependStatements) AddedImports() []string {
 }
 
 func (a *prependStatements) Order() int {
-	if a.order == 0 {
-		return DefaultOrder
-	}
 	return a.order
 }
 
 func (a *prependStatements) Namespace() string {
-	if a.namespace == "" {
-		return DefaultNamespace
-	}
 	return a.namespace
 }
 
@@ -93,19 +87,21 @@ func init() {
 	unmarshalers["prepend-statements"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
 		var config struct {
 			Template  code.Template `yaml:",inline"`
-			Order     int           `yaml:"order,omitempty"`
-			Namespace string        `yaml:"namespace,omitempty"`
+			Order     *int          `yaml:"order,omitempty"`
+			Namespace *string       `yaml:"namespace,omitempty"`
 		}
 
 		if err := yaml.NodeToValueContext(ctx, node, &config); err != nil {
 			return nil, err
 		}
 
-		return &prependStatements{
-			Template: &config.Template,
-
-			order:     config.Order, // defaults to 0 if not specified.
-			namespace: config.Namespace,
-		}, nil
+		prependStatements := PrependStmts(&config.Template)
+		if ns := config.Namespace; ns != nil && *ns != "" {
+			prependStatements.namespace = *ns
+		}
+		if config.Order != nil {
+			prependStatements.order = *config.Order
+		}
+		return prependStatements, nil
 	}
 }

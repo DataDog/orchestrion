@@ -288,7 +288,7 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 // transformations. It returns whether the AST was indeed modified. In case of an error, the
 // injector aborts immediately and returns the error.
 func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, err error) {
-	var orderedAdvices []*advice.OrderedAdvice
+	var orderedAdvice []*advice.OrderedAdvice
 	var index int
 	for _, inj := range aspects {
 		if !inj.JoinPoint.Matches(ctx) {
@@ -296,17 +296,17 @@ func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, 
 		}
 
 		for _, adv := range inj.Advice {
-			orderedAdvices = append(orderedAdvices, advice.NewOrderedAdvice(inj.ID, adv, index))
+			orderedAdvice = append(orderedAdvice, advice.NewOrderedAdvice(inj.ID, adv, index))
 			index++
 		}
 	}
 
-	if len(orderedAdvices) == 0 {
+	if len(orderedAdvice) == 0 {
 		return false, nil
 	}
 
-	advice.Sort(orderedAdvices)
-	for _, act := range orderedAdvices {
+	advice.Sort(orderedAdvice)
+	for _, act := range orderedAdvice {
 		var changed bool
 		changed, err := act.Apply(ctx)
 		mod = mod || changed
