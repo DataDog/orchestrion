@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+func TestFunction() {
+  // Original function body
+//line <generated>:1
+  {
+    _ = "1) Order only: namespace default, order 15 (applied 5)"
+  }
+  {
+    _ = "2) Default: namespace default, order 0 (applied 4)"
+  }
+  {
+    _ = "3) Partial: namespace partial, order 0 (applied 3)"
+  }
+  {
+    _ = "4) Explicit: namespace explicit, order 20 (applied 2)"
+  }
+  {
+    _ = "5) Explicit: namespace explicit, order 10 (applied 1)"
+  }
+}

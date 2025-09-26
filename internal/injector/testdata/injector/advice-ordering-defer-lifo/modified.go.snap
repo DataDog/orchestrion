@@ -1,0 +1,33 @@
+//line input.go:1:1
+package test
+
+import (
+  "context"
+//line <generated>:1
+  __orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+  __orchestrion_errortrace "github.com/DataDog/dd-trace-go/v2/instrumentation/errortrace"
+)
+
+//line input.go:7
+func getError(ctx context.Context) (__result__0 error) {
+//line <generated>:1
+  {
+
+    defer func() {
+      // 1) LIFO: This applied FIRST - processes error
+      __result__0 = __orchestrion_errortrace.Wrap(__result__0) // Processes error
+    }()
+  }
+  {
+
+    var span *__orchestrion_tracer.Span
+    span, ctx = __orchestrion_tracer.StartSpanFromContext(ctx, "getError")
+    defer func() {
+      // 2) LIFO: This is applied LAST - captures processed error
+      span.Finish(__orchestrion_tracer.WithError(__result__0)) // Captures processed error
+    }()
+  }
+  // Function that returns an error
+//line input.go:9
+  return nil
+}
