@@ -35,57 +35,57 @@ func (*nonOrderableAdvice) Apply(context.AdviceContext) (bool, error) { return f
 func (*nonOrderableAdvice) Hash(*fingerprint.Hasher) error            { return nil }
 
 func TestSort_BasicSorting(t *testing.T) {
-	advices := []*OrderedAdvice{
+	advice := []*OrderedAdvice{
 		NewOrderedAdvice("aspect1", &mockOrderableAdvice{id: "z-ns", namespace: "z-namespace", order: 10}, 0),
 		NewOrderedAdvice("aspect2", &mockOrderableAdvice{id: "a-ns", namespace: "a-namespace", order: 10}, 1),
 	}
 
-	Sort(advices)
+	Sort(advice)
 
-	require.Len(t, advices, 2)
-	assert.Equal(t, "a-ns", advices[0].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "z-ns", advices[1].Advice.(*mockOrderableAdvice).id)
+	require.Len(t, advice, 2)
+	assert.Equal(t, "a-ns", advice[0].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "z-ns", advice[1].Advice.(*mockOrderableAdvice).id)
 
-	advices = []*OrderedAdvice{
+	advice = []*OrderedAdvice{
 		NewOrderedAdvice("aspect1", &mockOrderableAdvice{id: "order-20", namespace: "same", order: 20}, 0),
 		NewOrderedAdvice("aspect2", &mockOrderableAdvice{id: "order-10", namespace: "same", order: 10}, 1),
 	}
 
-	Sort(advices)
+	Sort(advice)
 
-	require.Len(t, advices, 2)
-	assert.Equal(t, "order-10", advices[0].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "order-20", advices[1].Advice.(*mockOrderableAdvice).id)
+	require.Len(t, advice, 2)
+	assert.Equal(t, "order-10", advice[0].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "order-20", advice[1].Advice.(*mockOrderableAdvice).id)
 }
 
 func TestSort_StableSort(t *testing.T) {
-	advices := []*OrderedAdvice{
+	advice := []*OrderedAdvice{
 		NewOrderedAdvice("aspect1", &mockOrderableAdvice{id: "first", namespace: "same", order: 10}, 0),
 		NewOrderedAdvice("aspect2", &mockOrderableAdvice{id: "second", namespace: "same", order: 10}, 1),
 		NewOrderedAdvice("aspect3", &mockOrderableAdvice{id: "third", namespace: "same", order: 10}, 2),
 	}
 
-	Sort(advices)
+	Sort(advice)
 
-	require.Len(t, advices, 3)
-	assert.Equal(t, "first", advices[0].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "second", advices[1].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "third", advices[2].Advice.(*mockOrderableAdvice).id)
+	require.Len(t, advice, 3)
+	assert.Equal(t, "first", advice[0].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "second", advice[1].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "third", advice[2].Advice.(*mockOrderableAdvice).id)
 }
 
 func TestSort_EdgeCases(t *testing.T) {
-	var advices []*OrderedAdvice
-	Sort(advices)
-	assert.Empty(t, advices)
+	var advice []*OrderedAdvice
+	Sort(advice)
+	assert.Empty(t, advice)
 
-	advices = []*OrderedAdvice{
+	advice = []*OrderedAdvice{
 		NewOrderedAdvice("aspect1", &mockOrderableAdvice{id: "only", namespace: "test", order: 10}, 0),
 	}
 
-	Sort(advices)
+	Sort(advice)
 
-	require.Len(t, advices, 1)
-	assert.Equal(t, "only", advices[0].Advice.(*mockOrderableAdvice).id)
+	require.Len(t, advice, 1)
+	assert.Equal(t, "only", advice[0].Advice.(*mockOrderableAdvice).id)
 }
 
 func TestSort_NonOrderableAdvice(t *testing.T) {
@@ -111,7 +111,7 @@ func TestSort_ComplexScenario(t *testing.T) {
 	// - Multiple orders within namespaces
 	// - Stable sorting for same namespace+order
 	// - Mix of orderable and non-orderable advice
-	advices := []*OrderedAdvice{
+	advice := []*OrderedAdvice{
 		// Non-orderable (gets default namespace=DefaultNamespace, order=0)
 		NewOrderedAdvice("aspect1", &nonOrderableAdvice{id: "non-orderable"}, 0),
 
@@ -134,9 +134,9 @@ func TestSort_ComplexScenario(t *testing.T) {
 		NewOrderedAdvice("aspect7", &mockOrderableAdvice{id: "default-0", namespace: DefaultNamespace, order: 0}, 6),
 	}
 
-	Sort(advices)
+	Sort(advice)
 
-	require.Len(t, advices, 7)
+	require.Len(t, advice, 7)
 
 	// Expected order:
 	// 1. auth namespace: auth-5 (index 2), auth-5-second (index 5)
@@ -144,19 +144,19 @@ func TestSort_ComplexScenario(t *testing.T) {
 	// 3. tracing namespace: tracing-20 (index 1)
 	// 4. DefaultNamespace (last): non-orderable (index 0, order=0), default-0 (index 6, order=0), default-15 (index 3, order=15)
 
-	assert.Equal(t, "auth-5", advices[0].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "auth-5-second", advices[1].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "metrics-10", advices[2].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "tracing-20", advices[3].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "non-orderable", advices[4].Advice.(*nonOrderableAdvice).id)
-	assert.Equal(t, "default-0", advices[5].Advice.(*mockOrderableAdvice).id)
-	assert.Equal(t, "default-15", advices[6].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "auth-5", advice[0].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "auth-5-second", advice[1].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "metrics-10", advice[2].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "tracing-20", advice[3].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "non-orderable", advice[4].Advice.(*nonOrderableAdvice).id)
+	assert.Equal(t, "default-0", advice[5].Advice.(*mockOrderableAdvice).id)
+	assert.Equal(t, "default-15", advice[6].Advice.(*mockOrderableAdvice).id)
 }
 
 func TestSort_LargeSetWithDefaultNamespace(t *testing.T) {
 	// Test a large set with namespaces before, at, and after DefaultNamespace
 	// This surfaces edge cases and ensures proper ordering across the full spectrum
-	advices := []*OrderedAdvice{
+	advice := []*OrderedAdvice{
 		// "auth" namespace (before DefaultNamespace)
 		NewOrderedAdvice("auth1", &mockOrderableAdvice{id: "auth-high", namespace: "auth", order: 20}, 0),
 		NewOrderedAdvice("auth2", &mockOrderableAdvice{id: "auth-low", namespace: "auth", order: 5}, 1),
@@ -183,9 +183,9 @@ func TestSort_LargeSetWithDefaultNamespace(t *testing.T) {
 		NewOrderedAdvice("zzz1", &mockOrderableAdvice{id: "zzz-last", namespace: "zzz", order: 1}, 12),
 	}
 
-	Sort(advices)
+	Sort(advice)
 
-	require.Len(t, advices, 13)
+	require.Len(t, advice, 13)
 
 	// Expected order: aaa → auth → metrics → tracing → zzz → DefaultNamespace (last)
 	// Within each namespace: ascending by order, then by index for ties
@@ -208,9 +208,9 @@ func TestSort_LargeSetWithDefaultNamespace(t *testing.T) {
 
 	for i, expected := range expectedOrder {
 		var actual string
-		if mockAdv, ok := advices[i].Advice.(*mockOrderableAdvice); ok {
+		if mockAdv, ok := advice[i].Advice.(*mockOrderableAdvice); ok {
 			actual = mockAdv.id
-		} else if nonOrderAdv, ok := advices[i].Advice.(*nonOrderableAdvice); ok {
+		} else if nonOrderAdv, ok := advice[i].Advice.(*nonOrderableAdvice); ok {
 			actual = nonOrderAdv.id
 		}
 		assert.Equal(t, expected, actual, "Position %d should be %s", i, expected)
