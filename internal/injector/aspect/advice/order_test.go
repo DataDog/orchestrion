@@ -191,19 +191,19 @@ func TestSort_LargeSetWithDefaultNamespace(t *testing.T) {
 	// Within each namespace: ascending by order, then by index for ties
 
 	expectedOrder := []string{
-		"aaa-first",        // aaa, order=50
-		"auth-low",         // auth, order=5
-		"auth-medium",      // auth, order=10
-		"auth-high",        // auth, order=20
-		"metrics-low",      // metrics, order=8
-		"metrics-high",     // metrics, order=30
-		"tracing-medium",   // tracing, order=15
-		"tracing-high",     // tracing, order=40
-		"zzz-last",         // zzz, order=1
+		"aaa-first",             // aaa, order=50
+		"auth-low",              // auth, order=5
+		"auth-medium",           // auth, order=10
+		"auth-high",             // auth, order=20
+		"metrics-low",           // metrics, order=8
+		"metrics-high",          // metrics, order=30
+		"tracing-medium",        // tracing, order=15
+		"tracing-high",          // tracing, order=40
+		"zzz-last",              // zzz, order=1
 		"default-non-orderable", // DefaultNamespace, order=0 (DefaultOrder), index=4
-		"default-zero",     // DefaultNamespace, order=0 (DefaultOrder), index=5
-		"default-low",      // DefaultNamespace, order=3
-		"default-high",     // DefaultNamespace, order=25
+		"default-zero",          // DefaultNamespace, order=0 (DefaultOrder), index=5
+		"default-low",           // DefaultNamespace, order=3
+		"default-high",          // DefaultNamespace, order=25
 	}
 
 	for i, expected := range expectedOrder {
