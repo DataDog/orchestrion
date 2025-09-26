@@ -85,23 +85,28 @@ func (a *prependStatements) Namespace() string {
 
 func init() {
 	unmarshalers["prepend-statements"] = func(ctx gocontext.Context, node ast.Node) (Advice, error) {
-		var config struct {
+		config := struct {
 			Template  code.Template `yaml:",inline"`
-			Order     *int          `yaml:"order,omitempty"`
-			Namespace *string       `yaml:"namespace,omitempty"`
+			Order     int           `yaml:"order,omitempty"`
+			Namespace string        `yaml:"namespace,omitempty"`
+		}{
+			Order:     DefaultOrder,
+			Namespace: DefaultNamespace,
 		}
 
 		if err := yaml.NodeToValueContext(ctx, node, &config); err != nil {
 			return nil, err
 		}
 
-		prependStatements := PrependStmts(&config.Template)
-		if ns := config.Namespace; ns != nil && *ns != "" {
-			prependStatements.namespace = *ns
+		if config.Namespace == "" {
+			// If someone sets it to empty, reset to default.
+			config.Namespace = DefaultNamespace
 		}
-		if config.Order != nil {
-			prependStatements.order = *config.Order
-		}
-		return prependStatements, nil
+
+		return &prependStatements{
+			Template:  &config.Template,
+			order:     config.Order,
+			namespace: config.Namespace,
+		}, nil
 	}
 }
