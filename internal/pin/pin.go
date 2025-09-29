@@ -18,6 +18,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/filelock"
@@ -37,6 +38,11 @@ const (
 	datadogTracerV2       = "github.com/DataDog/dd-trace-go/v2"
 	datadogTracerV2All    = "github.com/DataDog/dd-trace-go/orchestrion/all/v2"
 )
+
+var orchestrionShippedVersions map[string]string = map[string]string{
+	datadogTracerV2:    "latest",
+	datadogTracerV2All: "latest",
+}
 
 type Options struct {
 	// Writer is the writer to send output of the command to. Defaults to
@@ -123,19 +129,24 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	}
 
 	if ver, found := curMod.requires(datadogTracerV1); found && semver.Compare(ver, "v1.74.0") < 0 {
-		log.Info().Str("current", ver).Msg("Updating " + datadogTracerV1 + " to v1.74+")
 		if err := runGoGet(ctx, goMod, datadogTracerV1+"@latest"); err != nil {
 			return fmt.Errorf("go get "+datadogTracerV1+"@latest: %w", err)
 		}
 	}
 
-	if ver, found := curMod.requires(datadogTracerV2); !found || semver.Compare(ver, "v2.1.0") < 0 {
+	ver, found := curMod.requires(datadogTracerV2)
+	targetVersion := resolveModVersion(datadogTracerV2, ver)
+	log.Info().Str("current", ver).Str("target", targetVersion).Msg("Installing or upgrading " + datadogTracerV2 + " (via " + datadogTracerV2All + ")")
+	if found || semver.Compare(ver, "v2.1.0") < 0 {
 		// We install/upgrade the `orchestrion/all/v2` module as it includes all interesting contribs in its dependency
 		// closure, so we don't have to manually verify all of them. The `go mod tidy` later will clean up if needed.
-		log.Info().Str("current", ver).Msg("Installing or upgrading " + datadogTracerV2 + " (via " + datadogTracerV2All + ")")
-		if err := runGoGet(ctx, goMod, datadogTracerV2All+"@latest"); err != nil {
-			return fmt.Errorf("go get "+datadogTracerV2+"@latest: %w", err)
+		target := datadogTracerV2All + "@" + targetVersion
+		if err := runGoGet(ctx, goMod, target); err != nil {
+			return fmt.Errorf("go get "+target+": %w", err)
 		}
+	}
+	if targetVersion != "latest" {
+		edits = append(edits, goModRequire{Path: datadogTracerV2, Version: targetVersion})
 	}
 
 	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.23.0") < 0 {
@@ -358,6 +369,35 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 	return true
 }
 
+func resolveModVersion(modPath, currentVersion string) string {
+	shippedVersion := orchestrionShippedVersions[modPath]
+	if shippedVersion == "latest" {
+		return "latest"
+	}
+
+	if currentVersion == "" || semver.Compare(currentVersion, shippedVersion) < 0 {
+		return shippedVersion
+	}
+
+	return currentVersion
+}
+
+func resolveDependencyVersion(modDir string, dependecy string) (string, error) {
+	goMod, err := goenv.GOMOD(modDir)
+	if err != nil {
+		return "", fmt.Errorf("getting GOMOD: %w", err)
+	}
+	mod, err := parseGoMod(context.Background(), goMod)
+	if err != nil {
+		return "", fmt.Errorf("parsing %q: %w", goMod, err)
+	}
+	ver, ok := mod.requires(datadogTracerV2)
+	if !ok {
+		return "", fmt.Errorf("failed to find %q in %q", datadogTracerV2, goMod)
+	}
+	return ver, nil
+}
+
 // writeUpdated writes the updated AST to the given file, using a temporary file
 // to write the content before renaming it, to maximize atomicity of the update.
 func writeUpdated(filename string, file *dst.File) error {
@@ -394,4 +434,24 @@ func (v dstNodeVisitor) Visit(node dst.Node) dst.Visitor {
 		return v
 	}
 	return nil
+}
+
+func init() {
+	_, thisFile, _, _ := runtime.Caller(0)
+	orchestrionSrcDir := filepath.Join(thisFile, "..", "..")
+	// The version of dd-trace-go that shipped with the current version of orchestrion.
+	// We use this to determine if we need to upgrade dd-trace-go when pinning.
+	orchestrionRoot := filepath.Dir(orchestrionSrcDir)
+	ver, err := resolveDependencyVersion(orchestrionRoot, datadogTracerV2)
+	if err != nil {
+		panic(fmt.Errorf("resolving %s version: %w", datadogTracerV2, err))
+	}
+	orchestrionShippedVersions[datadogTracerV2] = ver
+
+	instrumentationRoot := filepath.Dir(filepath.Join(orchestrionSrcDir, "instrument"))
+	ver, err = resolveDependencyVersion(instrumentationRoot, datadogTracerV2All)
+	if err != nil {
+		panic(fmt.Errorf("resolving %s version: %w", datadogTracerV2All, err))
+	}
+	orchestrionShippedVersions[datadogTracerV2All] = ver
 }
