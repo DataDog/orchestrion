@@ -14,7 +14,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/gomod"
@@ -22,11 +24,6 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/mod/semver"
 )
-
-var orchestrionShippedVersions = map[string]string{
-	integrations.DatadogTracerV2:    "latest",
-	integrations.DatadogTracerV2All: "latest",
-}
 
 func RequiredIntegrations(ctx context.Context, goMod string) ([]gomod.Edit, error) {
 	log := zerolog.Ctx(ctx)
@@ -82,7 +79,7 @@ func resolveIntegrationVersionWithFetcher(ctx context.Context, curMod gomod.File
 	log := zerolog.Ctx(ctx)
 
 	foundVersion, found := curMod.Requires(integration)
-	shippedVersion := orchestrionShippedVersions[integration]
+	shippedVersion := fetchShippedVersions()[integration]
 	latestVersion, err := fetcher(ctx, integration)
 	if err != nil {
 		return false, "", fmt.Errorf("fetching latest version for %s: %w", integration, err)
@@ -122,14 +119,31 @@ func resolveIntegrationVersionWithFetcher(ctx context.Context, curMod gomod.File
 // fetchLatestVersion queries the Go module registry to get the actual latest version
 // of the specified module path.
 func fetchLatestVersion(ctx context.Context, modPath string) (string, error) {
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "go", "list", "-m", "-json", modPath+"@latest")
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+
+	// Build environment with GOTOOLCHAIN=local and explicit -mod=mod
+	// This is necessary because GOFLAGS might contain -mod=vendor which prevents
+	// querying the module registry for @latest versions.
+	env := os.Environ()
+	env = append(env, "GOTOOLCHAIN=local")
+
+	// Remove any existing GOFLAGS that might contain -mod=vendor
+	var cleanEnv []string
+	for _, e := range env {
+		if !strings.HasPrefix(e, "GOFLAGS=") {
+			cleanEnv = append(cleanEnv, e)
+		}
+	}
+	// Set GOFLAGS with -mod=mod to ensure we can query the registry
+	cleanEnv = append(cleanEnv, "GOFLAGS=-mod=mod")
+
+	cmd.Env = cleanEnv
 	cmd.Stdout = &stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("go list -m -json %s@latest: %w", modPath, err)
+		return "", fmt.Errorf("go list -m -json %s@latest: %w (stderr: %s)", modPath, err, stderr.String())
 	}
 
 	var modInfo struct {
@@ -163,10 +177,14 @@ func resolveDependencyVersion(modDir string, dependency string) (string, error) 
 	return ver, nil
 }
 
-var initOnce sync.Once
+var (
+	initOnce                   sync.Once
+	orchestrionShippedVersions = atomic.Pointer[map[string]string]{}
+)
 
-func init() {
+func fetchShippedVersions() map[string]string {
 	initOnce.Do(func() {
+		versions := make(map[string]string)
 		_, thisFile, _, _ := runtime.Caller(0)
 		// The version of dd-trace-go that shipped with the current version of orchestrion.
 		// We use this to determine if we need to upgrade dd-trace-go when pinning.
@@ -175,12 +193,14 @@ func init() {
 		if err != nil {
 			panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2, orchestrionRoot, err))
 		}
-		orchestrionShippedVersions[integrations.DatadogTracerV2] = ver
+		versions[integrations.DatadogTracerV2] = ver
 		instrumentationRoot := filepath.Join(orchestrionRoot, "instrument")
 		ver, err = resolveDependencyVersion(instrumentationRoot, integrations.DatadogTracerV2All)
 		if err != nil {
 			panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2All, instrumentationRoot, err))
 		}
-		orchestrionShippedVersions[integrations.DatadogTracerV2All] = ver
+		versions[integrations.DatadogTracerV2All] = ver
+		orchestrionShippedVersions.Store(&versions)
 	})
+	return *orchestrionShippedVersions.Load()
 }
