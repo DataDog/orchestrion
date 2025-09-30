@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/gomod"
@@ -59,7 +60,12 @@ func RequiredIntegrations(ctx context.Context, goMod string) ([]gomod.Edit, erro
 		}
 	}
 
-	return []gomod.Edit{gomod.Require{Path: integrations.DatadogTracerV2, Version: targetVersion}}, nil
+	var edits []gomod.Edit
+	_, found := curMod.Requires(integrations.DatadogTracerV2All)
+	if found {
+		edits = append(edits, gomod.Require{Path: integrations.DatadogTracerV2All, Version: targetVersion})
+	}
+	return edits, nil
 }
 
 // versionFetcher is a function type for fetching latest versions
@@ -157,20 +163,24 @@ func resolveDependencyVersion(modDir string, dependency string) (string, error) 
 	return ver, nil
 }
 
+var initOnce sync.Once
+
 func init() {
-	_, thisFile, _, _ := runtime.Caller(0)
-	// The version of dd-trace-go that shipped with the current version of orchestrion.
-	// We use this to determine if we need to upgrade dd-trace-go when pinning.
-	orchestrionRoot := filepath.Join(thisFile, "..", "..", "..")
-	ver, err := resolveDependencyVersion(orchestrionRoot, integrations.DatadogTracerV2)
-	if err != nil {
-		panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2, orchestrionRoot, err))
-	}
-	orchestrionShippedVersions[integrations.DatadogTracerV2] = ver
-	instrumentationRoot := filepath.Join(orchestrionRoot, "instrument")
-	ver, err = resolveDependencyVersion(instrumentationRoot, integrations.DatadogTracerV2All)
-	if err != nil {
-		panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2All, instrumentationRoot, err))
-	}
-	orchestrionShippedVersions[integrations.DatadogTracerV2All] = ver
+	initOnce.Do(func() {
+		_, thisFile, _, _ := runtime.Caller(0)
+		// The version of dd-trace-go that shipped with the current version of orchestrion.
+		// We use this to determine if we need to upgrade dd-trace-go when pinning.
+		orchestrionRoot := filepath.Join(thisFile, "..", "..", "..")
+		ver, err := resolveDependencyVersion(orchestrionRoot, integrations.DatadogTracerV2)
+		if err != nil {
+			panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2, orchestrionRoot, err))
+		}
+		orchestrionShippedVersions[integrations.DatadogTracerV2] = ver
+		instrumentationRoot := filepath.Join(orchestrionRoot, "instrument")
+		ver, err = resolveDependencyVersion(instrumentationRoot, integrations.DatadogTracerV2All)
+		if err != nil {
+			panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2All, instrumentationRoot, err))
+		}
+		orchestrionShippedVersions[integrations.DatadogTracerV2All] = ver
+	})
 }
