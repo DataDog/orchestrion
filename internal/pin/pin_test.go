@@ -44,7 +44,7 @@ func TestPin(t *testing.T) {
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
-		assert.Contains(t, data.Require, gomod.Require{"github.com/DataDog/orchestrion", rawTag})
+		assert.Contains(t, data.Require, gomod.Require{Path: "github.com/DataDog/orchestrion", Version: rawTag})
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
@@ -103,7 +103,7 @@ func main() {}
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
-		assert.Contains(t, data.Require, gomod.Require{"github.com/DataDog/orchestrion", rawTag})
+		assert.Contains(t, data.Require, gomod.Require{Path: "github.com/DataDog/orchestrion", Version: rawTag})
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
@@ -127,7 +127,7 @@ func main() {}
 		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.NotContains(t, data.Require, gomod.Require{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
 	})
 
 	t.Run("prune-multiple", func(t *testing.T) {
@@ -142,8 +142,8 @@ func main() {}
 		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.NotContains(t, data.Require, gomod.Require{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
-		assert.NotContains(t, data.Require, gomod.Require{"github.com/skyrocknroll/go-mod-example", "v0.0.0-20190130140558-29b3c92445e5"})
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/skyrocknroll/go-mod-example", Version: "v0.0.0-20190130140558-29b3c92445e5"})
 	})
 
 	t.Run("empty-tool-dot-go", func(t *testing.T) {

@@ -42,7 +42,7 @@ func TestAutoPin(t *testing.T) {
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
-		assert.Contains(t, data.Require, gomod.Require{"github.com/DataDog/orchestrion", rawTag})
+		assert.Contains(t, data.Require, gomod.Require{Path: "github.com/DataDog/orchestrion", Version: rawTag})
 	})
 
 	t.Run("already-checked", func(t *testing.T) {
