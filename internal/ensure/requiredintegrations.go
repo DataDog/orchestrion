@@ -41,10 +41,11 @@ func RequiredIntegrations(ctx context.Context, goMod string) ([]gomod.Edit, erro
 	}
 
 	// V2
-	shouldUpgrade, targetVersion, err := resolveIntegrationVersion(ctx, curMod, integrations.DatadogTracerV2)
+	ver, err := fetchVersions(ctx, curMod, integrations.DatadogTracerV2, fetchLatestVersion)
 	if err != nil {
-		return nil, fmt.Errorf("resolving %s version: %w", integrations.DatadogTracerV2, err)
+		return nil, fmt.Errorf("fetching versions for %s: %w", integrations.DatadogTracerV2, err)
 	}
+	shouldUpgrade, targetVersion := resolveIntegrationVersion(ver)
 	if shouldUpgrade {
 		log.Info().
 			Str("target", targetVersion).
@@ -58,9 +59,11 @@ func RequiredIntegrations(ctx context.Context, goMod string) ([]gomod.Edit, erro
 	}
 
 	var edits []gomod.Edit
-	_, found := curMod.Requires(integrations.DatadogTracerV2All)
-	if found {
+	if ver.found {
 		edits = append(edits, gomod.Require{Path: integrations.DatadogTracerV2All, Version: targetVersion})
+	}
+	if ver.found && semver.Compare(ver.current, ver.shipped) != 0 {
+		edits = append(edits, gomod.Replace{OldPath: integrations.DatadogTracerV2, NewPath: integrations.DatadogTracerV2, NewVersion: ver.current})
 	}
 	return edits, nil
 }
@@ -68,52 +71,61 @@ func RequiredIntegrations(ctx context.Context, goMod string) ([]gomod.Edit, erro
 // versionFetcher is a function type for fetching latest versions
 type versionFetcher func(ctx context.Context, modPath string) (string, error)
 
-// resolveIntegrationVersion determines if the specified integration should be upgraded, and to which version.
-func resolveIntegrationVersion(ctx context.Context, curMod gomod.File, integration string) (bool, string, error) {
-	return resolveIntegrationVersionWithFetcher(ctx, curMod, integration, fetchLatestVersion)
+type versions struct {
+	found   bool
+	current string
+	shipped string
+	latest  string
 }
 
-// resolveIntegrationVersionWithFetcher is the internal implementation that accepts a custom version fetcher.
-// This allows for easier testing by injecting a mock fetcher.
-func resolveIntegrationVersionWithFetcher(ctx context.Context, curMod gomod.File, integration string, fetcher versionFetcher) (bool, string, error) {
+func fetchVersions(ctx context.Context, curMod gomod.File, integration string, fetcher versionFetcher) (*versions, error) {
 	log := zerolog.Ctx(ctx)
 
 	foundVersion, found := curMod.Requires(integration)
 	shippedVersion := fetchShippedVersions()[integration]
 	latestVersion, err := fetcher(ctx, integration)
 	if err != nil {
-		return false, "", fmt.Errorf("fetching latest version for %s: %w", integration, err)
+		return nil, fmt.Errorf("fetching latest version for %s: %w", integration, err)
 	}
 	log.Debug().
-		Str("module", integrations.DatadogTracerV2).
+		Str("module", integration).
 		Str("current", foundVersion).
 		Str("shipped", shippedVersion).
 		Str("latest", latestVersion).
 		Msg("Checking for updates")
+	return &versions{
+		found:   found,
+		current: foundVersion,
+		shipped: shippedVersion,
+		latest:  latestVersion,
+	}, nil
+}
 
+// resolveIntegrationVersion determines if the specified integration should be upgraded, and to which version.
+func resolveIntegrationVersion(ver *versions) (bool, string) {
 	var (
 		shouldUpgrade bool
 		targetVersion string
 	)
 
 	// Only run go get if we need to upgrade or if the module is not present.
-	if found {
-		targetVersion = foundVersion
-		if semver.Compare(foundVersion, "v2.1.0") < 0 {
+	if ver.found {
+		targetVersion = ver.current
+		if semver.Compare(ver.current, "v2.1.0") < 0 {
 			shouldUpgrade = true
-			targetVersion = maxVersion(shippedVersion, latestVersion)
+			targetVersion = maxVersion(ver.shipped, ver.latest)
 		} else {
-			// Force uograde, otherwise, go mod tidy will fail.
-			if semver.Compare(shippedVersion, foundVersion) > 0 {
+			// Force upgrade, otherwise, go mod tidy will fail.
+			if semver.Compare(ver.shipped, ver.current) > 0 {
 				shouldUpgrade = true
-				targetVersion = shippedVersion
+				targetVersion = ver.shipped
 			}
 		}
 	} else {
 		shouldUpgrade = true
-		targetVersion = maxVersion(shippedVersion, latestVersion)
+		targetVersion = maxVersion(ver.shipped, ver.latest)
 	}
-	return shouldUpgrade, targetVersion, nil
+	return shouldUpgrade, targetVersion
 }
 
 // fetchLatestVersion queries the Go module registry to get the actual latest version

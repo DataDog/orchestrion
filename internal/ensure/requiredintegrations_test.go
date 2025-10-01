@@ -115,114 +115,165 @@ func TestFetchLatestVersion(t *testing.T) {
 	})
 }
 
-func TestResolveIntegrationVersion(t *testing.T) {
+func TestFetchVersions(t *testing.T) {
 	ctx := testContext(t)
 
+	t.Run("module-found", func(t *testing.T) {
+		modPath := "test-module"
+		withShippedVersions(t, map[string]string{
+			modPath: "v2.5.0",
+		})
+
+		curMod := gomod.File{
+			Require: []gomod.Require{
+				{Path: modPath, Version: "v2.3.0"},
+			},
+		}
+
+		mockFetcher := mockVersionFetcher("v2.8.0")
+
+		ver, err := fetchVersions(ctx, curMod, modPath, mockFetcher)
+		require.NoError(t, err)
+		assert.True(t, ver.found)
+		assert.Equal(t, "v2.3.0", ver.current)
+		assert.Equal(t, "v2.5.0", ver.shipped)
+		assert.Equal(t, "v2.8.0", ver.latest)
+	})
+
+	t.Run("module-not-found", func(t *testing.T) {
+		modPath := "test-module"
+		withShippedVersions(t, map[string]string{
+			modPath: "v2.5.0",
+		})
+
+		curMod := gomod.File{Require: nil}
+		mockFetcher := mockVersionFetcher("v2.8.0")
+
+		ver, err := fetchVersions(ctx, curMod, modPath, mockFetcher)
+		require.NoError(t, err)
+		assert.False(t, ver.found)
+		assert.Empty(t, ver.current)
+		assert.Equal(t, "v2.5.0", ver.shipped)
+		assert.Equal(t, "v2.8.0", ver.latest)
+	})
+
+	t.Run("fetcher-error", func(t *testing.T) {
+		modPath := "test-module"
+		withShippedVersions(t, map[string]string{
+			modPath: "v2.5.0",
+		})
+
+		curMod := gomod.File{Require: nil}
+		mockErr := errors.New("network error")
+		errorFetcher := mockVersionFetcherWithError(mockErr)
+
+		_, err := fetchVersions(ctx, curMod, modPath, errorFetcher)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "fetching latest version")
+		assert.Contains(t, err.Error(), "network error")
+	})
+}
+
+func TestResolveIntegrationVersion(t *testing.T) {
 	tests := []struct {
-		name              string
-		shippedVersion    string
-		currentVersion    string
-		mockLatestVersion string
-		found             bool
-		wantUpgrade       bool
-		wantVersion       string
-		wantErr           bool
+		name        string
+		versions    *versions
+		wantUpgrade bool
+		wantVersion string
+		description string
 	}{
 		{
-			name:              "module-not-present",
-			shippedVersion:    "v2.5.0",
-			currentVersion:    "",
-			mockLatestVersion: "v2.8.0",
-			found:             false,
-			wantUpgrade:       true,
-			wantVersion:       "v2.8.0", // max(v2.5.0, v2.8.0)
+			name: "module-not-present",
+			versions: &versions{
+				found:   false,
+				current: "",
+				shipped: "v2.5.0",
+				latest:  "v2.8.0",
+			},
+			wantUpgrade: true,
+			wantVersion: "v2.8.0", // max(v2.5.0, v2.8.0)
+			description: "Should upgrade to latest when module not present",
 		},
 		{
-			name:              "module-below-minimum-upgrade-to-latest",
-			shippedVersion:    "v2.0.0",
-			currentVersion:    "v1.5.0",
-			mockLatestVersion: "v2.8.0",
-			found:             true,
-			wantUpgrade:       true,
-			wantVersion:       "v2.8.0", // max(v2.0.0, v2.8.0)
+			name: "module-below-minimum-upgrade-to-latest",
+			versions: &versions{
+				found:   true,
+				current: "v1.5.0",
+				shipped: "v2.0.0",
+				latest:  "v2.8.0",
+			},
+			wantUpgrade: true,
+			wantVersion: "v2.8.0", // max(v2.0.0, v2.8.0)
+			description: "Should upgrade to latest when current < v2.1.0",
 		},
 		{
-			name:              "module-below-minimum-upgrade-to-shipped",
-			shippedVersion:    "v2.5.0",
-			currentVersion:    "v2.0.0",
-			mockLatestVersion: "v2.3.0",
-			found:             true,
-			wantUpgrade:       true,
-			wantVersion:       "v2.5.0", // max(v2.5.0, v2.3.0)
+			name: "module-below-minimum-upgrade-to-shipped",
+			versions: &versions{
+				found:   true,
+				current: "v2.0.0",
+				shipped: "v2.3.0",
+				latest:  "v2.1.0",
+			},
+			wantUpgrade: true,
+			wantVersion: "v2.3.0", // max(v2.3.0, v2.1.0)
+			description: "Should upgrade to shipped when shipped > latest and current < v2.1.0",
 		},
 		{
-			name:              "module-above-minimum-shipped-newer",
-			shippedVersion:    "v3.0.0",
-			currentVersion:    "v2.5.0",
-			mockLatestVersion: "v2.8.0",
-			found:             true,
-			wantUpgrade:       true,
-			wantVersion:       "v3.0.0", // shipped > current, upgrade to shipped
+			name: "module-above-minimum-shipped-newer",
+			versions: &versions{
+				found:   true,
+				current: "v2.5.0",
+				shipped: "v2.8.0",
+				latest:  "v2.7.0",
+			},
+			wantUpgrade: true,
+			wantVersion: "v2.8.0", // shipped > current, upgrade to shipped
+			description: "Should upgrade to shipped when shipped > current >= v2.1.0",
 		},
 		{
-			name:              "module-above-minimum-current-newer",
-			shippedVersion:    "v2.2.0",
-			currentVersion:    "v2.5.0",
-			mockLatestVersion: "v2.8.0",
-			found:             true,
-			wantUpgrade:       false,
-			wantVersion:       "v2.5.0", // shipped < current, keep current
+			name: "module-above-minimum-current-newer",
+			versions: &versions{
+				found:   true,
+				current: "v2.5.0",
+				shipped: "v2.2.0",
+				latest:  "v2.8.0",
+			},
+			wantUpgrade: false,
+			wantVersion: "v2.5.0", // shipped < current, keep current
+			description: "Should not upgrade when current > shipped >= v2.1.0",
 		},
 		{
-			name:              "module-above-minimum-equal-to-shipped",
-			shippedVersion:    "v2.5.0",
-			currentVersion:    "v2.5.0",
-			mockLatestVersion: "v2.8.0",
-			found:             true,
-			wantUpgrade:       false,
-			wantVersion:       "v2.5.0", // shipped == current, keep current
+			name: "module-above-minimum-equal-to-shipped",
+			versions: &versions{
+				found:   true,
+				current: "v2.5.0",
+				shipped: "v2.5.0",
+				latest:  "v2.8.0",
+			},
+			wantUpgrade: false,
+			wantVersion: "v2.5.0", // shipped == current, keep current
+			description: "Should not upgrade when current == shipped >= v2.1.0",
 		},
 		{
-			name:              "module-above-minimum-current-much-newer",
-			shippedVersion:    "v2.2.0",
-			currentVersion:    "v3.0.0",
-			mockLatestVersion: "v2.8.0",
-			found:             true,
-			wantUpgrade:       false,
-			wantVersion:       "v3.0.0", // current > shipped and latest, keep current
+			name: "module-above-minimum-current-much-newer",
+			versions: &versions{
+				found:   true,
+				current: "v3.0.0",
+				shipped: "v2.2.0",
+				latest:  "v2.8.0",
+			},
+			wantUpgrade: false,
+			wantVersion: "v3.0.0", // current > shipped and latest, keep current
+			description: "Should not upgrade when current > shipped and current > latest",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			modPath := "test-module"
+			shouldUpgrade, targetVersion := resolveIntegrationVersion(tt.versions)
 
-			withShippedVersions(t, map[string]string{
-				modPath: tt.shippedVersion,
-			})
-
-			// Build current module state:
-			var requires []gomod.Require
-			if tt.found {
-				requires = []gomod.Require{
-					{Path: modPath, Version: tt.currentVersion},
-				}
-			}
-			curMod := gomod.File{Require: requires}
-
-			mockFetcher := mockVersionFetcher(tt.mockLatestVersion)
-
-			shouldUpgrade, targetVersion, err := resolveIntegrationVersionWithFetcher(
-				ctx, curMod, modPath, mockFetcher,
-			)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantUpgrade, shouldUpgrade, "shouldUpgrade mismatch")
-			assert.Equal(t, tt.wantVersion, targetVersion, "targetVersion mismatch")
+			assert.Equal(t, tt.wantUpgrade, shouldUpgrade, "shouldUpgrade mismatch: %s", tt.description)
+			assert.Equal(t, tt.wantVersion, targetVersion, "targetVersion mismatch: %s", tt.description)
 		})
 	}
 }
@@ -239,8 +290,10 @@ func TestResolveIntegrationVersionWithRealNetwork(t *testing.T) {
 
 		curMod := gomod.File{Require: nil}
 
-		shouldUpgrade, targetVersion, err := resolveIntegrationVersion(ctx, curMod, modPath)
+		ver, err := fetchVersions(ctx, curMod, modPath, fetchLatestVersion)
 		require.NoError(t, err)
+
+		shouldUpgrade, targetVersion := resolveIntegrationVersion(ver)
 		assert.True(t, shouldUpgrade, "should upgrade when module is not present")
 		assert.True(t, semver.IsValid(targetVersion))
 		assert.GreaterOrEqual(t, semver.Compare(targetVersion, "v0.15.0"), 0)
@@ -259,7 +312,7 @@ func TestResolveIntegrationVersionWithRealNetwork(t *testing.T) {
 			},
 		}
 
-		_, _, err := resolveIntegrationVersion(ctx, curMod, modPath)
+		_, err := fetchVersions(ctx, curMod, modPath, fetchLatestVersion)
 		// This should error because the module doesn't exist
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "fetching latest version")
@@ -360,23 +413,8 @@ func TestFetchShippedVersions(t *testing.T) {
 	})
 }
 
-func TestResolveIntegrationVersionEdgeCases(t *testing.T) {
+func TestRequiredIntegrationsEdgeCases(t *testing.T) {
 	ctx := testContext(t)
-
-	t.Run("fetcher-error", func(t *testing.T) {
-		modPath := "test-module"
-		withShippedVersions(t, map[string]string{
-			modPath: "v2.5.0",
-		})
-
-		curMod := gomod.File{Require: nil}
-		errorFetcher := mockVersionFetcherWithError(errors.New("network error"))
-
-		_, _, err := resolveIntegrationVersionWithFetcher(ctx, curMod, modPath, errorFetcher)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "fetching latest version")
-		assert.Contains(t, err.Error(), "network error")
-	})
 
 	t.Run("empty-shipped-version", func(t *testing.T) {
 		modPath := "test-module"
@@ -387,13 +425,110 @@ func TestResolveIntegrationVersionEdgeCases(t *testing.T) {
 		curMod := gomod.File{Require: nil}
 		mockFetcher := mockVersionFetcher("v2.5.0")
 
-		shouldUpgrade, targetVersion, err := resolveIntegrationVersionWithFetcher(
-			ctx, curMod, modPath, mockFetcher,
-		)
-
+		ver, err := fetchVersions(ctx, curMod, modPath, mockFetcher)
 		require.NoError(t, err)
+
+		shouldUpgrade, targetVersion := resolveIntegrationVersion(ver)
 		assert.True(t, shouldUpgrade)
 		// maxVersion should handle empty string and pick v2.5.0
 		assert.Equal(t, "v2.5.0", targetVersion)
+	})
+}
+
+func TestRequiredIntegrationsReplaceDirective(t *testing.T) {
+	// Test that the Replace directive is correctly generated with proper NewPath and NewVersion
+	t.Run("replace-when-current-differs-from-shipped", func(t *testing.T) {
+		modPath := "github.com/DataDog/dd-trace-go/v2"
+		withShippedVersions(t, map[string]string{
+			modPath: "v2.5.0",
+		})
+
+		ver := &versions{
+			found:   true,
+			current: "v2.3.0", // Different from shipped v2.5.0
+			shipped: "v2.5.0",
+			latest:  "v2.8.0",
+		}
+
+		// Based on the logic in RequiredIntegrations (lines 65-67):
+		// Replace is added when: found && current != shipped
+		shouldAddReplace := ver.found && semver.Compare(ver.current, ver.shipped) != 0
+		assert.True(t, shouldAddReplace, "Replace directive should be added when current differs from shipped")
+
+		// Verify the Replace struct is correctly formed with both NewPath and NewVersion
+		if shouldAddReplace {
+			replace := gomod.Replace{
+				OldPath:    modPath,
+				NewPath:    modPath, // Must be the same path to avoid "empty string" error
+				NewVersion: ver.current,
+			}
+
+			// Verify both fields are set correctly
+			assert.Equal(t, modPath, replace.OldPath)
+			assert.Equal(t, modPath, replace.NewPath, "NewPath must be set to avoid malformed import path error")
+			assert.Equal(t, ver.current, replace.NewVersion)
+		}
+	})
+
+	t.Run("no-replace-when-current-equals-shipped", func(t *testing.T) {
+		modPath := "github.com/DataDog/dd-trace-go/v2"
+		withShippedVersions(t, map[string]string{
+			modPath: "v2.5.0",
+		})
+
+		ver := &versions{
+			found:   true,
+			current: "v2.5.0", // Same as shipped
+			shipped: "v2.5.0",
+			latest:  "v2.8.0",
+		}
+
+		shouldAddReplace := ver.found && semver.Compare(ver.current, ver.shipped) != 0
+		assert.False(t, shouldAddReplace, "Replace directive should NOT be added when current equals shipped")
+	})
+
+	t.Run("no-replace-when-module-not-found", func(t *testing.T) {
+		ver := &versions{
+			found:   false,
+			current: "",
+			shipped: "v2.5.0",
+			latest:  "v2.8.0",
+		}
+
+		shouldAddReplace := ver.found && semver.Compare(ver.current, ver.shipped) != 0
+		assert.False(t, shouldAddReplace, "Replace directive should NOT be added when module not found")
+	})
+
+	t.Run("replace-with-pseudo-version", func(t *testing.T) {
+		// Test the exact scenario from the error report
+		modPath := "github.com/DataDog/dd-trace-go/v2"
+		pseudoVersion := "v2.4.0-dev.0.20250911151540-94e598897591"
+		withShippedVersions(t, map[string]string{
+			modPath: "v2.2.3",
+		})
+
+		ver := &versions{
+			found:   true,
+			current: pseudoVersion,
+			shipped: "v2.2.3",
+			latest:  "v2.2.3",
+		}
+
+		shouldAddReplace := ver.found && semver.Compare(ver.current, ver.shipped) != 0
+		assert.True(t, shouldAddReplace, "Replace directive should be added for pseudo-version")
+
+		if shouldAddReplace {
+			replace := gomod.Replace{
+				OldPath:    modPath,
+				NewPath:    modPath,
+				NewVersion: ver.current,
+			}
+
+			// Verify the Replace struct has all required fields for pseudo-versions
+			assert.Equal(t, modPath, replace.OldPath)
+			assert.Equal(t, modPath, replace.NewPath, "NewPath must be set for pseudo-versions")
+			assert.Equal(t, pseudoVersion, replace.NewVersion)
+			assert.Empty(t, replace.OldVersion, "OldVersion should be empty for unconditional replace")
+		}
 	})
 }

@@ -44,6 +44,18 @@ type (
 		// Version is the required module's version.
 		Version string
 	}
+
+	// Replace represents the target of a `replace` directive entry.
+	Replace struct {
+		// OldPath is the path of the module being replaced.
+		OldPath string
+		// OldVersion is the version of the module being replaced, if any.
+		OldVersion string
+		// NewPath is the path of the replacement module.
+		NewPath string
+		// NewVersion is the version of the replacement module, if any.
+		NewVersion string
+	}
 )
 
 // Parse processes the contents of the designated `go.mod` file using
@@ -148,4 +160,16 @@ func (t Toolchain) goModEditFlag() string {
 
 func (r Require) goModEditFlag() string {
 	return fmt.Sprintf("-require=%s@%s", r.Path, r.Version)
+}
+
+func (r Replace) goModEditFlag() string {
+	old := r.OldPath
+	if r.OldVersion != "" {
+		old += "@" + r.OldVersion
+	}
+	new := r.NewPath
+	if r.NewVersion != "" {
+		new += "@" + r.NewVersion
+	}
+	return fmt.Sprintf("-replace=%s=%s", old, new)
 }
