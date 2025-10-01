@@ -36,9 +36,10 @@ var Lint = &cli.Command{
 		if slices.Contains(args, "-help") || slices.Contains(args, "--help") || slices.Contains(args, "-h") {
 			tmpl := template.Must(template.New("help").Parse(cli.CommandHelpTemplate))
 			if err := tmpl.Execute(os.Stdout, clictx.Command); err != nil {
-				fmt.Printf("NAME:\n   orchestrion lint - %s\n\n", clictx.Command.Usage)
-				fmt.Printf("USAGE:\n   %s\n\n", clictx.Command.UsageText)
-				fmt.Println()
+				//nolint:errcheck
+				fmt.Fprintf(clictx.App.Writer, "NAME:\n   orchestrion lint - %s\n\n", clictx.Command.Usage)
+				fmt.Fprintf(clictx.App.Writer, "USAGE:\n   %s\n\n", clictx.Command.UsageText)
+				fmt.Fprintln(clictx.App.Writer)
 			}
 		}
 
