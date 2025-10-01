@@ -193,7 +193,9 @@ func executeBuildAndCaptureWorkDir(clictx *cli.Context, buildArgs []string) (str
 
 	buildErr := cmd.Run()
 
-	w.Close()
+	if err := w.Close(); err != nil {
+		return "", fmt.Errorf("closing pipe writer: %w", err)
+	}
 	<-done
 
 	if buildErr != nil {

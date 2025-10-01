@@ -3,6 +3,7 @@ version: "2"
 linters:
   default: none
   enable:
+    - govet
     - misspell
     - perfsprint
     - revive
@@ -106,6 +107,11 @@ linters:
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unhandled-error
         - name: unhandled-error
           exclude: [TEST]
+          arguments:
+            - "^fmt.Print"
+            - "^fmt.Println"
+            - "^fmt.Fprintf"
+            - "^fmt.Fprintln"
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unnecessary-stmt
         - name: unnecessary-stmt
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unreachable-code

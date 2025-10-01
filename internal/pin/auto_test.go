@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/gomod"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
@@ -37,11 +38,11 @@ func TestAutoPin(t *testing.T) {
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
-		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
+		assert.Contains(t, data.Require, gomod.Require{Path: "github.com/DataDog/orchestrion", Version: rawTag})
 	})
 
 	t.Run("already-checked", func(t *testing.T) {

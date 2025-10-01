@@ -14,7 +14,9 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/DataDog/orchestrion/internal/gomod"
 	"github.com/DataDog/orchestrion/internal/injector/config"
+	"github.com/DataDog/orchestrion/internal/integrations"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,11 +40,11 @@ func TestPin(t *testing.T) {
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
-		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
+		assert.Contains(t, data.Require, gomod.Require{Path: "github.com/DataDog/orchestrion", Version: rawTag})
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
@@ -51,7 +53,7 @@ func TestPin(t *testing.T) {
 	})
 
 	t.Run("upgrade:dd-trace-go", func(t *testing.T) {
-		tmp := scaffold(t, map[string]string{datadogTracerV1: "v1.73.2"})
+		tmp := scaffold(t, map[string]string{integrations.DatadogTracerV1: "v1.73.2"})
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
 package tools
 
@@ -69,23 +71,23 @@ import (
 
 func main() {}
 `), 0o644))
-		require.NoError(t, runGoMod(ctx, "tidy", filepath.Join(tmp, "go.mod"), io.Discard))
+		require.NoError(t, gomod.Run(ctx, "tidy", filepath.Join(tmp, "go.mod"), io.Discard))
 		chdir(t, tmp)
 
 		// WHEN
 		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
 
 		// THEN
-		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
-		ver, found := data.requires(datadogTracerV1)
+		ver, found := data.Requires(integrations.DatadogTracerV1)
 		assert.True(t, found)
 		assert.GreaterOrEqual(t, semver.Compare(ver, "v1.74.0"), 0)
 
 		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		require.NoError(t, err)
-		assert.Contains(t, string(content), datadogTracerV2All)
-		assert.NotContains(t, string(content), datadogTracerV1)
+		assert.Contains(t, string(content), integrations.DatadogTracerV2All)
+		assert.NotContains(t, string(content), integrations.DatadogTracerV1)
 	})
 
 	t.Run("another-version", func(t *testing.T) {
@@ -97,11 +99,11 @@ func main() {}
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
 		assert.FileExists(t, filepath.Join(tmp, "go.sum"))
 
-		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
 		rawTag, _ := version.TagInfo()
-		assert.Contains(t, data.Require, goModRequire{"github.com/DataDog/orchestrion", rawTag})
+		assert.Contains(t, data.Require, gomod.Require{Path: "github.com/DataDog/orchestrion", Version: rawTag})
 	})
 
 	t.Run("no-generate", func(t *testing.T) {
@@ -122,10 +124,10 @@ func main() {}
 
 		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
 
-		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
 	})
 
 	t.Run("prune-multiple", func(t *testing.T) {
@@ -137,11 +139,11 @@ func main() {}
 
 		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
 
-		data, err := parseGoMod(ctx, filepath.Join(tmp, "go.mod"))
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
 		require.NoError(t, err)
 
-		assert.NotContains(t, data.Require, goModRequire{"github.com/digitalocean/sample-golang", "v0.0.0-20240904143939-1e058723dcf4"})
-		assert.NotContains(t, data.Require, goModRequire{"github.com/skyrocknroll/go-mod-example", "v0.0.0-20190130140558-29b3c92445e5"})
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/skyrocknroll/go-mod-example", Version: "v0.0.0-20190130140558-29b3c92445e5"})
 	})
 
 	t.Run("empty-tool-dot-go", func(t *testing.T) {
