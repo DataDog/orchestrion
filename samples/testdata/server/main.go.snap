@@ -12,8 +12,8 @@ import (
 	"net/http"
 //line <generated>:1
 	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	__orchestrion_env "github.com/DataDog/dd-trace-go/v2/instrumentation/env"
 	__orchestrion_profiler "github.com/DataDog/dd-trace-go/v2/profiler"
-	__orchestrion_os "os"
 )
 
 //line samples/server/main.go:14
@@ -66,7 +66,7 @@ func instrumentedHandler(w http.ResponseWriter, r *http.Request) {
 //line <generated>:1
 func init() { __orchestrion_tracer.Start() }
 func init() {
-	switch __orchestrion_os.Getenv("DD_PROFILING_ENABLED") {
+	switch __orchestrion_env.Get("DD_PROFILING_ENABLED") {
 	case "1", "true", "auto":
 		// The "auto" value can be set if profiling is enabled via the
 		// Datadog Admission Controller. We always turn on the profiler in
