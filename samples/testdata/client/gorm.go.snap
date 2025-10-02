@@ -37,6 +37,9 @@ func gormClient() {
 			if err != nil {
 				return nil, err
 			}
+			if _, ok := db.Plugins["DDTracePlugin"]; ok {
+				return db, nil
+			}
 			if err := db.Use(__orchestrion_gormtrace.NewTracePlugin()); err != nil {
 				return nil, err
 			}
