@@ -123,12 +123,20 @@ func (r StartRequest) ForeachSpanTag(set func(key string, value any)) {
 	set("request.importPath", r.ImportPath)
 }
 
+// cacheKey creates a composite key from importPath and buildID to support
+// different build configurations (e.g., with/without PGO) of the same package.
+// See: https://github.com/DataDog/orchestrion/issues/653
+func cacheKey(importPath string, buildID string) string {
+	return importPath + "\x00" + buildID
+}
+
 func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, error) {
 	if req.ImportPath == "" || req.BuildID == "" {
 		return nil, fmt.Errorf("invalid request: %#v", req)
 	}
 
-	rawState, reused := s.state.LoadOrStore(req.ImportPath, &buildState{buildID: req.BuildID})
+	key := cacheKey(req.ImportPath, req.BuildID)
+	rawState, reused := s.state.LoadOrStore(key, &buildState{buildID: req.BuildID})
 	state, _ := rawState.(*buildState)
 
 	// Initialize the build state.
@@ -174,6 +182,8 @@ type (
 	FinishRequest struct {
 		// ImportPath is the import path of the package that was built.
 		ImportPath string `json:"importPath"`
+		// BuildID is the build ID of the package that was built.
+		BuildID string `json:"buildID"`
 		// FinishToken is forwarded from [*StartResponse.FinishToken], and cannot be
 		// blank.
 		FinishToken string `json:"token"`
@@ -209,11 +219,12 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 
 	log.Trace().Any("request", req).Msg("Finish request received")
 
-	if req.ImportPath == "" || req.FinishToken == "" {
+	if req.ImportPath == "" || req.BuildID == "" || req.FinishToken == "" {
 		return nil, fmt.Errorf("invalid request: %#v", req)
 	}
 
-	rawState, found := s.state.Load(req.ImportPath)
+	key := cacheKey(req.ImportPath, req.BuildID)
+	rawState, found := s.state.Load(key)
 	if !found {
 		return nil, fmt.Errorf("no build started for %q", req.ImportPath)
 	}
@@ -248,7 +259,8 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return nil, state.error
 	}
 
-	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(req.ImportPath)).String())
+	// Use composite key for storage directory to support different build IDs (e.g., with/without PGO)
+	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(cacheKey(req.ImportPath, req.BuildID))).String())
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		state.error = fmt.Errorf("creating storage directory: %w", err)
 		return nil, state.error
