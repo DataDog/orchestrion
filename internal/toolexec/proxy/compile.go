@@ -217,6 +217,7 @@ func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) 
 
 	_, err = client.Request(ctx, jobs, nbt.FinishRequest{
 		ImportPath:  cmd.importPath,
+		BuildID:     cmd.Flags.BuildID,
 		FinishToken: cmd.finishToken,
 		Files:       files,
 		Error:       errorMessage,

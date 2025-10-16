@@ -9,3 +9,10 @@ orchestrion
 coverage/
 venv/
 .python-version
+gotest.log
+test_output.log
+test-integration.log
+test-e2e.log
+
+# E2E test work directories
+/test/e2e/work/
