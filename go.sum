@@ -18,8 +18,8 @@ github.com/DataDog/datadog-agent/pkg/version v0.71.2 h1:5wVVZrOCzvH6ka+J/3iKQH3r
 github.com/DataDog/datadog-agent/pkg/version v0.71.2/go.mod h1:FYj51C1ib86rpr5tlLEep9jitqvljIJ5Uz2rrimGTeY=
 github.com/DataDog/datadog-go/v5 v5.8.1 h1:+GOES5W9zpKlhwHptZVW2C0NLVf7ilr7pHkDcbNvpIc=
 github.com/DataDog/datadog-go/v5 v5.8.1/go.mod h1:K9kcYBlxkcPP8tvvjZZKs/m1edNAUFzBbdpTUKfCsuw=
-github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.2 h1:YFB2AegunYOGsgWTXVY8Z6ORuiU/GLVWTheMDXh+8cw=
-github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.2/go.mod h1:gtac0BEnFnpwQWFw10sslSDeh7avl7m10frK3XlZAtk=
+github.com/DataDog/dd-trace-go/v2 v2.3.0 h1:0Y5kx+Wbod0z8moY0vUbKl6OM0oIV4zAynsVmsq+XT8=
+github.com/DataDog/dd-trace-go/v2 v2.3.0/go.mod h1:yFomJ/rqKNLDbS9ohIDibdz8q9GK0MUSSkBdVDCibGA=
 github.com/DataDog/go-libddwaf/v4 v4.6.0 h1:+qxofaFK/aJxjwHCM8hZsZMPj3OKH1wkOFuznxAhNK8=
 github.com/DataDog/go-libddwaf/v4 v4.6.0/go.mod h1:/AZqP6zw3qGJK5mLrA0PkfK3UQDk1zCI2fUNCt4xftE=
 github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 h1:rIMZ3Bqn2w8nWrAIXekOdm+sZVxUYHGX8cS7P9W06Kk=
@@ -43,6 +43,8 @@ github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiE
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
 github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb h1:m935MPodAbYS46DG4pJSv7WO+VECIWUQ7OJYSoTrMh4=
 github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb/go.mod h1:PkYb9DJNAwrSvRx5DYA+gUcOIgTGVMNkfSCbZM8cWpI=
+github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
+github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=

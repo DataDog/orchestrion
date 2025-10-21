@@ -3,7 +3,7 @@ module github.com/DataDog/orchestrion
 go 1.24.0
 
 require (
-	github.com/DataDog/dd-trace-go/v2 v2.3.0-rc.2
+	github.com/DataDog/dd-trace-go/v2 v2.3.0
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/dave/dst v0.27.3
@@ -50,6 +50,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/antithesishq/antithesis-sdk-go v0.5.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.3.2 // indirect
 	github.com/charmbracelet/x/ansi v0.10.2 // indirect
