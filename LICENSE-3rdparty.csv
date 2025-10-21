@@ -20,6 +20,7 @@ orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
 orchestrion,github.com/antithesishq/antithesis-sdk-go,MIT,Copyright (c) 2024 Antithesis
 orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
 orchestrion,github.com/blakesmith/ar,MIT,Copyright (c) 2013 Blake Smith <blakesmith0@gmail.com>
+orchestrion,github.com/cenkalti/backoff/v5,MIT,Copyright (c) 2014 Cenk Altı
 orchestrion,github.com/cespare/xxhash/v2,MIT,Copyright (c) 2016 Caleb Spare
 orchestrion,github.com/charmbracelet/colorprofile,MIT,"Copyright (c) 2020-2024 Charmbracelet, Inc"
 orchestrion,github.com/charmbracelet/lipgloss,MIT,"Copyright (c) 2021-2023 Charmbracelet, Inc"
