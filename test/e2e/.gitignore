@@ -1,0 +1,11 @@
+# Test artifacts
+*.log
+*.prof
+*.pgo
+
+# Temporary test binaries
+pgo-sample*
+pgo
+
+# Test work directories
+work/

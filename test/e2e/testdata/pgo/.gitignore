@@ -1,0 +1,13 @@
+# Build artifacts
+pgo-sample
+pgo-sample-orchestrion
+
+# Profile data
+*.pgo
+*.prof
+cpu.prof
+
+# Build logs
+*.log
+build-without-pgo.log
+build-with-pgo.log

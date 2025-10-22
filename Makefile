@@ -1,5 +1,5 @@
 
-.PHONY: all test format lint build install dd-trace-go test-integration \
+.PHONY: all test test-e2e format lint build install dd-trace-go test-integration \
         dd-trace-go-setup
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
@@ -9,10 +9,6 @@ DDTRACE_INTEGRATION_DIR := $(DD_TRACE_GO_DIR)/internal/orchestrion/_integration
 
 all: build format lint test
 
-.ONESHELL:
-test: gotestfmt
-	set -euo pipefail
-	go test -json -v ./... 2>&1 | tee ./gotest.log | gotestfmt
 
 format:
 	golangci-lint fmt
@@ -65,6 +61,17 @@ dd-trace-go-setup: dd-trace-go
 test-integration: dd-trace-go-setup
 	cd $(DDTRACE_INTEGRATION_DIR)
 	go run github.com/DataDog/orchestrion go test -v -shuffle=on -failfast ./... | tee $(ORCHESTRION_DIR)/test-integration.log
+
+.ONESHELL:
+test: gotestfmt
+	set -euo pipefail
+	go test -json -v -timeout=5m ./... 2>&1 | tee ./gotest.log | gotestfmt
+
+.ONESHELL:
+test-e2e: build
+	set -euo pipefail
+	@echo "Running end-to-end tests..."
+	go test -tags=e2e -v -timeout=5m ./test/e2e/ 2>&1 | tee test-e2e.log
 
 gotestfmt:
 	@if ! command -v gotestfmt >/dev/null 2>&1; then \
