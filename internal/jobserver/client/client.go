@@ -10,12 +10,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/ext"
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/nats-io/nats.go"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -28,13 +30,59 @@ type Client struct {
 }
 
 // Connect creates a new client connected to the NATS server at the specified
-// address.
+// address. It implements exponential backoff retry logic to handle temporary
+// connection issues, especially on slower CI environments.
 func Connect(addr string) (*Client, error) {
-	conn, err := nats.Connect(addr, nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())), nats.UserInfo(Username, NoPassword))
-	if err != nil {
-		return nil, err
+	const (
+		maxRetries     = 15                    // Increased for very slow CI environments
+		initialBackoff = 50 * time.Millisecond // Start with slightly higher delay
+		maxBackoff     = 10 * time.Second      // Increased max backoff for slow systems
+		natsTimeout    = 3 * time.Second       // Increased connection timeout
+	)
+
+	var lastErr error
+	backoff := initialBackoff
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		conn, err := nats.Connect(
+			addr,
+			nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())),
+			nats.UserInfo(Username, NoPassword),
+			nats.Timeout(natsTimeout),
+		)
+		if err == nil {
+			if attempt > 0 {
+				log.Debug().
+					Int("attempts", attempt+1).
+					Dur("total_wait", backoff).
+					Msg("Successfully connected to NATS job server after retry")
+			}
+			return New(conn), nil
+		}
+
+		lastErr = err
+
+		// Don't sleep on the last attempt
+		if attempt < maxRetries-1 {
+			log.Debug().
+				Err(err).
+				Int("attempt", attempt+1).
+				Int("max_attempts", maxRetries).
+				Dur("backoff", backoff).
+				Str("server", addr).
+				Msg("Failed to connect to NATS job server, retrying...")
+
+			time.Sleep(backoff)
+
+			// Exponential backoff with cap
+			backoff *= 2
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
+		}
 	}
-	return New(conn), nil
+
+	return nil, fmt.Errorf("failed to connect to NATS job server at %s after %d attempts: %w", addr, maxRetries, lastErr)
 }
 
 func New(conn *nats.Conn) *Client {
