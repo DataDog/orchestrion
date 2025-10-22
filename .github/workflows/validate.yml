@@ -348,14 +348,16 @@ jobs:
         run: go build -o bin/orchestrion .
       - name: Run E2E tests
         run: go test -tags=e2e -v -timeout=10m ./test/e2e/
-      - name: Upload E2E logs on failure
+      - name: Upload E2E artifacts on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: e2e-logs-${{ matrix.runs-on }}-go${{ matrix.go-version }}
+          name: e2e-artifacts-${{ matrix.runs-on }}-go${{ matrix.go-version }}
           path: |
             test-e2e.log
             test/e2e/**/*.log
+            test/e2e/**/*.pgo
+            test/e2e/**/*.prof
           if-no-files-found: ignore
 
   ##############################################################################

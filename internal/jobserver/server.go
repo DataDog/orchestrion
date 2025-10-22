@@ -87,7 +87,7 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 	}
 	startTimeout := opts.StartTimeout
 	if startTimeout == 0 {
-		startTimeout = 5 * time.Second
+		startTimeout = 10 * time.Second
 	}
 
 	// Creating the server instance
