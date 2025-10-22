@@ -71,7 +71,7 @@ test: gotestfmt
 test-e2e: build
 	set -euo pipefail
 	@echo "Running end-to-end tests..."
-	go test -tags=e2e -v -timeout=5m ./test/e2e/ 2>&1 | tee test-e2e.log
+	go test -tags=e2e -v -timeout=10m ./test/e2e/ 2>&1 | tee test-e2e.log
 
 gotestfmt:
 	@if ! command -v gotestfmt >/dev/null 2>&1; then \

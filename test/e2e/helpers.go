@@ -21,8 +21,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Ensure fmt is used
-var _ = fmt.Sprint
+func TestTimeout(t *testing.T) time.Duration {
+	t.Helper()
+
+	timeout := os.Getenv("E2E_TEST_TIMEOUT")
+	if timeout == "" {
+		timeout = "10m"
+	}
+	timeoutDuration, err := time.ParseDuration(timeout)
+	require.NoError(t, err)
+	return timeoutDuration
+}
 
 // FindOrchestrionBinary locates or builds the orchestrion binary for testing
 func FindOrchestrionBinary(t *testing.T) string {

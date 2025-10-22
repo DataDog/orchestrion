@@ -335,6 +335,7 @@ func getLoopback(log zerolog.Logger) string {
 			log.Warn().Err(err).Msg("Could not determine list of network interface addresses. Orchestrion requires at least one loopback interface to be available.")
 			return
 		}
+
 		for _, addr := range addrs {
 			if addr, ok := addr.(*net.IPNet); ok && addr.IP.IsLoopback() {
 				loopback = addr.IP.String()

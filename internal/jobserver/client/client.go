@@ -34,9 +34,10 @@ type Client struct {
 // connection issues, especially on slower CI environments.
 func Connect(addr string) (*Client, error) {
 	const (
-		maxRetries     = 10
-		initialBackoff = 50 * time.Millisecond
-		maxBackoff     = 5 * time.Second
+		maxRetries     = 15                    // Increased for very slow CI environments
+		initialBackoff = 50 * time.Millisecond // Start with slightly higher delay
+		maxBackoff     = 10 * time.Second      // Increased max backoff for slow systems
+		natsTimeout    = 3 * time.Second       // Increased connection timeout
 	)
 
 	var lastErr error
@@ -47,7 +48,7 @@ func Connect(addr string) (*Client, error) {
 			addr,
 			nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())),
 			nats.UserInfo(Username, NoPassword),
-			nats.Timeout(2*time.Second),
+			nats.Timeout(natsTimeout),
 		)
 		if err == nil {
 			if attempt > 0 {

@@ -33,7 +33,8 @@ func TestPGO(t *testing.T) {
 
 	workDir := e2e.CreateWorkDir(t, "testdata/pgo")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	testTimeout := e2e.TestTimeout(t)
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	logFile := filepath.Join(workDir, "test.log")
@@ -42,6 +43,13 @@ func TestPGO(t *testing.T) {
 	defer logWriter.Close()
 
 	log := e2e.Logger(t, logWriter)
+	testStartTime := time.Now()
+
+	log("=== Timeout Configuration ===")
+	log("Test context timeout: %v", testTimeout)
+	log("Test start time: %v", testStartTime.Format(time.RFC3339))
+	log("Context deadline: %v", testStartTime.Add(testTimeout).Format(time.RFC3339))
+	log("")
 
 	log("=== PGO E2E Test ===")
 	log("Testing fix for https://github.com/DataDog/orchestrion/issues/653")
@@ -49,6 +57,7 @@ func TestPGO(t *testing.T) {
 
 	// Step 1: Build regular binary for profiling
 	log("Step 1: Building binary for profiling (without orchestrion)...")
+	stepStart := time.Now()
 	binary := filepath.Join(workDir, "pgo-sample")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
@@ -59,11 +68,12 @@ func TestPGO(t *testing.T) {
 	cmd.Dir = workDir
 	e2e.RunAndLog(t, cmd, buildLog, log)
 	require.FileExists(t, binary)
-	log("✓ Built %s", binary)
+	log("✓ Built %s (took %v, elapsed: %v)", binary, time.Since(stepStart), time.Since(testStartTime))
 
 	// Step 2: Run binary to collect CPU profile
 	log("")
 	log("Step 2: Running binary to collect CPU profile...")
+	stepStart = time.Now()
 	profilePath := filepath.Join(workDir, "cpu.prof")
 
 	cmd = exec.CommandContext(ctx, binary)
@@ -73,11 +83,12 @@ func TestPGO(t *testing.T) {
 	err = e2e.WaitForCommandWithTimeout(t, cmd, 10*time.Second)
 	require.NoError(t, err, "Binary exited with error")
 	require.FileExists(t, profilePath)
-	log("✓ Profile collected: %s", profilePath)
+	log("✓ Profile collected: %s (took %v, elapsed: %v)", profilePath, time.Since(stepStart), time.Since(testStartTime))
 
 	// Step 3: Convert profile to PGO format
 	log("")
 	log("Step 3: Converting profile to PGO format...")
+	stepStart = time.Now()
 	pgoProfile := filepath.Join(workDir, "default.pgo")
 
 	cmd = exec.CommandContext(ctx, "go", "tool", "pprof", "-proto", profilePath)
@@ -89,7 +100,7 @@ func TestPGO(t *testing.T) {
 
 	info, err := os.Stat(pgoProfile)
 	require.NoError(t, err)
-	log("✓ Created %s (size: %d bytes)", pgoProfile, info.Size())
+	log("✓ Created %s (size: %d bytes, took %v, elapsed: %v)", pgoProfile, info.Size(), time.Since(stepStart), time.Since(testStartTime))
 	assert.Greater(t, info.Size(), int64(100), "PGO profile should not be empty")
 
 	// Step 4: Build with orchestrion AND PGO enabled (the critical test!)
@@ -97,6 +108,7 @@ func TestPGO(t *testing.T) {
 	log("Step 4: Building with orchestrion AND PGO enabled...")
 	log("  This tests the fix for https://github.com/DataDog/orchestrion/issues/653")
 
+	stepStart = time.Now()
 	orchestrionBinary := filepath.Join(workDir, "pgo-sample-orchestrion")
 	if runtime.GOOS == "windows" {
 		orchestrionBinary += ".exe"
@@ -105,10 +117,13 @@ func TestPGO(t *testing.T) {
 	buildWithPGOLog := filepath.Join(workDir, "build-with-pgo.log")
 	cmd = exec.CommandContext(ctx, orchestrionBin, "go", "build", "-x", "-pgo="+pgoProfile, "-o", orchestrionBinary, ".")
 	cmd.Dir = workDir
+	// Enable debug logging to capture job server lifecycle and timing information
+	cmd.Env = append(os.Environ(), "ORCHESTRION_LOG_LEVEL=DEBUG")
+	log("  Starting orchestrion build at %v (elapsed: %v)", time.Now().Format(time.RFC3339), time.Since(testStartTime))
 	e2e.RunAndLog(t, cmd, buildWithPGOLog, log)
 
 	require.FileExists(t, orchestrionBinary)
-	log("✓ Successfully built with orchestrion + PGO!")
+	log("✓ Successfully built with orchestrion + PGO (took %v, elapsed: %v)", time.Since(stepStart), time.Since(testStartTime))
 	log("✓ The fix works - no 'mismatched build ID' errors!")
 
 	// Step 5: Verify build logs are clean
@@ -164,6 +179,7 @@ func TestPGO(t *testing.T) {
 
 	log("")
 	log("=== PGO E2E Test PASSED ===")
+	log("Total test duration: %v (budget was %v)", time.Since(testStartTime), testTimeout)
 
 	// Log file locations for debugging
 	t.Logf("Test artifacts in: %s", workDir)

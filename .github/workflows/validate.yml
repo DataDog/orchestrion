@@ -347,7 +347,9 @@ jobs:
       - name: Build orchestrion
         run: go build -o bin/orchestrion .
       - name: Run E2E tests
-        run: go test -tags=e2e -v -timeout=10m ./test/e2e/
+        run: go test -tags=e2e -v -timeout=10m ./test/e2e/ 2>&1 | tee test-e2e.log
+        env:
+          E2E_TEST_TIMEOUT: 5m
       - name: Upload E2E artifacts on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
