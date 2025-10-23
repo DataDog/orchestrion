@@ -219,7 +219,10 @@ jobs:
             git diff
             exit 1
           fi
-
+      - name: Verify actions are pinned with ratchet
+        uses: sethvargo/ratchet@8b4ca256dbed184350608a3023620f267f0a5253 # ratchet:exclude
+        with:
+          files: ".github/workflows/*.yml .github/actions/**/action.yml"
   ##############################################################################
   # Run all unit tests with coverage enabled
   unit-tests:
@@ -399,7 +402,7 @@ jobs:
       - integration-tests
       - e2e-tests
       - benchmark
-    if: '!cancelled()'
+    if: "!cancelled()"
     steps:
       - name: Success
         if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-go.result != 'failure' && needs.lint-actions.result != 'failure' && needs.format.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
