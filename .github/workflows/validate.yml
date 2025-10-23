@@ -150,7 +150,7 @@ jobs:
         run: go vet ./...
       - name: Check documentation for misspellings
         uses: crate-ci/typos@85f62a8a84f939ae994ab3763f01a0296d61a7ee # v1.36.2
-  golangci-lint:
+  lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
     strategy:
@@ -174,7 +174,7 @@ jobs:
           working-directory: ${{ matrix.working-directory }}
   ##############################################################################
   # Verify all GitHub workflows have hash-pinned actions
-  lint-workflows:
+  lint-actions:
     runs-on: ubuntu-latest
     name: GitHub Workflow Linters
     steps:
@@ -194,6 +194,32 @@ jobs:
           reporter: github-check
           level: error
           fail_level: error
+
+  ##############################################################################
+  # Check code formatting
+  format:
+    needs: generate
+    runs-on: ubuntu-latest
+    name: Format Check
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - name: Setup go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        with:
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
+      - name: Run make format
+        run: make format
+      - name: Check for formatting changes
+        run: |-
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Files need formatting. Run 'make format' locally and commit the changes."
+            git status
+            git diff
+            exit 1
+          fi
+
   ##############################################################################
   # Run all unit tests with coverage enabled
   unit-tests:
@@ -366,19 +392,20 @@ jobs:
     needs:
       - generate
       - lint
-      - golangci-lint
-      - lint-workflows
+      - lint-go
+      - lint-actions
+      - format
       - unit-tests
       - integration-tests
       - e2e-tests
       - benchmark
-    if: "!cancelled()"
+    if: '!cancelled()'
     steps:
       - name: Success
-        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.golangci-lint.result != 'failure' && needs.lint-workflows.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
+        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-go.result != 'failure' && needs.lint-actions.result != 'failure' && needs.format.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
         run: echo "OK"
       - name: Failed
-        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.golangci-lint.result == 'failure' || needs.lint-workflows.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure'
+        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-go.result == 'failure' || needs.lint-actions.result == 'failure' || needs.format.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure'
         run: |-
           echo "Failed!"
           exit 1

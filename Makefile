@@ -118,7 +118,7 @@ gotestfmt:
 golangci-lint:
 	@if ! command -v golangci-lint >/dev/null 2>&1; then \
 		echo "Installing golangci-lint..."; \
-		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest; \
 	fi
 
 actionlint:
