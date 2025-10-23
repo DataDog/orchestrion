@@ -70,6 +70,8 @@ jobs:
         run: ./_tools/make-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
+      - name: Update embedded documentation
+        run: make docs
       - name: Check if working tree is dirty
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'

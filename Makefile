@@ -1,58 +1,84 @@
 
 .PHONY: all test test-e2e format lint build install dd-trace-go test-integration \
-        dd-trace-go-setup actionlint yamlfmt gotestfmt ratchet ratchet/pin ratchet/update ratchet/check
+        dd-trace-go-setup actionlint yamlfmt gotestfmt ratchet ratchet/pin ratchet/update ratchet/check help
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
 DD_TRACE_GO_DIR ?= $(CURDIR)/tmp/dd-trace-go
 DDTRACE_INTEGRATION_DIR := $(DD_TRACE_GO_DIR)/internal/orchestrion/_integration
 
+.DEFAULT_GOAL := help
+
+.PHONY: help
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[A-Za-z0-9_./-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
 all: build format lint test
 
-build:
+build: ## Build orchestrion binary to bin/orchestrion
 	go build -o bin/orchestrion main.go
 
-install:
+install: ## Install orchestrion to $$GOPATH/bin
 	go install .
 
+format: ## Format Go code and YAML files
 format: format/go format/yaml
 
+format/go: ## Format Go code only
 format/go: golangci-lint
 	@echo "Formatting Go code..."
 	golangci-lint fmt
 
+format/yaml: ## Format YAML files only (excludes testdata)
 format/yaml: yamlfmt
 	@echo "Formatting YAML files..."
 	yamlfmt -dstar '**/*.yml' '**/*.yaml'
 
-lint:  lint/action lint/yaml lint/action
+lint: ## Run all linters (Go, YAML, GitHub Actions)
+lint: lint/go lint/yaml lint/action
 
+lint/action: ## Lint GitHub Actions workflows
 lint/action: actionlint ratchet/check
 	@echo "Linting GitHub Actions workflows..."
 	actionlint
 
+lint/go: ## Run golangci-lint on Go code
 lint/go: golangci-lint
 	@echo "Linting Go code..."
 	golangci-lint run
 
+lint/yaml: ## Lint YAML formatting
 lint/yaml: yamlfmt
 	@echo "Linting YAML files..."
 	yamlfmt -dstar '**/*.yml' '**/*.yaml'
 
-# Ratchet - Pin GitHub Actions to commit SHAs
-
+ratchet/pin: ## Pin GitHub Actions to commit SHAs
 ratchet/pin: ratchet
 	@echo "Pinning GitHub Actions to commit SHAs..."
 	ratchet pin .github/workflows/*.yml .github/actions/**/action.yml
 
+ratchet/update: ## Update pinned GitHub Actions to latest versions
 ratchet/update: ratchet
 	@echo "Updating pinned GitHub Actions to latest versions..."
 	ratchet update .github/workflows/*.yml .github/actions/**/action.yml
 
+ratchet/check: ## Verify all GitHub Actions are pinned
 ratchet/check: ratchet
 	@echo "Checking GitHub Actions are pinned..."
 	ratchet lint .github/workflows/*.yml .github/actions/**/action.yml
 
+docs: ## Update embedded documentation in markdown files
+docs: embedmd tmp/make-help.txt
+	@echo "Updating embedded documentation..."
+	embedmd -w CONTRIBUTING.md
+
+tmp/make-help.txt: ## Generate make help output for embedding in documentation
+tmp/make-help.txt: $(MAKEFILE_LIST)
+	@mkdir -p tmp
+	@$(MAKE) --no-print-directory help > tmp/make-help.txt
 
 # Tests
 
@@ -73,7 +99,6 @@ ratchet/check: ratchet
 #   make test-integration        # run tests (expects setup done)
 #   make dd-trace-go-setup       # clone + set replace only
 
-
 dd-trace-go:
 	@mkdir -p ./tmp
 	@if [ ! -d "$(DD_TRACE_GO_DIR)/.git" ]; then \
@@ -92,17 +117,20 @@ dd-trace-go-setup: dd-trace-go
 	go mod tidy
 
 .ONESHELL:
+test: ## Run unit tests
 test: gotestfmt
 	set -euo pipefail
 	go test -json -v -timeout=5m ./... 2>&1 | tee ./gotest.log | gotestfmt
 
 .ONESHELL:
+test-e2e: ## Run end-to-end tests
 test-e2e: build
 	set -euo pipefail
 	@echo "Running end-to-end tests..."
 	go test -tags=e2e -v -timeout=10m ./test/e2e/ 2>&1 | tee test-e2e.log
 
 .ONESHELL:
+test-integration: ## Run integration tests with dd-trace-go
 test-integration: dd-trace-go-setup
 	cd $(DDTRACE_INTEGRATION_DIR)
 	go run github.com/DataDog/orchestrion go test -v -shuffle=on -failfast ./... | tee $(ORCHESTRION_DIR)/test-integration.log
@@ -137,4 +165,10 @@ ratchet:
 	@if ! command -v ratchet >/dev/null 2>&1; then \
 		echo "Installing ratchet..."; \
 		go install github.com/sethvargo/ratchet@latest; \
+	fi
+
+embedmd:
+	@if ! command -v embedmd >/dev/null 2>&1; then \
+		echo "Installing embedmd..."; \
+		go install github.com/campoy/embedmd@latest; \
 	fi
