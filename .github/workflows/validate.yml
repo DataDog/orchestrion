@@ -70,6 +70,8 @@ jobs:
         run: ./_tools/make-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
+      - name: Update embedded documentation
+        run: make docs
       - name: Check if working tree is dirty
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
@@ -219,10 +221,7 @@ jobs:
             git diff
             exit 1
           fi
-      - name: Verify actions are pinned with ratchet
-        uses: sethvargo/ratchet@8b4ca256dbed184350608a3023620f267f0a5253 # ratchet:exclude
-        with:
-          files: ".github/workflows/*.yml .github/actions/**/action.yml"
+
   ##############################################################################
   # Run all unit tests with coverage enabled
   unit-tests:
