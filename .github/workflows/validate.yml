@@ -402,7 +402,7 @@ jobs:
       - integration-tests
       - e2e-tests
       - benchmark
-    if: "!cancelled()"
+    if: '!cancelled()'
     steps:
       - name: Success
         if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-go.result != 'failure' && needs.lint-actions.result != 'failure' && needs.format.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
