@@ -1,12 +1,9 @@
 name: Dependency Updates
-
 on:
   schedule:
     - cron: '42 5 * * 1' # Mondays at 5:42 AM
   workflow_dispatch: {} # Manual runs
-
 permissions: read-all
-
 jobs:
   update-go:
     name: Update Go Dependencies
@@ -16,7 +13,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
-
       - name: Set up Go
         id: setup-go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
@@ -25,14 +21,12 @@ jobs:
           # will bail out if it encounters a "candidate" that requires a newer release.
           go-version: stable
           cache-dependency-path: '**/go.mod'
-
       - name: Determine latest github.com/DataDog/dd-trace-go/v2 version
         id: dd-trace-go
         run: |-
           set -euo pipefail
           version=$(go list -f '{{range .Versions}}{{.}}{{"\n"}}{{end}}' -m -versions github.com/DataDog/dd-trace-go/v2 | grep -v '-' | tail -n 1)
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
-
       # Passing "go@<version>" to "go get -u" ensures no dependencies get upgraded to a release that
       # does not support that specific go release. We do `go get -u` everywhere first, and then
       # `go mod tidy`, so that the later accounts for the complete updated module graph (otherwise
@@ -50,25 +44,21 @@ jobs:
             go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
             go -C="${dir}" mod edit -toolchain=none
           done
-
       - id: is-tree-dirty
         name: Check for updates
         run: |-
           git add .
           git diff --staged --patch --exit-code || echo "result=true" >> "${GITHUB_OUTPUT}"
-
       - name: Update LICENSE-3rdparty.csv
         if: steps.is-tree-dirty.outputs.result == 'true'
         run: ./_tools/make-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
-
       - name: Build diff
         if: steps.is-tree-dirty.outputs.result == 'true'
         run: |-
           git add .
           git diff --staged --patch > "${{ runner.temp }}/go.diff.patch"
-
       - name: Upload Artifact
         if: steps.is-tree-dirty.outputs.result == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -76,7 +66,6 @@ jobs:
           name: Patches
           path: ${{ runner.temp }}/go.diff.patch
           if-no-files-found: error
-
   create-pr:
     name: Create Pull Request
     runs-on: ubuntu-latest
@@ -88,16 +77,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
-
       - name: Download patches
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4
         with:
           name: Patches
           path: ${{ runner.temp }}/patches
-
       - name: Apply patches
         run: find "${{ runner.temp }}/patches" -type f -name '*.patch' -exec git apply {} \;
-
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Create branch # The branch needs to exist before we can add commits to it
         id: create-branch
@@ -106,14 +92,12 @@ jobs:
           git push origin "${{ github.sha }}":"refs/heads/${branch}"
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
           git fetch origin "${branch}"
-
       - name: Generate a GitHub token
         id: generate-token
         uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         with:
           app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
           private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
-
       - name: Create Commit # Adds a commit to the branch we created above
         uses: planetscale/ghcommit-action@322be9669498a4be9ce66efc1169f8f43f6bd883 # v0.2.17
         with:
@@ -122,7 +106,6 @@ jobs:
           branch: ${{ steps.create-branch.outputs.branch }}
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-
       - name: Create PR
         run: |-
           git fetch origin "${{ steps.create-branch.outputs.branch }}"

@@ -7,9 +7,7 @@ on:
     paths: [internal/version/version.go]
   release:
     types: [published]
-
 permissions: read-all
-
 jobs:
   validate:
     if: github.event_name != 'release'
@@ -25,7 +23,6 @@ jobs:
         with:
           go-version: stable
           cache-dependency-path: '**/go.mod'
-
       # Obtains the current configured version tag from source, and verifies it is a valid tag name.
       # Also checks whether the tag already exists.
       - name: Determine version
@@ -43,7 +40,6 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ github.token }}
-
       # If this is a pull request, and the release does not yet exist, the PR title must be "release: <tag>"
       - name: 'Pull Request title must be "release: ${{ steps.version.outputs.tag }}"'
         if: "github.event_name == 'pull_request' && !fromJSON(steps.version.outputs.exists) && format('release: {0}', steps.version.outputs.tag) != github.event.pull_request.title"
@@ -52,14 +48,12 @@ jobs:
           exit 1
         env:
           EVENT_PR_TITLE: ${{ toJSON(github.event.pull_request.title) }}
-
       # Release must not already exist (if the PR title suggests this is intended to be a release)
       - name: Release ${{ steps.version.outputs.tag }} already exists
         if: github.event_name == 'pull_request' && fromJSON(steps.version.outputs.exists) && startsWith(github.event.pull_request.title, 'release:')
         run: |-
           echo 'A release already exists for tag ${{ steps.version.outputs.tag }}. Please update to another version.'
           exit 1
-
       # If the release does not yet exist, create a draft release targeting this commit.
       - name: Create draft release
         if: github.event_name == 'push' && steps.version.outputs.exists == 'false'
@@ -84,7 +78,6 @@ jobs:
             ${{ contains(steps.version.outputs.tag, '-') && '--prerelease' || '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-
   release:
     if: github.event_name == 'release'
     name: Tag Release

@@ -1,5 +1,4 @@
 name: CodeQL
-
 on:
   push:
     branches: [main]
@@ -9,9 +8,7 @@ on:
     branches: [main]
   schedule:
     - cron: '45 23 * * 6'
-
 permissions: read-all
-
 jobs:
   analyze:
     name: Analyze (go)
@@ -27,18 +24,15 @@ jobs:
       security-events: write
       # required to fetch internal or private CodeQL packs
       packages: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
-
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@192325c86100d080feab897ff886c34abd4c83a3 # v3
         with:
           languages: go
           build-mode: autobuild
-
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@192325c86100d080feab897ff886c34abd4c83a3 # v3
         with:

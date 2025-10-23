@@ -4,7 +4,6 @@ outputs:
   codecov:
     description: Path to the codecov CLI
     value: ${{ steps.install.outputs.codecov }}
-
 runs:
   using: composite
   steps:
@@ -13,10 +12,8 @@ runs:
       with:
         python-version: '3.12'
         cache-dependency-path: ${{ github.action_path }}/requirements-dev.txt
-
     - name: Setup Rust
       uses: actions-rust-lang/setup-rust-toolchain@v1
-
     - name: Install codecov-cli
       id: install
       shell: bash
