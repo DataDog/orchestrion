@@ -13,7 +13,6 @@ inputs:
   token:
     description: CodeCov token to use
     required: true
-
 runs:
   using: composite
   steps:

@@ -1,5 +1,4 @@
 version: "2"
-
 linters:
   default: none
   enable:
@@ -8,7 +7,6 @@ linters:
     - perfsprint
     - revive
     - testifylint
-
   settings:
     perfsprint:
       integer-format: true
@@ -21,7 +19,6 @@ linters:
       strconcat: true
       bool-format: true
       hex-format: true
-
     revive:
       enable-all-rules: false
       rules:
@@ -101,7 +98,7 @@ linters:
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unchecked-type-assertion
         - name: unchecked-type-assertion
           exclude: [TEST]
-          arguments: [acceptIgnoredAssertionResult: true]
+          arguments: [{acceptIgnoredAssertionResult: true}]
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unexported-naming
         - name: unexported-naming
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unhandled-error
@@ -139,7 +136,6 @@ linters:
       - third_party$
       - builtin$
       - examples$
-
 formatters:
   enable:
     - gofmt
@@ -150,6 +146,5 @@ formatters:
       - third_party$
       - builtin$
       - examples$
-
 run:
   build-tags: [integration]

@@ -1,5 +1,4 @@
 version: 2
-
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -12,7 +11,6 @@ updates:
         dependency-type: production
     labels:
       - dependencies
-
   - package-ecosystem: pip
     directory: /.github/actions/codecov-cli
     schedule:

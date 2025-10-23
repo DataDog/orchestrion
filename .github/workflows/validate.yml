@@ -7,14 +7,11 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || ((github.event_name == 'push' && github.sha) || github.ref) }}
   cancel-in-progress: true
-
 permissions: read-all
-
 env:
   # Make sure we're actually testing with the intended Go release (i.e, ensure
   # no automatic toolchain download happens).
   GOTOOLCHAIN: local
-
 jobs:
   ##############################################################################
   # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
@@ -33,10 +30,9 @@ jobs:
         with:
           go-version: oldstable
           cache-dependency-path: "**/go.mod"
-
       - name: Run 'go generate ./...'
         run: |-
-          mkdir -p ${GOCOVERDIR}
+          mkdir -p "${GOCOVERDIR}"
           find . -name go.mod -execdir go generate ./... \;
         env:
           GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/DataDog/orchestrion/...,./...
@@ -61,7 +57,7 @@ jobs:
         if: github.event_name != 'push'
         run: |-
           currentTag=$(go run . version -static | cut -d' ' -f 2)
-          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             if [[ -n $(go -C="${dir}" mod edit --json | jq '(.Replace // []).[] | select(.Old.Path == "github.com/DataDog/orchestrion")') ]]; then
               echo "Aligning orchestrion version in ${dir} to ${currentTag} if necessary..."
@@ -70,12 +66,10 @@ jobs:
             go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
             go -C="${dir}" mod edit -toolchain=none
           done
-
       - name: Refresh LICENSE-3rdparty.csv
         run: ./_tools/make-licenses.sh
         env:
           TMPDIR: ${{ runner.temp }}
-
       - name: Check if working tree is dirty
         # Don't run for push, it's not necessary
         if: github.event_name != 'push'
@@ -121,14 +115,12 @@ jobs:
       - name: Apply patch
         run: |-
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
-
       - name: Generate a GitHub token
         id: generate-token
         uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
         with:
           app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
           private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
-
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
         uses: planetscale/ghcommit-action@322be9669498a4be9ce66efc1169f8f43f6bd883 # v0.2.17
@@ -138,7 +130,6 @@ jobs:
           branch: ${{ github.event.pull_request.head.ref }}
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-
   ##############################################################################
   # Run the various linters we have set up...
   lint:
@@ -159,8 +150,7 @@ jobs:
         run: go vet ./...
       - name: Check documentation for misspellings
         uses: crate-ci/typos@85f62a8a84f939ae994ab3763f01a0296d61a7ee # v1.36.2
-
-  golangci-lint:
+  lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
     strategy:
@@ -182,10 +172,9 @@ jobs:
         with:
           version: v2.5.0
           working-directory: ${{ matrix.working-directory }}
-
   ##############################################################################
   # Verify all GitHub workflows have hash-pinned actions
-  lint-workflows:
+  lint-actions:
     runs-on: ubuntu-latest
     name: GitHub Workflow Linters
     steps:
@@ -195,6 +184,41 @@ jobs:
         uses: zgosalvez/github-actions-ensure-sha-pinned-actions@fc87bb5b5a97953d987372e74478de634726b3e5 # v3
         with:
           allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
+      - name: Verify actions are pinned with ratchet
+        uses: sethvargo/ratchet@8b4ca256dbed184350608a3023620f267f0a5253 # ratchet:exclude
+        with:
+          files: ".github/workflows/*.yml .github/actions/**/action.yml"
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@f00ad0691526c10be4021a91b2510f0a769b14d0 # v1.68.0
+        with:
+          reporter: github-check
+          level: error
+          fail_level: error
+
+  ##############################################################################
+  # Check code formatting
+  format:
+    needs: generate
+    runs-on: ubuntu-latest
+    name: Format Check
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - name: Setup go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        with:
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
+      - name: Run make format
+        run: make format
+      - name: Check for formatting changes
+        run: |-
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Files need formatting. Run 'make format' locally and commit the changes."
+            git status
+            git diff
+            exit 1
+          fi
 
   ##############################################################################
   # Run all unit tests with coverage enabled
@@ -246,7 +270,6 @@ jobs:
           path: |-
             ./coverage/unit.out
             ./coverage/samples.out
-
   ##############################################################################
   # Run all benchmarks and generate report
   benchmark:
@@ -279,7 +302,6 @@ jobs:
           if-no-files-found: error
           name: benchmarks-${{ matrix.run_number }}.txt
           path: ${{ runner.temp }}/benchmarks-${{ matrix.run_number }}.txt
-
   benchmark-report:
     needs: benchmark
     runs-on: ubuntu-latest
@@ -308,23 +330,23 @@ jobs:
             | tee ${{ runner.temp }}/benchmarks-formatted.txt
       - name: Setting Job Summary
         run: |-
-          echo "### Benchmark Report"                     >> "${GITHUB_STEP_SUMMARY}"
-          echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
-          cat ${{ runner.temp }}/benchmarks-formatted.txt >> "${GITHUB_STEP_SUMMARY}"
-          echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
-
+          {
+            echo "### Benchmark Report"
+            echo '```'
+            cat ${{ runner.temp }}/benchmarks-formatted.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
   ##############################################################################
   # Run all integration tests and gather extensive coverage
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@56a1413e83177dd7138367cedc78852d4c546027 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
     secrets:
       DD_API_KEY: ${{ secrets.DD_CI_API_KEY }}
-
   ##############################################################################
   # Run end-to-end tests (PGO, etc.)
   e2e-tests:
@@ -361,7 +383,6 @@ jobs:
             test/e2e/**/*.pgo
             test/e2e/**/*.prof
           if-no-files-found: ignore
-
   ##############################################################################
   # Assert everything is complete. This simplifies branch protection settings
   # and allows us to have one single trigger for CodeCov reporting.
@@ -371,23 +392,23 @@ jobs:
     needs:
       - generate
       - lint
-      - golangci-lint
-      - lint-workflows
+      - lint-go
+      - lint-actions
+      - format
       - unit-tests
       - integration-tests
       - e2e-tests
       - benchmark
-    if: "!cancelled()"
+    if: '!cancelled()'
     steps:
       - name: Success
-        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.golangci-lint.result != 'failure' && needs.lint-workflows.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
+        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-go.result != 'failure' && needs.lint-actions.result != 'failure' && needs.format.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
         run: echo "OK"
       - name: Failed
-        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.golangci-lint.result == 'failure' || needs.lint-workflows.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure'
+        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-go.result == 'failure' || needs.lint-actions.result == 'failure' || needs.format.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure'
         run: |-
           echo "Failed!"
           exit 1
-
   ##############################################################################
   # Produce a CodeCov coverage report with all uploaded code coverage data.
   coverage-preflight:
@@ -442,7 +463,6 @@ jobs:
             --token="${CODECOV_TOKEN}"                                          \
             --slug="${{ github.repository }}"
           echo "::endgroup::"
-
   coverage-matrix:
     runs-on: ubuntu-latest
     name: Compute Coverage Matrix
@@ -512,7 +532,6 @@ jobs:
               ].join('\n'),
             );
           EOF
-
   coverage-upload:
     runs-on: ubuntu-latest
     name: Upload report to CodeCov (${{ matrix.flag }})
@@ -535,7 +554,6 @@ jobs:
           flags: ${{ matrix.flag }}
           files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
           token: ${{ secrets.CODECOV_TOKEN }}
-
   coverage-finalize:
     runs-on: ubuntu-latest
     name: Create CodeCov report

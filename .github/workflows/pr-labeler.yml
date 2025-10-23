@@ -2,9 +2,7 @@ name: PR Labeler
 on:
   pull_request:
     types: [opened, edited, reopened]
-
 permissions: read-all
-
 jobs:
   update-labels:
     name: Update PR labels
@@ -19,9 +17,7 @@ jobs:
         with:
           go-version: oldstable
           cache-dependency-path: '**/go.mod'
-
       - name: Assign Labels
         run: go -C _tools run ./conventionalcommit
         env:
           GITHUB_TOKEN: ${{ github.token }}
-

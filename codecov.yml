@@ -1,18 +1,14 @@
----
 # yaml-language-server: $schema=https://json.schemastore.org/codecov
 codecov:
   notify:
     manual_trigger: true
-
 comment:
   layout: diff, components, files
   behavior: new
-
 ignore:
   - 'samples/**' # This is sample code for instrumentable things
   - '_tools/**' # Repository maintenance tooling
   - 'internal/injector/aspect/advice/code/dot_ast.proxies.go' # Auto-generated proxy code
-
 coverage:
   status:
     project:
@@ -23,7 +19,6 @@ coverage:
       default:
         target: auto
         informational: true
-
 component_management:
   individual_components:
     - component_id: generators
