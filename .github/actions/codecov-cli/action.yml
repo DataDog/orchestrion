@@ -13,7 +13,7 @@ runs:
         python-version: '3.12'
         cache-dependency-path: ${{ github.action_path }}/requirements-dev.txt
     - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # ratchet:actions-rust-lang/setup-rust-toolchain@v1
     - name: Install codecov-cli
       id: install
       shell: bash

@@ -1,6 +1,6 @@
 
 .PHONY: all test test-e2e format lint build install dd-trace-go test-integration \
-        dd-trace-go-setup actionlint yamlfmt gotestfmt
+        dd-trace-go-setup actionlint yamlfmt gotestfmt ratchet ratchet/pin ratchet/update ratchet/check
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
@@ -27,7 +27,7 @@ format/yaml: yamlfmt
 
 lint:  lint/action lint/yaml lint/action
 
-lint/action: actionlint
+lint/action: actionlint ratchet/check
 	@echo "Linting GitHub Actions workflows..."
 	actionlint
 
@@ -38,6 +38,21 @@ lint/go: golangci-lint
 lint/yaml: yamlfmt
 	@echo "Linting YAML files..."
 	yamlfmt -dstar '**/*.yml' '**/*.yaml'
+
+# Ratchet - Pin GitHub Actions to commit SHAs
+
+ratchet/pin: ratchet
+	@echo "Pinning GitHub Actions to commit SHAs..."
+	ratchet pin .github/workflows/*.yml .github/actions/**/action.yml
+
+ratchet/update: ratchet
+	@echo "Updating pinned GitHub Actions to latest versions..."
+	ratchet update .github/workflows/*.yml .github/actions/**/action.yml
+
+ratchet/check: ratchet
+	@echo "Checking GitHub Actions are pinned..."
+	ratchet lint .github/workflows/*.yml .github/actions/**/action.yml
+
 
 # Tests
 
@@ -116,4 +131,10 @@ yamlfmt:
 	@if ! command -v yamlfmt >/dev/null 2>&1; then \
 		echo "Installing yamlfmt..."; \
 		go install github.com/google/yamlfmt/cmd/yamlfmt@latest; \
+	fi
+
+ratchet:
+	@if ! command -v ratchet >/dev/null 2>&1; then \
+		echo "Installing ratchet..."; \
+		go install github.com/sethvargo/ratchet@latest; \
 	fi

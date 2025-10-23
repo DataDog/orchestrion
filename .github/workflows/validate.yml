@@ -184,7 +184,10 @@ jobs:
         uses: zgosalvez/github-actions-ensure-sha-pinned-actions@fc87bb5b5a97953d987372e74478de634726b3e5 # v3
         with:
           allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
-
+      - name: Verify actions are pinned with ratchet
+        uses: sethvargo/ratchet@8b4ca256dbed184350608a3023620f267f0a5253 # ratchet:exclude
+        with:
+          files: ".github/workflows/*.yml .github/actions/**/action.yml"
   ##############################################################################
   # Run all unit tests with coverage enabled
   unit-tests:
@@ -299,19 +302,17 @@ jobs:
           echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
           cat ${{ runner.temp }}/benchmarks-formatted.txt >> "${GITHUB_STEP_SUMMARY}"
           echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
-
   ##############################################################################
   # Run all integration tests and gather extensive coverage
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@56a1413e83177dd7138367cedc78852d4c546027 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
     secrets:
       DD_API_KEY: ${{ secrets.DD_CI_API_KEY }}
-
   ##############################################################################
   # Run end-to-end tests (PGO, etc.)
   e2e-tests:
