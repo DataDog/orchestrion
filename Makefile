@@ -1,6 +1,6 @@
 
 .PHONY: all test test-e2e format lint build install dd-trace-go test-integration \
-        dd-trace-go-setup actionlint yamlfmt gotestfmt ratchet ratchet/pin ratchet/update ratchet/check
+        dd-trace-go-setup actionlint yamlfmt gotestfmt ratchet ratchet/pin ratchet/update ratchet/check actionlint yamlfmt gotestfmt
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
@@ -72,7 +72,6 @@ ratchet/check: ratchet
 # Usage examples:
 #   make test-integration        # run tests (expects setup done)
 #   make dd-trace-go-setup       # clone + set replace only
-
 
 dd-trace-go:
 	@mkdir -p ./tmp
