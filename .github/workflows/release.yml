@@ -105,7 +105,7 @@ jobs:
         env:
           EVENT_TAG: ${{ github.event.release.tag_name }}
         run: |-
-          for gomod in $(find . -iname go.mod -not -path '*/_*'); do
+          find . -iname go.mod -not -path '*/_*' -print0 | while IFS= read -r -d '' gomod; do
             dir=$(dirname "${gomod}")
             mod=$(go -C "${dir}" list -m)
             case "${mod}" in

@@ -32,7 +32,7 @@ jobs:
           cache-dependency-path: "**/go.mod"
       - name: Run 'go generate ./...'
         run: |-
-          mkdir -p ${GOCOVERDIR}
+          mkdir -p "${GOCOVERDIR}"
           find . -name go.mod -execdir go generate ./... \;
         env:
           GOFLAGS: -cover -covermode=atomic -coverpkg=github.com/DataDog/orchestrion/...,./...
@@ -57,7 +57,7 @@ jobs:
         if: github.event_name != 'push'
         run: |-
           currentTag=$(go run . version -static | cut -d' ' -f 2)
-          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             if [[ -n $(go -C="${dir}" mod edit --json | jq '(.Replace // []).[] | select(.Old.Path == "github.com/DataDog/orchestrion")') ]]; then
               echo "Aligning orchestrion version in ${dir} to ${currentTag} if necessary..."
@@ -188,6 +188,12 @@ jobs:
         uses: sethvargo/ratchet@8b4ca256dbed184350608a3023620f267f0a5253 # ratchet:exclude
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@f00ad0691526c10be4021a91b2510f0a769b14d0 # v1.68.0
+        with:
+          reporter: github-check
+          level: error
+          fail_level: error
   ##############################################################################
   # Run all unit tests with coverage enabled
   unit-tests:
@@ -298,10 +304,12 @@ jobs:
             | tee ${{ runner.temp }}/benchmarks-formatted.txt
       - name: Setting Job Summary
         run: |-
-          echo "### Benchmark Report"                     >> "${GITHUB_STEP_SUMMARY}"
-          echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
-          cat ${{ runner.temp }}/benchmarks-formatted.txt >> "${GITHUB_STEP_SUMMARY}"
-          echo '```'                                      >> "${GITHUB_STEP_SUMMARY}"
+          {
+            echo "### Benchmark Report"
+            echo '```'
+            cat ${{ runner.temp }}/benchmarks-formatted.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
   ##############################################################################
   # Run all integration tests and gather extensive coverage
   integration-tests:

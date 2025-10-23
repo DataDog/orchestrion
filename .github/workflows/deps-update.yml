@@ -33,13 +33,13 @@ jobs:
       # we'd need to run these in dependency order to ensure stable output).
       - name: Update dependencies
         run: |-
-          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "github.com/DataDog/dd-trace-go/v2@${{ steps.dd-trace-go.outputs.version }}" ./...
           done
       - name: Run go mod tidy
         run: |-
-          for gomod in $(find . -iname go.mod -not -path './_docs/themes/**'); do
+          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
             go -C="${dir}" mod edit -toolchain=none

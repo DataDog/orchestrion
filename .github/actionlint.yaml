@@ -1,0 +1,7 @@
+# actionlint configuration
+# https://github.com/rhysd/actionlint/blob/main/docs/config.md
+
+# Custom self-hosted runner labels
+self-hosted-runner:
+  labels:
+    - arm-8core-linux
