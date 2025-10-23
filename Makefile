@@ -1,6 +1,6 @@
 
 .PHONY: all test test-e2e format lint build install dd-trace-go test-integration \
-        dd-trace-go-setup
+        dd-trace-go-setup actionlint yamlfmt gotestfmt
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
@@ -9,35 +9,37 @@ DDTRACE_INTEGRATION_DIR := $(DD_TRACE_GO_DIR)/internal/orchestrion/_integration
 
 all: build format lint test
 
-
-format:
-	golangci-lint fmt
-
-lint:
-	golangci-lint run
-
 build:
 	go build -o bin/orchestrion main.go
 
 install:
 	go install .
 
-dd-trace-go:
-	@mkdir -p ./tmp
-	@if [ ! -d "$(DD_TRACE_GO_DIR)/.git" ]; then \
-		echo "Cloning dd-trace-go (shallow) into $(DD_TRACE_GO_DIR)"; \
-		git clone --depth 1 --no-tags git@github.com:DataDog/dd-trace-go.git "$(DD_TRACE_GO_DIR)"; \
-	else \
-		echo "dd-trace-go already exists at $(DD_TRACE_GO_DIR)"; \
-	fi
+format: format/go format/yaml
 
-.ONESHELL:
-dd-trace-go-setup: dd-trace-go
-	@echo "Using orchestrion from: $(ORCHESTRION_DIR)"
-	@echo "Integration dir: $(DDTRACE_INTEGRATION_DIR)"
-	cd $(DDTRACE_INTEGRATION_DIR)
-	go mod edit -replace "github.com/DataDog/orchestrion=$(ORCHESTRION_DIR)"
-	go mod tidy
+format/go: golangci-lint
+	@echo "Formatting Go code..."
+	golangci-lint fmt
+
+format/yaml: yamlfmt
+	@echo "Formatting YAML files..."
+	yamlfmt -dstar '**/*.yml' '**/*.yaml'
+
+lint:  lint/action lint/yaml lint/action
+
+lint/action: actionlint
+	@echo "Linting GitHub Actions workflows..."
+	actionlint
+
+lint/go: golangci-lint
+	@echo "Linting Go code..."
+	golangci-lint run
+
+lint/yaml: yamlfmt
+	@echo "Linting YAML files..."
+	yamlfmt -dstar '**/*.yml' '**/*.yaml'
+
+# Tests
 
 # Integration with dd-trace-go using orchestrion
 #
@@ -57,10 +59,22 @@ dd-trace-go-setup: dd-trace-go
 #   make dd-trace-go-setup       # clone + set replace only
 
 
+dd-trace-go:
+	@mkdir -p ./tmp
+	@if [ ! -d "$(DD_TRACE_GO_DIR)/.git" ]; then \
+		echo "Cloning dd-trace-go (shallow) into $(DD_TRACE_GO_DIR)"; \
+		git clone --depth 1 --no-tags git@github.com:DataDog/dd-trace-go.git "$(DD_TRACE_GO_DIR)"; \
+	else \
+		echo "dd-trace-go already exists at $(DD_TRACE_GO_DIR)"; \
+	fi
+
 .ONESHELL:
-test-integration: dd-trace-go-setup
+dd-trace-go-setup: dd-trace-go
+	@echo "Using orchestrion from: $(ORCHESTRION_DIR)"
+	@echo "Integration dir: $(DDTRACE_INTEGRATION_DIR)"
 	cd $(DDTRACE_INTEGRATION_DIR)
-	go run github.com/DataDog/orchestrion go test -v -shuffle=on -failfast ./... | tee $(ORCHESTRION_DIR)/test-integration.log
+	go mod edit -replace "github.com/DataDog/orchestrion=$(ORCHESTRION_DIR)"
+	go mod tidy
 
 .ONESHELL:
 test: gotestfmt
@@ -73,8 +87,33 @@ test-e2e: build
 	@echo "Running end-to-end tests..."
 	go test -tags=e2e -v -timeout=10m ./test/e2e/ 2>&1 | tee test-e2e.log
 
+.ONESHELL:
+test-integration: dd-trace-go-setup
+	cd $(DDTRACE_INTEGRATION_DIR)
+	go run github.com/DataDog/orchestrion go test -v -shuffle=on -failfast ./... | tee $(ORCHESTRION_DIR)/test-integration.log
+
+# Install tools
+
 gotestfmt:
 	@if ! command -v gotestfmt >/dev/null 2>&1; then \
 		echo "Installing gotestfmt..."; \
 		go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest; \
+	fi
+
+golangci-lint:
+	@if ! command -v golangci-lint >/dev/null 2>&1; then \
+		echo "Installing golangci-lint..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+	fi
+
+actionlint:
+	@if ! command -v actionlint >/dev/null 2>&1; then \
+		echo "Installing actionlint..."; \
+		go install github.com/rhysd/actionlint/cmd/actionlint@latest; \
+	fi
+
+yamlfmt:
+	@if ! command -v yamlfmt >/dev/null 2>&1; then \
+		echo "Installing yamlfmt..."; \
+		go install github.com/google/yamlfmt/cmd/yamlfmt@latest; \
 	fi
