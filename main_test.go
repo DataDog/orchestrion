@@ -46,7 +46,7 @@ func main() {
 	run.exec(t, orchestrionBin, "pin")
 
 	// Run the command from a working directory that is NOT the module root, so we can ensure the
-	// configuration is appopriately loaded from the module's root anyway.
+	// configuration is appropriately loaded from the module's root anyway.
 	runCmd := runner{dir: filepath.Join(run.dir, "cmd")}
 	runCmd.exec(t, orchestrionBin, "go", "run", ".")
 }
