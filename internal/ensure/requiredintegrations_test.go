@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/gomod"
@@ -410,6 +411,24 @@ func TestFetchShippedVersions(t *testing.T) {
 				assert.True(t, semver.IsValid(version), "version %q for %q should be valid semver", version, key)
 			}
 		}
+	})
+
+	t.Run("fallback-when-instrument-missing", func(t *testing.T) {
+		// Create temp directory without instrument/ subdirectory
+		tempDir := t.TempDir()
+		testGoMod := filepath.Join(tempDir, "go.mod")
+		require.NoError(t, os.WriteFile(testGoMod, []byte(`module test
+require github.com/DataDog/dd-trace-go/v2 v2.3.0
+`), 0644))
+
+		versions := loadShippedVersions(tempDir)
+
+		v2Version := versions["github.com/DataDog/dd-trace-go/v2"]
+		allVersion := versions["github.com/DataDog/dd-trace-go/orchestrion/all/v2"]
+
+		require.NotEmpty(t, v2Version)
+		require.NotEmpty(t, allVersion)
+		assert.Equal(t, v2Version, allVersion, "both should use same version when instrument/ is missing")
 	})
 }
 
