@@ -196,23 +196,41 @@ var (
 
 func fetchShippedVersions() map[string]string {
 	initOnce.Do(func() {
-		versions := make(map[string]string)
 		_, thisFile, _, _ := runtime.Caller(0)
-		// The version of dd-trace-go that shipped with the current version of orchestrion.
-		// We use this to determine if we need to upgrade dd-trace-go when pinning.
 		orchestrionRoot := filepath.Join(thisFile, "..", "..", "..")
-		ver, err := resolveDependencyVersion(orchestrionRoot, integrations.DatadogTracerV2)
-		if err != nil {
-			panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2, orchestrionRoot, err))
-		}
-		versions[integrations.DatadogTracerV2] = ver
-		instrumentationRoot := filepath.Join(orchestrionRoot, "instrument")
-		ver, err = resolveDependencyVersion(instrumentationRoot, integrations.DatadogTracerV2All)
-		if err != nil {
-			panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2All, instrumentationRoot, err))
-		}
-		versions[integrations.DatadogTracerV2All] = ver
+		versions := loadShippedVersions(orchestrionRoot)
 		orchestrionShippedVersions.Store(&versions)
 	})
 	return *orchestrionShippedVersions.Load()
+}
+
+func loadShippedVersions(orchestrionRoot string) map[string]string {
+	versions := make(map[string]string)
+
+	// The version of dd-trace-go that shipped with the current version of orchestrion.
+	// We use this to determine if we need to upgrade dd-trace-go when pinning.
+	ver, err := resolveDependencyVersion(orchestrionRoot, integrations.DatadogTracerV2)
+	if err != nil {
+		panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2, orchestrionRoot, err))
+	}
+	versions[integrations.DatadogTracerV2] = ver
+
+	// Default to using the same version as DatadogTracerV2 for DatadogTracerV2All.
+	// This serves as a fallback when the instrument directory (which is a separate submodule)
+	// is not accessible, such as when orchestrion is used as a module dependency from the
+	// Go module cache where nested submodules may not be present.
+	versions[integrations.DatadogTracerV2All] = versions[integrations.DatadogTracerV2]
+
+	// If the instrument directory exists, override with the actual version from its go.mod
+	instrumentationRoot := filepath.Join(orchestrionRoot, "instrument")
+	if _, err := os.Stat(instrumentationRoot); err != nil {
+		return versions
+	}
+	ver, err = resolveDependencyVersion(instrumentationRoot, integrations.DatadogTracerV2All)
+	if err != nil {
+		panic(fmt.Errorf("resolving %s version in %q: %w", integrations.DatadogTracerV2All, instrumentationRoot, err))
+	}
+	versions[integrations.DatadogTracerV2All] = ver
+
+	return versions
 }
