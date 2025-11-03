@@ -151,7 +151,7 @@ jobs:
       - name: vet
         run: go vet ./...
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1 # v1.38.1
+        uses: crate-ci/typos@07d900b8fa1097806b8adb6391b0d3e0ac2fdea7 # v1.39.0
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -343,7 +343,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@399a58b6cb0b5afb9ed6ba6861a3ee8521a11c02 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@b2e6ba79ff0ebbf02d90ccbd9ce2f3f948dede74 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
