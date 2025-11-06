@@ -108,10 +108,11 @@ Targets:
   format               Format Go code and YAML files
   format/go            Format Go code only
   format/yaml          Format YAML files only (excludes testdata)
-  lint                 Run all linters (Go, YAML, GitHub Actions)
+  lint                 Run all linters (Go, YAML, GitHub Actions, Makefiles)
   lint/action          Lint GitHub Actions workflows
   lint/go              Run golangci-lint on Go code
   lint/yaml            Lint YAML formatting
+  lint/makefile        Lint Makefiles
   ratchet/pin          Pin GitHub Actions to commit SHAs
   ratchet/update       Update pinned GitHub Actions to latest versions
   ratchet/check        Verify all GitHub Actions are pinned

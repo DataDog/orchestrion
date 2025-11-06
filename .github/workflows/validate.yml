@@ -148,8 +148,6 @@ jobs:
           cache-dependency-path: "**/go.mod"
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
-      - name: vet
-        run: go vet ./...
       - name: Check documentation for misspellings
         uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1 # v1.38.1
   lint-go:
@@ -169,6 +167,8 @@ jobs:
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
+      - name: Run go vet
+        run: go vet ./...
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v6
         with:
@@ -196,6 +196,24 @@ jobs:
           reporter: github-check
           level: error
           fail_level: error
+
+  ##############################################################################
+  # Lint Makefiles
+  lint-makefile:
+    runs-on: ubuntu-latest
+    name: Makefile Linters
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - name: Setup go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        with:
+          go-version: stable
+          cache-dependency-path: "**/go.mod"
+      - name: Install checkmake
+        run: go install github.com/checkmake/checkmake/cmd/checkmake@latest
+      - name: Lint Makefiles
+        run: make lint/makefile
 
   ##############################################################################
   # Check code formatting
@@ -396,6 +414,7 @@ jobs:
       - lint
       - lint-go
       - lint-actions
+      - lint-makefile
       - format
       - unit-tests
       - integration-tests
@@ -404,10 +423,10 @@ jobs:
     if: '!cancelled()'
     steps:
       - name: Success
-        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-go.result != 'failure' && needs.lint-actions.result != 'failure' && needs.format.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
+        if: needs.generate.result != 'failure' && needs.lint.result != 'failure' && needs.lint-go.result != 'failure' && needs.lint-actions.result != 'failure' && needs.lint-makefile.result != 'failure' && needs.format.result != 'failure' && needs.unit-tests.result != 'failure' && needs.integration-tests.result != 'failure' && needs.e2e-tests.result != 'failure'
         run: echo "OK"
       - name: Failed
-        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-go.result == 'failure' || needs.lint-actions.result == 'failure' || needs.format.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure'
+        if: needs.generate.result == 'failure' || needs.lint.result == 'failure' || needs.lint-go.result == 'failure' || needs.lint-actions.result == 'failure' || needs.lint-makefile.result == 'failure' || needs.format.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.e2e-tests.result == 'failure'
         run: |-
           echo "Failed!"
           exit 1
