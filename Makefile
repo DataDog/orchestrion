@@ -1,6 +1,8 @@
 
-.PHONY: all test test-e2e format lint build install dd-trace-go test-integration \
-        dd-trace-go-setup actionlint yamlfmt gotestfmt ratchet ratchet/pin ratchet/update ratchet/check help
+.PHONY: all test test-e2e format format/go format/yaml lint lint/action lint/go lint/yaml lint/makefile \
+        build install dd-trace-go dd-trace-go-setup test-integration \
+        docs tmp/make-help.txt actionlint yamlfmt gotestfmt ratchet \
+        ratchet/pin ratchet/update ratchet/check checkmake embedmd help
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
@@ -37,8 +39,8 @@ format/yaml: yamlfmt
 	@echo "Formatting YAML files..."
 	yamlfmt -dstar '**/*.yml' '**/*.yaml'
 
-lint: ## Run all linters (Go, YAML, GitHub Actions)
-lint: lint/go lint/yaml lint/action
+lint: ## Run all linters (Go, YAML, GitHub Actions, Makefiles)
+lint: lint/go lint/yaml lint/action lint/makefile
 
 lint/action: ## Lint GitHub Actions workflows
 lint/action: actionlint ratchet/check
@@ -54,6 +56,11 @@ lint/yaml: ## Lint YAML formatting
 lint/yaml: yamlfmt
 	@echo "Linting YAML files..."
 	yamlfmt -dstar '**/*.yml' '**/*.yaml'
+
+lint/makefile: ## Lint Makefiles
+lint/makefile: checkmake
+	@echo "Linting Makefiles..."
+	checkmake --config=.checkmake Makefile $(shell find . -type f \( -name 'Makefile' -o -name 'makefile' -o -name 'GNUmakefile' -o -name '*.mk' \) -not -path './tmp/*' -not -path './_*' -not -path './Makefile')
 
 ratchet/pin: ## Pin GitHub Actions to commit SHAs
 ratchet/pin: ratchet
@@ -165,6 +172,12 @@ ratchet:
 	@if ! command -v ratchet >/dev/null 2>&1; then \
 		echo "Installing ratchet..."; \
 		go install github.com/sethvargo/ratchet@latest; \
+	fi
+
+checkmake:
+	@if ! command -v checkmake >/dev/null 2>&1; then \
+		echo "Installing checkmake..."; \
+		go install github.com/checkmake/checkmake/cmd/checkmake@latest; \
 	fi
 
 embedmd:

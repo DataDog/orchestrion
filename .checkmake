@@ -1,0 +1,22 @@
+# checkmake configuration file
+# See: https://github.com/checkmake/checkmake
+
+[minphony]
+# We don't require a clean target
+disabled = true
+
+[maxbodylength]
+# Some targets legitimately need more than 5 lines
+disabled = true
+
+[uniquetargets]
+# We use the pattern of defining targets twice for help text:
+#   target: ## help text
+#   target: dependencies
+# This is valid Make syntax and necessary for our help command
+disabled = true
+
+[phonydeclared]
+# Checkmake doesn't properly recognize PHONY declarations when using
+# the dual-line target pattern for help text, resulting in false positives
+disabled = true
