@@ -1,0 +1,21 @@
+# yamlfmt configuration
+# Exclude testdata directories from formatting to preserve test fixtures
+
+# Enable doublestar glob patterns for recursive matching
+doublestar: true
+
+# Exclude patterns
+exclude:
+  - "**/testdata/**"
+  - "**/*testdata*/**"
+
+# Use gitignore files for additional exclusions
+gitignore_excludes: true
+
+# Formatter configuration
+formatter:
+  type: basic
+  indent: 2
+  include_document_start: false
+  retain_line_breaks: true
+  max_line_length: 0

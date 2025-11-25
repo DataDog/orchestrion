@@ -20,9 +20,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/DataDog/orchestrion/internal/ensure"
 	"github.com/DataDog/orchestrion/internal/filelock"
 	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/DataDog/orchestrion/internal/gomod"
 	"github.com/DataDog/orchestrion/internal/injector/config"
+	"github.com/DataDog/orchestrion/internal/integrations"
 	"github.com/DataDog/orchestrion/internal/version"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
@@ -31,12 +34,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const (
-	orchestrionImportPath = "github.com/DataDog/orchestrion"
-	datadogTracerV1       = "gopkg.in/DataDog/dd-trace-go.v1"
-	datadogTracerV2       = "github.com/DataDog/dd-trace-go/v2"
-	datadogTracerV2All    = "github.com/DataDog/dd-trace-go/orchestrion/all/v2"
-)
+const orchestrionImportPath = "github.com/DataDog/orchestrion"
 
 type Options struct {
 	// Writer is the writer to send output of the command to. Defaults to
@@ -116,40 +114,31 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 	}
 
 	// Add the current version of orchestrion to the `go.mod` file.
-	var edits []goModEdit
-	curMod, err := parseGoMod(ctx, goMod)
+	var edits []gomod.Edit
+	curMod, err := gomod.Parse(ctx, goMod)
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", goMod, err)
 	}
 
-	if ver, found := curMod.requires(datadogTracerV1); found && semver.Compare(ver, "v1.74.0") < 0 {
-		log.Info().Str("current", ver).Msg("Updating " + datadogTracerV1 + " to v1.74+")
-		if err := runGoGet(ctx, goMod, datadogTracerV1+"@latest"); err != nil {
-			return fmt.Errorf("go get "+datadogTracerV1+"@latest: %w", err)
-		}
+	integrationEdits, err := ensure.RequiredIntegrations(ctx, goMod)
+	if err != nil {
+		return fmt.Errorf("ensuring required integrations in %q: %w", goMod, err)
 	}
-
-	if ver, found := curMod.requires(datadogTracerV2); !found || semver.Compare(ver, "v2.1.0") < 0 {
-		// We install/upgrade the `orchestrion/all/v2` module as it includes all interesting contribs in its dependency
-		// closure, so we don't have to manually verify all of them. The `go mod tidy` later will clean up if needed.
-		log.Info().Str("current", ver).Msg("Installing or upgrading " + datadogTracerV2 + " (via " + datadogTracerV2All + ")")
-		if err := runGoGet(ctx, goMod, datadogTracerV2All+"@latest"); err != nil {
-			return fmt.Errorf("go get "+datadogTracerV2+"@latest: %w", err)
-		}
-	}
+	// If the current version is the same as the target version, this will be a no-op.
+	edits = append(edits, integrationEdits...)
 
 	if goversion.Compare(fmt.Sprintf("go%s", curMod.Go), "go1.23.0") < 0 {
 		log.Info().Msg("Setting go directive to 1.23.0")
-		edits = append(edits, goModVersion("1.23.0"))
+		edits = append(edits, gomod.Version("1.23.0"))
 	}
 
-	if ver, found := curMod.requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {
+	if ver, found := curMod.Requires(orchestrionImportPath); !found || semver.Compare(ver, version.Tag()) < 0 {
 		log.Info().Str("current", ver).Msg("Adding/updating require entry for " + orchestrionImportPath)
 		version, _, _ := strings.Cut(version.Tag(), "+")
-		edits = append(edits, goModRequire{Path: orchestrionImportPath, Version: version})
+		edits = append(edits, gomod.Require{Path: orchestrionImportPath, Version: version})
 	}
 
-	if err := runGoModEdit(ctx, goMod, edits...); err != nil {
+	if err := gomod.RunEdit(ctx, goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
 
@@ -160,13 +149,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
-		if err := runGoMod(ctx, "tidy", goMod, nil); err != nil {
+		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
 			return fmt.Errorf("running `go mod tidy`: %w", err)
 		}
 	}
 
 	// Restore the previous toolchain directive if `go mod tidy` had the nerve to touch it...
-	if err := runGoModEdit(ctx, goMod, curMod.Toolchain); err != nil {
+	if err := gomod.RunEdit(ctx, goMod, curMod.Toolchain); err != nil {
 		return fmt.Errorf("restoring toolchain directive: %w", err)
 	}
 
@@ -230,7 +219,7 @@ func updateToolFile(file *dst.File) (*importSet, error) {
 	}
 	spec.Decs.End.Replace("// integration")
 
-	spec, _ = importSet.Add(datadogTracerV2All)
+	spec, _ = importSet.Add(integrations.DatadogTracerV2All)
 	spec.Decs.Before = dst.EmptyLine
 	spec.Decs.End.Replace("// integration")
 
@@ -238,7 +227,7 @@ func updateToolFile(file *dst.File) (*importSet, error) {
 	importSet.Remove(orchestrionImportPath + "/instrument")
 
 	// We instrument natively with V2, so we no longer need to import the legacy V1 entry point.
-	importSet.Remove(datadogTracerV1)
+	importSet.Remove(integrations.DatadogTracerV1)
 
 	return importSet, nil
 }

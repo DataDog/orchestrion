@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+func TestFunction() {
+  // Original function body
+//line <generated>:1
+  {
+    _ = "1) Fourth defined (index 3) - applied 4"
+  }
+  {
+    _ = "2) Third defined (index 2) - applied 3"
+  }
+  {
+    _ = "3) Second defined (index 1) - applied 2"
+  }
+  {
+    _ = "4) First defined (index 0) - applied 1"
+  }
+}

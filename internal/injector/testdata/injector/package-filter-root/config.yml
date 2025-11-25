@@ -1,0 +1,56 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      all-of:
+        - package-filter:
+            root: true
+        - function-body:
+            function:
+              - signature-contains:
+                  args: [context.Context]
+                  returns: [error]
+    advice:
+      - prepend-statements:
+          imports:
+            time: time
+          template: |-
+            {{ $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- if (eq $ctx "") -}}
+              {{- $ctx = "ctx" -}}
+              ctx := context.TODO()
+            {{ end -}}
+
+            {{ $ctx }}, cancel := context.WithTimeout({{ $ctx }}, 1*time.Second)
+            defer cancel()
+            _ = {{ $ctx }} // Use the context to avoid unused variable
+
+syntheticReferences:
+  time: true
+
+import-path: github.com/DataDog/orchestrion/internal/example
+
+code: |-
+  package example
+
+  import (
+    "context"
+    "fmt"
+  )
+
+  func main() {
+    fmt.Println("Hello from root module!")
+  }
+
+  func helloWorld(ctx context.Context) error {
+    return printWithContext(ctx, "Hello from root module!")
+  }
+
+  func printWithContext(ctx context.Context, msg string) (err error) {
+    if ctx.Err() != nil {
+      return ctx.Err()
+    }
+
+    fmt.Println(msg)
+    return nil
+  }

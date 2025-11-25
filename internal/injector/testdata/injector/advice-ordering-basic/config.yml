@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# Test basic advice ordering within a single aspect
+# Multiple prepend-statements with different order values should execute in order
+aspects:
+  - id: Basic Ordering Test
+    join-point:
+      function-body:
+        function:
+          - name: TestFunction
+    advice:
+      # This should execute THIRD (order: 30)
+      - prepend-statements:
+          order: 30
+          template: |-
+            _ = "1) Application order: 3"
+      # This should execute FIRST (order: 10)
+      - prepend-statements:
+          order: 10
+          template: |-
+            _ = "3) Application order: 1"
+      # This should execute SECOND (order: 20)
+      - prepend-statements:
+          order: 20
+          template: |-
+            _ = "2) Application order: 2"
+
+code: |-
+  package test
+
+  func TestFunction() {
+    // Original function body
+  }

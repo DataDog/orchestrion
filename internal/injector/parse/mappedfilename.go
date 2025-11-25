@@ -13,7 +13,7 @@ import (
 // ConsumeLineDirective consumes the first line from r if it's a "//line"
 // directive that either does not have line/column information or has it set to
 // line 1 (and column 1). If the directive is consumed, the filename it refers
-// to is returned. Otherwise, the reader is rewinded to its original position
+// to is returned. Otherwise, the reader is rewound to its original position
 // if the provided reader supports the [io.Seeker] interface.
 func ConsumeLineDirective(r io.Reader) (string, error) {
 	seeker, ok := r.(io.Seeker)

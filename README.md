@@ -72,6 +72,7 @@ Datadog's user guide for Orchestrion can be found on [docs.datadoghq.com][dd-doc
 
 Orchestrion's project documentation can be found at [datadoghq.dev/orchestrion](https://datadoghq.dev/orchestrion); in
 particular:
+
 - the [user guide](https://datadoghq.dev/orchestrion/docs/) provides information about available configuration, and how
   to customize the traces produced by your application;
 - the [contributor guide](https://datadoghq.dev/orchestrion/contributing/) provides more detailed information about how

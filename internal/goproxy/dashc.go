@@ -17,7 +17,7 @@ import (
 // flag present at the beginning of the slice (if present), changing directories as requested, then returns the slice
 // without it.
 //
-// The "-C" flags is reuqired to be the very first argument provided to "go" commands.
+// The "-C" flags is required to be the very first argument provided to "go" commands.
 func processDashC(ctx context.Context, args []string) ([]string, error) {
 	if len(args) == 0 {
 		return nil, nil

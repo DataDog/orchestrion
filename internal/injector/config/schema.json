@@ -375,6 +375,7 @@
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
+        { "$ref": "#/$defs/join-point/package-filter" },
         { "$ref": "#/$defs/join-point/struct-definition" },
         { "$ref": "#/$defs/join-point/struct-literal" },
         { "$ref": "#/$defs/join-point/test-main" },
@@ -481,7 +482,13 @@
             "minItems": 1
           }
         },
-        "examples": [{ "function": [{ "name": "main" }, { "signature": {} }] }],
+        "examples": [
+          { "function": [{ "name": "main" }, { "signature": {} }] },
+          { "function": [{ "signature-contains": { "args": ["context.Context"], "returns": ["error"] } }] },
+          { "function": [{ "result-implements": "io.Reader" }] },
+          { "function": [{ "final-result-implements": "error" }] },
+          { "function": [{ "argument-implements": "context.Context" }] }
+        ],
         "$defs": {
           "option": {
             "type": "object",
@@ -530,6 +537,59 @@
                       }
                     },
                     "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "required": ["signature-contains"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "signature-contains": {
+                    "description": "Matches functions based on their arguments and return value types in any order and does not require all arguments or return values to be present.",
+                    "type": "object",
+                    "properties": {
+                      "args": {
+                        "description": "The types of arguments that should be present in the function signature.",
+                        "type": "array",
+                        "items": { "$ref": "#/$defs/go/qualified-identifier" }
+                      },
+                      "returns": {
+                        "description": "The types of values that should be present in the function's return values.",
+                        "type": "array",
+                        "items": { "$ref": "#/$defs/go/qualified-identifier" }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "required": ["result-implements"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "result-implements": {
+                    "description": "Matches functions where at least one return value implements the specified interface.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  }
+                }
+              },
+              {
+                "required": ["final-result-implements"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "final-result-implements": {
+                    "description": "Matches functions where specifically the final return value implements the specified interface.",
+                    "$ref": "#/$defs/go/qualified-identifier"
+                  }
+                }
+              },
+              {
+                "required": ["argument-implements"],
+                "unevaluatedProperties": false,
+                "properties": {
+                  "argument-implements": {
+                    "description": "Matches functions where at least one argument implements the specified interface.",
+                    "$ref": "#/$defs/go/qualified-identifier"
                   }
                 }
               }
@@ -616,6 +676,63 @@
           }
         },
         "examples": [{ "package-name": "main" }]
+      },
+      "package-filter": {
+        "required": ["package-filter"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "package-filter": {
+            "title": "Filter packages using glob patterns",
+            "markdownDescription": "The `package-filter` join point is node-agnostic. It matches any node within packages whose import paths match the specified glob pattern.\\n\\nSupports two formats:\\n- **String format**: matches packages globally using the pattern\\n- **Object format**: allows specifying `root` to limit matching to the current module only\\n\\nSupports glob patterns including:\\n- `*` matches any sequence within a path segment\\n- `**` matches any sequence across multiple path segments (globstar)\\n- `?` matches any single character except path separator\\n- `[class]` matches any character in the character class\\n\\nWhen `root: true`, only matches packages within the current Go module and applies the pattern to relative paths within the module. When `root: false` (default), matches packages from any module using the full import path.",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "description": "Glob pattern to match against import paths globally"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "anyOf": [
+                  { "required": ["pattern"] },
+                  { "required": ["root"], "properties": { "root": { "const": true } } }
+                ],
+                "properties": {
+                  "root": {
+                    "description": "If true, only matches packages within the current Go module and applies pattern to relative paths. If false (default), matches packages from any module using full import path.",
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "pattern": {
+                    "description": "Glob pattern to match against import paths. Supports *, **, ?, and [class] patterns. When omitted and root is true, matches all packages in root module.",
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "examples": [
+          { "package-filter": "github.com/ACME/*/*/my*" },
+          { "package-filter": "**/internal/*" },
+          {
+            "package-filter": {
+              "pattern": "github.com/external/library/internal/*"
+            }
+          },
+          {
+            "package-filter": {
+              "root": true,
+              "pattern": "internal/*"
+            }
+          },
+          {
+            "package-filter": {
+              "root": true
+            }
+          }
+        ]
       },
       "struct-definition": {
         "required": ["struct-definition"],
@@ -763,9 +880,24 @@
         "properties": {
           "prepend-statements": {
             "title": "Add new logic before a node",
-            "markdownDescription": "The `prepend-statements` advice inserts new statements rendered by the provided code template before the matched AST node. This is often used to add logic in the preamble of function implementations, and the `defer` keyword can be used to also introduce epilogue logic.",
-            "$ref": "#/$defs/code-template",
-            "unevaluatedProperties": false
+            "markdownDescription": "The `prepend-statements` advice inserts new statements rendered by the provided code template before the matched AST node. This is often used to add logic in the preamble of function implementations, and the `defer` keyword can be used to also introduce epilogue logic.\n\n**Execution Order**: Multiple prepend-statements are executed in reverse order (last prepended executes first). Use `namespace` and `order` properties to control the relative execution order across different aspects.",
+            "unevaluatedProperties": false,
+            "allOf": [
+              { "$ref": "#/$defs/code-template" },
+              {
+                "properties": {
+                  "order": {
+                    "description": "Optional. The execution order within the namespace. Lower values execute first. Defaults to 0 if not specified.",
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "namespace": {
+                    "description": "Optional. The logical grouping namespace for this advice. Advice is sorted alphabetically by namespace first, then by order within each namespace. If not specified, uses a special default namespace that executes after all explicitly namespaced advice, giving users full control over execution order.",
+                    "type": "string"
+                  }
+                }
+              }
+            ]
           }
         },
         "examples": [
