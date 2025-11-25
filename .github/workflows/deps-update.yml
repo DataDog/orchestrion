@@ -12,10 +12,10 @@ jobs:
       changes-needed: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           # Run with current stable so we can evaluate all possible versions; as the Go toolchain
           # will bail out if it encounters a "candidate" that requires a newer release.
@@ -76,7 +76,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Download patches
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v4
         with:
@@ -94,12 +94,12 @@ jobs:
           git fetch origin "${branch}"
       - name: Generate a GitHub token
         id: generate-token
-        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
         with:
           app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
           private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@f24050e41f8694750427d111b52f4ef9ca81a32d # v0.2.18
+        uses: planetscale/ghcommit-action@343f41817a6a0f882f18bbc59fdd37f49452736f # v0.2.19
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ github.repository }}

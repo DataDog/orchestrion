@@ -23,10 +23,10 @@ jobs:
       has-patch: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: oldstable
           cache-dependency-path: "**/go.mod"
@@ -105,7 +105,7 @@ jobs:
     if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -119,13 +119,13 @@ jobs:
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
       - name: Generate a GitHub token
         id: generate-token
-        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
         with:
           app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
           private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
-        uses: planetscale/ghcommit-action@f24050e41f8694750427d111b52f4ef9ca81a32d # v0.2.18
+        uses: planetscale/ghcommit-action@343f41817a6a0f882f18bbc59fdd37f49452736f # v0.2.19
         with:
           commit_message: "chore: update generated files"
           repo: ${{ github.event.pull_request.head.repo.full_name }}
@@ -140,16 +140,16 @@ jobs:
     name: Linters
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@80c8a4945eec0f6d464eaf9e65ed98ef085283d1 # v1.38.1
+        uses: crate-ci/typos@626c4bedb751ce0b7f03262ca97ddda9a076ae1c # v1.39.2
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -161,16 +161,16 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Run go vet
         run: go vet ./...
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v6
+        uses: golangci/golangci-lint-action@e7fa5ac41e1cf5b7d48e45e42232ce7ada589601 # v6
         with:
           version: v2.5.0
           working-directory: ${{ matrix.working-directory }}
@@ -181,7 +181,7 @@ jobs:
     name: GitHub Workflow Linters
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Ensure SHA pinned actions
         uses: zgosalvez/github-actions-ensure-sha-pinned-actions@9e9574ef04ea69da568d6249bd69539ccc704e74 # v3
         with:
@@ -191,7 +191,7 @@ jobs:
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@f00ad0691526c10be4021a91b2510f0a769b14d0 # v1.68.0
+        uses: reviewdog/action-actionlint@437bbe918b0d29544cbf9e8b1d63fe6f4e7a881d # v1.69.0
         with:
           reporter: github-check
           level: error
@@ -204,9 +204,9 @@ jobs:
     name: Makefile Linters
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -223,9 +223,9 @@ jobs:
     name: Format Check
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -255,10 +255,10 @@ jobs:
     name: Unit tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup Go
         id: setup-go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
@@ -303,10 +303,10 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -328,10 +328,10 @@ jobs:
     name: Benchmark Report
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -361,7 +361,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@399a58b6cb0b5afb9ed6ba6861a3ee8521a11c02 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@b0227d8b5440bfbcde89d1ba2e2438b6b5881ec1 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
@@ -380,9 +380,9 @@ jobs:
         go-version: [oldstable, stable]
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Setup Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
@@ -438,7 +438,7 @@ jobs:
     steps:
       - name: Checkout
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Download codecov CLI
         id: codecov-cli
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
@@ -563,7 +563,7 @@ jobs:
       matrix: ${{ fromJson(needs.coverage-matrix.outputs.matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Download Artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v4
         with:
@@ -582,7 +582,7 @@ jobs:
     if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
       - name: Download codecov CLI
         id: codecov-cli
         uses: ./.github/actions/codecov-cli
