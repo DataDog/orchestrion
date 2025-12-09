@@ -88,18 +88,29 @@ func (s *functionDeclaration) FileMayMatch(ctx *may.FileContext) may.MatchType {
 }
 
 func (s *functionDeclaration) Matches(ctx context.AspectContext) bool {
+	node := ctx.Node()
+
+	// Check if this function is being used as an argument to a function call
+	// and has an ignore directive
+	chain := ctx.Chain()
+	if chain.PropertyName() == "Args" {
+		if hasIgnoreDirective(node) {
+			return false
+		}
+	}
+
 	info := functionInformation{
 		ImportPath:   ctx.ImportPath(),
 		typeResolver: ctx,
 	}
 
-	if decl, ok := ctx.Node().(*dst.FuncDecl); ok {
+	if decl, ok := node.(*dst.FuncDecl); ok {
 		if decl.Recv != nil && len(decl.Recv.List) == 1 {
 			info.Receiver = decl.Recv.List[0].Type
 		}
 		info.Name = decl.Name.Name
 		info.Type = decl.Type
-	} else if lit, ok := ctx.Node().(*dst.FuncLit); ok {
+	} else if lit, ok := node.(*dst.FuncLit); ok {
 		info.Type = lit.Type
 	} else {
 		return false
@@ -494,6 +505,24 @@ func (fo *finalResultImplements) evaluate(info functionInformation) bool {
 
 func (fo *finalResultImplements) Hash(h *fingerprint.Hasher) error {
 	return h.Named("final-result-implements", fingerprint.String(fo.InterfaceName))
+}
+
+// isIgnored returns true if the node is prefixed by an `//orchestrion:ignore` (or the legacy `//dd:ignore`) directive.
+func hasIgnoreDirective(node dst.Node) bool {
+	const (
+		orchestrionIgnore = "//orchestrion:ignore"
+		ddIgnore          = "//dd:ignore"
+	)
+
+	for _, cmt := range node.Decorations().Start.All() {
+		if cmt == orchestrionIgnore || strings.HasPrefix(cmt, orchestrionIgnore+" ") {
+			return true
+		}
+		if cmt == ddIgnore || strings.HasPrefix(cmt, ddIgnore+" ") {
+			return true
+		}
+	}
+	return false
 }
 
 // argumentImplements matches functions where at least one argument's type

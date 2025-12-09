@@ -6,9 +6,12 @@
 package join
 
 import (
+	"go/parser"
+	"go/token"
 	"testing"
 
 	"github.com/dave/dst"
+	"github.com/dave/dst/decorator"
 	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -233,4 +236,72 @@ signature-contains:
 
 	require.Len(t, signatureContains.Results, 1, "Expected 1 result")
 	assert.Equal(t, "bool", signatureContains.Results[0].Name, "Result should be bool")
+}
+
+func TestHasIgnoreDirective(t *testing.T) {
+	tests := []struct {
+		name        string
+		source      string
+		shouldMatch bool
+	}{
+		{
+			name: "without ignore directive",
+			source: `package main
+import "net/http"
+func myHandler (w http.ResponseWriter, r *http.Request) {}
+
+func main() {
+	http.HandleFunc("/", handler)
+}`,
+			shouldMatch: false,
+		},
+		{
+			name: "with ignore directive -- net/http",
+			source: `package main
+import "net/http"
+//orchestrion:ignore
+func myHandler(w http.ResponseWriter, r *http.Request) {}
+
+func main() {
+	http.HandleFunc("/", myHandler)
+}`,
+			shouldMatch: true,
+		},
+		{
+			name: "with ignore directive -- echo",
+			source: `package main
+import "labstack/echo"
+//orchestrion:ignore
+func myHandler(c echo.Context) error {return c.String(http.StatusOK, "testing")}
+
+func main() {
+	e := echo.New()
+	e.GET("/", myHandler)
+}`,
+			shouldMatch: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fset := token.NewFileSet()
+			parsedFile, err := parser.ParseFile(fset, "test.go", tt.source, parser.ParseComments)
+			require.NoError(t, err)
+
+			// Create the decorator.
+			dec := decorator.NewDecorator(fset)
+			f, err := dec.DecorateFile(parsedFile)
+			require.NoError(t, err)
+
+			var funcDecl *dst.FuncDecl
+			for _, decl := range f.Decls {
+				if fd, ok := decl.(*dst.FuncDecl); ok && fd.Name.Name == "myHandler" {
+					funcDecl = fd
+					break
+				}
+			}
+			assert.NotNil(t, funcDecl)
+			assert.Equal(t, tt.shouldMatch, hasIgnoreDirective(funcDecl))
+		})
+	}
 }
