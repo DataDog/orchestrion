@@ -507,24 +507,6 @@ func (fo *finalResultImplements) Hash(h *fingerprint.Hasher) error {
 	return h.Named("final-result-implements", fingerprint.String(fo.InterfaceName))
 }
 
-// isIgnored returns true if the node is prefixed by an `//orchestrion:ignore` (or the legacy `//dd:ignore`) directive.
-func hasIgnoreDirective(node dst.Node) bool {
-	const (
-		orchestrionIgnore = "//orchestrion:ignore"
-		ddIgnore          = "//dd:ignore"
-	)
-
-	for _, cmt := range node.Decorations().Start.All() {
-		if cmt == orchestrionIgnore || strings.HasPrefix(cmt, orchestrionIgnore+" ") {
-			return true
-		}
-		if cmt == ddIgnore || strings.HasPrefix(cmt, ddIgnore+" ") {
-			return true
-		}
-	}
-	return false
-}
-
 // argumentImplements matches functions where at least one argument's type
 // implements the specified interface.
 type argumentImplements struct {
@@ -705,4 +687,22 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 	}
 
 	return nil
+}
+
+// isIgnored returns true if the node is prefixed by an `//orchestrion:ignore` (or the legacy `//dd:ignore`) directive.
+func hasIgnoreDirective(node dst.Node) bool {
+	const (
+		orchestrionIgnore = "//orchestrion:ignore"
+		ddIgnore          = "//dd:ignore"
+	)
+
+	for _, cmt := range node.Decorations().Start.All() {
+		if cmt == orchestrionIgnore || strings.HasPrefix(cmt, orchestrionIgnore+" ") {
+			return true
+		}
+		if cmt == ddIgnore || strings.HasPrefix(cmt, ddIgnore+" ") {
+			return true
+		}
+	}
+	return false
 }
