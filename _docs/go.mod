@@ -12,7 +12,7 @@ require (
 	cloud.google.com/go/pubsub v1.50.1
 	github.com/99designs/gqlgen v0.17.83
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.5.0-rc.8
-	github.com/DataDog/orchestrion v1.6.1
+	github.com/DataDog/orchestrion v1.7.0-rc.1
 	github.com/DataDog/orchestrion/instrument v1.6.1
 	github.com/IBM/sarama v1.46.3
 	github.com/Shopify/sarama v1.38.1

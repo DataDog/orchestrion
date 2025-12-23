@@ -15,7 +15,6 @@ orchestrion,github.com/DataDog/go-runtime-metrics-internal/pkg/runtimemetrics,Ap
 orchestrion,github.com/DataDog/go-sqllexer,MIT,"Copyright (c) 2023 Datadog, Inc."
 orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,"Copyright (c) 2014-2020 Prime Directive, Inc. All rights reserved."
 orchestrion,github.com/DataDog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
-orchestrion,github.com/Masterminds/semver/v3,MIT,"Copyright (C) 2014-2019, Matt Butcher and Matt Farina"
 orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
 orchestrion,github.com/antithesishq/antithesis-sdk-go,MIT,Copyright (c) 2024 Antithesis
 orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
@@ -39,21 +38,23 @@ orchestrion,github.com/fsnotify/fsnotify,BSD-3-Clause,Copyright © 2012 The Go A
 orchestrion,github.com/go-logr/logr,Apache-2.0,unknown
 orchestrion,github.com/go-logr/stdr,Apache-2.0,unknown
 orchestrion,github.com/go-ole/go-ole,MIT,"Copyright © 2013-2017 Yasuhiro Matsumoto, <mattn.jp@gmail.com>"
-orchestrion,github.com/go-viper/mapstructure/v2,MIT,Copyright (c) 2013 Mitchell Hashimoto
 orchestrion,github.com/goccy/go-yaml,MIT,Copyright (c) 2019 Masaaki Goshima
-orchestrion,github.com/gogo/protobuf,BSD-3-Clause,"Copyright (c) 2013, The GoGo Authors. All rights reserved. | Copyright 2010 The Go Authors.  All rights reserved."
 orchestrion,github.com/golang/protobuf/proto,BSD-3-Clause,Copyright 2010 The Go Authors.  All rights reserved.
 orchestrion,github.com/google/go-tpm,Apache-2.0,unknown
 orchestrion,github.com/google/uuid,BSD-3-Clause,"Copyright (c) 2009,2014 Google Inc. All rights reserved."
 orchestrion,github.com/hashicorp/go-version,MPL-2.0,"Copyright (c) 2014 HashiCorp, Inc."
 orchestrion,github.com/json-iterator/go,MIT,Copyright (c) 2016 json-iterator
 orchestrion,github.com/klauspost/compress,MIT,Copyright (c) 2012 The Go Authors. All rights reserved. | Copyright (c) 2019 Klaus Post. All rights reserved. | Copyright 2016-2017 The New York Times Company | Copyright (c) 2015 Klaus Post | Copyright (c) 2011 The Snappy-Go Authors. All rights reserved. | Copyright 2016 The filepathx Authors
+orchestrion,github.com/klauspost/compress/internal/snapref,BSD-3-Clause,Copyright (c) 2011 The Snappy-Go Authors. All rights reserved.
 orchestrion,github.com/klauspost/compress/s2,BSD-3-Clause,Copyright (c) 2011 The Snappy-Go Authors. All rights reserved. | Copyright (c) 2019 Klaus Post. All rights reserved.
+orchestrion,github.com/klauspost/compress/zstd/internal/xxhash,MIT,Copyright (c) 2016 Caleb Spare
+orchestrion,github.com/klauspost/cpuid/v2,MIT,Copyright (c) 2015 Klaus Post
 orchestrion,github.com/lucasb-eyer/go-colorful,MIT,Copyright (c) 2013 Lucas Beyer
 orchestrion,github.com/mattn/go-colorable,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
 orchestrion,github.com/mattn/go-isatty,MIT,unknown
 orchestrion,github.com/mattn/go-runewidth,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
 orchestrion,github.com/minio/highwayhash,Apache-2.0,unknown
+orchestrion,github.com/minio/simdjson-go,Apache-2.0,unknown
 orchestrion,github.com/modern-go/concurrent,Apache-2.0,unknown
 orchestrion,github.com/modern-go/reflect2,Apache-2.0,unknown
 orchestrion,github.com/muesli/termenv,MIT,Copyright (c) 2019 Christian Muehlhaeuser
@@ -91,6 +92,7 @@ orchestrion,go.opentelemetry.io/collector/component,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/featuregate,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/internal/telemetry,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/collector/pdata,Apache-2.0,unknown
+orchestrion,go.opentelemetry.io/collector/pdata/pprofile,Apache-2.0,unknown
 orchestrion,go.opentelemetry.io/contrib/bridges/otelzap,Apache-2.0,Copyright 2009 The Go Authors.
 orchestrion,go.opentelemetry.io/otel,Apache-2.0,Copyright 2009 The Go Authors.
 orchestrion,go.opentelemetry.io/otel/log,Apache-2.0,Copyright 2009 The Go Authors.
@@ -99,19 +101,17 @@ orchestrion,go.opentelemetry.io/otel/trace,Apache-2.0,Copyright 2009 The Go Auth
 orchestrion,go.uber.org/atomic,MIT,"Copyright (c) 2016 Uber Technologies, Inc."
 orchestrion,go.uber.org/multierr,MIT,"Copyright (c) 2017-2021 Uber Technologies, Inc."
 orchestrion,go.uber.org/zap,MIT,"Copyright (c) 2016-2017 Uber Technologies, Inc."
+orchestrion,go.yaml.in/yaml/v3,MIT,Copyright (c) 2006-2010 Kirill Simonov | Copyright (c) 2006-2011 Kirill Simonov | Copyright (c) 2011-2019 Canonical Ltd | Copyright 2011-2016 Canonical Ltd.
 orchestrion,golang.org/x/crypto,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/exp/constraints,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/mod/semver,BSD-3-Clause,Copyright 2009 The Go Authors.
-orchestrion,golang.org/x/net,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/sync/errgroup,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/sys,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/term,BSD-3-Clause,Copyright 2009 The Go Authors.
-orchestrion,golang.org/x/text,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/time/rate,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/xerrors,BSD-3-Clause,Copyright 2019 The Go Authors.
-orchestrion,google.golang.org/genproto/googleapis/rpc,Apache-2.0,unknown
-orchestrion,google.golang.org/grpc,Apache-2.0,Copyright 2014 gRPC authors.
+orchestrion,google.golang.org/genproto/googleapis/rpc/code,Apache-2.0,unknown
 orchestrion,google.golang.org/protobuf,BSD-3-Clause,Copyright (c) 2018 The Go Authors. All rights reserved.
 orchestrion,gopkg.in/ini.v1,Apache-2.0,Copyright 2014 Unknwon
 orchestrion,gopkg.in/yaml.v3,MIT,Copyright (c) 2006-2010 Kirill Simonov | Copyright (c) 2006-2011 Kirill Simonov | Copyright (c) 2011-2019 Canonical Ltd | Copyright 2011-2016 Canonical Ltd.
