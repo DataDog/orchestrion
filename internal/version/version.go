@@ -9,7 +9,7 @@ import "runtime/debug"
 
 const (
 	// tag specifies the current release tag. It needs to be manually updated.
-	tag       = "v1.6.1"
+	tag       = "v1.7.0-rc.1"
 	devSuffix = "+dev"
 )
 
