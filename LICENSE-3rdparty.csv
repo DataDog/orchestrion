@@ -48,7 +48,6 @@ orchestrion,github.com/klauspost/compress,MIT,Copyright (c) 2012 The Go Authors.
 orchestrion,github.com/klauspost/compress/internal/snapref,BSD-3-Clause,Copyright (c) 2011 The Snappy-Go Authors. All rights reserved.
 orchestrion,github.com/klauspost/compress/s2,BSD-3-Clause,Copyright (c) 2011 The Snappy-Go Authors. All rights reserved. | Copyright (c) 2019 Klaus Post. All rights reserved.
 orchestrion,github.com/klauspost/compress/zstd/internal/xxhash,MIT,Copyright (c) 2016 Caleb Spare
-orchestrion,github.com/klauspost/cpuid/v2,MIT,Copyright (c) 2015 Klaus Post
 orchestrion,github.com/lucasb-eyer/go-colorful,MIT,Copyright (c) 2013 Lucas Beyer
 orchestrion,github.com/mattn/go-colorable,MIT,Copyright (c) 2016 Yasuhiro Matsumoto
 orchestrion,github.com/mattn/go-isatty,MIT,unknown

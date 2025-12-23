@@ -177,7 +177,7 @@ ratchet:
 checkmake:
 	@if ! command -v checkmake >/dev/null 2>&1; then \
 		echo "Installing checkmake..."; \
-		go install github.com/checkmake/checkmake/cmd/checkmake@latest; \
+		go install github.com/mrtazz/checkmake/cmd/checkmake@latest; \
 	fi
 
 embedmd:
