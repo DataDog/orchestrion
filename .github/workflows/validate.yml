@@ -211,7 +211,7 @@ jobs:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Install checkmake
-        run: go install github.com/checkmake/checkmake/cmd/checkmake@latest
+        run: go install github.com/mrtazz/checkmake/cmd/checkmake@latest
       - name: Lint Makefiles
         run: make lint/makefile
 
