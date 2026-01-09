@@ -3,7 +3,7 @@ module github.com/DataDog/orchestrion
 go 1.24.0
 
 require (
-	github.com/DataDog/dd-trace-go/v2 v2.5.0-rc.8
+	github.com/DataDog/dd-trace-go/v2 v2.5.0
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/dave/dst v0.27.3
