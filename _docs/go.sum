@@ -208,8 +208,8 @@ github.com/DataDog/dd-trace-go/instrumentation/testutils/grpc/v2 v2.5.0 h1:XsLiW
 github.com/DataDog/dd-trace-go/instrumentation/testutils/grpc/v2 v2.5.0/go.mod h1:zXdh5AVUY2U0O8jMi20foSdn8k4AAYgY4/l/0DEwg7c=
 github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.5.0 h1:ZYbE3TIPlkG26Xwc4obJdoi6ZUybofmiIAhjVpJlCtk=
 github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.5.0/go.mod h1:5BPHXB3ojLN0CgnXEHhhBxpBBE2TpNhT0jj9qxaXXxQ=
-github.com/DataDog/dd-trace-go/v2 v2.5.0 h1:Tp4McT135WhbdT/6BYcAoRvl5gH7YKzehSo6Q3uuxBM=
-github.com/DataDog/dd-trace-go/v2 v2.5.0/go.mod h1:A9rVmQfyzYUFCctFdKkli9us7G/YhXlMICpQ958wJUA=
+github.com/DataDog/dd-trace-go/v2 v2.5.1-rc.1 h1:N3p93E8g0bSApEIq7Pwqoan/446W01xYqRpLqbfKa0E=
+github.com/DataDog/dd-trace-go/v2 v2.5.1-rc.1/go.mod h1:A9rVmQfyzYUFCctFdKkli9us7G/YhXlMICpQ958wJUA=
 github.com/DataDog/go-libddwaf/v4 v4.8.0 h1:m6Bl1lS2RtVN4MtdTYhR5vJ2fWQ3WmNy4FiNBpzrp6w=
 github.com/DataDog/go-libddwaf/v4 v4.8.0/go.mod h1:/AZqP6zw3qGJK5mLrA0PkfK3UQDk1zCI2fUNCt4xftE=
 github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 h1:rIMZ3Bqn2w8nWrAIXekOdm+sZVxUYHGX8cS7P9W06Kk=
