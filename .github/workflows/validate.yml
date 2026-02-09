@@ -149,7 +149,7 @@ jobs:
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@93cbdb2d23269548cf0db0f74d0bc6a09a3f0d5c # v1.43.0
+        uses: crate-ci/typos@78bc6fb2c0d734235d57a2d6b9de923cc325ebdd # v1.43.4
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -183,7 +183,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@6124774845927d14c601359ab8138699fa5b70c3 # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@d5d20e15f2736816ee0e001ba8b24b54d9ffcff4 # v3
         with:
           allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
       - name: Verify actions are pinned with ratchet
@@ -361,7 +361,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@85daf7cbba902c8e372fdaa16aa7d96352c85430 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@9859372f724703846a6fd5abf9882a71a175cd3d # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
