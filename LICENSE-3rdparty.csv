@@ -76,10 +76,10 @@ orchestrion,github.com/rs/zerolog,MIT,Copyright (c) 2017 Olivier Poitrey
 orchestrion,github.com/russross/blackfriday/v2,BSD-2-Clause,unknown
 orchestrion,github.com/secure-systems-lab/go-securesystemslib/cjson,MIT,Copyright (c) 2021 NYU Secure Systems Lab
 orchestrion,github.com/shirou/gopsutil/v4,BSD-3-Clause,"Copyright (c) 2014, WAKAYAMA Shirou | Copyright (c) 2009 The Go Authors. All rights reserved."
-orchestrion,github.com/theckman/httpforwarded,BSD-3-Clause,Copyright (c) 2009 The Go Authors. All rights reserved. | Copyright (c) 2016 Tim Heckman. All rights reserved.
 orchestrion,github.com/tinylib/msgp/msgp,MIT,Copyright (c) 2014 Philip Hofer
 orchestrion,github.com/tklauser/go-sysconf,BSD-3-Clause,"Copyright (c) 2018-2022, Tobias Klauser"
 orchestrion,github.com/tklauser/numcpus,Apache-2.0,unknown
+orchestrion,github.com/trailofbits/go-mutexasserts,MIT,Copyright (c) 2020 Trail of Bits
 orchestrion,github.com/urfave/cli/v2,MIT,Copyright (c) 2022 urfave/cli maintainers
 orchestrion,github.com/xeipuuv/gojsonpointer,Apache-2.0,Copyright 2015 xeipuuv
 orchestrion,github.com/xeipuuv/gojsonreference,Apache-2.0,Copyright 2015 xeipuuv
