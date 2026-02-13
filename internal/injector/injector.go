@@ -220,6 +220,12 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 		err        error
 	)
 
+	changed, err := injectIgnoredEchoHandlerRegistrations(ctx, params.File)
+	if err != nil {
+		return result{}, err
+	}
+	modified = modified || changed
+
 	pre := func(csor *dstutil.Cursor) bool {
 		if err != nil || csor.Node() == nil || isIgnored(ctx, csor.Node()) {
 			return false
@@ -281,6 +287,71 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 		},
 		Modified: modified,
 		GoLang:   minGoLang,
+	}, nil
+}
+
+func injectIgnoredEchoHandlerRegistrations(ctx gocontext.Context, file *dst.File) (bool, error) {
+	var modified bool
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*dst.FuncDecl)
+		if !ok || fn.Name == nil || fn.Name.Name == "" || !isIgnored(ctx, fn) || !isEchoHandlerFuncDecl(fn) {
+			continue
+		}
+
+		regDecl, err := ignoredEchoHandlerRegistrationDecl(fn)
+		if err != nil {
+			return modified, err
+		}
+
+		file.Decls = append(file.Decls, regDecl)
+		modified = true
+	}
+
+	return modified, nil
+}
+
+func isEchoHandlerFuncDecl(fn *dst.FuncDecl) bool {
+	if fn.Type == nil || fn.Type.Params == nil || fn.Type.Results == nil {
+		return false
+	}
+	if len(fn.Type.Params.List) != 1 || len(fn.Type.Results.List) != 1 {
+		return false
+	}
+
+	echoCtxType := typed.MustTypeName("github.com/labstack/echo/v4.Context")
+	errType := typed.MustTypeName("error")
+	return echoCtxType.Matches(fn.Type.Params.List[0].Type) && errType.Matches(fn.Type.Results.List[0].Type)
+}
+
+func ignoredEchoHandlerRegistrationDecl(fn *dst.FuncDecl) (dst.Decl, error) {
+	handlerRef := dst.Expr(dst.NewIdent(fn.Name.Name))
+	if fn.Recv != nil && len(fn.Recv.List) > 0 {
+		recvType, ok := dst.Clone(fn.Recv.List[0].Type).(dst.Expr)
+		if !ok {
+			return nil, fmt.Errorf("clone method receiver type: unexpected node %T", fn.Recv.List[0].Type)
+		}
+		handlerRef = &dst.SelectorExpr{
+			X:   &dst.ParenExpr{X: recvType},
+			Sel: dst.NewIdent(fn.Name.Name),
+		}
+	}
+
+	return &dst.GenDecl{
+		Tok: token.VAR,
+		Specs: []dst.Spec{
+			&dst.ValueSpec{
+				Names: []*dst.Ident{dst.NewIdent("_")},
+				Values: []dst.Expr{
+					&dst.CallExpr{
+						Fun: &dst.Ident{
+							Path: "github.com/DataDog/orchestrion/runtime/echoignore",
+							Name: "RegisterIgnoredEchoHandlerFunc",
+						},
+						Args: []dst.Expr{handlerRef},
+					},
+				},
+			},
+		},
 	}, nil
 }
 
