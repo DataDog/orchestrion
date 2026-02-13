@@ -51,6 +51,17 @@ var builtIn = configGo{
 					),
 				},
 			},
+			{
+				ID:             "echo.v4.New.IgnoreDirective",
+				TracerInternal: true, // This only redirects to a helper with equivalent semantics.
+				JoinPoint:      join.FunctionCall("github.com/labstack/echo/v4", "New"),
+				Advice: []advice.Advice{
+					advice.ReplaceFunction(
+						"github.com/DataDog/orchestrion/runtime/echoignore",
+						"New",
+					),
+				},
+			},
 		},
 		name: "<built-in>",
 		meta: configYMLMeta{

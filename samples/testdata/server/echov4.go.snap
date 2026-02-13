@@ -11,21 +11,14 @@ import (
 
 	"github.com/labstack/echo/v4"
 //line <generated>:1
-	__orchestrion_echotrace "github.com/DataDog/dd-trace-go/contrib/labstack/echo.v4/v2"
+	__orchestrion_echoignore "github.com/DataDog/orchestrion/runtime/echoignore"
 )
 
 //line samples/server/echov4.go:14
 func echoV4Server() {
 	r :=
 //line <generated>:1
-		func() *echo.Echo {
-			e :=
-//line samples/server/echov4.go:15
-				echo.New()
-//line <generated>:1
-			e.Use(__orchestrion_echotrace.Middleware())
-			return e
-		}()
+		__orchestrion_echoignore.New()
 //line samples/server/echov4.go:16
 	r.GET("/ping", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{
@@ -42,14 +35,7 @@ type api struct {
 func (a *api) echoV4Server() {
 	a.srv =
 //line <generated>:1
-		func() *echo.Echo {
-			e :=
-//line samples/server/echov4.go:29
-				echo.New()
-//line <generated>:1
-			e.Use(__orchestrion_echotrace.Middleware())
-			return e
-		}()
+		__orchestrion_echoignore.New()
 //line samples/server/echov4.go:30
 	a.srv.GET("/ping", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{

@@ -4,3 +4,4 @@ yaml:
   aspects:
     - built.WithOrchestrion
     - built.WithOrchestrionVersion
+    - echo.v4.New.IgnoreDirective
