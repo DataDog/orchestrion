@@ -10,7 +10,7 @@ package proxy
 import "flag"
 
 func (f *linkFlagSet) parse(args []string) ([]string, error) {
-	flagSet := flag.NewFlagSet("link version go1.24", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("link version go1.25", flag.ContinueOnError)
 	flagSet.String("B", "", "set ELF NT_GNU_BUILD_ID note or Mach-O UUID; use \"gobuildid\" to generate it from the Go build ID; \"none\" to disable")
 	flagSet.String("E", "", "set entry symbol name")
 	flagSet.String("H", "", "set header type")
@@ -41,11 +41,13 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.Int("debugtextsize", 0, "debug text section max size")
 	flagSet.Int("debugtramp", 0, "debug trampolines")
 	flagSet.Bool("dumpdep", false, "dump symbol dependency graph")
+	flagSet.Bool("e", false, "no limit on number of errors reported")
 	flagSet.String("extar", "", "archive program for buildmode=c-archive")
 	flagSet.String("extld", "", "use linker when linking in external mode")
 	flagSet.String("extldflags", "", "pass flags to external linker")
 	flagSet.Bool("f", false, "ignore version mismatch")
 	flagSet.String("fipso", "", "write fips module to file")
+	flagSet.String("funcalign", "", "set function align to N bytes")
 	flagSet.Bool("g", false, "disable go package data checks")
 	flagSet.Bool("h", false, "halt on error")
 	flagSet.StringVar(&f.ImportCfg, "importcfg", "", "read import configuration from file")
