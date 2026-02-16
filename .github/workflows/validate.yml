@@ -172,7 +172,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v6
         with:
-          version: v2.5.0
+          version: v2.9.0
           working-directory: ${{ matrix.working-directory }}
   ##############################################################################
   # Verify all GitHub workflows have hash-pinned actions
