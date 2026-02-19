@@ -10,11 +10,19 @@ package config
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"golang.org/x/tools/go/packages"
+)
+
+const (
+	// EnvVarConfigFiles is the environment variable used to pass pre-resolved
+	// config YAML file paths from the parent orchestrion process to toolexec
+	// children, avoiding repeated package resolution NATS round trips.
+	EnvVarConfigFiles = "ORCHESTRION_CONFIG_FILES"
 )
 
 // Config represents an injector's configuration. It can be obtained using
@@ -123,4 +131,18 @@ func (l *Loader) markLoaded(filename string) bool {
 
 func (l *Loader) packages(ctx context.Context, patterns ...string) ([]*packages.Package, error) {
 	return l.pkgLoader(ctx, l.dir, patterns...)
+}
+
+// LoadedYMLFiles returns the sorted list of absolute paths to YAML config files
+// that were discovered during Load. This can be used to pre-resolve config file
+// paths for subsequent processes.
+func (l *Loader) LoadedYMLFiles() []string {
+	var files []string
+	for filename := range l.loaded {
+		if strings.HasSuffix(filename, ".yml") {
+			files = append(files, filename)
+		}
+	}
+	sort.Strings(files)
+	return files
 }

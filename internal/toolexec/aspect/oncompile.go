@@ -40,27 +40,46 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
 	ctx = log.WithContext(ctx)
 
-	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
-	if err != nil {
-		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+	var imports importcfg.ImportConfig
+	if cmd.Imports != nil {
+		// Reuse the importcfg already parsed during parseCompileCommand.
+		imports = *cmd.Imports
+	} else {
+		var err error
+		imports, err = importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
+		if err != nil {
+			return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+		}
 	}
 
-	goMod, err := goenv.GOMOD(".")
-	if err != nil {
-		return fmt.Errorf("go env GOMOD: %w", err)
-	}
-	goModDir := filepath.Dir(goMod)
-	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
+	// Fast path: use pre-resolved config files from parent process (avoids
+	// ~20 NATS round trips for package resolution per toolexec invocation).
+	var cfg config.Config
+	if configFiles := os.Getenv(config.EnvVarConfigFiles); configFiles != "" {
+		files := strings.Split(configFiles, string(os.PathListSeparator))
+		cfg, resErr = config.LoadFromFiles(ctx, files)
+		if resErr != nil {
+			return fmt.Errorf("loading injector configuration from pre-resolved files: %w", resErr)
+		}
+	} else {
+		// Slow path: full config resolution via NATS.
+		goMod, err := goenv.GOMOD(".")
+		if err != nil {
+			return fmt.Errorf("go env GOMOD: %w", err)
+		}
+		goModDir := filepath.Dir(goMod)
+		log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
-	js, err := client.FromEnvironment(ctx, cmd.WorkDir)
-	if err != nil {
-		return err
-	}
-	pkgLoader := packageLoader(js)
+		js, err := client.FromEnvironment(ctx, cmd.WorkDir)
+		if err != nil {
+			return err
+		}
+		pkgLoader := packageLoader(js)
 
-	cfg, resErr := config.NewLoader(pkgLoader, goModDir, false).Load(ctx)
-	if resErr != nil {
-		return fmt.Errorf("loading injector configuration: %w", resErr)
+		cfg, resErr = config.NewLoader(pkgLoader, goModDir, false).Load(ctx)
+		if resErr != nil {
+			return fmt.Errorf("loading injector configuration: %w", resErr)
+		}
 	}
 
 	aspects := cfg.Aspects()

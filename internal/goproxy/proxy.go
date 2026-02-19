@@ -10,16 +10,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/goflags"
+	injconfig "github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/tools/go/packages"
 )
 
 type config struct {
@@ -92,6 +96,13 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
 		case "build", "clean", "get", "install", "list", "run", "test":
 			if cfg.toolexec != "" {
+				// Pre-compute GOMOD for toolexec children to avoid a subprocess
+				// fork per package compilation. This is the single largest
+				// per-invocation overhead (10-30ms each).
+				if goMod, err := goenv.GOMOD("."); err == nil {
+					env = append(env, fmt.Sprintf("%s=%s", goenv.EnvVarGoMod, goMod))
+				}
+
 				log.Debug().Str("-toolexec", cfg.toolexec).Msg("Adding -toolexec argument")
 
 				oldLen := len(argv)
@@ -137,6 +148,10 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 				if serverStartErr == nil {
 					log.Debug().Str("url", server.ClientURL()).Msg("Setting job server URL in environment")
 					env = append(env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, server.ClientURL()))
+
+					// Pre-resolve config file paths so toolexec children can skip
+					// the ~20 NATS round trips for package resolution.
+					env = preResolveConfigFiles(ctx, log, server, env)
 				}
 
 				// Set the process' goflags, since we know them already...
@@ -188,4 +203,45 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 
 	log.Debug().Str("command", cmd.String()).Msg("Command execution completed successfully")
 	return nil
+}
+
+// preResolveConfigFiles uses the job server's in-process connection to resolve
+// all config YAML file paths once, passing them to toolexec children via an
+// environment variable. This collapses ~20 NATS round trips per toolexec
+// invocation into zero.
+func preResolveConfigFiles(ctx context.Context, log *zerolog.Logger, server *jobserver.Server, env []string) []string {
+	goMod := os.Getenv(goenv.EnvVarGoMod)
+	if goMod == "" {
+		var err error
+		goMod, err = goenv.GOMOD(".")
+		if err != nil {
+			log.Debug().Err(err).Msg("Cannot pre-resolve config files: GOMOD not available")
+			return env
+		}
+	}
+	goModDir := filepath.Dir(goMod)
+
+	jsClient, err := server.Connect()
+	if err != nil {
+		log.Debug().Err(err).Msg("Cannot pre-resolve config files: failed to connect to job server")
+		return env
+	}
+	defer jsClient.Close()
+
+	pkgLoader := func(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
+		return client.Request(ctx, jsClient, pkgs.LoadRequest{Dir: dir, Patterns: patterns})
+	}
+	loader := injconfig.NewLoader(pkgLoader, goModDir, false)
+	if _, err := loader.Load(ctx); err != nil {
+		log.Debug().Err(err).Msg("Cannot pre-resolve config files: config loading failed")
+		return env
+	}
+
+	files := loader.LoadedYMLFiles()
+	if len(files) > 0 {
+		val := strings.Join(files, string(os.PathListSeparator))
+		env = append(env, fmt.Sprintf("%s=%s", injconfig.EnvVarConfigFiles, val))
+		log.Debug().Int("count", len(files)).Msg("Pre-resolved config file paths for toolexec children")
+	}
+	return env
 }

@@ -38,8 +38,20 @@ var (
 	modulePathCache = make(map[string]string)
 )
 
+const (
+	// EnvVarGoMod is the environment variable used to cache the GOMOD path
+	// across toolexec invocations, avoiding a subprocess fork per package.
+	EnvVarGoMod = "ORCHESTRION_GOMOD"
+)
+
 // GOMOD returns the current GOMOD environment variable (from running `go env GOMOD`).
+// If the ORCHESTRION_GOMOD environment variable is set, it is returned directly
+// to avoid the cost of forking a subprocess on every toolexec invocation.
 func GOMOD(dir string) (string, error) {
+	if goMod := os.Getenv(EnvVarGoMod); goMod != "" {
+		return goMod, nil
+	}
+
 	cmd := exec.Command("go", "env", "GOMOD")
 	cmd.Dir = dir
 	var stdout bytes.Buffer

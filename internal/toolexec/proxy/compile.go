@@ -44,6 +44,11 @@ type CompileCommand struct {
 	// WorkDir is the $WORK directory managed by the go toolchain.
 	WorkDir string
 
+	// Imports is the parsed importcfg file. It is populated during
+	// parseCompileCommand and reused in OnCompile to avoid parsing the same
+	// file twice per compilation.
+	Imports *importcfg.ImportConfig
+
 	// LinkDeps lists all link-time dependencies that must be honored to link a
 	// dependent of the built package. If not blank, this is written to disk, then
 	// appended to the archive output.
@@ -265,6 +270,7 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 		if err != nil {
 			return nil, fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 		}
+		cmd.Imports = &imports
 
 		cmd.LinkDeps, err = linkdeps.FromImportConfig(ctx, &imports)
 		if err != nil {
