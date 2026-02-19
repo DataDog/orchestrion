@@ -41,6 +41,6 @@ func TestNewerGoVersion(t *testing.T) {
 		},
 	}
 
-	_, err = injector.typeCheck(context.Background(), fset, []parse.File{{Name: "main.go", AstFile: astFile}})
+	_, err = injector.typeCheck(context.Background(), fset, []parse.File{{Name: "main.go", AstFile: astFile}}, false)
 	require.ErrorContains(t, err, "please reinstall and pin orchestrion with a newer Go version")
 }

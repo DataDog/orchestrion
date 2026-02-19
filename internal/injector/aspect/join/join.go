@@ -33,3 +33,46 @@ type Point interface {
 
 	fingerprint.Hashable
 }
+
+// NeedsTypesMap reports whether any of the given join points require the
+// types.Info.Types map to be populated. This is only needed for *implements
+// join points (resultImplements, finalResultImplements, argumentImplements).
+// When false, the type checker can skip populating the Types map, saving
+// per-expression map insertions.
+func NeedsTypesMap(points []Point) bool {
+	for _, p := range points {
+		if needsTypesMap(p) {
+			return true
+		}
+	}
+	return false
+}
+
+func needsTypesMap(p Point) bool {
+	switch v := p.(type) {
+	case allOf:
+		for _, child := range v {
+			if needsTypesMap(child) {
+				return true
+			}
+		}
+	case oneOf:
+		for _, child := range v {
+			if needsTypesMap(child) {
+				return true
+			}
+		}
+	case *not:
+		return needsTypesMap(v.JoinPoint)
+	case *functionBody:
+		return needsTypesMap(v.Function)
+	case *functionDeclaration:
+		for _, opt := range v.Options {
+			switch opt.(type) {
+			case *resultImplements, *finalResultImplements, *argumentImplements:
+				return true
+			}
+		}
+	}
+	return false
+}

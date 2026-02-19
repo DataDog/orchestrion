@@ -21,6 +21,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/advice"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/join"
 	"github.com/DataDog/orchestrion/internal/injector/parse"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
@@ -111,7 +112,17 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		return nil, context.GoLangVersion{}, nil
 	}
 
-	typeInfo, err := i.typeCheck(ctx, fset, parsedFiles)
+	// Check if any surviving aspect needs the expensive Types map (only
+	// *implements join points use it). No production dd-trace-go aspects use
+	// these, so this is typically false.
+	needTypesMap := false
+	for _, f := range parsedFiles {
+		if join.NeedsTypesMap(pointsOf(f.Aspects)) {
+			needTypesMap = true
+			break
+		}
+	}
+	typeInfo, err := i.typeCheck(ctx, fset, parsedFiles, needTypesMap)
 	if errors.Is(err, typeCheckingError{}) {
 		// We don't want to fail here on type-checking errors... Instead do nothing and let the standard
 		// go compiler/toolchain surface the error to the user in a canonical way.
@@ -180,6 +191,15 @@ func (i *Injector) validate() error {
 	i.restorerResolver = &lookupResolver{lookup: i.Lookup}
 
 	return err
+}
+
+// pointsOf extracts join points from a list of aspects.
+func pointsOf(aspects []*aspect.Aspect) []join.Point {
+	points := make([]join.Point, len(aspects))
+	for i, a := range aspects {
+		points[i] = a.JoinPoint
+	}
+	return points
 }
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,

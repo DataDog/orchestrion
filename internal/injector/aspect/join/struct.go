@@ -45,8 +45,10 @@ func (s *structDefinition) PackageMayMatch(ctx *may.PackageContext) may.MatchTyp
 	return may.NeverMatch
 }
 
-func (*structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {
-	return ctx.FileContains("struct")
+func (s *structDefinition) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	// Search for the type name instead of the "struct" keyword, which appears
+	// in ~99% of Go files and provides no filtering value.
+	return ctx.FileContains(s.TypeName.Name)
 }
 
 func (s *structDefinition) Matches(ctx context.AspectContext) bool {
@@ -121,7 +123,12 @@ func (s *structLiteral) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 	return ctx.PackageImports(s.TypeName.ImportPath)
 }
 
-func (*structLiteral) FileMayMatch(_ *may.FileContext) may.MatchType {
+func (s *structLiteral) FileMayMatch(ctx *may.FileContext) may.MatchType {
+	// Search for the type name to filter out files that can't possibly contain
+	// a struct literal of this type.
+	if s.TypeName.Name != "" {
+		return ctx.FileContains(s.TypeName.Name)
+	}
 	return may.Unknown
 }
 

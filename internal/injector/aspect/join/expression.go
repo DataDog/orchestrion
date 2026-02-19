@@ -36,7 +36,16 @@ func (i *functionCall) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
 }
 
 func (i *functionCall) FileMayMatch(ctx *may.FileContext) may.MatchType {
-	return ctx.FileContains(i.Name)
+	if ctx.FileContains(i.Name) == may.NeverMatch {
+		return may.NeverMatch
+	}
+	// A cross-package function call requires the import path to be present in
+	// the file's import block. Checking for this significantly reduces false
+	// positives from common function names like "Get", "Open", "New".
+	if i.ImportPath != "" && ctx.FileContains(i.ImportPath) == may.NeverMatch {
+		return may.NeverMatch
+	}
+	return may.Match
 }
 
 func (i *functionCall) Matches(ctx context.AspectContext) bool {

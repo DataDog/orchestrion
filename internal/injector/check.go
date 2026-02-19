@@ -20,16 +20,20 @@ import (
 )
 
 // typeCheck runs the Go type checker on the provided files, and returns the
-// Uses type information map that is built in the process.
-func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File) (_ types.Info, err error) {
+// Uses type information map that is built in the process. If needTypesMap is
+// false, the Types map is not populated, saving per-expression map insertions.
+// This is safe when no *implements join points are active.
+func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File, needTypesMap bool) (_ types.Info, err error) {
 	span, _ := tracer.StartSpanFromContext(ctx, "Injector.typeCheck")
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
 	pkg := types.NewPackage(i.ImportPath, i.Name)
 	typeInfo := types.Info{
-		Types:  make(map[ast.Expr]types.TypeAndValue),
 		Uses:   make(map[*ast.Ident]types.Object),
 		Scopes: make(map[ast.Node]*types.Scope),
+	}
+	if needTypesMap {
+		typeInfo.Types = make(map[ast.Expr]types.TypeAndValue)
 	}
 
 	checkerCfg := types.Config{
