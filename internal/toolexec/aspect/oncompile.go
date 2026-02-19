@@ -17,6 +17,8 @@ import (
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	injcontext "github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/cache"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
@@ -105,36 +107,27 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		}
 	}
 
-	injector := injector.Injector{
-		RootConfig: map[string]string{"httpmode": "wrap"},
-		Lookup:     imports.Lookup,
-		ImportPath: w.ImportPath,
-		TestMain:   cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test"),
-		ImportMap:  imports.PackageFile,
-		GoVersion:  cmd.Flags.Lang,
-		ModifiedFile: func(file string) string {
-			return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
-		},
+	testMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
+	modifiedFilePath := func(file string) string {
+		return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
 	}
 
 	goFiles := cmd.GoFiles()
-	results, goLang, resErr := injector.InjectFiles(ctx, goFiles, aspects)
+
+	// Compute cache key for the persistent instrumentation cache.
+	var configFiles []string
+	if cf := os.Getenv(config.EnvVarConfigFiles); cf != "" {
+		configFiles = strings.Split(cf, string(os.PathListSeparator))
+	}
+	importPaths := make([]string, 0, len(imports.PackageFile))
+	for k := range imports.PackageFile {
+		importPaths = append(importPaths, k)
+	}
+	cacheKey := cache.ComputeKey(w.ImportPath, cmd.Flags.Lang, testMain, goFiles, configFiles, importPaths)
+
+	references, resErr := w.injectOrRestoreFromCache(ctx, log, cmd, cacheKey, goFiles, aspects, testMain, modifiedFilePath, &imports)
 	if resErr != nil {
 		return resErr
-	}
-
-	if err := cmd.SetLang(goLang); err != nil {
-		return err
-	}
-
-	references := typed.ReferenceMap{}
-	for gofile, modFile := range results {
-		log.Debug().Str("original", gofile).Str("updated", modFile.Filename).Msg("Replacing argument for modified source code")
-		if err := cmd.ReplaceParam(gofile, modFile.Filename); err != nil {
-			return fmt.Errorf("replacing %q with %q: %w", gofile, modFile.Filename, err)
-		}
-
-		references.Merge(modFile.References)
 	}
 
 	if references.Count() == 0 {
@@ -224,4 +217,129 @@ func packageLoader(js *client.Client) config.PackageLoader {
 	return func(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
 		return client.Request(ctx, js, pkgs.LoadRequest{Dir: dir, Patterns: patterns})
 	}
+}
+
+// injectOrRestoreFromCache either restores a cached instrumentation result or
+// runs the full InjectFiles pipeline and caches the result for future builds.
+func (w Weaver) injectOrRestoreFromCache(
+	ctx context.Context,
+	log zerolog.Logger,
+	cmd *proxy.CompileCommand,
+	cacheKey cache.Key,
+	goFiles []string,
+	aspects []*aspect.Aspect,
+	testMain bool,
+	modifiedFilePath func(string) string,
+	imports *importcfg.ImportConfig,
+) (typed.ReferenceMap, error) {
+	references := typed.ReferenceMap{}
+
+	// Check the persistent cache for a hit.
+	if cached := cache.Lookup(cacheKey); cached != nil {
+		log.Debug().Str("import-path", w.ImportPath).Msg("Instrumentation cache hit")
+		if err := applyCachedResult(cmd, cached, modifiedFilePath, &references); err != nil {
+			log.Warn().Err(err).Msg("Failed to apply cached result, falling back to full instrumentation")
+			references = typed.ReferenceMap{}
+		} else {
+			return references, nil
+		}
+	}
+
+	// Cache miss: run full instrumentation pipeline.
+	inj := injector.Injector{
+		RootConfig:   map[string]string{"httpmode": "wrap"},
+		Lookup:       imports.Lookup,
+		ImportPath:   w.ImportPath,
+		TestMain:     testMain,
+		ImportMap:    imports.PackageFile,
+		GoVersion:    cmd.Flags.Lang,
+		ModifiedFile: modifiedFilePath,
+	}
+
+	results, goLang, err := inj.InjectFiles(ctx, goFiles, aspects)
+	if err != nil {
+		return references, err
+	}
+
+	if err := cmd.SetLang(goLang); err != nil {
+		return references, err
+	}
+
+	for gofile, modFile := range results {
+		log.Debug().Str("original", gofile).Str("updated", modFile.Filename).Msg("Replacing argument for modified source code")
+		if err := cmd.ReplaceParam(gofile, modFile.Filename); err != nil {
+			return references, fmt.Errorf("replacing %q with %q: %w", gofile, modFile.Filename, err)
+		}
+		references.Merge(modFile.References)
+	}
+
+	// Store result in cache for future builds.
+	storeCacheEntry(cacheKey, results, goLang)
+	return references, nil
+}
+
+// applyCachedResult writes cached modified files to disk and populates the
+// references map from cached data.
+func applyCachedResult(
+	cmd *proxy.CompileCommand,
+	entry *cache.Entry,
+	modifiedFilePath func(string) string,
+	references *typed.ReferenceMap,
+) error {
+	if entry.GoLang != "" {
+		goLang, _ := injcontext.ParseGoLangVersion(entry.GoLang)
+		if err := cmd.SetLang(goLang); err != nil {
+			return err
+		}
+	}
+
+	for origPath, modFile := range entry.ModifiedFiles {
+		outPath := modifiedFilePath(origPath)
+		dir := filepath.Dir(outPath)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("mkdir %q: %w", dir, err)
+		}
+		if err := os.WriteFile(outPath, modFile.Content, 0o644); err != nil {
+			return fmt.Errorf("writing cached file %q: %w", outPath, err)
+		}
+		if err := cmd.ReplaceParam(origPath, outPath); err != nil {
+			return fmt.Errorf("replacing %q with %q: %w", origPath, outPath, err)
+		}
+		// Reconstruct the ReferenceMap refs from cached data.
+		for importPath, isImport := range modFile.References {
+			references.AddRef(importPath, typed.ReferenceKind(isImport))
+		}
+	}
+	return nil
+}
+
+// storeCacheEntry stores the instrumentation result in the persistent cache.
+func storeCacheEntry(key cache.Key, results map[string]injector.InjectedFile, goLang injcontext.GoLangVersion) {
+	if len(results) == 0 {
+		// Nothing was modified, store an empty entry so we skip next time too.
+		cache.Store(key, &cache.Entry{})
+		return
+	}
+
+	entry := &cache.Entry{
+		GoLang:        goLang.String(),
+		ModifiedFiles: make(map[string]cache.ModifiedFile, len(results)),
+	}
+	for origPath, modFile := range results {
+		content, err := os.ReadFile(modFile.Filename)
+		if err != nil {
+			// Can't cache if we can't read the file.
+			return
+		}
+		refs := make(map[string]bool, modFile.References.Count())
+		for importPath, kind := range modFile.References.Map() {
+			refs[importPath] = bool(kind)
+		}
+		entry.ModifiedFiles[origPath] = cache.ModifiedFile{
+			Content:    content,
+			References: refs,
+		}
+	}
+
+	cache.Store(key, entry)
 }

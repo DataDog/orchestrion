@@ -206,6 +206,12 @@ func (r *ReferenceMap) Merge(other ReferenceMap) {
 	}
 }
 
+// AddRef adds a reference with the given kind. It follows the same semantics
+// as the internal add method: ImportStatement is the strongest kind.
+func (r *ReferenceMap) AddRef(path string, kind ReferenceKind) {
+	r.add(path, kind)
+}
+
 func (r *ReferenceMap) Map() map[string]ReferenceKind {
 	return r.refs
 }
