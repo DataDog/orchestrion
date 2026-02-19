@@ -10,6 +10,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -134,14 +135,19 @@ func (l *Loader) packages(ctx context.Context, patterns ...string) ([]*packages.
 }
 
 // LoadedYMLFiles returns the sorted list of absolute paths to YAML config files
-// that were discovered during Load. This can be used to pre-resolve config file
-// paths for subsequent processes.
+// that were successfully loaded during Load. Only files that actually exist on
+// disk are included (the loaded set may contain paths that were attempted but
+// returned fs.ErrNotExist).
 func (l *Loader) LoadedYMLFiles() []string {
 	var files []string
 	for filename := range l.loaded {
-		if strings.HasSuffix(filename, ".yml") {
-			files = append(files, filename)
+		if !strings.HasSuffix(filename, ".yml") {
+			continue
 		}
+		if _, err := os.Stat(filename); err != nil {
+			continue
+		}
+		files = append(files, filename)
 	}
 	sort.Strings(files)
 	return files
