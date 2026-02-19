@@ -335,6 +335,44 @@ Key metrics to track:
 
 ---
 
+## Benchmark Results (Phase A + C implemented)
+
+Measured on Apple M3 Max, `benchtime=3x`, comparing `main` branch vs optimized branch.
+
+```
+goos: darwin
+goarch: arm64
+cpu: Apple M3 Max
+
+                                                  │  main branch  │       optimized branch        │
+                                                  │    sec/op     │   sec/op     vs base          │
+/repo=DataDog:orchestrion/variant=baseline-16           13.44           13.40        ~
+/repo=DataDog:orchestrion/variant=instrumented-16       18.65           16.55       -11.3%
+/repo=jlegrone:tctx/variant=baseline-16                  2.33            2.30        ~
+/repo=jlegrone:tctx/variant=instrumented-16             27.04           21.83       -19.3%
+/repo=jlegrone:tctx.test/variant=baseline-16             2.75            2.74        ~
+/repo=jlegrone:tctx.test/variant=instrumented-16        25.73           22.55       -12.4%
+geomean                                                 10.18            9.40        -7.7%
+```
+
+### Instrumentation Overhead Reduction
+
+| Benchmark             | Main Overhead | Opt Overhead | Reduction |  % Less |
+|-----------------------|---------------|--------------|-----------|---------|
+| DataDog:orchestrion   |         5.21s |        3.15s |     2.06s |   39.5% |
+| jlegrone:tctx         |        24.71s |       19.53s |     5.18s |   21.0% |
+| jlegrone:tctx.test    |        22.98s |       19.81s |     3.17s |   13.8% |
+
+The self-build benchmark (DataDog:orchestrion, ~160 packages) shows **39.5% less
+instrumentation overhead**. The external project benchmarks show 13-21% less overhead.
+
+Note: These benchmarks clear `$GOCACHE` each iteration, so the persistent cache (Phase C)
+doesn't get to show its warm-cache benefit. The persistent cache would shine in the common
+development scenario of `go test -count=1` where Go's cache is busted but instrumented
+files haven't changed — in that scenario, the overhead reduction would be much larger.
+
+---
+
 ## Appendix: Why `-overlay` Can't Fully Replace `-toolexec`
 
 1. **`importcfg` patching**: When instrumentation adds `import "dd-trace-go/v2/tracer"`,
