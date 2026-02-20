@@ -18,6 +18,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/common"
+	"github.com/DataDog/orchestrion/internal/jobserver/inject"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/nats-io/nats-server/v2/server"
@@ -161,6 +162,9 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 		return nil, err
 	}
 	if err := buildid.Subscribe(ctx, conn, pkgLoader, res.CacheStats); err != nil {
+		return nil, err
+	}
+	if err := inject.Subscribe(ctx, conn, pkgLoader); err != nil {
 		return nil, err
 	}
 	cleanup, err := nbt.Subscribe(ctx, conn)

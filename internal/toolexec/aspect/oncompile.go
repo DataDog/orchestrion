@@ -22,6 +22,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/inject"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
@@ -44,7 +45,6 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 
 	var imports importcfg.ImportConfig
 	if cmd.Imports != nil {
-		// Reuse the importcfg already parsed during parseCompileCommand.
 		imports = *cmd.Imports
 	} else {
 		var err error
@@ -54,112 +54,91 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		}
 	}
 
-	// Fast path: use pre-resolved config files from parent process (avoids
-	// ~20 NATS round trips for package resolution per toolexec invocation).
-	var cfg config.Config
-	if configFiles := os.Getenv(config.EnvVarConfigFiles); configFiles != "" {
-		files := strings.Split(configFiles, string(os.PathListSeparator))
-		cfg, resErr = config.LoadFromFiles(ctx, files)
-		if resErr != nil {
-			return fmt.Errorf("loading injector configuration from pre-resolved files: %w", resErr)
-		}
-	} else {
-		// Slow path: full config resolution via NATS.
-		goMod, err := goenv.GOMOD(".")
-		if err != nil {
-			return fmt.Errorf("go env GOMOD: %w", err)
-		}
-		goModDir := filepath.Dir(goMod)
-		log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
+	// Determine special-case behavior for this package.
+	specialBehavior, _ := FindBehaviorOverride(w.ImportPath)
 
-		js, err := client.FromEnvironment(ctx, cmd.WorkDir)
-		if err != nil {
-			return err
-		}
-		pkgLoader := packageLoader(js)
-
-		cfg, resErr = config.NewLoader(pkgLoader, goModDir, false).Load(ctx)
-		if resErr != nil {
-			return fmt.Errorf("loading injector configuration: %w", resErr)
-		}
+	// Try the server-side inject service first (eliminates per-process config
+	// loading, YAML parsing, and aspect construction overhead).
+	js, err := client.FromEnvironment(ctx, cmd.WorkDir)
+	if err != nil {
+		return err
 	}
 
-	aspects := cfg.Aspects()
-	specialBehavior, isSpecial := FindBehaviorOverride(w.ImportPath)
-	if isSpecial {
-		switch specialBehavior {
-		case NeverWeave:
-			log.Debug().Str("import-path", w.ImportPath).Msg("Not weaving aspects to prevent circular instrumentation")
-			return nil
-
-		case WeaveTracerInternal:
-			log.Debug().Str("import-path", w.ImportPath).Msg("Enabling tracer-internal mode")
-			aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
-				return !a.TracerInternal
-			})
-
-		case NoOverride:
-			// No-op
-
-		default:
-			// Unreachable
-			panic(fmt.Sprintf("un-handled behavior override: %d", specialBehavior))
-		}
-	}
-
-	testMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
-	modifiedFilePath := func(file string) string {
-		return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
-	}
-
-	goFiles := cmd.GoFiles()
-
-	// Compute cache key for the persistent instrumentation cache.
 	var configFiles []string
 	if cf := os.Getenv(config.EnvVarConfigFiles); cf != "" {
 		configFiles = strings.Split(cf, string(os.PathListSeparator))
 	}
-	importPaths := make([]string, 0, len(imports.PackageFile))
-	for k := range imports.PackageFile {
-		importPaths = append(importPaths, k)
-	}
-	cacheKey := cache.ComputeKey(w.ImportPath, cmd.Flags.Lang, testMain, goFiles, configFiles, importPaths)
 
-	references, resErr := w.injectOrRestoreFromCache(ctx, log, cmd, cacheKey, goFiles, aspects, testMain, modifiedFilePath, &imports)
-	if resErr != nil {
-		return resErr
+	resp, err := client.Request(ctx, js, inject.Request{
+		ImportPath:     w.ImportPath,
+		GoVersion:      cmd.Flags.Lang,
+		TestMain:       cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test"),
+		PackageName:    cmd.Flags.Package,
+		GoFiles:        cmd.GoFiles(),
+		PackageFile:    imports.PackageFile,
+		ImportMap:      imports.ImportMap,
+		OutputDir:      filepath.Dir(cmd.Flags.Output),
+		ConfigFiles:    configFiles,
+		NeverWeave:     specialBehavior == NeverWeave,
+		TracerInternal: specialBehavior == WeaveTracerInternal,
+	})
+
+	if err != nil {
+		// Fallback to local execution if the inject service is unavailable.
+		log.Debug().Err(err).Msg("Server-side inject failed, falling back to local execution")
+		return w.onCompileLocal(ctx, log, cmd, &imports, configFiles, specialBehavior)
 	}
 
-	if references.Count() == 0 {
+	if resp.Skipped {
+		log.Debug().Str("import-path", w.ImportPath).Msg("Not weaving aspects (server-side skip)")
+		return nil
+	}
+
+	// Apply the server's response.
+	if resp.GoLang != "" {
+		goLang, _ := injcontext.ParseGoLangVersion(resp.GoLang)
+		if err := cmd.SetLang(goLang); err != nil {
+			return err
+		}
+	}
+
+	for _, entry := range resp.ModifiedFiles {
+		log.Debug().Str("original", entry.OriginalPath).Str("updated", entry.ModifiedPath).Msg("Replacing argument for modified source code")
+		if err := cmd.ReplaceParam(entry.OriginalPath, entry.ModifiedPath); err != nil {
+			return fmt.Errorf("replacing %q with %q: %w", entry.OriginalPath, entry.ModifiedPath, err)
+		}
+	}
+
+	// Process link deps and resolve new dependencies.
+	if len(resp.LinkDeps) == 0 {
 		return nil
 	}
 
 	var regUpdated bool
-	for depImportPath, kind := range references.Map() {
+	for _, depImportPath := range resp.LinkDeps {
 		if depImportPath == "unsafe" {
-			// Unsafe isn't like other go packages, and it does not have an associated archive file.
 			continue
 		}
-
 		if _, satisfied := imports.PackageFile[depImportPath]; satisfied {
-			// Already part of natural dependencies, nothing to do...
 			continue
 		}
 
-		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
+		log.Debug().Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
 		cmd.LinkDeps.Add(depImportPath)
 
-		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
-			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
-			// typically used to avoid creating dependency cycles. Corollary to this, the `link.deps`
-			// file will not contain transitive closures for these packages, so we need to resolve these
-			// at link-time. If the package being built is "main", then we can ignore this, as we are at
-			// the top-level of a dependency tree anyway, and if we cannot resolve a dependency, then we
-			// will not be able to link the final binary.
+		// Determine the reference kind from the response entry.
+		isImportStmt := false
+		for _, entry := range resp.ModifiedFiles {
+			if v, ok := entry.References[depImportPath]; ok && v {
+				isImportStmt = true
+				break
+			}
+		}
+
+		if !isImportStmt && cmd.Flags.Package != "main" {
 			continue
 		}
 
-		// Imported packages need to be provided in the compilation's importcfg file
 		deps, err := resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
 		if err != nil {
 			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
@@ -172,24 +151,122 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			log.Trace().Str("import-path", dep).Msg("Processing " + linkdeps.Filename + " dependencies")
 			for _, tDep := range deps.Dependencies() {
 				if _, found := imports.PackageFile[tDep]; !found {
-					log.Trace().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
 					cmd.LinkDeps.Add(tDep)
 				}
 			}
 
 			if _, ok := imports.PackageFile[dep]; ok {
-				// Already part of natural dependencies, nothing to do...
 				continue
 			}
-			log.Trace().Str("import-path", dep).Str("inherited-from", depImportPath).Str("archive", archive).Msg("Recording transitive dependency")
 			imports.PackageFile[dep] = archive
 			regUpdated = true
 		}
 	}
 
 	if regUpdated {
-		// Creating updated version of the importcfg file, with new dependencies
 		if err := writeUpdatedImportConfig(log, imports, cmd.Flags.ImportCfg); err != nil {
+			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
+		}
+	}
+
+	return nil
+}
+
+// onCompileLocal is the fallback path that runs the full instrumentation
+// pipeline locally in the toolexec process when the server-side inject
+// service is unavailable.
+func (w Weaver) onCompileLocal(ctx context.Context, log zerolog.Logger, cmd *proxy.CompileCommand, imports *importcfg.ImportConfig, configFiles []string, specialBehavior BehaviorOverride) error {
+	var cfg config.Config
+	var err error
+	if len(configFiles) > 0 {
+		cfg, err = config.LoadFromFiles(ctx, configFiles)
+	} else {
+		goMod, goModErr := goenv.GOMOD(".")
+		if goModErr != nil {
+			return fmt.Errorf("go env GOMOD: %w", goModErr)
+		}
+		goModDir := filepath.Dir(goMod)
+		js, jsErr := client.FromEnvironment(ctx, cmd.WorkDir)
+		if jsErr != nil {
+			return jsErr
+		}
+		cfg, err = config.NewLoader(packageLoader(js), goModDir, false).Load(ctx)
+	}
+	if err != nil {
+		return fmt.Errorf("loading injector configuration: %w", err)
+	}
+
+	aspects := cfg.Aspects()
+	switch specialBehavior {
+	case NeverWeave:
+		return nil
+	case WeaveTracerInternal:
+		aspects = slices.DeleteFunc(aspects, func(a *aspect.Aspect) bool {
+			return !a.TracerInternal
+		})
+	}
+
+	testMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
+	modifiedFilePath := func(file string) string {
+		return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
+	}
+
+	goFiles := cmd.GoFiles()
+	importPaths := make([]string, 0, len(imports.PackageFile))
+	for k := range imports.PackageFile {
+		importPaths = append(importPaths, k)
+	}
+	cacheKey := cache.ComputeKey(w.ImportPath, cmd.Flags.Lang, testMain, goFiles, configFiles, importPaths)
+
+	references, err := w.injectOrRestoreFromCache(ctx, log, cmd, cacheKey, goFiles, aspects, testMain, modifiedFilePath, imports)
+	if err != nil {
+		return err
+	}
+
+	if references.Count() == 0 {
+		return nil
+	}
+
+	var regUpdated bool
+	for depImportPath, kind := range references.Map() {
+		if depImportPath == "unsafe" {
+			continue
+		}
+		if _, satisfied := imports.PackageFile[depImportPath]; satisfied {
+			continue
+		}
+
+		cmd.LinkDeps.Add(depImportPath)
+
+		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
+			continue
+		}
+
+		deps, err := resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
+		if err != nil {
+			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
+		}
+		for dep, archive := range deps {
+			deps, err := linkdeps.FromArchive(ctx, archive)
+			if err != nil {
+				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
+			}
+			for _, tDep := range deps.Dependencies() {
+				if _, found := imports.PackageFile[tDep]; !found {
+					cmd.LinkDeps.Add(tDep)
+				}
+			}
+
+			if _, ok := imports.PackageFile[dep]; ok {
+				continue
+			}
+			imports.PackageFile[dep] = archive
+			regUpdated = true
+		}
+	}
+
+	if regUpdated {
+		if err := writeUpdatedImportConfig(log, *imports, cmd.Flags.ImportCfg); err != nil {
 			return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
 		}
 	}
