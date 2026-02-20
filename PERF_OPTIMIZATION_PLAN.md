@@ -335,7 +335,7 @@ Key metrics to track:
 
 ---
 
-## Full Benchmark Results (Phase A + B.2 + C)
+## Full Benchmark Results (Phase A + B.1 + B.2 + C)
 
 Measured on Apple M3 Max, `benchtime=1x`, full suite run sequentially.
 
@@ -345,43 +345,43 @@ Measured on Apple M3 Max, `benchtime=1x`, full suite run sequentially.
 goos: darwin
 goarch: arm64
 cpu: Apple M3 Max
-                                                  │ main (42d54e5) │         optimized (9d6f951)         │
+                                                  │ main (42d54e5) │       optimized (f695149)            │
                                                   │     sec/op     │   sec/op     vs base                │
-/repo=traefik:traefik/variant=baseline-16                59.75           60.98        ~
-/repo=traefik:traefik/variant=instrumented-16           109.61           94.49       -13.8%
-/repo=go-delve:delve/variant=baseline-16                 5.460           5.364        ~
-/repo=go-delve:delve/variant=instrumented-16             28.96           26.18        -9.6%
-/repo=jlegrone:tctx/variant=baseline-16                  2.408           2.355        ~
-/repo=jlegrone:tctx/variant=instrumented-16              26.14           22.13       -15.3%
-/repo=tinylib:msgp/variant=baseline-16                   3.331           3.349        ~
-/repo=tinylib:msgp/variant=instrumented-16               27.11           24.91        -8.1%
-/repo=gin-gonic:gin.test/variant=baseline-16             9.571           9.478        ~
-/repo=gin-gonic:gin.test/variant=instrumented-16         28.65           25.70       -10.3%
-/repo=jlegrone:tctx.test/variant=baseline-16             2.825           2.831        ~
-/repo=jlegrone:tctx.test/variant=instrumented-16         26.18           22.21       -15.2%
-/repo=DataDog:orchestrion/variant=baseline-16            13.51           13.19        ~
-/repo=DataDog:orchestrion/variant=instrumented-16        18.29           17.34        -5.2%
-geomean                                                  15.01           14.10        -6.0%
+/repo=DataDog:orchestrion/variant=baseline-16            13.38           13.83        ~
+/repo=DataDog:orchestrion/variant=instrumented-16        24.43           22.30        -8.7%
+/repo=traefik:traefik/variant=baseline-16                62.06           62.79        ~
+/repo=traefik:traefik/variant=instrumented-16           111.38           94.57       -15.1%
+/repo=go-delve:delve/variant=baseline-16                  5.38            5.30        ~
+/repo=go-delve:delve/variant=instrumented-16             28.51           25.40       -10.9%
+/repo=jlegrone:tctx/variant=baseline-16                   2.35            2.32        ~
+/repo=jlegrone:tctx/variant=instrumented-16              25.11           20.83       -17.0%
+/repo=tinylib:msgp/variant=baseline-16                    3.40            3.34        ~
+/repo=tinylib:msgp/variant=instrumented-16               28.66           22.57       -21.3%
+/repo=gin-gonic:gin.test/variant=baseline-16             10.15            9.49        ~
+/repo=gin-gonic:gin.test/variant=instrumented-16         30.15           25.24       -16.3%
+/repo=jlegrone:tctx.test/variant=baseline-16              2.75            2.76        ~
+/repo=jlegrone:tctx.test/variant=instrumented-16         25.39           21.73       -14.4%
+geomean                                                  15.40           14.15        -8.1%
 ```
 
 ### Instrumentation Overhead Reduction
 
-| Benchmark             | Main Overhead | Opt Overhead | Reduction |  % Less |
-|-----------------------|---------------|--------------|-----------|---------|
-| DataDog:orchestrion   |         4.78s |        4.15s |     0.63s |   13.2% |
-| **traefik:traefik**   |      **49.86s** |     **33.51s** |  **16.35s** | **32.8%** |
-| go-delve:delve        |        23.50s |       20.82s |     2.68s |   11.4% |
-| jlegrone:tctx         |        23.73s |       19.77s |     3.96s |   16.7% |
-| tinylib:msgp          |        23.78s |       21.56s |     2.22s |    9.3% |
-| gin-gonic:gin.test    |        19.08s |       16.22s |     2.86s |   15.0% |
-| jlegrone:tctx.test    |        23.36s |       19.38s |     3.98s |   17.0% |
-| **TOTAL**             |    **168.08s** |    **135.41s** |  **32.67s** | **19.4%** |
+| Benchmark             | Main Overhead | Opt Overhead | Saved   |  % Less |
+|-----------------------|---------------|--------------|---------|---------|
+| DataDog:orchestrion   |        11.05s |        8.47s |   2.58s |   23.3% |
+| **traefik:traefik**   |     **49.32s** |     **31.78s** |**17.54s**| **35.6%** |
+| go-delve:delve        |        23.14s |       20.10s |   3.03s |   13.1% |
+| jlegrone:tctx         |        22.77s |       18.51s |   4.26s |   18.7% |
+| tinylib:msgp          |        25.27s |       19.23s |   6.04s |   23.9% |
+| gin-gonic:gin.test    |        20.00s |       15.75s |   4.25s |   21.3% |
+| jlegrone:tctx.test    |        22.64s |       18.97s |   3.66s |   16.2% |
+| **TOTAL**             |    **174.18s** |    **132.81s** |**41.36s**| **23.7%** |
 
-The largest absolute improvement is **traefik** (-16.35s, -32.8% overhead) due to its large
+The largest absolute improvement is **traefik** (-17.54s, -35.6% overhead) due to its large
 dependency graph (~700+ packages) where per-package optimizations compound significantly.
-Across all 7 benchmarks, **total instrumentation overhead is reduced by 19.4%** (32.67 seconds).
+Across all 7 benchmarks, **total instrumentation overhead is reduced by 23.7%** (41 seconds).
 
-Total instrumented wall time: 264.9s → 233.0s (**-12.1%**).
+Total instrumented wall time: 273.6s → 232.6s (**-15.0%**).
 
 Note: These benchmarks use `benchtime=1x` with a fresh `$GOCACHE` each iteration. The
 persistent cache (Phase C) provides additional benefit in warm-cache scenarios (e.g.,
