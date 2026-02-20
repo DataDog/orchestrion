@@ -24,6 +24,12 @@ const (
 	// config YAML file paths from the parent orchestrion process to toolexec
 	// children, avoiding repeated package resolution NATS round trips.
 	EnvVarConfigFiles = "ORCHESTRION_CONFIG_FILES"
+
+	// EnvVarEligibleImports is the environment variable used to pass the set of
+	// import paths that any aspect cares about. Toolexec children use this to
+	// skip the inject NATS call entirely for packages that can't match any
+	// aspect (~95% of packages in a typical build).
+	EnvVarEligibleImports = "ORCHESTRION_ELIGIBLE_IMPORTS"
 )
 
 // Config represents an injector's configuration. It can be obtained using

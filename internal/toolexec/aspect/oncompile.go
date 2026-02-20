@@ -6,6 +6,7 @@
 package aspect
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -56,6 +57,19 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 
 	// Determine special-case behavior for this package.
 	specialBehavior, _ := FindBehaviorOverride(w.ImportPath)
+
+	if specialBehavior == NeverWeave {
+		log.Debug().Str("import-path", w.ImportPath).Msg("Not weaving aspects to prevent circular instrumentation")
+		return nil
+	}
+
+	// Early skip: if we have the pre-computed set of import paths that aspects
+	// care about, check if this package imports any of them. If not, skip the
+	// inject NATS call entirely (~95% of packages in a typical build).
+	if canSkipInstrumentation(w.ImportPath, imports.PackageFile, cmd.GoFiles()) {
+		log.Debug().Str("import-path", w.ImportPath).Msg("Skipping instrumentation (no eligible imports)")
+		return nil
+	}
 
 	// Try the server-side inject service first (eliminates per-process config
 	// loading, YAML parsing, and aspect construction overhead).
@@ -288,6 +302,50 @@ func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, fi
 	}
 
 	return nil
+}
+
+// canSkipInstrumentation returns true if the package definitely can't match any
+// aspect, based on the pre-computed eligible imports set. This avoids the inject
+// NATS round-trip for ~95% of packages in a typical build.
+func canSkipInstrumentation(importPath string, packageFile map[string]string, goFiles []string) bool {
+	eligibleStr := os.Getenv(config.EnvVarEligibleImports)
+	if eligibleStr == "" {
+		return false // no eligible imports info available, can't skip
+	}
+
+	eligible := strings.Split(eligibleStr, string(os.PathListSeparator))
+
+	// Check if the package's import map intersects with the eligible set.
+	for _, path := range eligible {
+		if _, ok := packageFile[path]; ok {
+			return false // this package imports something aspects care about
+		}
+		if path == importPath {
+			return false // the package IS one that aspects target
+		}
+	}
+
+	// No eligible imports found. As a safety check, scan source files for
+	// orchestrion directive comments which can match any package.
+	for _, f := range goFiles {
+		if fileContainsDirective(f) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// fileContainsDirective does a cheap byte scan for orchestrion directive
+// comments. This is much faster than the full inject pipeline (~0.01ms vs
+// ~1-5ms per file).
+func fileContainsDirective(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return true // can't read → don't skip (conservative)
+	}
+	return bytes.Contains(data, []byte("//orchestrion:")) ||
+		bytes.Contains(data, []byte("//dd:orchestrion"))
 }
 
 func packageLoader(js *client.Client) config.PackageLoader {

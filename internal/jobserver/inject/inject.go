@@ -19,6 +19,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/injector"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/DataDog/orchestrion/internal/injector/cache"
 	"github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
@@ -106,6 +107,25 @@ func (s *service) handle(ctx context.Context, req Request) (Response, error) {
 			}
 		}
 		aspects = filtered
+	}
+
+	// Package-level aspect filtering: skip packages that can't match any aspect.
+	pkgCtx := &may.PackageContext{
+		ImportPath: req.ImportPath,
+		ImportMap:  req.PackageFile,
+		TestMain:   req.TestMain,
+	}
+	filtered := make([]*aspect.Aspect, 0, len(aspects))
+	for _, a := range aspects {
+		if a.JoinPoint.PackageMayMatch(pkgCtx) != may.NeverMatch {
+			filtered = append(filtered, a)
+		}
+	}
+	aspects = filtered
+
+	if len(aspects) == 0 {
+		log.Debug().Str("import-path", req.ImportPath).Msg("No aspects match this package, skipping")
+		return Response{Skipped: true}, nil
 	}
 
 	// Build the importcfg from the request data.

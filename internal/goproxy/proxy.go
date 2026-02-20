@@ -16,6 +16,7 @@ import (
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/goflags"
+	injaspect "github.com/DataDog/orchestrion/internal/injector/aspect"
 	injconfig "github.com/DataDog/orchestrion/internal/injector/config"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
@@ -232,8 +233,9 @@ func preResolveConfigFiles(ctx context.Context, log *zerolog.Logger, server *job
 		return client.Request(ctx, jsClient, pkgs.LoadRequest{Dir: dir, Patterns: patterns})
 	}
 	loader := injconfig.NewLoader(pkgLoader, goModDir, false)
-	if _, err := loader.Load(ctx); err != nil {
-		log.Debug().Err(err).Msg("Cannot pre-resolve config files: config loading failed")
+	cfg, err := loader.Load(ctx)
+	if err != nil {
+		log.Debug().Err(err).Msg("Cannot pre-resolve config: config loading failed")
 		return env
 	}
 
@@ -243,5 +245,16 @@ func preResolveConfigFiles(ctx context.Context, log *zerolog.Logger, server *job
 		env = append(env, fmt.Sprintf("%s=%s", injconfig.EnvVarConfigFiles, val))
 		log.Debug().Int("count", len(files)).Msg("Pre-resolved config file paths for toolexec children")
 	}
+
+	// Compute the set of import paths that any aspect cares about. Toolexec
+	// children use this to skip the inject NATS call entirely for packages
+	// that can't match any aspect (~95% of packages in a typical build).
+	eligible := injaspect.EligibleImports(cfg.Aspects())
+	if len(eligible) > 0 {
+		val := strings.Join(eligible, string(os.PathListSeparator))
+		env = append(env, fmt.Sprintf("%s=%s", injconfig.EnvVarEligibleImports, val))
+		log.Debug().Int("count", len(eligible)).Msg("Pre-computed eligible import paths for toolexec children")
+	}
+
 	return env
 }

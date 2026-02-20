@@ -77,6 +77,26 @@ func InjectedPaths(list []*Aspect) []string {
 	return res
 }
 
+// EligibleImports returns the deduplicated set of import paths that could
+// trigger any aspect in the list to match. A package that imports NONE of these
+// paths cannot match any aspect (except directive-only aspects which require a
+// separate byte scan). This is used for early skip in the toolexec shim.
+func EligibleImports(list []*Aspect) []string {
+	dedup := make(map[string]struct{})
+	for _, a := range list {
+		for _, path := range a.JoinPoint.ImpliesImported() {
+			if path != "" {
+				dedup[path] = struct{}{}
+			}
+		}
+	}
+	res := make([]string, 0, len(dedup))
+	for path := range dedup {
+		res = append(res, path)
+	}
+	return res
+}
+
 func (a *Aspect) UnmarshalYAML(ctx context.Context, node ast.Node) error {
 	var ti struct {
 		JoinPoint      ast.Node `yaml:"join-point"`

@@ -100,6 +100,11 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 	log := zerolog.Ctx(ctx)
 	aspects = i.packageFilterAspects(aspects)
 
+	if len(aspects) == 0 {
+		log.Debug().Str("import-path", i.ImportPath).Msg("No aspects match this package after import filtering")
+		return nil, context.GoLangVersion{}, nil
+	}
+
 	fset := token.NewFileSet()
 	parser := parse.NewParser(fset, len(files))
 	parsedFiles, err := parser.ParseFiles(ctx, files, aspects)
