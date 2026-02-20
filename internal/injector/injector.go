@@ -146,8 +146,21 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		resultMu     sync.Mutex
 	)
 
-	wg.Add(len(parsedFiles))
-	for _, parsedFile := range parsedFiles {
+	// Only decorate and transform files that have matching aspects. Files
+	// with no aspects were parsed solely for type checking and don't need
+	// the expensive DecorateFile + AST walk. In a typical package, only
+	// 1-2 files out of 10+ have matching aspects, so this skips ~80-90%
+	// of DecorateFile calls (which dominate CPU time via go/token position
+	// lookups and RWMutex contention on the shared FileSet).
+	var filesToInject []parse.File
+	for _, f := range parsedFiles {
+		if len(f.Aspects) > 0 {
+			filesToInject = append(filesToInject, f)
+		}
+	}
+
+	wg.Add(len(filesToInject))
+	for _, parsedFile := range filesToInject {
 		go func(parsedFile parse.File) {
 			defer wg.Done()
 
