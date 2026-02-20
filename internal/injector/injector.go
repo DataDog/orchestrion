@@ -15,7 +15,6 @@ import (
 	"go/importer"
 	"go/token"
 	"go/types"
-	"sync"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
@@ -137,63 +136,47 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		return nil, context.GoLangVersion{}, err
 	}
 
-	var (
-		wg           sync.WaitGroup
-		errs         []error
-		errsMu       sync.Mutex
-		result       = make(map[string]InjectedFile, len(parsedFiles))
-		resultGoLang context.GoLangVersion
-		resultMu     sync.Mutex
-	)
-
 	// Only decorate and transform files that have matching aspects. Files
 	// with no aspects were parsed solely for type checking and don't need
-	// the expensive DecorateFile + AST walk. In a typical package, only
-	// 1-2 files out of 10+ have matching aspects, so this skips ~80-90%
-	// of DecorateFile calls (which dominate CPU time via go/token position
-	// lookups and RWMutex contention on the shared FileSet).
-	var filesToInject []parse.File
-	for _, f := range parsedFiles {
-		if len(f.Aspects) > 0 {
-			filesToInject = append(filesToInject, f)
+	// the expensive DecorateFile + AST walk.
+	//
+	// Process files sequentially to avoid RWMutex contention on the shared
+	// token.FileSet. The DST decorator calls FileSet.PositionFor for every
+	// AST node, which takes an RLock each time. With concurrent goroutines,
+	// the atomic operations for RLock/RUnlock become the dominant cost
+	// (~11% of total CPU). Since most packages have only 1-2 files with
+	// matching aspects, parallelism provides negligible benefit while
+	// contention imposes significant overhead.
+	var (
+		result       = make(map[string]InjectedFile, len(parsedFiles))
+		resultGoLang context.GoLangVersion
+	)
+
+	for _, parsedFile := range parsedFiles {
+		if len(parsedFile.Aspects) == 0 {
+			continue
 		}
+
+		dec := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(typeInfo.Uses))
+		dstFile, err := dec.DecorateFile(parsedFile.AstFile)
+		if err != nil {
+			return nil, context.GoLangVersion{}, err
+		}
+
+		res, err := i.injectFile(ctx, dec, dstFile, typeInfo, parsedFile.Aspects)
+		if err != nil {
+			return nil, context.GoLangVersion{}, err
+		}
+
+		if !res.Modified {
+			continue
+		}
+
+		result[parsedFile.Name] = res.InjectedFile
+		resultGoLang.SetAtLeast(res.GoLang)
 	}
 
-	wg.Add(len(filesToInject))
-	for _, parsedFile := range filesToInject {
-		go func(parsedFile parse.File) {
-			defer wg.Done()
-
-			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(typeInfo.Uses))
-			dstFile, err := decorator.DecorateFile(parsedFile.AstFile)
-			if err != nil {
-				errsMu.Lock()
-				defer errsMu.Unlock()
-				errs = append(errs, err)
-				return
-			}
-
-			res, err := i.injectFile(ctx, decorator, dstFile, typeInfo, parsedFile.Aspects)
-			if err != nil {
-				errsMu.Lock()
-				defer errsMu.Unlock()
-				errs = append(errs, err)
-				return
-			}
-
-			if !res.Modified {
-				return
-			}
-
-			resultMu.Lock()
-			defer resultMu.Unlock()
-			result[parsedFile.Name] = res.InjectedFile
-			resultGoLang.SetAtLeast(res.GoLang)
-		}(parsedFile)
-	}
-	wg.Wait()
-
-	return result, resultGoLang, errors.Join(errs...)
+	return result, resultGoLang, nil
 }
 
 func (i *Injector) validate() error {
