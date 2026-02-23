@@ -361,7 +361,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@0b4e12c3f12236f465b843f051ff056c06f2ffc1 # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@1c51de1ed4843dd6db4a429f0751713d0743144f # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
