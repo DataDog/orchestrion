@@ -18,16 +18,20 @@ require (
 	cloud.google.com/go/pubsub v1.49.0 // indirect
 	cloud.google.com/go/pubsub/v2 v2.0.0 // indirect
 	github.com/99designs/gqlgen v0.17.83 // indirect
-	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/obfuscate v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/template v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/version v0.75.4 // indirect
+	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/obfuscate v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/template v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/log v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/otel v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/stats v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/traceutil v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/version v0.76.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.8.3 // indirect
 	github.com/DataDog/dd-trace-go/contrib/99designs/gqlgen/v2 v2.5.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/IBM/sarama/v2 v2.5.0 // indirect
@@ -128,7 +132,7 @@ require (
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/ebitengine/purego v0.9.1 // indirect
+	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.12.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -151,7 +155,6 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gocql/gocql v1.7.0 // indirect
 	github.com/gofiber/fiber/v2 v2.52.9 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/gomodule/redigo v1.9.2 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
@@ -213,12 +216,12 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nats-io/jwt/v2 v2.8.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.12.4 // indirect
-	github.com/nats-io/nats.go v1.48.0 // indirect
+	github.com/nats-io/nats.go v1.49.0 // indirect
 	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-	github.com/petermattis/goid v0.0.0-20260113132338-7c7de50cc741 // indirect
+	github.com/petermattis/goid v0.0.0-20260226131333-17d1149c6ac6 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -237,7 +240,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.10.0 // indirect
 	github.com/segmentio/kafka-go v0.4.47 // indirect
-	github.com/shirou/gopsutil/v4 v4.26.1 // indirect
+	github.com/shirou/gopsutil/v4 v4.26.2 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
