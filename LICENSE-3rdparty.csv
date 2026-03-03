@@ -5,6 +5,10 @@ orchestrion,github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/a
 orchestrion,github.com/DataDog/datadog-agent/pkg/proto/pbgo/trace,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/remoteconfig/state,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/trace,Apache-2.0,"Copyright 2016-present Datadog, Inc."
+orchestrion,github.com/DataDog/datadog-agent/pkg/trace/log,Apache-2.0,"Copyright 2016-present Datadog, Inc."
+orchestrion,github.com/DataDog/datadog-agent/pkg/trace/otel/traceutil,Apache-2.0,"Copyright 2016-present Datadog, Inc."
+orchestrion,github.com/DataDog/datadog-agent/pkg/trace/stats,Apache-2.0,"Copyright 2016-present Datadog, Inc."
+orchestrion,github.com/DataDog/datadog-agent/pkg/trace/traceutil,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/util/log,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/util/scrubber,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/version,Apache-2.0,"Copyright 2016-present Datadog, Inc."
@@ -36,7 +40,6 @@ orchestrion,github.com/ebitengine/purego,Apache-2.0,unknown
 orchestrion,github.com/fsnotify/fsnotify,BSD-3-Clause,Copyright © 2012 The Go Authors. All rights reserved.
 orchestrion,github.com/go-ole/go-ole,MIT,"Copyright © 2013-2017 Yasuhiro Matsumoto, <mattn.jp@gmail.com>"
 orchestrion,github.com/goccy/go-yaml,MIT,Copyright (c) 2019 Masaaki Goshima
-orchestrion,github.com/golang/protobuf/proto,BSD-3-Clause,Copyright 2010 The Go Authors.  All rights reserved.
 orchestrion,github.com/google/go-tpm,Apache-2.0,unknown
 orchestrion,github.com/google/uuid,BSD-3-Clause,"Copyright (c) 2009,2014 Google Inc. All rights reserved."
 orchestrion,github.com/hashicorp/go-version,MPL-2.0,"Copyright IBM Corp. 2014, 2025"

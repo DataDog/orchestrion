@@ -13,12 +13,12 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/liamg/memoryfs v1.6.0
 	github.com/nats-io/nats-server/v2 v2.12.4
-	github.com/nats-io/nats.go v1.48.0
+	github.com/nats-io/nats.go v1.49.0
 	github.com/otiai10/copy v1.14.1
 	github.com/polyfloyd/go-errorlint v1.8.1-0.20250906200200-9b25878c4dea
 	github.com/rs/zerolog v1.34.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	github.com/shirou/gopsutil/v4 v4.26.1
+	github.com/shirou/gopsutil/v4 v4.26.2
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -31,16 +31,20 @@ require (
 )
 
 require (
-	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/obfuscate v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/template v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.75.4 // indirect
-	github.com/DataDog/datadog-agent/pkg/version v0.75.4 // indirect
+	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/obfuscate v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/template v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/log v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/otel v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/stats v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/traceutil v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.76.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/version v0.76.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.8.3 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.8.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 // indirect
@@ -61,9 +65,8 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ebitengine/purego v0.9.1 // indirect
+	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
@@ -86,7 +89,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
-	github.com/petermattis/goid v0.0.0-20260113132338-7c7de50cc741 // indirect
+	github.com/petermattis/goid v0.0.0-20260226131333-17d1149c6ac6 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
