@@ -132,12 +132,12 @@ func TestFunc(i int, s string, m MyInt, ms *MyStruct) (int, error) {
 	info.Uses[errorResultAst] = errorObj
 
 	// Add the mapping from dst nodes to ast nodes.
-	nodeMap[params[0].Type] = intParamAst         // int
-	nodeMap[params[1].Type] = stringParamAst      // string
-	nodeMap[params[2].Type] = myIntParamAst       // MyInt
-	nodeMap[params[3].Type] = myStructPtrParamAst // *MyStruct
-	nodeMap[results[0].Type] = intResultAst       // int
-	nodeMap[results[1].Type] = errorResultAst     // error
+	nodeMap[params[0].Type] = intParamAst            // int
+	nodeMap[params[1].Type] = stringParamAst         // string
+	nodeMap[params[2].Type] = myIntParamAst          // MyInt
+	nodeMap[params[3].Type] = myStructPtrParamAst    // *MyStruct
+	nodeMap[results[0].Type] = intResultAst          // int
+	nodeMap[results[1].Type] = errorResultAst        // error
 	nodeMap[customCtxDstStarExpr] = customCtxStarAst // *CustomContext via Uses fallback
 
 	// Map an expression to a non-expression ast node for testing the type assertion.
