@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "context"
+  "fmt"
+)
+
+type CustomContext struct {
+  context.Context
+  UserID string
+}
+
+func DoThingWithCustomCtx(ctx *CustomContext) {
+//line <generated>:1
+  {
+    fmt.Printf("found context: %q\n", "ctx")
+
+  }
+//line input.go:14
+  fmt.Println("doing thing")
+}
