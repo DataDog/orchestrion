@@ -40,8 +40,21 @@ func typeImplements(t types.Type, iface *types.Interface) bool {
 		return true
 	}
 
-	// types.Implements handles pointer receivers implicitly, so no need for explicit pointer check.
-	return false
+	// Fallback: check by method name only. types.Implements can fail when
+	// ResolveInterfaceTypeByName (importer.Default) and the type checker
+	// (importer.ForCompiler) produce different *types.Package objects for the
+	// same path, causing types.Identical to reject named types in method
+	// signatures (e.g., time.Time in context.Context.Deadline).
+	// types.LookupFieldOrMethod compares by package path, not pointer, so it
+	// correctly finds matching methods across importers.
+	for i := 0; i < iface.NumMethods(); i++ {
+		m := iface.Method(i)
+		obj, _, _ := types.LookupFieldOrMethod(t, false, m.Pkg(), m.Name())
+		if _, isFunc := obj.(*types.Func); !isFunc {
+			return false
+		}
+	}
+	return true
 }
 
 // ResolveInterfaceTypeByName takes an interface name as a string and resolves it to an interface type.
