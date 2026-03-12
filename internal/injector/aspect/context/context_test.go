@@ -106,6 +106,20 @@ func TestFunc(i int, s string, m MyInt, ms *MyStruct) (int, error) {
 	// Create a non-expression node for testing the type assertion failure.
 	nonExpressionAst := &ast.BadStmt{}
 
+	// Setup for *CustomContext via typeInfo.Uses fallback test.
+	// The star expr is NOT in info.Types; its inner ident IS in info.Uses.
+	// This exercises the else-branch of the *ast.StarExpr handler in ResolveType.
+	customContextTypeName := types.NewTypeName(0, pkg, "CustomContext", nil)
+	customContextType := types.NewNamed(customContextTypeName, types.NewStruct(nil, nil), nil)
+	customContextPtrType := types.NewPointer(customContextType)
+	customCtxIdentAst := &ast.Ident{Name: "CustomContext"}
+	customCtxStarAst := &ast.StarExpr{X: customCtxIdentAst}
+	// customCtxStarAst is NOT added to info.Types.
+	// customCtxIdentAst is NOT added to nodeMap (so reverse lookup in star-expr handler fails).
+	info.Uses[customCtxIdentAst] = customContextTypeName
+	// DST star expr that maps to customCtxStarAst in the nodeMap.
+	customCtxDstStarExpr := &dst.StarExpr{X: &dst.Ident{Name: "CustomContext"}}
+
 	// Populate the types map.
 	info.Types[intParamAst] = types.TypeAndValue{Type: intType}
 	info.Types[stringParamAst] = types.TypeAndValue{Type: stringType}
@@ -124,6 +138,7 @@ func TestFunc(i int, s string, m MyInt, ms *MyStruct) (int, error) {
 	nodeMap[params[3].Type] = myStructPtrParamAst // *MyStruct
 	nodeMap[results[0].Type] = intResultAst       // int
 	nodeMap[results[1].Type] = errorResultAst     // error
+	nodeMap[customCtxDstStarExpr] = customCtxStarAst // *CustomContext via Uses fallback
 
 	// Map an expression to a non-expression ast node for testing the type assertion.
 	nodeMap[&dst.Ident{Name: "nonExprAst"}] = nonExpressionAst
@@ -188,6 +203,14 @@ func TestFunc(i int, s string, m MyInt, ms *MyStruct) (int, error) {
 			name:     "error result using Uses map",
 			expr:     results[1].Type,
 			expected: errorType,
+		},
+		{
+			// Exercises the else-branch of the *ast.StarExpr handler:
+			// the star expr is not in info.Types, its inner ident is not in nodeMap
+			// (so reverse lookup fails), but the ident IS in info.Uses.
+			name:     "*CustomContext via typeInfo.Uses fallback",
+			expr:     customCtxDstStarExpr,
+			expected: customContextPtrType,
 		},
 	}
 

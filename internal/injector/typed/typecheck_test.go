@@ -6,6 +6,8 @@
 package typed
 
 import (
+	"go/importer"
+	"go/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -211,4 +213,125 @@ func TestSplitPackageAndName(t *testing.T) {
 			assert.Equal(t, tc.expectedLocal, local, "Local name should match")
 		})
 	}
+}
+
+// TestTypeImplements tests the typeImplements function, specifically its method-name
+// fallback for the cross-importer package identity mismatch that affects context.Context.
+func TestTypeImplements(t *testing.T) {
+	t.Run("cross-package identity failure proves fallback is needed", func(t *testing.T) {
+		// Create two packages with the same import path but different pointers.
+		// This simulates what happens when importer.Default() and importer.ForCompiler
+		// both import the same package: they produce different *types.Package objects.
+		pkg1 := types.NewPackage("mypkg", "mypkg")
+		pkg2 := types.NewPackage("mypkg", "mypkg")
+
+		// Create a named type in each package with the same name (e.g., time.Time).
+		namedInPkg1 := types.NewNamed(types.NewTypeName(0, pkg1, "Token", nil), types.NewStruct(nil, nil), nil)
+		namedInPkg2 := types.NewNamed(types.NewTypeName(0, pkg2, "Token", nil), types.NewStruct(nil, nil), nil)
+
+		// Build an interface with a method that returns *Token from pkg1.
+		ifacePkg := types.NewPackage("ifacepkg", "ifacepkg")
+		ifaceSig := types.NewSignatureType(
+			nil, nil, nil,
+			types.NewTuple(),
+			types.NewTuple(types.NewVar(0, ifacePkg, "", types.NewPointer(namedInPkg1))),
+			false,
+		)
+		ifaceMethod := types.NewFunc(0, ifacePkg, "Foo", ifaceSig)
+		iface := types.NewInterfaceType([]*types.Func{ifaceMethod}, nil).Complete()
+
+		// Build a concrete struct with method Foo() returning *Token from pkg2.
+		implPkg := types.NewPackage("implpkg", "implpkg")
+		implNamed := types.NewNamed(types.NewTypeName(0, implPkg, "Impl", nil), types.NewStruct(nil, nil), nil)
+		implRecv := types.NewVar(0, implPkg, "s", types.NewPointer(implNamed))
+		implSig := types.NewSignatureType(
+			implRecv, nil, nil,
+			types.NewTuple(),
+			types.NewTuple(types.NewVar(0, implPkg, "", types.NewPointer(namedInPkg2))),
+			false,
+		)
+		implNamed.AddMethod(types.NewFunc(0, implPkg, "Foo", implSig))
+		implPtrType := types.NewPointer(implNamed)
+
+		// types.Implements should fail: Token in pkg1 and pkg2 are different *types.TypeName
+		// objects, so types.Identical returns false and types.Implements returns false.
+		assert.False(t, types.Implements(implPtrType, iface),
+			"types.Implements should return false due to cross-package type identity mismatch")
+
+		// typeImplements should succeed: it finds method "Foo" by name via LookupFieldOrMethod.
+		assert.True(t, typeImplements(implPtrType, iface),
+			"typeImplements should return true using method-name fallback")
+	})
+
+	t.Run("real context.Context case with cross-importer time.Time", func(t *testing.T) {
+		// Load context.Context via ResolveInterfaceTypeByName (uses importer.Default internally).
+		contextIface, err := ResolveInterfaceTypeByName("context.Context")
+		require.NoError(t, err)
+		require.NotNil(t, contextIface)
+
+		// Import time via a SECOND independent importer.Default().
+		// This produces a different *types.Package for "time" than the one used inside
+		// ResolveInterfaceTypeByName, so types.Identical fails for the two time.Time types.
+		imp2 := importer.Default()
+		timePkg, err := imp2.Import("time")
+		require.NoError(t, err)
+		timeType := timePkg.Scope().Lookup("Time").Type()
+
+		// Build a concrete type implementing context.Context methods, but with
+		// Deadline() returning time.Time from imp2 — incompatible with imp1's time.Time.
+		pkg := types.NewPackage("test", "test")
+		customCtxNamed := types.NewNamed(
+			types.NewTypeName(0, pkg, "CustomContext", nil),
+			types.NewStruct(nil, nil), nil,
+		)
+		ptrToCustomCtx := types.NewPointer(customCtxNamed)
+
+		recv := func() *types.Var { return types.NewVar(0, pkg, "c", ptrToCustomCtx) }
+
+		// Deadline() (deadline time.Time, ok bool) — uses imp2's time.Time
+		customCtxNamed.AddMethod(types.NewFunc(0, pkg, "Deadline",
+			types.NewSignatureType(recv(), nil, nil,
+				types.NewTuple(),
+				types.NewTuple(
+					types.NewVar(0, pkg, "deadline", timeType),
+					types.NewVar(0, pkg, "ok", types.Typ[types.Bool]),
+				),
+				false),
+		))
+
+		// Done() <-chan struct{}
+		customCtxNamed.AddMethod(types.NewFunc(0, pkg, "Done",
+			types.NewSignatureType(recv(), nil, nil,
+				types.NewTuple(),
+				types.NewTuple(types.NewVar(0, pkg, "",
+					types.NewChan(types.RecvOnly, types.NewStruct(nil, nil)))),
+				false),
+		))
+
+		// Err() error
+		customCtxNamed.AddMethod(types.NewFunc(0, pkg, "Err",
+			types.NewSignatureType(recv(), nil, nil,
+				types.NewTuple(),
+				types.NewTuple(types.NewVar(0, pkg, "", types.Universe.Lookup("error").Type())),
+				false),
+		))
+
+		// Value(key any) any
+		anyType := types.Universe.Lookup("any").Type()
+		customCtxNamed.AddMethod(types.NewFunc(0, pkg, "Value",
+			types.NewSignatureType(recv(), nil, nil,
+				types.NewTuple(types.NewVar(0, pkg, "key", anyType)),
+				types.NewTuple(types.NewVar(0, pkg, "", anyType)),
+				false),
+		))
+
+		// types.Implements should fail because time.Time from imp2 is a different
+		// *types.TypeName than time.Time from the importer used inside ResolveInterfaceTypeByName.
+		assert.False(t, types.Implements(ptrToCustomCtx, contextIface),
+			"types.Implements should return false due to cross-importer time.Time mismatch")
+
+		// typeImplements should succeed: all 4 methods (Deadline, Done, Err, Value) exist by name.
+		assert.True(t, typeImplements(ptrToCustomCtx, contextIface),
+			"typeImplements should return true using method-name fallback for context.Context")
+	})
 }
