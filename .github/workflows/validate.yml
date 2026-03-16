@@ -575,6 +575,28 @@ jobs:
           flags: ${{ matrix.flag }}
           files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
           token: ${{ secrets.CODECOV_TOKEN }}
+  coverage-upload-datadog:
+    runs-on: ubuntu-latest
+    name: Upload coverage to Datadog (${{ matrix.flag }})
+    needs: [coverage-matrix]
+    if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJson(needs.coverage-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - name: Download Artifacts
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8
+        with:
+          pattern: coverage-*
+      - name: Upload coverage to Datadog
+        if: always()
+        continue-on-error: true
+        uses: DataDog/coverage-upload-github-action@9bbbf86d16f7db1b14c5b885e61cf0d96053686a # v1
+        with:
+          api_key: ${{ secrets.DD_CI_API_KEY }}
+          files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
+          flags: ${{ matrix.flag }}
   coverage-finalize:
     runs-on: ubuntu-latest
     name: Create CodeCov report
