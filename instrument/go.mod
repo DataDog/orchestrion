@@ -18,20 +18,20 @@ require (
 	cloud.google.com/go/pubsub v1.49.0 // indirect
 	cloud.google.com/go/pubsub/v2 v2.0.0 // indirect
 	github.com/99designs/gqlgen v0.17.83 // indirect
-	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/obfuscate v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/template v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/log v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/otel v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/stats v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/traceutil v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.76.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/version v0.76.2 // indirect
+	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/obfuscate v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/template v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/log v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/otel v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/stats v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/traceutil v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/pkg/version v0.76.3 // indirect
 	github.com/DataDog/datadog-go/v5 v5.8.3 // indirect
 	github.com/DataDog/dd-trace-go/contrib/99designs/gqlgen/v2 v2.5.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/IBM/sarama/v2 v2.5.0 // indirect
