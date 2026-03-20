@@ -1,14 +1,5 @@
 schema-version: v1
 ignore:
-  # Resolved paths (when GoCoverprofilePathResolver successfully maps to repo-relative paths)
-  - "samples/"
-  - "_samples/"
-  - "_tools/"
+  - "samples/**"
+  - "_tools/**"
   - "internal/injector/aspect/advice/code/dot_ast.proxies.go"
-  # Unresolved paths (when Go module path differs from filesystem directory name,
-  # e.g. module "github.com/DataDog/orchestrion/_samples" lives in "samples/" on disk.
-  # The reducer's suffix matching fails and keeps the full module import path.
-  # Glob patterns match these unresolved paths.)
-  - "**/_samples/**"
-  - "**/_tools/**"
-  - "**/dot_ast.proxies.go"
