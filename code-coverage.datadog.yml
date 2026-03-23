@@ -1,0 +1,5 @@
+schema-version: v1
+ignore:
+  - "samples/**"
+  - "_tools/**"
+  - "internal/injector/aspect/advice/code/dot_ast.proxies.go"
