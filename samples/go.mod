@@ -1,6 +1,6 @@
 module github.com/DataDog/orchestrion/_samples
 
-go 1.24.0
+go 1.25.0
 
 replace (
 	github.com/DataDog/orchestrion => ..
@@ -104,9 +104,9 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.6.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valyala/fasthttp/v2 v2.6.0 // indirect
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.6.0 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.6.0 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.7.0 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.8.0 // indirect
-	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 // indirect
+	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20260217080614-b0f4edc38a6d // indirect
 	github.com/DataDog/go-sqllexer v0.1.12 // indirect
 	github.com/DataDog/go-tuf v1.1.1-0.5.2 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
@@ -308,7 +308,7 @@ require (
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
 	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
