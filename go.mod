@@ -31,20 +31,20 @@ require (
 )
 
 require (
-	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/obfuscate v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/template v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/log v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/otel v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/stats v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/trace/traceutil v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/log v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.76.3 // indirect
-	github.com/DataDog/datadog-agent/pkg/version v0.76.3 // indirect
+	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/obfuscate v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/opentelemetry-mapping-go/otlp/attributes v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/template v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/trace v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/log v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/otel v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/stats v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/trace/traceutil v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/util/log v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.77.0-devel // indirect
+	github.com/DataDog/datadog-agent/pkg/version v0.77.0-devel // indirect
 	github.com/DataDog/datadog-go/v5 v5.8.3 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.9.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/DataDog/go-tuf v1.1.1-0.5.2 // indirect
 	github.com/DataDog/sketches-go v1.4.8 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/antithesishq/antithesis-sdk-go v0.6.0 // indirect
+	github.com/antithesishq/antithesis-sdk-go v0.7.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -71,7 +71,7 @@ require (
 	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/hashicorp/go-version v1.8.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/linkdata/deadlock v0.5.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.21 // indirect
-	github.com/minio/highwayhash v1.0.4-0.20251030100505-070ab1a87a76 // indirect
+	github.com/minio/highwayhash v1.0.4 // indirect
 	github.com/minio/simdjson-go v0.4.5 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
