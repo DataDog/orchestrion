@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      GitHub Actions:
+        applies-to: version-updates
+        dependency-type: production
+    labels:
+      - dependencies
+    cooldown:
+      default-days: 2
+  - package-ecosystem: pip
+    directory: /.github/actions/codecov-cli
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      Python Dependencies:
+        applies-to: version-updates
+        dependency-type: development
+    labels:
+      - dependencies
+    cooldown:
+      default-days: 2
