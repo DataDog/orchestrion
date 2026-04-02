@@ -1,0 +1,10 @@
+# Policy for: .github/workflows/validate.yml (self-mutation job) in DataDog/orchestrion
+issuer: https://token.actions.githubusercontent.com
+subject_pattern: repo:DataDog/orchestrion:pull_request
+
+claim_pattern:
+  event_name: pull_request
+  repository: DataDog/orchestrion
+
+permissions:
+  contents: write
