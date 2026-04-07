@@ -102,6 +102,9 @@ jobs:
     needs: generate
     runs-on: ubuntu-latest
     name: Update PR with generated files
+    permissions:
+      id-token: write
+      contents: read
     if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
     steps:
       - name: Checkout
@@ -117,12 +120,12 @@ jobs:
       - name: Apply patch
         run: |-
           [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
-      - name: Generate a GitHub token
+      - name: Get GitHub token (DataDog/orchestrion)
         id: generate-token
-        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
+        uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
         with:
-          app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
-          private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
+          scope: DataDog/orchestrion
+          policy: self.github.validate.self-mutation
       # We use ghcommit to create signed commits directly using the GitHub API
       - name: Push changes
         uses: planetscale/ghcommit-action@25309d8005ac7c3bcd61d3fe19b69e0fe47dbdde # v0.2.20
