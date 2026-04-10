@@ -1,0 +1,45 @@
+%YAML 1.1
+---
+# Regression test for: https://github.com/DataDog/orchestrion/issues/APMS-19232
+# When a function-call join-point matches a qualified call like http.Get(...),
+# the Fun field is a *dst.SelectorExpr. Templates accessing {{ .AST.Fun.Name }}
+# must work for both *dst.Ident (dot-imported bare call) and *dst.SelectorExpr
+# (qualified call). This test exercises the SelectorExpr path by ensuring the
+# enclosing function has a context.Context parameter (so the {{ if $ctx }} branch
+# is taken and .AST.Fun.Name is evaluated).
+aspects:
+  - join-point:
+      all-of:
+        - not:
+            import-path: net/http
+        - function-call: net/http.Get
+    advice:
+      - wrap-expression:
+          imports:
+            client: github.com/DataDog/dd-trace-go/contrib/net/http/v2/client
+          template: |-
+            {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{- if $ctx -}}
+              client.{{ .AST.Fun.Name }}(
+                {{ $ctx }},
+                {{ range .AST.Args }}{{ . }},
+                {{ end }}
+              )
+            {{- else -}}
+              {{ . }}
+            {{- end -}}
+
+syntheticReferences:
+  github.com/DataDog/dd-trace-go/contrib/net/http/v2/client: true
+
+code: |-
+  package example
+
+  import (
+      "context"
+      "net/http"
+  )
+
+  func DoRequest(ctx context.Context) (*http.Response, error) {
+      return http.Get("http://example.com")
+  }
