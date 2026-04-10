@@ -1,6 +1,6 @@
 %YAML 1.1
 ---
-# Regression test for: https://github.com/DataDog/orchestrion/issues/APMS-19232
+# Regression test for APMS-19232
 # When a function-call join-point matches a qualified call like http.Get(...),
 # the Fun field is a *dst.SelectorExpr. Templates accessing {{ .AST.Fun.Name }}
 # must work for both *dst.Ident (dot-imported bare call) and *dst.SelectorExpr
