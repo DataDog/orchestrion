@@ -1,1 +1,1 @@
-codecov-cli==11.2.7
+codecov-cli==11.2.8
