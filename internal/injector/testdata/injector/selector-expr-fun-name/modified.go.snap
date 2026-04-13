@@ -1,0 +1,18 @@
+//line input.go:1:1
+package example
+
+import (
+  "context"
+  "net/http"
+//line <generated>:1
+  __orchestrion_client "github.com/DataDog/dd-trace-go/contrib/net/http/v2/client"
+)
+
+//line input.go:8
+func DoRequest(ctx context.Context) (*http.Response, error) {
+  return __orchestrion_client. //line <generated>:1
+          Get(
+      ctx,
+//line input.go:9
+      "http://example.com")
+}
