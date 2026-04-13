@@ -31,6 +31,7 @@ orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracele
 orchestrion,github.com/charmbracelet/x/cellbuf,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
 orchestrion,github.com/charmbracelet/x/term,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
 orchestrion,github.com/cihub/seelog,BSD-3-Clause,"Copyright (c) 2012, Cloud Instruments Co., Ltd. <info@cin.io>"
+orchestrion,github.com/clipperhouse/displaywidth,MIT,Copyright (c) 2025 Matt Sherman
 orchestrion,github.com/clipperhouse/uax29/v2/graphemes,MIT,Copyright (c) 2020 Matt Sherman
 orchestrion,github.com/cpuguy83/go-md2man/v2/md2man,MIT,Copyright (c) 2014 Brian Goff
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
