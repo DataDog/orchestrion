@@ -6,7 +6,7 @@ replace github.com/DataDog/orchestrion => ..
 
 require (
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.5.0
-	github.com/DataDog/orchestrion v1.9.0
+	github.com/DataDog/orchestrion v1.10.0-rc.1
 )
 
 require (
@@ -74,12 +74,11 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2 v2.5.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.5.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valyala/fasthttp/v2 v2.5.0 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.7.1 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.8.0-rc.2 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.9.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20260217080614-b0f4edc38a6d // indirect
 	github.com/DataDog/go-sqllexer v0.1.13 // indirect
 	github.com/DataDog/go-tuf v1.1.1-0.5.2 // indirect
-	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/DataDog/sketches-go v1.4.8 // indirect
 	github.com/IBM/sarama v1.45.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
@@ -278,6 +277,7 @@ require (
 	go.opentelemetry.io/otel v1.41.0 // indirect
 	go.opentelemetry.io/otel/metric v1.41.0 // indirect
 	go.opentelemetry.io/otel/trace v1.41.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
