@@ -6,7 +6,7 @@ replace github.com/DataDog/orchestrion => ..
 
 require (
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.5.0
-	github.com/DataDog/orchestrion v1.10.0-rc.1
+	github.com/DataDog/orchestrion v1.10.0
 )
 
 require (
@@ -74,7 +74,7 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2 v2.5.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.5.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valyala/fasthttp/v2 v2.5.0 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.8.0-rc.2 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.8.0 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.9.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20260217080614-b0f4edc38a6d // indirect
 	github.com/DataDog/go-sqllexer v0.1.13 // indirect
