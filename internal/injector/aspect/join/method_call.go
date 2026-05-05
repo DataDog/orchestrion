@@ -7,6 +7,7 @@ package join
 
 import (
 	gocontext "context"
+	"errors"
 	"fmt"
 	"go/types"
 
@@ -121,10 +122,10 @@ func init() {
 		}
 
 		if spec.Receiver == "" {
-			return nil, fmt.Errorf("method-call: missing required field 'receiver'")
+			return nil, errors.New("method-call: missing required field 'receiver'")
 		}
 		if spec.Name == "" {
-			return nil, fmt.Errorf("method-call: missing required field 'name'")
+			return nil, errors.New("method-call: missing required field 'name'")
 		}
 
 		tn, err := typed.NewTypeName(spec.Receiver)

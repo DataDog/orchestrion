@@ -18,7 +18,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
-func newNamedType(pkgPath, pkgName, typeName string) *types.Named {
+func newNamedType(pkgPath string, pkgName string, typeName string) *types.Named {
 	pkg := types.NewPackage(pkgPath, pkgName)
 	obj := types.NewTypeName(0, pkg, typeName, nil)
 	return types.NewNamed(obj, types.NewStruct(nil, nil), nil)
