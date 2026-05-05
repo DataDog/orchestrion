@@ -12,7 +12,7 @@ func (c *myClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func doRequest(client *http.Client, other *myClient, req *http.Request) {
-  // Should be rewritten: receiver is *http.Client
+  // Should be rewritten: receiver is *http.Client (pointer-only match)
   _, _ =
 //line <generated>:1
     http.DefaultClient.Do(

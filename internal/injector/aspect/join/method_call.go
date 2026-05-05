@@ -19,13 +19,27 @@ import (
 	"github.com/goccy/go-yaml/ast"
 )
 
-type methodCall struct {
-	Receiver typed.TypeName
-	Name     string
-}
+type (
+	MethodCallMatch int
 
-func MethodCall(receiver typed.TypeName, name string) *methodCall {
-	return &methodCall{Receiver: receiver, Name: name}
+	methodCall struct {
+		Receiver typed.TypeName
+		Name     string
+		Match    MethodCallMatch
+	}
+)
+
+const (
+	// MethodCallMatchAny matches calls regardless of whether the receiver is a pointer or value. This is the default.
+	MethodCallMatchAny MethodCallMatch = iota
+	// MethodCallMatchPointerOnly matches only calls where the receiver is a pointer type.
+	MethodCallMatchPointerOnly
+	// MethodCallMatchValueOnly matches only calls where the receiver is a value type.
+	MethodCallMatchValueOnly
+)
+
+func MethodCall(receiver typed.TypeName, name string, match MethodCallMatch) *methodCall {
+	return &methodCall{Receiver: receiver, Name: name, Match: match}
 }
 
 func (m *methodCall) ImpliesImported() []string {
@@ -58,25 +72,33 @@ func (m *methodCall) Matches(ctx context.AspectContext) bool {
 	return m.matchesType(recvType)
 }
 
-// matchesType checks whether the resolved go/types.Type corresponds to the expected receiver.
 func (m *methodCall) matchesType(t types.Type) bool {
 	if t == nil {
 		return false
 	}
 
-	if m.Receiver.Pointer {
+	switch m.Match {
+	case MethodCallMatchPointerOnly:
 		ptr, ok := t.(*types.Pointer)
 		if !ok {
 			return false
 		}
-		t = ptr.Elem()
+		return m.matchesNamed(ptr.Elem())
+	case MethodCallMatchValueOnly:
+		return m.matchesNamed(t)
+	default: // MethodCallMatchAny
+		if ptr, ok := t.(*types.Pointer); ok {
+			t = ptr.Elem()
+		}
+		return m.matchesNamed(t)
 	}
+}
 
+func (m *methodCall) matchesNamed(t types.Type) bool {
 	named, ok := t.(*types.Named)
 	if !ok {
 		return false
 	}
-
 	obj := named.Obj()
 	return obj.Pkg() != nil &&
 		obj.Pkg().Path() == m.Receiver.ImportPath &&
@@ -84,14 +106,15 @@ func (m *methodCall) matchesType(t types.Type) bool {
 }
 
 func (m *methodCall) Hash(h *fingerprint.Hasher) error {
-	return h.Named("method-call", m.Receiver, fingerprint.String(m.Name))
+	return h.Named("method-call", m.Receiver, fingerprint.String(m.Name), m.Match)
 }
 
 func init() {
 	unmarshalers["method-call"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var spec struct {
-			Receiver string `yaml:"receiver"`
-			Name     string `yaml:"name"`
+			Receiver string          `yaml:"receiver"`
+			Name     string          `yaml:"name"`
+			Match    MethodCallMatch `yaml:"match"`
 		}
 		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
 			return nil, err
@@ -108,7 +131,49 @@ func init() {
 		if err != nil {
 			return nil, fmt.Errorf("method-call: invalid receiver type %q: %w", spec.Receiver, err)
 		}
+		if tn.Pointer {
+			return nil, fmt.Errorf("method-call: receiver type must not include a pointer sigil (use match: pointer-only instead): %q", spec.Receiver)
+		}
 
-		return MethodCall(tn, spec.Name), nil
+		return MethodCall(tn, spec.Name, spec.Match), nil
 	}
+}
+
+var _ yaml.NodeUnmarshalerContext = (*MethodCallMatch)(nil)
+
+func (m *MethodCallMatch) UnmarshalYAML(ctx gocontext.Context, node ast.Node) error {
+	var name string
+	if err := yaml.NodeToValueContext(ctx, node, &name); err != nil {
+		return err
+	}
+
+	switch name {
+	case "any", "":
+		*m = MethodCallMatchAny
+	case "pointer-only":
+		*m = MethodCallMatchPointerOnly
+	case "value-only":
+		*m = MethodCallMatchValueOnly
+	default:
+		return fmt.Errorf("invalid method-call.match value: %q", name)
+	}
+
+	return nil
+}
+
+func (m MethodCallMatch) String() string {
+	switch m {
+	case MethodCallMatchAny:
+		return "any"
+	case MethodCallMatchPointerOnly:
+		return "pointer-only"
+	case MethodCallMatchValueOnly:
+		return "value-only"
+	default:
+		panic(fmt.Errorf("invalid MethodCallMatch(%d)", int(m)))
+	}
+}
+
+func (m MethodCallMatch) Hash(h *fingerprint.Hasher) error {
+	return h.Named("method-call-match", fingerprint.Int(m))
 }
