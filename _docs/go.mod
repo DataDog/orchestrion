@@ -12,7 +12,7 @@ require (
 	cloud.google.com/go/pubsub v1.50.1
 	github.com/99designs/gqlgen v0.17.86
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.6.0
-	github.com/DataDog/orchestrion v1.10.0-rc.1
+	github.com/DataDog/orchestrion v1.10.0
 	github.com/DataDog/orchestrion/instrument v1.8.0
 	github.com/IBM/sarama v1.46.3
 	github.com/Shopify/sarama v1.38.1
@@ -130,7 +130,7 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2 v2.6.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.6.0 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valyala/fasthttp/v2 v2.6.0 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.8.0-rc.2 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.8.1 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.9.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20260217080614-b0f4edc38a6d // indirect
 	github.com/DataDog/go-sqllexer v0.1.13 // indirect
