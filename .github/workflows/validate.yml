@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: oldstable
           cache-dependency-path: "**/go.mod"
@@ -48,7 +48,7 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-generators+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
           path: ./coverage/generator.out
@@ -83,7 +83,7 @@ jobs:
           git diff --staged --patch --exit-code > .repo.patch || echo 'result=true' >> "${GITHUB_OUTPUT}"
       - name: Upload patch
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           if-no-files-found: error
           include-hidden-files: true
@@ -145,14 +145,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
+        uses: crate-ci/typos@5374cbf686e897b15713110e233094e2874de7ef # v1.46.1
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -166,7 +166,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -186,7 +186,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@471d5ace1f08e3c4df1c4c2f7e6341aa75da434a # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@ca46236c6ce584ae24bc6283ba8dcf4b3ec8a066 # v3
         with:
           allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
       - name: Verify actions are pinned with ratchet
@@ -194,7 +194,7 @@ jobs:
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@0d952c597ef8459f634d7145b0b044a9699e5e43 # v1.71.0
+        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1.72.0
         with:
           reporter: github-check
           level: error
@@ -209,7 +209,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -228,7 +228,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -261,7 +261,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup Go
         id: setup-go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
@@ -287,7 +287,7 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-unit+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
           path: |-
@@ -309,7 +309,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -320,7 +320,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Upload benchmark report (raw)
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           if-no-files-found: error
           name: benchmarks-${{ matrix.run_number }}.txt
@@ -334,7 +334,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
         id: setup-go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: "**/go.mod"
@@ -364,12 +364,13 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: generate
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@ee8dce259fa5e3f266a3b92944ece08023aabc8a # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@937a8e83c8bfc28a9bfef9c2f53641bc57432a8e # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    permissions:
+      id-token: write
+      contents: read
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
-    secrets:
-      DD_API_KEY: ${{ secrets.DD_CI_API_KEY }}
   ##############################################################################
   # Run end-to-end tests (PGO, etc.)
   e2e-tests:
@@ -385,7 +386,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
@@ -397,7 +398,7 @@ jobs:
           E2E_TEST_TIMEOUT: 5m
       - name: Upload E2E artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: e2e-artifacts-${{ matrix.runs-on }}-go${{ matrix.go-version }}
           path: |
@@ -501,7 +502,7 @@ jobs:
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
       - name: Setup Node
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v4
         with:
           node-version: latest
       - name: Download Artifacts
@@ -595,7 +596,7 @@ jobs:
       - name: Upload coverage to Datadog
         if: always()
         continue-on-error: true
-        uses: DataDog/coverage-upload-github-action@d2cf302a39c05e0ad22063360a2bf6ce0cc4906c # v1
+        uses: DataDog/coverage-upload-github-action@6c4bd935248daa6f0ef94e3e6ba71ad5ad079998 # v1
         with:
           api_key: ${{ secrets.DD_CI_API_KEY }}
           files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
