@@ -31,6 +31,7 @@ orchestrion,github.com/charmbracelet/x/ansi,MIT,"Copyright (c) 2023 Charmbracele
 orchestrion,github.com/charmbracelet/x/cellbuf,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
 orchestrion,github.com/charmbracelet/x/term,MIT,"Copyright (c) 2023 Charmbracelet, Inc."
 orchestrion,github.com/cihub/seelog,BSD-3-Clause,"Copyright (c) 2012, Cloud Instruments Co., Ltd. <info@cin.io>"
+orchestrion,github.com/clipperhouse/displaywidth,MIT,Copyright (c) 2025 Matt Sherman
 orchestrion,github.com/clipperhouse/uax29/v2/graphemes,MIT,Copyright (c) 2020 Matt Sherman
 orchestrion,github.com/cpuguy83/go-md2man/v2/md2man,MIT,Copyright (c) 2014 Brian Goff
 orchestrion,github.com/dave/dst,MIT,Copyright (c) 2018 David Brophy | Copyright (c) 2009 The Go Authors. All rights reserved.
@@ -111,4 +112,3 @@ orchestrion,golang.org/x/xerrors,BSD-3-Clause,Copyright 2019 The Go Authors.
 orchestrion,google.golang.org/genproto/googleapis/rpc/code,Apache-2.0,unknown
 orchestrion,google.golang.org/protobuf,BSD-3-Clause,Copyright (c) 2018 The Go Authors. All rights reserved.
 orchestrion,gopkg.in/ini.v1,Apache-2.0,Copyright 2014 Unknwon
-orchestrion,gopkg.in/yaml.v3,MIT,Copyright (c) 2006-2010 Kirill Simonov | Copyright (c) 2006-2011 Kirill Simonov | Copyright (c) 2011-2019 Canonical Ltd | Copyright 2011-2016 Canonical Ltd.
