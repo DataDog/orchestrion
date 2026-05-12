@@ -21,7 +21,7 @@ jobs:
           lfs: true
           submodules: recursive
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: '**/go.mod'
@@ -33,7 +33,7 @@ jobs:
         # identical to hugo's.
         run: go -C ./_docs run github.com/gohugoio/hugo --minify --enableGitInfo --environment=gh-pages
       - name: Upload Artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: site
           path: _docs/public/
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v3
         with:
           path: _docs/public/
       - name: Deploy to Github Pages
