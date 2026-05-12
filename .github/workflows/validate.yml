@@ -367,11 +367,10 @@ jobs:
     uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@937a8e83c8bfc28a9bfef9c2f53641bc57432a8e # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     permissions:
       id-token: write
+      contents: read
     with:
       collect-coverage: ${{ github.event_name != 'merge_group' }}
       orchestrion-version: ${{ github.sha }}
-    secrets:
-      DD_API_KEY: ${{ secrets.DD_CI_API_KEY }}
   ##############################################################################
   # Run end-to-end tests (PGO, etc.)
   e2e-tests:
