@@ -29,56 +29,16 @@ jobs:
         id: version
         run: |-
           set -euo pipefail
-          # From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string, with added v prefix.
-          VERSION_TAG_REGEX='^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
-
-          echo "::group::Environment"
-          go version
-          echo "GOTOOLCHAIN=${GOTOOLCHAIN:-<unset>}"
-          echo "PWD=$(pwd)"
-          echo "::endgroup::"
-
-          echo "::group::Run 'go run . version -static'"
-          set +e
-          raw_output=$(go run . version -static)
-          rc=$?
-          set -e
-          echo "exit_code=${rc}"
-          echo "raw_output=[${raw_output}]"
-          if [ "${rc}" -ne 0 ]; then
-            echo "::error::go run . version -static failed with exit code ${rc}"
-            exit 1
-          fi
-          echo "::endgroup::"
-
-          echo "::group::Extract version field"
-          cut_output=$(echo "${raw_output}" | cut -d' ' -f 2)
-          echo "cut_output=[${cut_output}]"
-          echo "::endgroup::"
-
-          echo "::group::Validate semver regex"
-          if ! echo "${cut_output}" | grep -E "${VERSION_TAG_REGEX}"; then
-            echo "::error::Version [${cut_output}] does not match semver regex"
-            exit 1
-          fi
-          version="${cut_output}"
-          echo "version=${version}"
-          echo "::endgroup::"
-
+          # Adapted from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string,
+          # with a v prefix and \d replaced by [0-9] since GNU grep -E does not support \d.
+          VERSION_TAG_REGEX='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
+          version=$(grep -E "${VERSION_TAG_REGEX}" <(go run . version -static | cut -d' ' -f 2))
           echo "tag=${version}" >> "${GITHUB_OUTPUT}"
-
-          echo "::group::Check whether release already exists"
-          set +e
-          gh release view "${version}" --json isDraft
-          gh_rc=$?
-          set -e
-          echo "gh release view exit_code=${gh_rc}"
-          if [ "${gh_rc}" -eq 0 ]; then
+          if gh release view "${version}" --json isDraft; then
             echo "exists=true" >> "${GITHUB_OUTPUT}"
           else
             echo "exists=false" >> "${GITHUB_OUTPUT}"
           fi
-          echo "::endgroup::"
         env:
           GH_TOKEN: ${{ github.token }}
       # If this is a pull request, and the release does not yet exist, the PR title must be "release: <tag>"
