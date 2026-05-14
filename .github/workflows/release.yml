@@ -29,8 +29,9 @@ jobs:
         id: version
         run: |-
           set -euo pipefail
-          # From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string, with added v prefix.
-          VERSION_TAG_REGEX='^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
+          # Adapted from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string,
+          # with a v prefix and \d replaced by [0-9] since GNU grep -E does not support \d.
+          VERSION_TAG_REGEX='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
           version=$(grep -E "${VERSION_TAG_REGEX}" <(go run . version -static | cut -d' ' -f 2))
           echo "tag=${version}" >> "${GITHUB_OUTPUT}"
           if gh release view "${version}" --json isDraft; then
