@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: stable
           cache-dependency-path: '**/go.mod'
@@ -29,8 +29,9 @@ jobs:
         id: version
         run: |-
           set -euo pipefail
-          # From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string, with added v prefix.
-          VERSION_TAG_REGEX='^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
+          # Adapted from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string,
+          # with a v prefix and \d replaced by [0-9] since GNU grep -E does not support \d.
+          VERSION_TAG_REGEX='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
           version=$(grep -E "${VERSION_TAG_REGEX}" <(go run . version -static | cut -d' ' -f 2))
           echo "tag=${version}" >> "${GITHUB_OUTPUT}"
           if gh release view "${version}" --json isDraft; then
@@ -90,7 +91,7 @@ jobs:
         with:
           ref: ${{ github.event.release.target_commitish }}
       - name: Setup go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: oldstable
           cache-dependency-path: '**/go.mod'
