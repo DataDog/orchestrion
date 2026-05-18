@@ -6,6 +6,7 @@
 package join
 
 import (
+	gocontext "context"
 	"go/types"
 	"testing"
 
@@ -57,6 +58,18 @@ func TestMethodCallMatchesType(t *testing.T) {
 	}
 }
 
+func TestMethodCallPackageMayMatch(t *testing.T) {
+	tn, err := typed.NewTypeName("go.uber.org/zap.Logger")
+	require.NoError(t, err)
+	m := MethodCall(tn, "Info", MethodCallMatchAny)
+
+	importing := &may.PackageContext{ImportMap: map[string]string{"go.uber.org/zap": "zap.a"}}
+	notImporting := &may.PackageContext{ImportMap: map[string]string{"example.com/other": "other.a"}}
+
+	assert.Equal(t, may.Match, m.PackageMayMatch(importing))
+	assert.Equal(t, may.NeverMatch, m.PackageMayMatch(notImporting))
+}
+
 func TestMethodCallFileMayMatch(t *testing.T) {
 	tn, err := typed.NewTypeName("go.uber.org/zap.Logger")
 	require.NoError(t, err)
@@ -102,7 +115,7 @@ func TestMethodCallHash(t *testing.T) {
 func TestMethodCallUnmarshalYAML(t *testing.T) {
 	tests := []struct {
 		name       string
-		input      string
+		yaml       string
 		wantImport string
 		wantType   string
 		wantMethod string
@@ -111,9 +124,9 @@ func TestMethodCallUnmarshalYAML(t *testing.T) {
 	}{
 		{
 			name: "defaults to any",
-			input: `
-receiver: "go.uber.org/zap.Logger"
-name: Info`,
+			yaml: `method-call:
+  receiver: "go.uber.org/zap.Logger"
+  name: Info`,
 			wantImport: "go.uber.org/zap",
 			wantType:   "Logger",
 			wantMethod: "Info",
@@ -121,10 +134,10 @@ name: Info`,
 		},
 		{
 			name: "pointer-only",
-			input: `
-receiver: "go.uber.org/zap.Logger"
-name: Info
-match: pointer-only`,
+			yaml: `method-call:
+  receiver: "go.uber.org/zap.Logger"
+  name: Info
+  match: pointer-only`,
 			wantImport: "go.uber.org/zap",
 			wantType:   "Logger",
 			wantMethod: "Info",
@@ -132,10 +145,10 @@ match: pointer-only`,
 		},
 		{
 			name: "value-only",
-			input: `
-receiver: "go.uber.org/zap.SugaredLogger"
-name: Debugw
-match: value-only`,
+			yaml: `method-call:
+  receiver: "go.uber.org/zap.SugaredLogger"
+  name: Debugw
+  match: value-only`,
 			wantImport: "go.uber.org/zap",
 			wantType:   "SugaredLogger",
 			wantMethod: "Debugw",
@@ -143,19 +156,21 @@ match: value-only`,
 		},
 		{
 			name: "pointer sigil in receiver is rejected",
-			input: `
-receiver: "*go.uber.org/zap.Logger"
-name: Info`,
+			yaml: `method-call:
+  receiver: "*go.uber.org/zap.Logger"
+  name: Info`,
 			wantErr: true,
 		},
 		{
-			name:    "missing receiver is rejected",
-			input:   `name: Info`,
+			name: "missing receiver is rejected",
+			yaml: `method-call:
+  name: Info`,
 			wantErr: true,
 		},
 		{
-			name:    "missing name is rejected",
-			input:   `receiver: "go.uber.org/zap.Logger"`,
+			name: "missing name is rejected",
+			yaml: `method-call:
+  receiver: "go.uber.org/zap.Logger"`,
 			wantErr: true,
 		},
 	}
@@ -165,40 +180,26 @@ name: Info`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var spec struct {
-				Receiver string          `yaml:"receiver"`
-				Name     string          `yaml:"name"`
-				Match    MethodCallMatch `yaml:"match"`
-			}
-			err := yaml.Unmarshal([]byte(tt.input), &spec)
+			var data map[string]any
+			err := yaml.Unmarshal([]byte(tt.yaml), &data)
+			require.NoError(t, err)
+
+			node, err := yaml.ValueToNode(data["method-call"])
+			require.NoError(t, err)
+
+			result, err := fn(gocontext.Background(), node)
 			if tt.wantErr {
-				// Error may come from YAML parsing or from building the MethodCall.
-				if err == nil {
-					tn, tnErr := typed.NewTypeName(spec.Receiver)
-					if tnErr == nil && tn.Pointer {
-						// Pointer sigil rejection happens in the unmarshaler, not YAML parsing.
-						return
-					}
-					if spec.Receiver == "" || spec.Name == "" {
-						return
-					}
-					t.Fatal("expected an error but none occurred")
-				}
+				assert.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 
-			tn, err := typed.NewTypeName(spec.Receiver)
-			require.NoError(t, err)
-			require.False(t, tn.Pointer, "receiver must not have a pointer sigil")
-
-			m := MethodCall(tn, spec.Name, spec.Match)
+			m, ok := result.(*methodCall)
+			require.True(t, ok)
 			assert.Equal(t, tt.wantImport, m.Receiver.ImportPath)
 			assert.Equal(t, tt.wantType, m.Receiver.Name)
 			assert.Equal(t, tt.wantMethod, m.Name)
 			assert.Equal(t, tt.wantMatch, m.Match)
-
-			_ = fn
 		})
 	}
 }
