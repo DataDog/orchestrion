@@ -1,0 +1,31 @@
+%YAML 1.1
+---
+# Verifies that method-call matches calls on variables typed as an interface,
+# but does NOT match calls on concrete types that happen to implement that interface.
+aspects:
+  - id: io-reader-read
+    join-point:
+      method-call:
+        receiver: "io.Reader"
+        name: Read
+    advice:
+      - wrap-expression:
+          template: |-
+            io.MultiReader({{ .AST.Fun.X }}).Read(
+              {{ index .AST.Args 0 }},
+            )
+
+code: |-
+  package test
+
+  import (
+    "io"
+    "strings"
+  )
+
+  func doRead(r io.Reader, sr *strings.Reader, buf []byte) {
+    // Should be rewritten: receiver is typed as io.Reader (interface)
+    _, _ = r.Read(buf)
+    // Should NOT be rewritten: receiver is *strings.Reader (concrete type that implements io.Reader)
+    _, _ = sr.Read(buf)
+  }

@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "io"
+  "strings"
+)
+
+func doRead(r io.Reader, sr *strings.Reader, buf []byte) {
+  // Should be rewritten: receiver is typed as io.Reader (interface)
+  _, _ =
+//line <generated>:1
+    io.MultiReader(
+//line input.go:10
+      r).
+//line <generated>:1
+      Read(
+//line input.go:10
+        buf)
+  // Should NOT be rewritten: receiver is *strings.Reader (concrete type that implements io.Reader)
+  _, _ = sr.Read(buf)
+}
