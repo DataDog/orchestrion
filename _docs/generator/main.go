@@ -20,7 +20,7 @@ func main() {
 	gen := Generator{
 		Dir:          filepath.Join(thisFile, "..", "..", "content", "docs", "dd-trace-go", "v2"),
 		ConfigSource: filepath.Join(thisFile, "..", ".."),
-		Validate:     false, // Currently one aspect is not valid in V2 (rueidis)
+		Validate:     true,
 		CommonPrefix: "github.com/DataDog/dd-trace-go/",
 		TrimPrefix:   "v2/",
 		TrimSuffix:   "/v2",

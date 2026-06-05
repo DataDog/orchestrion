@@ -11,9 +11,9 @@ jobs:
       pull-requests: write # Needed to update labels
     steps:
       - name: Check out
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           go-version: oldstable
           cache-dependency-path: '**/go.mod'

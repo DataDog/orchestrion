@@ -11,6 +11,8 @@ updates:
         dependency-type: production
     labels:
       - dependencies
+    cooldown:
+      default-days: 2
   - package-ecosystem: pip
     directory: /.github/actions/codecov-cli
     schedule:
@@ -22,3 +24,5 @@ updates:
         dependency-type: development
     labels:
       - dependencies
+    cooldown:
+      default-days: 2

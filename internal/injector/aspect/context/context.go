@@ -303,26 +303,30 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 	}
 
 	// For star expressions (*Type), resolve the underlying type and return a pointer.
-	// Need to convert back from ast.Expr to dst.Expr to use nodeMap recursively.
 	if starExpr, ok := astExpr.(*ast.StarExpr); ok {
-		// Find the corresponding dst.Node for starExpr.X
+		// Find the dst.Expr corresponding to starExpr.X via reverse nodeMap lookup.
 		var dstX dst.Expr
-		// Iterate through nodeMap to find the dst.Node corresponding to ast.Node starExpr.X
-		// This is inefficient but necessary as we don't have a direct reverse mapping.
-		// Consider optimizing if performance becomes an issue.
 		for dNode, aNode := range c.nodeMap {
 			if aNode == starExpr.X {
 				if dExpr, ok := dNode.(dst.Expr); ok {
 					dstX = dExpr
-					break
 				}
+				break
 			}
 		}
 
 		if dstX != nil {
-			underlyingType := c.ResolveType(dstX)
-			if underlyingType != nil {
-				return types.NewPointer(underlyingType)
+			if underlying := c.ResolveType(dstX); underlying != nil {
+				return types.NewPointer(underlying)
+			}
+		} else {
+			// Fallback: if nodeMap reverse lookup failed (e.g., locally-defined types
+			// in function parameter position like *CustomContext), try typeInfo.Uses
+			// directly on the identifier.
+			if ident, ok := starExpr.X.(*ast.Ident); ok {
+				if obj, ok := c.typeInfo.Uses[ident]; ok {
+					return types.NewPointer(obj.Type())
+				}
 			}
 		}
 	}

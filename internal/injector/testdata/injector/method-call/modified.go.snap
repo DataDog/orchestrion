@@ -1,0 +1,23 @@
+//line input.go:1:1
+package test
+
+import (
+  "net/http"
+)
+
+type myClient struct{}
+
+func (c *myClient) Do(req *http.Request) (*http.Response, error) {
+  return nil, nil
+}
+
+func doRequest(client *http.Client, other *myClient, req *http.Request) {
+  // Should be rewritten: receiver is *http.Client (pointer-only match)
+  _, _ =
+//line <generated>:1
+    http.DefaultClient.Do(
+//line input.go:15
+      req)
+  // Should NOT be rewritten: receiver is *myClient, not *http.Client
+  _, _ = other.Do(req)
+}

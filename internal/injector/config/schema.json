@@ -372,6 +372,7 @@
         { "$ref": "#/$defs/join-point/function" },
         { "$ref": "#/$defs/join-point/function-call" },
         { "$ref": "#/$defs/join-point/import-path" },
+        { "$ref": "#/$defs/join-point/method-call" },
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
@@ -626,6 +627,50 @@
         "examples": [
           { "import-path": "net/http" },
           { "import-path": "github.com/gorilla/mux" }
+        ]
+      },
+      "method-call": {
+        "required": ["method-call"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "method-call": {
+            "title": "Target method calls by receiver type",
+            "markdownDescription": "The `method-call` join point matches call expressions of the form `receiver.Method(args...)` where the receiver's type is a specific fully-qualified named type. Unlike `function-call`, it uses type information to distinguish between different types that expose the same method name.\n\nThe `match` field controls whether to match pointer receivers (`pointer-only`), value receivers (`value-only`), or both (`any`, the default).",
+            "type": "object",
+            "required": ["receiver", "name"],
+            "properties": {
+              "receiver": {
+                "description": "The fully qualified type name of the method receiver (without pointer sigil).",
+                "$ref": "#/$defs/go/qualified-identifier"
+              },
+              "name": {
+                "description": "The name of the method to match.",
+                "$ref": "#/$defs/go/identifier"
+              },
+              "match": {
+                "description": "Whether to match pointer receivers, value receivers, or both (default: any).",
+                "type": "string",
+                "enum": ["pointer-only", "value-only", "any"],
+                "default": "any"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          {
+            "method-call": {
+              "receiver": "go.uber.org/zap.Logger",
+              "name": "Info"
+            }
+          },
+          {
+            "method-call": {
+              "receiver": "net/http.Client",
+              "name": "Do",
+              "match": "pointer-only"
+            }
+          }
         ]
       },
       "not": {

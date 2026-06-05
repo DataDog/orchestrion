@@ -10,7 +10,7 @@ package proxy
 import "flag"
 
 func (f *compileFlagSet) parse(args []string) ([]string, error) {
-	flagSet := flag.NewFlagSet("compile version go1.24", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("compile version go1.25", flag.ContinueOnError)
 	flagSet.Bool("%", false, "debug non-static initializers")
 	flagSet.Bool("+", false, "compiling runtime")
 	flagSet.Bool("B", false, "disable bounds checking")

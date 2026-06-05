@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -20,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/mod/modfile"
 )
 
 func TestBuildFromModuleSubdirectory(t *testing.T) {
@@ -59,13 +61,14 @@ type benchCase interface {
 var benchCases = map[string]func(b *testing.B) benchCase{
 	"DataDog:orchestrion": benchmarkOrchestrion,
 	// normal build
-	"traefik:traefik": benchmarkGithub("traefik", "traefik", "./...", false),
-	"go-delve:delve":  benchmarkGithub("go-delve", "delve", "./...", false),
-	"jlegrone:tctx":   benchmarkGithub("jlegrone", "tctx", "./...", false),
-	"tinylib:msgp":    benchmarkGithub("tinylib", "msgp", "./...", false),
+	"traefik:traefik": benchmarkGithub("traefik", "traefik", "", "./...", false),
+	"go-delve:delve":  benchmarkGithub("go-delve", "delve", "", "./...", false),
+	"jlegrone:tctx":   benchmarkGithub("jlegrone", "tctx", "", "./...", false),
+	"tinylib:msgp":    benchmarkGithub("tinylib", "msgp", "", "./...", false),
+	"etcd-io:etcd":    benchmarkGithub("etcd-io", "etcd", "server", "./...", false),
 	// test packages
-	"gin-gonic:gin.test": benchmarkGithub("gin-gonic", "gin", "./...", true),
-	"jlegrone:tctx.test": benchmarkGithub("jlegrone", "tctx", "./...", true),
+	"gin-gonic:gin.test": benchmarkGithub("gin-gonic", "gin", "", "./...", true),
+	"jlegrone:tctx.test": benchmarkGithub("jlegrone", "tctx", "", "./...", true),
 }
 
 func Benchmark(b *testing.B) {
@@ -93,7 +96,10 @@ type benchGithub struct {
 	harness
 }
 
-func benchmarkGithub(owner string, repo string, build string, testbuild bool) func(b *testing.B) benchCase {
+// benchmarkGithub builds a benchmark case for a github repo. If subdir is
+// non-empty, setup and build run against that sub-module (etcd-style monorepos)
+// rather than the repo root.
+func benchmarkGithub(owner string, repo string, subdir string, build string, testbuild bool) func(b *testing.B) benchCase {
 	return func(b *testing.B) benchCase {
 		tc := &benchGithub{harness{build: build, testbuild: testbuild}}
 
@@ -101,8 +107,14 @@ func benchmarkGithub(owner string, repo string, build string, testbuild bool) fu
 		b.Logf("Latest release is %s/%s@%s", owner, repo, tag)
 
 		tc.gitCloneGithub(b, owner, repo, tag)
+		if subdir != "" {
+			tc.dir = filepath.Join(tc.dir, subdir)
+		}
 		tc.exec(b, "go", "mod", "download")
 		tc.exec(b, "go", "mod", "edit", "-replace=github.com/DataDog/orchestrion="+rootDir)
+		if replace := os.Getenv("DD_TRACE_GO_REPLACE"); replace != "" {
+			applyDDTraceGoReplaces(b, &tc.runner, replace)
+		}
 		if stat, err := os.Stat(filepath.Join(tc.dir, "vendor")); err == nil && stat.IsDir() {
 			// If there's a vendor dir, we need to update the `modules.txt` in there to reflect the replacement.
 			tc.exec(b, "go", "mod", "vendor")
@@ -246,6 +258,51 @@ func getGithubToken() (string, bool) {
 	}
 
 	return strings.TrimSpace(bytes.String()), true
+}
+
+// applyDDTraceGoReplaces walks replace, finds every go.mod whose module path
+// starts with github.com/DataDog/dd-trace-go, and adds a corresponding replace
+// directive to the target's go.mod. This lets the benchmarks build against a
+// local checkout of dd-trace-go (including branches where transitive contribs
+// reference an unpublished placeholder version like v2.10.0-dev).
+func applyDDTraceGoReplaces(b *testing.B, r *runner, replace string) {
+	b.Helper()
+
+	err := filepath.WalkDir(replace, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if path != replace {
+				name := d.Name()
+				if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		if d.Name() != "go.mod" {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		mod, err := modfile.Parse(path, data, nil)
+		if err != nil {
+			return err
+		}
+		if mod.Module == nil {
+			return nil
+		}
+		modPath := mod.Module.Mod.Path
+		if !strings.HasPrefix(modPath, "github.com/DataDog/dd-trace-go") {
+			return nil
+		}
+		r.exec(b, "go", "mod", "edit", "-replace="+modPath+"="+filepath.Dir(path))
+		return nil
+	})
+	require.NoError(b, err)
 }
 
 func (h *harness) gitCloneGithub(b *testing.B, owner string, repo string, tag string) string {

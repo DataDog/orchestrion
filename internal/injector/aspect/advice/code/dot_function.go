@@ -8,7 +8,6 @@ package code
 import (
 	"errors"
 	"fmt"
-	"go/types"
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
@@ -348,8 +347,7 @@ func findImplementingField(ctx context.AdviceContext, fields *dst.FieldList, int
 	// Iterate through fields to check for implementation.
 	currentIndex := 0
 	for _, field := range fields.List {
-		actualType := ctx.ResolveType(field.Type)
-		if actualType != nil && types.Implements(actualType, iface) {
+		if typed.ExprImplements(ctx, field.Type, iface) {
 			return fieldAt(fields, currentIndex, fieldKind)
 		}
 

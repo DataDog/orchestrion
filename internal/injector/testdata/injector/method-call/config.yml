@@ -1,0 +1,37 @@
+%YAML 1.1
+---
+# Verifies that method-call matches calls on the correct receiver type and
+# leaves calls on a different type with the same method name untouched.
+aspects:
+  - id: http-client-do
+    join-point:
+      method-call:
+        receiver: "net/http.Client"
+        name: Do
+        match: pointer-only
+    advice:
+      - wrap-expression:
+          template: |-
+            http.DefaultClient.Do(
+              {{ index .AST.Args 0 }},
+            )
+
+code: |-
+  package test
+
+  import (
+    "net/http"
+  )
+
+  type myClient struct{}
+
+  func (c *myClient) Do(req *http.Request) (*http.Response, error) {
+    return nil, nil
+  }
+
+  func doRequest(client *http.Client, other *myClient, req *http.Request) {
+    // Should be rewritten: receiver is *http.Client (pointer-only match)
+    _, _ = client.Do(req)
+    // Should NOT be rewritten: receiver is *myClient, not *http.Client
+    _, _ = other.Do(req)
+  }

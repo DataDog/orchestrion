@@ -81,7 +81,7 @@ span being created around the function's execution. The directive can optionally
 provide custom span tags as `key:value` pairs (all parsed as literal strings):
 
 ```go
-//dd:span tag-name:for other-tag:bar
+//dd:span tag-name:foo other-tag:bar
 func tracedFunction() {
   // This function will be represented as a span named "tracedFunction"
 }

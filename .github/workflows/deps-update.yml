@@ -12,10 +12,10 @@ jobs:
       changes-needed: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
         with:
           # Run with current stable so we can evaluate all possible versions; as the Go toolchain
           # will bail out if it encounters a "candidate" that requires a newer release.
@@ -61,7 +61,7 @@ jobs:
           git diff --staged --patch > "${{ runner.temp }}/go.diff.patch"
       - name: Upload Artifact
         if: steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: Patches
           path: ${{ runner.temp }}/go.diff.patch
@@ -72,13 +72,13 @@ jobs:
     needs: [update-go]
     if: needs.update-go.outputs.changes-needed == 'true'
     permissions:
+      id-token: write
       contents: write
-      pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Download patches
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: Patches
           path: ${{ runner.temp }}/patches
@@ -92,14 +92,14 @@ jobs:
           git push origin "${{ github.sha }}":"refs/heads/${branch}"
           echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
           git fetch origin "${branch}"
-      - name: Generate a GitHub token
+      - name: Get GitHub token (DataDog/orchestrion)
         id: generate-token
-        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
         with:
-          app-id: ${{ vars.DD_K9_LIBRARY_GO_APP_ID }}
-          private-key: ${{ secrets.DD_K9_LIBRARY_GO_APP_PRIVATE_KEY }}
+          scope: DataDog/orchestrion
+          policy: self.github.deps-update.schedule
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@f24050e41f8694750427d111b52f4ef9ca81a32d # v0.2.18
+        uses: planetscale/ghcommit-action@25309d8005ac7c3bcd61d3fe19b69e0fe47dbdde # v0.2.20
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ github.repository }}

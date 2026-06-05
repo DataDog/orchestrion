@@ -1,0 +1,35 @@
+%YAML 1.1
+---
+aspects:
+  - id: "custom-context-implements"
+    join-point:
+      function-body:
+        function:
+          - name: DoThingWithCustomCtx
+    advice:
+      - prepend-statements:
+          imports:
+            fmt: fmt
+          template: |-
+            {{ with .Function.ArgumentThatImplements "context.Context" }}
+            fmt.Printf("found context: %q\n", "{{ . }}")
+            {{ else }}
+            fmt.Println("no context found")
+            {{ end }}
+
+code: |-
+  package test
+
+  import (
+  	"context"
+  	"fmt"
+  )
+
+  type CustomContext struct {
+  	context.Context
+  	UserID string
+  }
+
+  func DoThingWithCustomCtx(ctx *CustomContext) {
+  	fmt.Println("doing thing")
+  }
