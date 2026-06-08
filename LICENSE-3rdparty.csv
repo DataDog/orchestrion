@@ -6,12 +6,8 @@ orchestrion,github.com/DataDog/datadog-agent/pkg/proto/pbgo/trace,Apache-2.0,"Co
 orchestrion,github.com/DataDog/datadog-agent/pkg/remoteconfig/state,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/trace,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/trace/log,Apache-2.0,"Copyright 2016-present Datadog, Inc."
-orchestrion,github.com/DataDog/datadog-agent/pkg/trace/otel/traceutil,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/trace/stats,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-agent/pkg/trace/traceutil,Apache-2.0,"Copyright 2016-present Datadog, Inc."
-orchestrion,github.com/DataDog/datadog-agent/pkg/util/log,Apache-2.0,"Copyright 2016-present Datadog, Inc."
-orchestrion,github.com/DataDog/datadog-agent/pkg/util/scrubber,Apache-2.0,"Copyright 2016-present Datadog, Inc."
-orchestrion,github.com/DataDog/datadog-agent/pkg/version,Apache-2.0,"Copyright 2016-present Datadog, Inc."
 orchestrion,github.com/DataDog/datadog-go/v5/statsd,MIT,"Copyright (c) 2015 Datadog, Inc"
 orchestrion,github.com/DataDog/dd-trace-go/v2,Apache-2.0,"Copyright 2016 Datadog, Inc. | Copyright (c) 2016-Present, Datadog <info@datadoghq.com> | Copyright 2016-Present Datadog, Inc."
 orchestrion,github.com/DataDog/go-libddwaf/v4,Apache-2.0,"Copyright 2016-present Datadog, Inc."
@@ -111,4 +107,3 @@ orchestrion,golang.org/x/tools,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,golang.org/x/xerrors,BSD-3-Clause,Copyright 2019 The Go Authors.
 orchestrion,google.golang.org/genproto/googleapis/rpc/code,Apache-2.0,unknown
 orchestrion,google.golang.org/protobuf,BSD-3-Clause,Copyright (c) 2018 The Go Authors. All rights reserved.
-orchestrion,gopkg.in/ini.v1,Apache-2.0,Copyright 2014 Unknwon
