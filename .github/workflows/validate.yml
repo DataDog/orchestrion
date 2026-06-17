@@ -16,7 +16,6 @@ jobs:
   ##############################################################################
   # Run all the code generators; and refresh the LICENSES-3rdparty.csv file
   generate:
-    needs: coverage-preflight
     runs-on: ubuntu-latest
     name: Run all generators
     outputs:
@@ -408,8 +407,7 @@ jobs:
             test/e2e/**/*.prof
           if-no-files-found: ignore
   ##############################################################################
-  # Assert everything is complete. This simplifies branch protection settings
-  # and allows us to have one single trigger for CodeCov reporting.
+  # Assert everything is complete. This simplifies branch protection settings.
   complete:
     runs-on: ubuntu-latest
     name: Complete
@@ -435,64 +433,11 @@ jobs:
           echo "Failed!"
           exit 1
   ##############################################################################
-  # Produce a CodeCov coverage report with all uploaded code coverage data.
-  coverage-preflight:
-    runs-on: ubuntu-latest
-    name: CodeCov pre-flight
-    steps:
-      - name: Checkout
-        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-      - name: Download codecov CLI
-        id: codecov-cli
-        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: ./.github/actions/codecov-cli
-      - name: Register commit with CodeCov
-        if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        shell: bash
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: |-
-          set -euo pipefail
-
-          pr=()
-          sha="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-          parentsha="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            pr+=("--pr=${{ github.event.number }}")
-          fi
-
-          echo "::group::Register commit metadata with CodeCov"
-          ${{ steps.codecov-cli.outputs.codecov }}                              \
-            --auto-load-params-from=GithubActions                               \
-            --verbose                                                           \
-            create-commit                                                       \
-            --parent-sha="${parentsha}"                                         \
-            ${pr[@]+"${pr[@]}"}                                                 \
-            --sha="${sha}"                                                      \
-            --fail-on-error                                                     \
-            --git-service=github                                                \
-            --token="${CODECOV_TOKEN}"                                          \
-            --slug="${{ github.repository }}"
-          echo "::endgroup::"
-
-          echo "::group::Create a new blank CodeCov report"
-          ${{ steps.codecov-cli.outputs.codecov }}                              \
-            --auto-load-params-from=GithubActions                               \
-            --verbose                                                           \
-            create-report                                                       \
-            ${pr[@]+"${pr[@]}"}                                                 \
-            --sha="${sha}"                                                      \
-            --fail-on-error                                                     \
-            --git-service=github                                                \
-            --token="${CODECOV_TOKEN}"                                          \
-            --slug="${{ github.repository }}"
-          echo "::endgroup::"
+  # Collect coverage artifacts and upload to Datadog.
   coverage-matrix:
     runs-on: ubuntu-latest
     name: Compute Coverage Matrix
     needs:
-      - coverage-preflight
       - unit-tests
       - integration-tests
     if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
@@ -557,28 +502,6 @@ jobs:
               ].join('\n'),
             );
           EOF
-  coverage-upload:
-    runs-on: ubuntu-latest
-    name: Upload report to CodeCov (${{ matrix.flag }})
-    needs: [coverage-matrix]
-    if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-    strategy:
-      fail-fast: true
-      matrix: ${{ fromJson(needs.coverage-matrix.outputs.matrix) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-      - name: Download Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          pattern: coverage-*
-      - name: Upload Reports
-        uses: ./.github/actions/codecov-upload
-        with:
-          name: ${{ matrix.flag }}
-          flags: ${{ matrix.flag }}
-          files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
-          token: ${{ secrets.CODECOV_TOKEN }}
   coverage-upload-datadog:
     runs-on: ubuntu-latest
     name: Upload coverage to Datadog (${{ matrix.flag }})
@@ -601,45 +524,3 @@ jobs:
           api_key: ${{ secrets.DD_CI_API_KEY }}
           files: ${{ fromJson(needs.coverage-matrix.outputs.files)[matrix.flag] }}
           flags: ${{ matrix.flag }}
-  coverage-finalize:
-    runs-on: ubuntu-latest
-    name: Create CodeCov report
-    needs: [coverage-upload]
-    if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-      - name: Download codecov CLI
-        id: codecov-cli
-        uses: ./.github/actions/codecov-cli
-      - name: Create CodeCov report
-        shell: bash
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: |-
-          set -euo pipefail
-          sha="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-
-          echo "::group::Create CodeCov report results"
-          ${{ steps.codecov-cli.outputs.codecov }}                              \
-            --auto-load-params-from=GithubActions                               \
-            --verbose                                                           \
-            create-report-results                                               \
-            --sha="${sha}"                                                      \
-            --fail-on-error                                                     \
-            --git-service=github                                                \
-            --token="${CODECOV_TOKEN}"                                          \
-            --slug="${{ github.repository }}"
-          echo "::endgroup::"
-
-          echo "::group::Issue GitHub notifications"
-          ${{ steps.codecov-cli.outputs.codecov }}                              \
-            --auto-load-params-from=GithubActions                               \
-            --verbose                                                           \
-            send-notifications                                                  \
-            --sha="${sha}"                                                      \
-            --fail-on-error                                                     \
-            --git-service=github                                                \
-            --token="${CODECOV_TOKEN}"                                          \
-            --slug=${{ github.repository }}
-          echo "::endgroup::"
