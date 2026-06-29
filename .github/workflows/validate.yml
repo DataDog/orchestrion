@@ -297,6 +297,10 @@ jobs:
   # Run all benchmarks and generate report
   benchmark:
     needs: generate
+    # Benchmarks execute repository-controlled Go code on a custom runner. Only
+    # run them for merge queues or PRs from this repository, where the author
+    # already has write access, and never for fork pull requests.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: arm-8core-linux
     name: Benchmarks (run ${{ matrix.run_number }})
     strategy:
