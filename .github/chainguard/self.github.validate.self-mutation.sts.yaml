@@ -4,6 +4,7 @@ subject_pattern: repo:DataDog/orchestrion:pull_request
 
 claim_pattern:
   event_name: pull_request
+  job_workflow_ref: DataDog/orchestrion/\.github/workflows/validate\.yml@refs/heads/.*
   repository: DataDog/orchestrion
 
 permissions:
