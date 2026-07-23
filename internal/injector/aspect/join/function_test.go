@@ -241,9 +241,9 @@ func TestUnmarshalYAMLReceiver(t *testing.T) {
 			want: Receiver(typed.TypeName{Name: "false"}),
 		},
 		{
-			name:    "true is rejected",
-			yaml:    `receiver: true`,
-			wantErr: true,
+			name: "any receiver",
+			yaml: `receiver: true`,
+			want: AnyReceiver(),
 		},
 		{
 			name:    "non-string is rejected",
@@ -266,16 +266,18 @@ func TestUnmarshalYAMLReceiver(t *testing.T) {
 	}
 }
 
-func TestNoReceiverMatches(t *testing.T) {
+func TestHasReceiverMatches(t *testing.T) {
 	tests := []struct {
-		name string
-		node dst.Node
-		want bool
+		name            string
+		node            dst.Node
+		wantNoReceiver  bool
+		wantAnyReceiver bool
 	}{
 		{
-			name: "function declaration",
-			node: &dst.FuncDecl{Name: dst.NewIdent("function")},
-			want: true,
+			name:            "function declaration",
+			node:            &dst.FuncDecl{Name: dst.NewIdent("function")},
+			wantNoReceiver:  true,
+			wantAnyReceiver: false,
 		},
 		{
 			name: "method declaration",
@@ -283,7 +285,8 @@ func TestNoReceiverMatches(t *testing.T) {
 				Recv: &dst.FieldList{List: []*dst.Field{{Type: dst.NewIdent("receiver")}}},
 				Name: dst.NewIdent("method"),
 			},
-			want: false,
+			wantNoReceiver:  false,
+			wantAnyReceiver: true,
 		},
 		{
 			name: "pointer method declaration",
@@ -291,25 +294,30 @@ func TestNoReceiverMatches(t *testing.T) {
 				Recv: &dst.FieldList{List: []*dst.Field{{Type: &dst.StarExpr{X: dst.NewIdent("receiver")}}}},
 				Name: dst.NewIdent("method"),
 			},
-			want: false,
+			wantNoReceiver:  false,
+			wantAnyReceiver: true,
 		},
 		{
-			name: "function literal",
-			node: &dst.FuncLit{Type: &dst.FuncType{}},
-			want: true,
+			name:            "function literal",
+			node:            &dst.FuncLit{Type: &dst.FuncType{}},
+			wantNoReceiver:  true,
+			wantAnyReceiver: false,
 		},
 		{
-			name: "non-function node",
-			node: &dst.GenDecl{},
-			want: false,
+			name:            "non-function node",
+			node:            &dst.GenDecl{},
+			wantNoReceiver:  false,
+			wantAnyReceiver: false,
 		},
 	}
 
-	matcher := Function(NoReceiver())
+	noReceiver := Function(NoReceiver())
+	anyReceiver := Function(AnyReceiver())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := functionTestContext{node: tt.node}
-			assert.Equal(t, tt.want, matcher.Matches(ctx))
+			assert.Equal(t, tt.wantNoReceiver, noReceiver.Matches(ctx))
+			assert.Equal(t, tt.wantAnyReceiver, anyReceiver.Matches(ctx))
 		})
 	}
 }

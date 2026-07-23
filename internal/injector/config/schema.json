@@ -485,6 +485,8 @@
         },
         "examples": [
           { "function": [{ "name": "main" }, { "signature": {} }] },
+          { "function": [{ "receiver": true }] },
+          { "function": [{ "receiver": false }] },
           { "function": [{ "signature-contains": { "args": ["context.Context"], "returns": ["error"] } }] },
           { "function": [{ "result-implements": "io.Reader" }] },
           { "function": [{ "final-result-implements": "error" }] },
@@ -513,10 +515,10 @@
                 "unevaluatedProperties": false,
                 "properties": {
                   "receiver": {
-                    "description": "Matches only method declarations for the provided receiver type, or non-method functions and function literal expressions if `false` is provided.",
+                    "description": "Matches only method declarations for the provided receiver type. A boolean matches any function based on receiver presence: `true` selects methods with any receiver type, while `false` selects non-method functions and function literal expressions.",
                     "oneOf": [
                       { "$ref": "#/$defs/go/qualified-identifier" },
-                      { "const": false }
+                      { "type": "boolean" }
                     ]
                   }
                 }

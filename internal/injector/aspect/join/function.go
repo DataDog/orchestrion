@@ -313,31 +313,36 @@ func (fo *receiver) Hash(h *fingerprint.Hasher) error {
 	return h.Named("receiver", fo.TypeName)
 }
 
-type noReceiver struct{}
+type hasReceiver bool
 
 // NoReceiver matches functions and function literal expressions without a receiver.
 func NoReceiver() FunctionOption {
-	return &noReceiver{}
+	return hasReceiver(false)
 }
 
-func (fo *noReceiver) packageMayMatch(_ *may.PackageContext) may.MatchType {
+// AnyReceiver matches methods with any receiver type.
+func AnyReceiver() FunctionOption {
+	return hasReceiver(true)
+}
+
+func (hasReceiver) packageMayMatch(_ *may.PackageContext) may.MatchType {
 	return may.Match
 }
 
-func (fo *noReceiver) fileMayMatch(_ *may.FileContext) may.MatchType {
+func (hasReceiver) fileMayMatch(_ *may.FileContext) may.MatchType {
 	return may.Match
 }
 
-func (fo *noReceiver) evaluate(info functionInformation) bool {
-	return info.Receiver == nil
+func (fo hasReceiver) evaluate(info functionInformation) bool {
+	return (info.Receiver != nil) == bool(fo)
 }
 
-func (fo *noReceiver) impliesImported() []string {
+func (hasReceiver) impliesImported() []string {
 	return nil
 }
 
-func (fo *noReceiver) Hash(h *fingerprint.Hasher) error {
-	return h.Named("receiver", fingerprint.Bool(false))
+func (fo hasReceiver) Hash(h *fingerprint.Hasher) error {
+	return h.Named("receiver", fingerprint.Bool(fo))
 }
 
 type functionBody struct {
@@ -626,12 +631,9 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 			}
 			o.FunctionOption = Receiver(tn)
 		case bool:
-			if arg {
-				return fmt.Errorf("cannot unmarshal into a FuncDeclOption: 'receiver' can only be false or a string, got true")
-			}
-			o.FunctionOption = NoReceiver()
+			o.FunctionOption = hasReceiver(arg)
 		default:
-			return fmt.Errorf("cannot unmarshal into a FuncDeclOption: 'receiver' can only be false or a string, got %T", arg)
+			return fmt.Errorf("cannot unmarshal into a FuncDeclOption: 'receiver' can only be a boolean or a string, got %T", arg)
 		}
 	case "signature", "signature-contains":
 		var sig struct {
