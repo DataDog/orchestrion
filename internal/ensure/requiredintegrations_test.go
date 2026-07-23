@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/gomod"
@@ -114,6 +115,62 @@ func TestFetchLatestVersion(t *testing.T) {
 		assert.NotEmpty(t, version)
 		assert.True(t, semver.IsValid(version), "version %q should be valid semver", version)
 	})
+
+	t.Run("workspace-mode-compatibility", func(t *testing.T) {
+		// Simulate a target project that uses a Go workspace (e.g. etcd-style
+		// monorepos). Under workspace mode the go command rejects -mod=mod with
+		// "-mod may only be set to readonly or vendor when in workspace mode",
+		// so fetchLatestVersion must disable workspace mode when querying the registry.
+		workDir := t.TempDir()
+		modDir := filepath.Join(workDir, "mod-a")
+		require.NoError(t, os.MkdirAll(modDir, 0755))
+		require.NoError(t, os.WriteFile(filepath.Join(modDir, "go.mod"),
+			[]byte("module example.com/mod-a\n\ngo 1.23\n"), 0644))
+		goWork := filepath.Join(workDir, "go.work")
+		require.NoError(t, os.WriteFile(goWork,
+			[]byte("go 1.23\n\nuse ./mod-a\n"), 0644))
+
+		t.Setenv("GOWORK", goWork)
+
+		version, err := fetchLatestVersion(ctx, "golang.org/x/mod")
+		require.NoError(t, err, "fetchLatestVersion should work even when GOWORK is set")
+		assert.NotEmpty(t, version)
+		assert.True(t, semver.IsValid(version), "version %q should be valid semver", version)
+	})
+}
+
+func TestLatestVersionEnv(t *testing.T) {
+	base := []string{
+		"PATH=/usr/bin",
+		"GOFLAGS=-mod=vendor",
+		"GOWORK=/some/path/go.work",
+		"GOTOOLCHAIN=go1.99",
+	}
+
+	env := latestVersionEnv(base)
+
+	// Unrelated variables are preserved.
+	assert.Contains(t, env, "PATH=/usr/bin")
+
+	// Canonical overrides are present.
+	assert.Contains(t, env, "GOTOOLCHAIN=local")
+	assert.Contains(t, env, "GOFLAGS=-mod=mod")
+	// GOWORK=off is what allows -mod=mod queries to succeed under workspace mode.
+	assert.Contains(t, env, "GOWORK=off")
+
+	// Inherited conflicting values must be dropped, not just shadowed: each of the
+	// three normalized variables appears exactly once.
+	counts := map[string]int{}
+	for _, e := range env {
+		key, _, ok := strings.Cut(e, "=")
+		if !ok {
+			continue
+		}
+		counts[key]++
+	}
+	assert.Equal(t, 1, counts["GOFLAGS"], "GOFLAGS should appear exactly once")
+	assert.Equal(t, 1, counts["GOWORK"], "GOWORK should appear exactly once")
+	assert.Equal(t, 1, counts["GOTOOLCHAIN"], "GOTOOLCHAIN should appear exactly once")
 }
 
 func TestFetchVersions(t *testing.T) {
