@@ -513,8 +513,11 @@
                 "unevaluatedProperties": false,
                 "properties": {
                   "receiver": {
-                    "description": "Matches only method declarations for the provided receiver type.",
-                    "$ref": "#/$defs/go/qualified-identifier"
+                    "description": "Matches only method declarations for the provided receiver type, or non-method functions and function literal expressions if `false` is provided.",
+                    "oneOf": [
+                      { "$ref": "#/$defs/go/qualified-identifier" },
+                      { "const": false }
+                    ]
                   }
                 }
               },
