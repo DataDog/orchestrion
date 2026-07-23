@@ -1,0 +1,1377 @@
+diff --git i/src/cmd/compile/internal/base/debug.go w/src/cmd/compile/internal/base/debug.go
+index 5e0268bb88..9bd7e3281d 100644
+--- i/src/cmd/compile/internal/base/debug.go
++++ w/src/cmd/compile/internal/base/debug.go
+@@ -69,6 +69,7 @@ type DebugFlags struct {
+ 	StaticCopy            int    `help:"print information about missed static copies" concurrent:"ok"`
+ 	SyncFrames            int    `help:"how many writer stack frames to include at sync points in unified export data"`
+ 	TailCall              int    `help:"print information about tail calls"`
++	Taint                 int    `help:"enable experimental IAST shadow taint instrumentation" concurrent:"ok"`
+ 	TypeAssert            int    `help:"print information about type assertion inlining"`
+ 	WB                    int    `help:"print information about write barriers"`
+ 	ABIWrap               int    `help:"print information about ABI wrapper generation"`
+diff --git i/src/cmd/compile/internal/ssagen/ssa.go w/src/cmd/compile/internal/ssagen/ssa.go
+index 17feb90df7..75a3c3c5e7 100644
+--- i/src/cmd/compile/internal/ssagen/ssa.go
++++ w/src/cmd/compile/internal/ssagen/ssa.go
+@@ -392,9 +392,11 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+ 	// Allocate starting values
+ 	s.labels = map[string]*ssaLabel{}
+ 	s.fwdVars = map[ir.Node]*ssa.Value{}
++	s.taint = map[*ssa.Value]*ssa.Value{}
++	s.shadowVars = map[*ir.Name]*ir.Name{}
+ 	s.startmem = s.entryNewValue0(ssa.OpInitMem, types.TypeMem)
+ 
+-	s.hasOpenDefers = base.Flag.N == 0 && s.hasdefer && !s.curfn.OpenCodedDeferDisallowed()
++	s.hasOpenDefers = base.Flag.N == 0 && s.hasdefer && !s.curfn.OpenCodedDeferDisallowed() && !s.shadowCallable()
+ 	switch {
+ 	case base.Debug.NoOpenDefer != 0:
+ 		s.hasOpenDefers = false
+@@ -492,12 +494,37 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+ 
+ 	s.f.OwnAux = ssa.OwnAuxCall(fn.LSym, params)
+ 
++	var incomingTaint *ssa.Value
++	var incomingTaintParam *ir.Name
++	if s.shadowCallable() {
++		transition := s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionTake"), true,
++			[]*types.Type{types.Types[types.TUINT8], types.Types[types.TUINTPTR]}, s.shadowFunctionPC())
++		incomingTaint = transition[0]
++		s.shadowReturnAuth = transition[1]
++		for _, field := range fn.Type().Params() {
++			if s.taintTrackedType(field.Type) {
++				name, ok := field.Nname.(*ir.Name)
++				if ok && !ir.IsBlank(name) {
++					incomingTaintParam = name
++				}
++				break
++			}
++		}
++	}
++
+ 	// Populate SSAable arguments.
+ 	for _, n := range fn.Dcl {
+ 		if n.Class == ir.PPARAM {
+ 			if s.canSSA(n) {
+ 				v := s.newValue0A(ssa.OpArg, n.Type(), n)
+ 				s.vars[n] = v
++				if s.taintTrackedType(n.Type()) {
++					label := s.cleanTaint()
++					if incomingTaint != nil && n == incomingTaintParam {
++						label = incomingTaint
++					}
++					s.vars[s.shadowVariable(n)] = label
++				}
+ 				s.addNamedValue(n, v) // This helps with debugging information, not needed for compilation itself.
+ 			} else { // address was taken AND/OR too large for SSA
+ 				paramAssignment := ssa.ParamAssignmentForArgName(s.f, n)
+@@ -511,6 +538,13 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+ 						s.storeParameterRegsToStack(s.f.ABISelf, paramAssignment, n, s.decladdrs[n], false)
+ 					}
+ 				}
++				if s.taintTrackedType(n.Type()) {
++					label := s.cleanTaint()
++					if incomingTaint != nil && n == incomingTaintParam {
++						label = incomingTaint
++					}
++					s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, s.decladdrs[n], label)
++				}
+ 			}
+ 		}
+ 	}
+@@ -554,7 +588,12 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+ 			if n.Byval() && !n.Addrtaken() && ssa.CanSSA(n.Type()) {
+ 				n.Class = ir.PAUTO
+ 				fn.Dcl = append(fn.Dcl, n)
+-				s.assign(n, s.load(n.Type(), ptr), false, 0)
++				value := s.load(n.Type(), ptr)
++				if s.taintTrackedType(n.Type()) {
++					s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++						[]*types.Type{types.Types[types.TUINT8]}, ptr)[0]
++				}
++				s.assign(n, value, false, 0)
+ 				continue
+ 			}
+ 
+@@ -678,7 +717,15 @@ func (s *state) paramsToHeap() {
+ 			}
+ 			s.newHeapaddr(n)
+ 			if n.Class == ir.PPARAM {
++				var label *ssa.Value
++				if s.taintTrackedType(n.Type()) {
++					label = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++						[]*types.Type{types.Types[types.TUINT8]}, s.decladdrs[n])[0]
++				}
+ 				s.move(n.Type(), s.expr(n.Heapaddr), s.decladdrs[n])
++				if label != nil {
++					s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, s.expr(n.Heapaddr), label)
++				}
+ 			}
+ 		}
+ 	}
+@@ -1050,6 +1097,14 @@ type state struct {
+ 	// *Node is the unique identifier (an ONAME Node) for the variable.
+ 	fwdVars map[ir.Node]*ssa.Value
+ 
++	// taint maps program values to runtime uint8 shadow-label values.
++	taint map[*ssa.Value]*ssa.Value
++
++	// shadowVars maps tracked Go variables to synthetic uint8 SSA variables.
++	shadowVars map[*ir.Name]*ir.Name
++	// shadowReturnAuth authenticates a dynamic return transition.
++	shadowReturnAuth *ssa.Value
++
+ 	// all defined variables at the end of each block. Indexed by block ID.
+ 	defvars []map[ir.Node]*ssa.Value
+ 
+@@ -2382,6 +2437,9 @@ func (s *state) exit() *ssa.Block {
+ 			s.popLine()
+ 		}
+ 	}
++	if s.shadowCallable() {
++		s.pushTaintResults()
++	}
+ 
+ 	// Do actual return.
+ 	// These currently turn into self-copies (in many cases).
+@@ -3068,9 +3126,19 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 			return s.entryNewValue1A(ssa.OpAddr, types.NewPtr(n.Type()), sym, s.sb)
+ 		}
+ 		if s.canSSA(n) {
+-			return s.variable(n, n.Type())
++			value := s.variable(n, n.Type())
++			if s.taintTrackedType(n.Type()) {
++				s.taint[value] = s.variable(s.shadowVariable(n), types.Types[types.TUINT8])
++			}
++			return value
+ 		}
+-		return s.load(n.Type(), s.addr(n))
++		addr := s.addr(n)
++		value := s.load(n.Type(), addr)
++		if s.taintTrackedType(n.Type()) {
++			s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++				[]*types.Type{types.Types[types.TUINT8]}, addr)[0]
++		}
++		return value
+ 	case ir.OLINKSYMOFFSET:
+ 		n := n.(*ir.LinksymOffsetExpr)
+ 		return s.load(n.Type(), s.addr(n))
+@@ -3488,7 +3556,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 	case ir.ODEREF:
+ 		n := n.(*ir.StarExpr)
+ 		p := s.exprPtr(n.X, n.Bounded(), n.Pos())
+-		return s.load(n.Type(), p)
++		value := s.load(n.Type(), p)
++		if s.taintTrackedType(n.Type()) {
++			s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++				[]*types.Type{types.Types[types.TUINT8]}, p)[0]
++		}
++		return value
+ 
+ 	case ir.ODOT:
+ 		n := n.(*ir.SelectorExpr)
+@@ -3507,7 +3580,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 		// instrumentation.
+ 		if ir.IsAddressable(n) && !s.canSSA(n) {
+ 			p := s.addr(n)
+-			return s.load(n.Type(), p)
++			value := s.load(n.Type(), p)
++			if s.taintTrackedType(n.Type()) {
++				s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++					[]*types.Type{types.Types[types.TUINT8]}, p)[0]
++			}
++			return value
+ 		}
+ 		v := s.expr(n.X)
+ 		return s.newValue1I(ssa.OpStructSelect, n.Type(), int64(fieldIdx(n)), v)
+@@ -3516,7 +3594,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 		n := n.(*ir.SelectorExpr)
+ 		p := s.exprPtr(n.X, n.Bounded(), n.Pos())
+ 		p = s.newValue1I(ssa.OpOffPtr, types.NewPtr(n.Type()), n.Offset(), p)
+-		return s.load(n.Type(), p)
++		value := s.load(n.Type(), p)
++		if s.taintTrackedType(n.Type()) {
++			s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++				[]*types.Type{types.Types[types.TUINT8]}, p)[0]
++		}
++		return value
+ 
+ 	case ir.OINDEX:
+ 		n := n.(*ir.IndexExpr)
+@@ -4535,6 +4618,13 @@ func (s *state) assignWhichMayOverlap(left ir.Node, right *ssa.Value, deref bool
+ 		left := left.(*ir.Name)
+ 		// Update variable assignment.
+ 		s.vars[left] = right
++		if s.taintTrackedType(left.Type()) {
++			label := s.taint[right]
++			if label == nil {
++				label = s.cleanTaint()
++			}
++			s.vars[s.shadowVariable(left)] = label
++		}
+ 		s.addNamedValue(left, right)
+ 		return
+ 	}
+@@ -4556,16 +4646,31 @@ func (s *state) assignWhichMayOverlap(left ir.Node, right *ssa.Value, deref bool
+ 		t = types.Types[types.TUNSAFEPTR]
+ 	}
+ 	if deref {
++		label := s.cleanTaint()
++		if s.taintTrackedType(t) && right != nil {
++			label = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++				[]*types.Type{types.Types[types.TUINT8]}, right)[0]
++		}
+ 		// Treat as a mem->mem move.
+ 		if right == nil {
+ 			s.zero(t, addr)
+ 		} else {
+ 			s.moveWhichMayOverlap(t, addr, right, mayOverlap)
+ 		}
++		if s.taintTrackedType(t) {
++			s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, label)
++		}
+ 		return
+ 	}
+ 	// Treat as a store.
+ 	s.storeType(t, addr, right, skip, !ir.IsAutoTmp(left))
++	if s.taintTrackedType(t) {
++		label := s.taint[right]
++		if label == nil {
++			label = s.cleanTaint()
++		}
++		s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, label)
++	}
+ }
+ 
+ // zeroVal returns the zero value for type t.
+@@ -4952,6 +5057,11 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 
+ 	callABI := s.f.ABIDefault
+ 
++	shadowCall := base.Debug.Taint != 0 && k == callNormal && n.Op() == ir.OCALLFUNC &&
++		s.shadowFunctionType(n.Fun.Type()) && n.Fun.Op() == ir.ONAME && n.Fun.(*ir.Name).Class == ir.PFUNC &&
++		n.Fun.(*ir.Name).Func != nil
++	dynamicShadowCall := base.Debug.Taint != 0 && k == callNormal && s.shadowFunctionType(n.Fun.Type()) && !shadowCall
++
+ 	if k != callNormal && k != callTail && (len(n.Args) != 0 || n.Op() == ir.OCALLINTER || n.Fun.Type().NumResults() != 0) {
+ 		s.Fatalf("go/defer call with arguments: %v", n)
+ 	}
+@@ -5007,7 +5117,6 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 	if deferExtra != nil {
+ 		dextra = s.expr(deferExtra)
+ 	}
+-
+ 	params := callABI.ABIAnalyze(n.Fun.Type(), false /* Do not set (register) nNames from caller side -- can cause races. */)
+ 	types.CalcSize(fn.Type())
+ 	stksize := params.ArgWidth() // includes receiver, args, and results
+@@ -5020,6 +5129,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 	}
+ 
+ 	var call *ssa.Value
++	var dynamicCallAuth *ssa.Value
+ 	if k == callDeferStack {
+ 		if stksize != 0 {
+ 			s.Fatalf("deferprocStack with non-zero stack size %d: %v", stksize, n)
+@@ -5067,6 +5177,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 		// Write args.
+ 		t := n.Fun.Type()
+ 		args := n.Args
++		var shadowArgs []*ssa.Value
+ 
+ 		for _, p := range params.InParams() { // includes receiver for interface calls
+ 			ACArgs = append(ACArgs, p.Type)
+@@ -5084,7 +5195,29 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 		}
+ 
+ 		for i, n := range args {
+-			callArgs = append(callArgs, s.putArg(n, t.Param(i).Type))
++			arg := s.putArg(n, t.Param(i).Type)
++			callArgs = append(callArgs, arg)
++			if (shadowCall || dynamicShadowCall) && s.taintTrackedType(t.Param(i).Type) {
++				label := s.taint[arg]
++				if label == nil {
++					label = s.cleanTaint()
++				}
++				shadowArgs = append(shadowArgs, label)
++			}
++			if base.Debug.Taint != 0 && i == 0 && calleeLSym != nil &&
++				(calleeLSym.Name == "os.Open" || calleeLSym.Name == "os.OpenFile") {
++				if label := s.taint[arg]; label != nil {
++					s.rtcall(typecheck.LookupRuntimeFunc("taintSinkOpen"), true, nil, label)
++				}
++			}
++		}
++
++		for _, label := range shadowArgs {
++			if shadowCall {
++				targetPC := s.entryNewValue1A(ssa.OpAddr, types.Types[types.TUINTPTR], calleeLSym, s.sb)
++				dynamicCallAuth = s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionEnter"), true,
++					[]*types.Type{types.Types[types.TUINTPTR]}, targetPC, label)[0]
++			}
+ 		}
+ 
+ 		callArgs = append(callArgs, s.mem())
+@@ -5108,9 +5241,19 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 			// critical that we not clobber any arguments already
+ 			// stored onto the stack.
+ 			codeptr = s.rawLoad(types.Types[types.TUINTPTR], closure)
++			if dynamicShadowCall && len(shadowArgs) == 1 {
++				dynamicCallAuth = s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionEnter"), true,
++					[]*types.Type{types.Types[types.TUINTPTR]}, codeptr, shadowArgs[0])[0]
++				callArgs[len(callArgs)-1] = s.mem()
++			}
+ 			aux := ssa.ClosureAuxCall(callABI.ABIAnalyzeTypes(ACArgs, ACResults))
+ 			call = s.newValue2A(ssa.OpClosureLECall, aux.LateExpansionResultType(), aux, codeptr, closure)
+ 		case codeptr != nil:
++			if dynamicShadowCall && len(shadowArgs) == 1 {
++				dynamicCallAuth = s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionEnter"), true,
++					[]*types.Type{types.Types[types.TUINTPTR]}, codeptr, shadowArgs[0])[0]
++				callArgs[len(callArgs)-1] = s.mem()
++			}
+ 			// Note that the "receiver" parameter is nil because the actual receiver is the first input parameter.
+ 			aux := ssa.InterfaceAuxCall(params)
+ 			call = s.newValue1A(ssa.OpInterLECall, aux.LateExpansionResultType(), aux, codeptr)
+@@ -5169,7 +5312,26 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 	if returnResultAddr {
+ 		return s.resultAddrOfCall(call, 0, fp.Type)
+ 	}
+-	return s.newValue1I(ssa.OpSelectN, fp.Type, 0, call)
++	result := s.newValue1I(ssa.OpSelectN, fp.Type, 0, call)
++	if dynamicShadowCall && dynamicCallAuth != nil && s.taintTrackedType(fp.Type) {
++		label := s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionFinish"), true,
++			[]*types.Type{types.Types[types.TUINT8]}, dynamicCallAuth)[0]
++		s.taint[result] = label
++		s.prevCall = call
++	}
++	if shadowCall && s.taintTrackedType(fp.Type) {
++		label := s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionFinish"), true,
++			[]*types.Type{types.Types[types.TUINT8]}, dynamicCallAuth)[0]
++		s.taint[result] = label
++		s.prevCall = call
++	}
++	if base.Debug.Taint != 0 && calleeLSym != nil && calleeLSym.Name == "os.Getenv" {
++		label := s.rtcall(typecheck.LookupRuntimeFunc("taintSourceLabel"), true,
++			[]*types.Type{types.Types[types.TUINT8]}, result)[0]
++		s.taint[result] = label
++		s.prevCall = call
++	}
++	return result
+ }
+ 
+ // maybeNilCheckClosure checks if a nil check of a closure is needed in some
+@@ -6606,6 +6768,67 @@ func (s *state) variable(n ir.Node, t *types.Type) *ssa.Value {
+ 	return v
+ }
+ 
++func (s *state) taintTrackedType(t *types.Type) bool {
++	return base.Debug.Taint != 0 && !base.Flag.CompilingRuntime && t.IsString()
++}
++
++func (s *state) shadowVariable(n *ir.Name) *ir.Name {
++	shadow := s.shadowVars[n]
++	if shadow != nil {
++		return shadow
++	}
++	shadow = typecheck.TempAt(n.Pos(), s.curfn, types.Types[types.TUINT8])
++	shadow.SetUsed(true)
++	s.shadowVars[n] = shadow
++	return shadow
++}
++
++func (s *state) cleanTaint() *ssa.Value {
++	return s.constInt8(types.Types[types.TUINT8], 0)
++}
++
++func (s *state) shadowFunctionType(t *types.Type) bool {
++	if base.Debug.Taint == 0 || t.NumResults() != 1 || !s.taintTrackedType(t.Result(0).Type) {
++		return false
++	}
++	trackedParams := 0
++	for index := 0; index < t.NumParams(); index++ {
++		if s.taintTrackedType(t.Param(index).Type) {
++			trackedParams++
++		}
++	}
++	return trackedParams == 1
++}
++
++func (s *state) shadowCallable() bool {
++	return s.shadowFunctionType(s.curfn.Type())
++}
++
++func (s *state) shadowFunctionPC() *ssa.Value {
++	return s.entryNewValue1A(ssa.OpAddr, types.Types[types.TUINTPTR], s.curfn.LSym, s.sb)
++}
++
++func (s *state) pushTaintResults() {
++	for _, n := range s.curfn.Dcl {
++		if n.Class != ir.PPARAMOUT || !s.taintTrackedType(n.Type()) {
++			continue
++		}
++		var label *ssa.Value
++		if s.canSSA(n) {
++			label = s.variable(s.shadowVariable(n), types.Types[types.TUINT8])
++		} else {
++			label = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++				[]*types.Type{types.Types[types.TUINT8]}, s.addr(n))[0]
++		}
++		if label == nil {
++			label = s.cleanTaint()
++		}
++		if s.shadowReturnAuth != nil {
++			s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionPublish"), true, nil, s.shadowReturnAuth, label)
++		}
++	}
++}
++
+ func (s *state) mem() *ssa.Value {
+ 	return s.variable(memVar, types.TypeMem)
+ }
+diff --git i/src/cmd/compile/internal/typecheck/_builtin/runtime.go w/src/cmd/compile/internal/typecheck/_builtin/runtime.go
+index a7603c3e33..58da4ee57d 100644
+--- i/src/cmd/compile/internal/typecheck/_builtin/runtime.go
++++ w/src/cmd/compile/internal/typecheck/_builtin/runtime.go
+@@ -278,6 +278,16 @@ func msanmove(dst, src, size uintptr)
+ func asanread(addr, size uintptr)
+ func asanwrite(addr, size uintptr)
+ 
++// experimental runtime IAST shadow labels
++func taintSourceLabel(string) uint8
++func taintSinkOpen(uint8)
++func taintTransitionEnter(uintptr, uint8) uintptr
++func taintTransitionTake(uintptr) (uint8, uintptr)
++func taintTransitionPublish(uintptr, uint8)
++func taintTransitionFinish(uintptr) uint8
++func taintStoreString(unsafe.Pointer, uint8)
++func taintLoadString(unsafe.Pointer) uint8
++
+ func checkptrAlignment(unsafe.Pointer, *byte, uintptr)
+ func checkptrArithmetic(unsafe.Pointer, []unsafe.Pointer)
+ 
+diff --git i/src/cmd/compile/internal/typecheck/builtin.go w/src/cmd/compile/internal/typecheck/builtin.go
+index 955e65e598..fde8d149ff 100644
+--- i/src/cmd/compile/internal/typecheck/builtin.go
++++ w/src/cmd/compile/internal/typecheck/builtin.go
+@@ -229,19 +229,27 @@ var runtimeDecls = [...]struct {
+ 	{"msanmove", funcTag, 155},
+ 	{"asanread", funcTag, 154},
+ 	{"asanwrite", funcTag, 154},
+-	{"checkptrAlignment", funcTag, 156},
+-	{"checkptrArithmetic", funcTag, 158},
+-	{"libfuzzerTraceCmp1", funcTag, 159},
+-	{"libfuzzerTraceCmp2", funcTag, 160},
+-	{"libfuzzerTraceCmp4", funcTag, 161},
+-	{"libfuzzerTraceCmp8", funcTag, 162},
+-	{"libfuzzerTraceConstCmp1", funcTag, 159},
+-	{"libfuzzerTraceConstCmp2", funcTag, 160},
+-	{"libfuzzerTraceConstCmp4", funcTag, 161},
+-	{"libfuzzerTraceConstCmp8", funcTag, 162},
+-	{"libfuzzerHookStrCmp", funcTag, 163},
+-	{"libfuzzerHookEqualFold", funcTag, 163},
+-	{"addCovMeta", funcTag, 165},
++	{"taintSourceLabel", funcTag, 156},
++	{"taintSinkOpen", funcTag, 157},
++	{"taintTransitionEnter", funcTag, 158},
++	{"taintTransitionTake", funcTag, 159},
++	{"taintTransitionPublish", funcTag, 160},
++	{"taintTransitionFinish", funcTag, 161},
++	{"taintStoreString", funcTag, 162},
++	{"taintLoadString", funcTag, 163},
++	{"checkptrAlignment", funcTag, 164},
++	{"checkptrArithmetic", funcTag, 166},
++	{"libfuzzerTraceCmp1", funcTag, 167},
++	{"libfuzzerTraceCmp2", funcTag, 168},
++	{"libfuzzerTraceCmp4", funcTag, 169},
++	{"libfuzzerTraceCmp8", funcTag, 170},
++	{"libfuzzerTraceConstCmp1", funcTag, 167},
++	{"libfuzzerTraceConstCmp2", funcTag, 168},
++	{"libfuzzerTraceConstCmp4", funcTag, 169},
++	{"libfuzzerTraceConstCmp8", funcTag, 170},
++	{"libfuzzerHookStrCmp", funcTag, 171},
++	{"libfuzzerHookEqualFold", funcTag, 171},
++	{"addCovMeta", funcTag, 173},
+ 	{"x86HasAVX", varTag, 6},
+ 	{"x86HasFMA", varTag, 6},
+ 	{"x86HasPOPCNT", varTag, 6},
+@@ -257,7 +265,7 @@ var runtimeDecls = [...]struct {
+ }
+ 
+ func runtimeTypes() []*types.Type {
+-	var typs [166]*types.Type
++	var typs [174]*types.Type
+ 	typs[0] = types.ByteType
+ 	typs[1] = types.NewPtr(typs[0])
+ 	typs[2] = types.Types[types.TANY]
+@@ -414,16 +422,24 @@ func runtimeTypes() []*types.Type {
+ 	typs[153] = newSig(params(typs[26], typs[26]), params(typs[26]))
+ 	typs[154] = newSig(params(typs[5], typs[5]), nil)
+ 	typs[155] = newSig(params(typs[5], typs[5], typs[5]), nil)
+-	typs[156] = newSig(params(typs[7], typs[1], typs[5]), nil)
+-	typs[157] = types.NewSlice(typs[7])
+-	typs[158] = newSig(params(typs[7], typs[157]), nil)
+-	typs[159] = newSig(params(typs[71], typs[71], typs[15]), nil)
+-	typs[160] = newSig(params(typs[65], typs[65], typs[15]), nil)
+-	typs[161] = newSig(params(typs[67], typs[67], typs[15]), nil)
+-	typs[162] = newSig(params(typs[24], typs[24], typs[15]), nil)
+-	typs[163] = newSig(params(typs[30], typs[30], typs[15]), nil)
+-	typs[164] = types.NewArray(typs[0], 16)
+-	typs[165] = newSig(params(typs[7], typs[67], typs[164], typs[30], typs[13], typs[71], typs[71]), params(typs[67]))
++	typs[156] = newSig(params(typs[30]), params(typs[71]))
++	typs[157] = newSig(params(typs[71]), nil)
++	typs[158] = newSig(params(typs[5], typs[71]), params(typs[5]))
++	typs[159] = newSig(params(typs[5]), params(typs[71], typs[5]))
++	typs[160] = newSig(params(typs[5], typs[71]), nil)
++	typs[161] = newSig(params(typs[5]), params(typs[71]))
++	typs[162] = newSig(params(typs[7], typs[71]), nil)
++	typs[163] = newSig(params(typs[7]), params(typs[71]))
++	typs[164] = newSig(params(typs[7], typs[1], typs[5]), nil)
++	typs[165] = types.NewSlice(typs[7])
++	typs[166] = newSig(params(typs[7], typs[165]), nil)
++	typs[167] = newSig(params(typs[71], typs[71], typs[15]), nil)
++	typs[168] = newSig(params(typs[65], typs[65], typs[15]), nil)
++	typs[169] = newSig(params(typs[67], typs[67], typs[15]), nil)
++	typs[170] = newSig(params(typs[24], typs[24], typs[15]), nil)
++	typs[171] = newSig(params(typs[30], typs[30], typs[15]), nil)
++	typs[172] = types.NewArray(typs[0], 16)
++	typs[173] = newSig(params(typs[7], typs[67], typs[172], typs[30], typs[13], typs[71], typs[71]), params(typs[67]))
+ 	return typs[:]
+ }
+ 
+diff --git i/src/internal/runtime/maps/group.go w/src/internal/runtime/maps/group.go
+index a56d32aca0..c32e30c492 100644
+--- i/src/internal/runtime/maps/group.go
++++ w/src/internal/runtime/maps/group.go
+@@ -299,6 +299,24 @@ func (g *groupReference) elem(typ *abi.MapType, i uintptr) unsafe.Pointer {
+ 	return unsafe.Pointer(uintptr(g.data) + offset)
+ }
+ 
++func (g *groupReference) copyTaintLabels(typ *abi.MapType, source groupReference) {
++	if typ.Elem.Kind() != abi.String || typ.IndirectElem() {
++		return
++	}
++	for i := uintptr(0); i < abi.MapGroupSlots; i++ {
++		taintCopyString(g.elem(typ, i), source.elem(typ, i))
++	}
++}
++
++func (g *groupReference) clearTaintLabels(typ *abi.MapType) {
++	if typ.Elem.Kind() != abi.String || typ.IndirectElem() {
++		return
++	}
++	for i := uintptr(0); i < abi.MapGroupSlots; i++ {
++		taintClearString(g.elem(typ, i))
++	}
++}
++
+ // groupsReference is a wrapper type describing an array of groups stored at
+ // data.
+ type groupsReference struct {
+@@ -336,6 +354,7 @@ func (g *groupsReference) group(typ *abi.MapType, i uint64) groupReference {
+ 
+ func cloneGroup(typ *abi.MapType, newGroup, oldGroup groupReference) {
+ 	typedmemmove(typ.Group, newGroup.data, oldGroup.data)
++	newGroup.copyTaintLabels(typ, oldGroup)
+ 	if typ.IndirectKey() {
+ 		// Deep copy keys if indirect.
+ 		for i := uintptr(0); i < abi.MapGroupSlots; i++ {
+diff --git i/src/internal/runtime/maps/map.go w/src/internal/runtime/maps/map.go
+index 515558a94f..97bcb07779 100644
+--- i/src/internal/runtime/maps/map.go
++++ w/src/internal/runtime/maps/map.go
+@@ -710,6 +710,9 @@ func (m *Map) deleteSmall(typ *abi.MapType, hash uintptr, key unsafe.Pointer) {
+ 			}
+ 
+ 			slotElem := g.elem(typ, i)
++			if typ.Elem.Kind() == abi.String && !typ.IndirectElem() {
++				taintClearString(slotElem)
++			}
+ 			if typ.IndirectElem() {
+ 				// Clearing the pointer is sufficient.
+ 				*(*unsafe.Pointer)(slotElem) = nil
+@@ -775,6 +778,7 @@ func (m *Map) clearSmall(typ *abi.MapType) {
+ 		data: m.dirPtr,
+ 	}
+ 
++	g.clearTaintLabels(typ)
+ 	typedmemclr(typ.Group, g.data)
+ 	g.ctrls().setEmpty()
+ 
+diff --git i/src/internal/runtime/maps/runtime.go w/src/internal/runtime/maps/runtime.go
+index 8bba23f070..85be34081b 100644
+--- i/src/internal/runtime/maps/runtime.go
++++ w/src/internal/runtime/maps/runtime.go
+@@ -33,6 +33,12 @@ func newarray(typ *abi.Type, n int) unsafe.Pointer
+ //go:linkname newobject
+ func newobject(typ *abi.Type) unsafe.Pointer
+ 
++//go:linkname taintCopyString runtime.taintCopyString
++func taintCopyString(destination, source unsafe.Pointer)
++
++//go:linkname taintClearString runtime.taintClearString
++func taintClearString(address unsafe.Pointer)
++
+ // Pushed from runtime in order to use runtime.plainError
+ //
+ //go:linkname errNilAssign
+diff --git i/src/internal/runtime/maps/table.go w/src/internal/runtime/maps/table.go
+index 977f3091ad..97874b6a60 100644
+--- i/src/internal/runtime/maps/table.go
++++ w/src/internal/runtime/maps/table.go
+@@ -409,6 +409,9 @@ func (t *table) uncheckedPutSlot(typ *abi.MapType, hash uintptr, key, elem unsaf
+ 			} else {
+ 				typedmemmove(typ.Elem, slotElem, elem)
+ 			}
++			if typ.Elem.Kind() == abi.String && !typ.IndirectElem() {
++				taintCopyString(slotElem, elem)
++			}
+ 
+ 			t.growthLeft--
+ 			t.used++
+@@ -449,6 +452,9 @@ func (t *table) Delete(typ *abi.MapType, m *Map, hash uintptr, key unsafe.Pointe
+ 				}
+ 
+ 				slotElem := g.elem(typ, i)
++				if typ.Elem.Kind() == abi.String && !typ.IndirectElem() {
++					taintClearString(slotElem)
++				}
+ 				if typ.IndirectElem() {
+ 					// Clearing the pointer is sufficient.
+ 					*(*unsafe.Pointer)(slotElem) = nil
+@@ -623,6 +629,7 @@ func (t *table) Clear(typ *abi.MapType) {
+ 		for i := uint64(0); i <= t.groups.lengthMask; i++ {
+ 			g := t.groups.group(typ, i)
+ 			if g.ctrls().anyFull() {
++				g.clearTaintLabels(typ)
+ 				typedmemclr(typ.Group, g.data)
+ 			}
+ 			g.ctrls().setEmpty()
+@@ -630,6 +637,7 @@ func (t *table) Clear(typ *abi.MapType) {
+ 	} else {
+ 		for i := uint64(0); i <= t.groups.lengthMask; i++ {
+ 			g := t.groups.group(typ, i)
++			g.clearTaintLabels(typ)
+ 			typedmemclr(typ.Group, g.data)
+ 			g.ctrls().setEmpty()
+ 		}
+diff --git i/src/runtime/chan.go w/src/runtime/chan.go
+index 3320c248b4..75173bfee1 100644
+--- i/src/runtime/chan.go
++++ w/src/runtime/chan.go
+@@ -32,18 +32,19 @@ const (
+ )
+ 
+ type hchan struct {
+-	qcount   uint           // total data in the queue
+-	dataqsiz uint           // size of the circular queue
+-	buf      unsafe.Pointer // points to an array of dataqsiz elements
+-	elemsize uint16
+-	closed   uint32
+-	timer    *timer // timer feeding this chan
+-	elemtype *_type // element type
+-	sendx    uint   // send index
+-	recvx    uint   // receive index
+-	recvq    waitq  // list of recv waiters
+-	sendq    waitq  // list of send waiters
+-	bubble   *synctestBubble
++	qcount      uint           // total data in the queue
++	dataqsiz    uint           // size of the circular queue
++	buf         unsafe.Pointer // points to an array of dataqsiz elements
++	taintLabels unsafe.Pointer // runtime IAST labels for buffered string channels
++	elemsize    uint16
++	closed      uint32
++	timer       *timer // timer feeding this chan
++	elemtype    *_type // element type
++	sendx       uint   // send index
++	recvx       uint   // receive index
++	recvq       waitq  // list of recv waiters
++	sendq       waitq  // list of send waiters
++	bubble      *synctestBubble
+ 
+ 	// lock protects all fields in hchan, as well as several
+ 	// fields in sudogs blocked on this channel.
+@@ -87,6 +88,10 @@ func makechan(t *chantype, size int) *hchan {
+ 	if overflow || mem > maxAlloc-hchanSize || size < 0 {
+ 		panic(plainError("makechan: size out of range"))
+ 	}
++	var taintSize uintptr
++	if elem.Kind() == abi.String && size > 0 {
++		taintSize = uintptr(size)
++	}
+ 
+ 	// Hchan does not contain pointers interesting for GC when elements stored in buf do not contain pointers.
+ 	// buf points into the same allocation, elemtype is persistent.
+@@ -96,18 +101,19 @@ func makechan(t *chantype, size int) *hchan {
+ 	switch {
+ 	case mem == 0:
+ 		// Queue or element size is zero.
+-		c = (*hchan)(mallocgc(hchanSize, nil, true))
++		c = new(hchan)
+ 		// Race detector uses this location for synchronization.
+ 		c.buf = c.raceaddr()
+ 	case !elem.Pointers():
+-		// Elements do not contain pointers.
+-		// Allocate hchan and buf in one call.
+ 		c = (*hchan)(mallocgc(hchanSize+mem, nil, true))
+ 		c.buf = add(unsafe.Pointer(c), hchanSize)
+ 	default:
+ 		// Elements contain pointers.
+ 		c = new(hchan)
+ 		c.buf = mallocgc(mem, elem, true)
++		if taintSize != 0 {
++			c.taintLabels = mallocgc(taintSize, nil, true)
++		}
+ 	}
+ 
+ 	c.elemsize = uint16(elem.Size_)
+@@ -139,6 +145,23 @@ func chanbuf(c *hchan, i uint) unsafe.Pointer {
+ 	return add(c.buf, uintptr(i)*uintptr(c.elemsize))
+ }
+ 
++func (c *hchan) taintEnabled() bool {
++	return c.elemtype != nil && c.elemtype.Kind() == abi.String
++}
++
++func (c *hchan) taintLabel(index uint) uint8 {
++	if c.taintLabels == nil {
++		return 0
++	}
++	return *(*uint8)(add(c.taintLabels, uintptr(index)))
++}
++
++func (c *hchan) setTaintLabel(index uint, label uint8) {
++	if c.taintLabels != nil {
++		*(*uint8)(add(c.taintLabels, uintptr(index))) = label
++	}
++}
++
+ // full reports whether a send on c would block (that is, the channel is full).
+ // It uses a single word-sized read of mutable state, so although
+ // the answer is instantaneously true, the correct answer may have changed
+@@ -174,6 +197,10 @@ func chansend1(c *hchan, elem unsafe.Pointer) {
+  * the operation; we'll see that it's now closed.
+  */
+ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
++	sendLabel := uint8(0)
++	if c != nil && c.taintEnabled() {
++		sendLabel = taintLoadString(ep)
++	}
+ 	if c == nil {
+ 		if !block {
+ 			return false
+@@ -229,7 +256,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+ 	if sg := c.recvq.dequeue(); sg != nil {
+ 		// Found a waiting receiver. We pass the value we want to send
+ 		// directly to the receiver, bypassing the channel buffer (if any).
+-		send(c, sg, ep, func() { unlock(&c.lock) }, 3)
++		send(c, sg, ep, sendLabel, func() { unlock(&c.lock) }, 3)
+ 		return true
+ 	}
+ 
+@@ -240,6 +267,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+ 			racenotify(c, c.sendx, nil)
+ 		}
+ 		typedmemmove(c.elemtype, qp, ep)
++		c.setTaintLabel(c.sendx, sendLabel)
+ 		c.sendx++
+ 		if c.sendx == c.dataqsiz {
+ 			c.sendx = 0
+@@ -264,6 +292,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+ 	// No stack splits between assigning elem and enqueuing mysg
+ 	// on gp.waiting where copystack can find it.
+ 	mysg.elem.set(ep)
++	mysg.taintLabel = sendLabel
+ 	mysg.waitlink = nil
+ 	mysg.g = gp
+ 	mysg.isSelect = false
+@@ -299,6 +328,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+ 		blockevent(mysg.releasetime-t0, 2)
+ 	}
+ 	mysg.c.set(nil)
++	mysg.taintLabel = 0
+ 	releaseSudog(mysg)
+ 	if closed {
+ 		if c.closed == 0 {
+@@ -315,7 +345,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+ // Channel c must be empty and locked.  send unlocks c with unlockf.
+ // sg must already be dequeued from c.
+ // ep must be non-nil and point to the heap or the caller's stack.
+-func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
++func send(c *hchan, sg *sudog, ep unsafe.Pointer, label uint8, unlockf func(), skip int) {
+ 	if c.bubble != nil && getg().bubble != c.bubble {
+ 		unlockf()
+ 		fatal("send on synctest channel from outside bubble")
+@@ -338,6 +368,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
+ 	}
+ 	if sg.elem.get() != nil {
+ 		sendDirect(c.elemtype, sg, ep)
++		sg.taintLabel = label
+ 		sg.elem.set(nil)
+ 	}
+ 	gp := sg.g
+@@ -369,6 +400,7 @@ func timerchandrain(c *hchan) bool {
+ 	for c.qcount > 0 {
+ 		any = true
+ 		typedmemclr(c.elemtype, chanbuf(c, c.recvx))
++		c.setTaintLabel(c.recvx, 0)
+ 		c.recvx++
+ 		if c.recvx == c.dataqsiz {
+ 			c.recvx = 0
+@@ -445,6 +477,7 @@ func closechan(c *hchan) {
+ 			typedmemclr(c.elemtype, sg.elem.get())
+ 			sg.elem.set(nil)
+ 		}
++		sg.taintLabel = 0
+ 		if sg.releasetime != 0 {
+ 			sg.releasetime = cputicks()
+ 		}
+@@ -573,6 +606,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+ 			}
+ 			if ep != nil {
+ 				typedmemclr(c.elemtype, ep)
++				if c.taintEnabled() {
++					taintStoreString(ep, 0)
++				}
+ 			}
+ 			return true, false
+ 		}
+@@ -593,6 +629,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+ 			unlock(&c.lock)
+ 			if ep != nil {
+ 				typedmemclr(c.elemtype, ep)
++				if c.taintEnabled() {
++					taintStoreString(ep, 0)
++				}
+ 			}
+ 			return true, false
+ 		}
+@@ -618,6 +657,8 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+ 		if ep != nil {
+ 			typedmemmove(c.elemtype, ep, qp)
+ 		}
++		recvLabel := c.taintLabel(c.recvx)
++		c.setTaintLabel(c.recvx, 0)
+ 		typedmemclr(c.elemtype, qp)
+ 		c.recvx++
+ 		if c.recvx == c.dataqsiz {
+@@ -625,6 +666,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+ 		}
+ 		c.qcount--
+ 		unlock(&c.lock)
++		if ep != nil && c.taintEnabled() {
++			taintStoreString(ep, recvLabel)
++		}
+ 		return true, true
+ 	}
+ 
+@@ -679,6 +723,10 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+ 		blockevent(mysg.releasetime-t0, 2)
+ 	}
+ 	success := mysg.success
++	if ep != nil && c.taintEnabled() {
++		taintStoreString(ep, mysg.taintLabel)
++	}
++	mysg.taintLabel = 0
+ 	gp.param = nil
+ 	mysg.c.set(nil)
+ 	releaseSudog(mysg)
+@@ -700,6 +748,10 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+ // sg must already be dequeued from c.
+ // A non-nil ep must point to the heap or the caller's stack.
+ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
++	recvLabel := uint8(0)
++	if c.taintEnabled() {
++		recvLabel = sg.taintLabel
++	}
+ 	if c.bubble != nil && getg().bubble != c.bubble {
+ 		unlockf()
+ 		fatal("receive on synctest channel from outside bubble")
+@@ -726,8 +778,10 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
+ 		if ep != nil {
+ 			typedmemmove(c.elemtype, ep, qp)
+ 		}
++		recvLabel = c.taintLabel(c.recvx)
+ 		// copy data from sender to queue
+ 		typedmemmove(c.elemtype, qp, sg.elem.get())
++		c.setTaintLabel(c.recvx, sg.taintLabel)
+ 		c.recvx++
+ 		if c.recvx == c.dataqsiz {
+ 			c.recvx = 0
+@@ -735,8 +789,12 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
+ 		c.sendx = c.recvx // c.sendx = (c.sendx+1) % c.dataqsiz
+ 	}
+ 	sg.elem.set(nil)
++	sg.taintLabel = 0
+ 	gp := sg.g
+ 	unlockf()
++	if ep != nil && c.taintEnabled() {
++		taintStoreString(ep, recvLabel)
++	}
+ 	gp.param = unsafe.Pointer(sg)
+ 	sg.success = true
+ 	if sg.releasetime != 0 {
+diff --git i/src/runtime/malloc.go w/src/runtime/malloc.go
+index c08bc7574b..78ee36a910 100644
+--- i/src/runtime/malloc.go
++++ w/src/runtime/malloc.go
+@@ -884,6 +884,11 @@ mapped:
+ 				throw("out of memory allocating heap arena metadata")
+ 			}
+ 		}
++		taintShadow := sysAlloc(heapArenaWords, &memstats.gcMiscSys, "IAST heap shadow")
++		if taintShadow == nil {
++			throw("out of memory allocating IAST heap shadow")
++		}
++		atomic.StorepNoWB(unsafe.Pointer(&r.taintShadow), taintShadow)
+ 
+ 		// Register the arena in allArenas if requested.
+ 		if len((*arenaList)) == cap((*arenaList)) {
+diff --git i/src/runtime/mgcsweep.go w/src/runtime/mgcsweep.go
+index 4eecb1cfd9..14119c836e 100644
+--- i/src/runtime/mgcsweep.go
++++ w/src/runtime/mgcsweep.go
+@@ -615,13 +615,15 @@ func (sl *sweepLocked) sweep(preserve bool) bool {
+ 		spanHasNoSpecials(s)
+ 	}
+ 
+-	if traceAllocFreeEnabled() || debug.clobberfree != 0 || raceenabled || msanenabled || asanenabled {
+-		// Find all newly freed objects.
++	{
++		// Find all newly freed objects. Runtime IAST heap shadows must always
++		// be cleared before these addresses become reusable.
+ 		mbits := s.markBitsForBase()
+ 		abits := s.allocBitsForIndex(0)
+ 		for i := uintptr(0); i < uintptr(s.nelems); i++ {
+ 			if !mbits.isMarked() && (abits.index < uintptr(s.freeindex) || abits.isMarked()) {
+ 				x := s.base() + i*s.elemsize
++				taintHeapClearRange(x, size)
+ 				if traceAllocFreeEnabled() {
+ 					trace := traceAcquire()
+ 					if trace.ok() {
+diff --git i/src/runtime/mheap.go w/src/runtime/mheap.go
+index 9b62ee4273..a6b0431118 100644
+--- i/src/runtime/mheap.go
++++ w/src/runtime/mheap.go
+@@ -268,6 +268,10 @@ var mheap_ mheap
+ type heapArena struct {
+ 	_ sys.NotInHeap
+ 
++	// taintShadow stores one runtime IAST label per pointer-sized heap word.
++	// It is allocated outside the Go heap and lives as long as this arena.
++	taintShadow *uint8
++
+ 	// spans maps from virtual address page ID within this arena to *mspan.
+ 	// For allocated spans, their pages map to the span itself.
+ 	// For free spans, only the lowest and highest pages map to the span itself.
+diff --git i/src/runtime/panic.go w/src/runtime/panic.go
+index d467e9305d..2c7df3afc9 100644
+--- i/src/runtime/panic.go
++++ w/src/runtime/panic.go
+@@ -807,6 +807,7 @@ var panicnil = &godebugInc{name: "panicnil"}
+ //
+ //go:linkname gopanic
+ func gopanic(e any) {
++	taintTransitionClear()
+ 	if e == nil {
+ 		if debug.panicnil.Load() != 1 {
+ 			e = new(PanicNilError)
+diff --git i/src/runtime/proc.go w/src/runtime/proc.go
+index 005c875cbf..0d2e0d4a33 100644
+--- i/src/runtime/proc.go
++++ w/src/runtime/proc.go
+@@ -542,6 +542,7 @@ func releaseSudog(s *sudog) {
+ 	if s.c.get() != nil {
+ 		throw("runtime: sudog with non-nil c")
+ 	}
++	s.taintLabel = 0
+ 	gp := getg()
+ 	if gp.param != nil {
+ 		throw("runtime: releaseSudog with non-nil gp.param")
+@@ -4473,6 +4474,7 @@ func goyield_m(gp *g) {
+ 
+ // Finishes execution of the current goroutine.
+ func goexit1() {
++	taintTransitionClear()
+ 	if raceenabled {
+ 		if gp := getg(); gp.bubble != nil {
+ 			racereleasemergeg(gp, gp.bubble.raceaddr())
+@@ -4501,6 +4503,7 @@ func goexit0(gp *g) {
+ }
+ 
+ func gdestroy(gp *g) {
++	taintAddressClearRange(gp.stack.lo, gp.stack.hi-gp.stack.lo)
+ 	mp := getg().m
+ 	pp := mp.p.ptr()
+ 
+@@ -4518,6 +4521,9 @@ func gdestroy(gp *g) {
+ 	gp._defer = nil // should be true already but just in case.
+ 	gp._panic = nil // non-nil for Goexit during panic. points at stack-allocated data.
+ 	gp.writebuf = nil
++	gp.taintTransitionTarget = 0
++	gp.taintTransitionReturn = 0
++	clear(gp.taintTransitionValues[:])
+ 	gp.waitreason = waitReasonZero
+ 	gp.param = nil
+ 	gp.labels = nil
+diff --git i/src/runtime/runtime2.go w/src/runtime/runtime2.go
+index be33932b24..60d7fb9f3e 100644
+--- i/src/runtime/runtime2.go
++++ w/src/runtime/runtime2.go
+@@ -413,7 +413,8 @@ type sudog struct {
+ 	next *sudog
+ 	prev *sudog
+ 
+-	elem maybeTraceablePtr // data element (may point to stack)
++	elem       maybeTraceablePtr // data element (may point to stack)
++	taintLabel uint8             // runtime IAST label moved atomically with elem
+ 
+ 	// The following fields are never accessed concurrently.
+ 	// For channels, waitlink is only accessed by g.
+@@ -595,6 +596,12 @@ type g struct {
+ 	// valgrindStackID is used to track what memory is used for stacks when a program is
+ 	// built with the "valgrind" build tag, otherwise it is unused.
+ 	valgrindStackID uintptr
++
++	// Experimental ephemeral IAST transition buffer.
++	taintTransitionTarget     uintptr
++	taintTransitionReturn     uintptr
++	taintTransitionGeneration uintptr
++	taintTransitionValues     [16]uint8
+ }
+ 
+ // gTrackingPeriod is the number of transitions out of _Grunning between
+diff --git i/src/runtime/select.go w/src/runtime/select.go
+index 553f6960eb..3e50827b38 100644
+--- i/src/runtime/select.go
++++ w/src/runtime/select.go
+@@ -265,7 +265,10 @@ func selectgo(cas0 *scase, order0 *uint16, pc0 *uintptr, nsends, nrecvs int, blo
+ 	var casi int
+ 	var cas *scase
+ 	var caseSuccess bool
++	var caseLabel uint8
+ 	var caseReleaseTime int64 = -1
++	var recvLabel uint8
++	var sendLabel uint8
+ 	var recvOK bool
+ 	for _, casei := range pollorder {
+ 		casi = int(casei)
+@@ -321,6 +324,7 @@ func selectgo(cas0 *scase, order0 *uint16, pc0 *uintptr, nsends, nrecvs int, blo
+ 		// No stack splits between assigning elem and enqueuing
+ 		// sg on gp.waiting where copystack can find it.
+ 		sg.elem.set(cas.elem)
++		sg.taintLabel = 0
+ 		sg.releasetime = 0
+ 		if t0 != 0 {
+ 			sg.releasetime = -1
+@@ -331,6 +335,9 @@ func selectgo(cas0 *scase, order0 *uint16, pc0 *uintptr, nsends, nrecvs int, blo
+ 		nextp = &sg.waitlink
+ 
+ 		if casi < nsends {
++			if c.taintEnabled() {
++				sg.taintLabel = taintLoadString(cas.elem)
++			}
+ 			c.sendq.enqueue(sg)
+ 		} else {
+ 			c.recvq.enqueue(sg)
+@@ -383,6 +390,7 @@ func selectgo(cas0 *scase, order0 *uint16, pc0 *uintptr, nsends, nrecvs int, blo
+ 			casi = int(casei)
+ 			cas = k
+ 			caseSuccess = sglist.success
++			caseLabel = sglist.taintLabel
+ 			if sglist.releasetime > 0 {
+ 				caseReleaseTime = sglist.releasetime
+ 			}
+@@ -396,6 +404,7 @@ func selectgo(cas0 *scase, order0 *uint16, pc0 *uintptr, nsends, nrecvs int, blo
+ 		}
+ 		sgnext = sglist.waitlink
+ 		sglist.waitlink = nil
++		sglist.taintLabel = 0
+ 		releaseSudog(sglist)
+ 		sglist = sgnext
+ 	}
+@@ -441,6 +450,9 @@ func selectgo(cas0 *scase, order0 *uint16, pc0 *uintptr, nsends, nrecvs int, blo
+ 	}
+ 
+ 	selunlock(scases, lockorder)
++	if casi >= nsends && cas.elem != nil && cas.c.taintEnabled() {
++		taintStoreString(cas.elem, caseLabel)
++	}
+ 	goto retc
+ 
+ bufrecv:
+@@ -459,9 +471,11 @@ bufrecv:
+ 	}
+ 	recvOK = true
+ 	qp = chanbuf(c, c.recvx)
++	recvLabel = c.taintLabel(c.recvx)
+ 	if cas.elem != nil {
+ 		typedmemmove(c.elemtype, cas.elem, qp)
+ 	}
++	c.setTaintLabel(c.recvx, 0)
+ 	typedmemclr(c.elemtype, qp)
+ 	c.recvx++
+ 	if c.recvx == c.dataqsiz {
+@@ -469,6 +483,9 @@ bufrecv:
+ 	}
+ 	c.qcount--
+ 	selunlock(scases, lockorder)
++	if cas.elem != nil && c.taintEnabled() {
++		taintStoreString(cas.elem, recvLabel)
++	}
+ 	goto retc
+ 
+ bufsend:
+@@ -484,6 +501,9 @@ bufsend:
+ 		asanread(cas.elem, c.elemtype.Size_)
+ 	}
+ 	typedmemmove(c.elemtype, chanbuf(c, c.sendx), cas.elem)
++	if c.taintEnabled() {
++		c.setTaintLabel(c.sendx, taintLoadString(cas.elem))
++	}
+ 	c.sendx++
+ 	if c.sendx == c.dataqsiz {
+ 		c.sendx = 0
+@@ -507,6 +527,9 @@ rclose:
+ 	recvOK = false
+ 	if cas.elem != nil {
+ 		typedmemclr(c.elemtype, cas.elem)
++		if c.taintEnabled() {
++			taintStoreString(cas.elem, 0)
++		}
+ 	}
+ 	if raceenabled {
+ 		raceacquire(c.raceaddr())
+@@ -524,7 +547,11 @@ send:
+ 	if asanenabled {
+ 		asanread(cas.elem, c.elemtype.Size_)
+ 	}
+-	send(c, sg, cas.elem, func() { selunlock(scases, lockorder) }, 2)
++	sendLabel = 0
++	if c.taintEnabled() {
++		sendLabel = taintLoadString(cas.elem)
++	}
++	send(c, sg, cas.elem, sendLabel, func() { selunlock(scases, lockorder) }, 2)
+ 	if debugSelect {
+ 		print("syncsend: cas0=", cas0, " c=", c, "\n")
+ 	}
+diff --git i/src/runtime/sizeof_test.go w/src/runtime/sizeof_test.go
+index 219bcb9259..006bf40396 100644
+--- i/src/runtime/sizeof_test.go
++++ w/src/runtime/sizeof_test.go
+@@ -21,8 +21,8 @@ func TestSizeof(t *testing.T) {
+ 		_32bit uintptr // size on 32bit platforms
+ 		_64bit uintptr // size on 64bit platforms
+ 	}{
+-		{runtime.G{}, 288 + xreg, 448 + xreg}, // g, but exported for testing
+-		{runtime.Sudog{}, 64, 104},            // sudog, but exported for testing
++		{runtime.G{}, 316 + xreg, 488 + xreg}, // g, but exported for testing
++		{runtime.Sudog{}, 68, 112},            // sudog, but exported for testing
+ 	}
+ 
+ 	if xreg > runtime.PtrSize {
+diff --git i/src/runtime/stack.go w/src/runtime/stack.go
+index 6f89cc142c..1488901b4a 100644
+--- i/src/runtime/stack.go
++++ w/src/runtime/stack.go
+@@ -451,6 +451,7 @@ func stackalloc(n uint32) stack {
+ 	if stackDebug >= 1 {
+ 		print("  allocated ", v, "\n")
+ 	}
++	taintAddressClearRange(uintptr(v), uintptr(n))
+ 	return stack{uintptr(v), uintptr(v) + uintptr(n)}
+ }
+ 
+@@ -881,6 +882,7 @@ func syncadjustsudogs(gp *g, used uintptr, adjinfo *adjustinfo) uintptr {
+ 		newBot := oldBot + adjinfo.delta
+ 		sgsize = adjinfo.sghi - oldBot
+ 		memmove(unsafe.Pointer(newBot), unsafe.Pointer(oldBot), sgsize)
++		taintAddressCopyRange(newBot, oldBot, sgsize)
+ 	}
+ 
+ 	// Unlock channels.
+@@ -954,6 +956,7 @@ func copystack(gp *g, newsize uintptr) {
+ 
+ 	// Copy the stack (or the rest of it) to the new location
+ 	memmove(unsafe.Pointer(new.hi-ncopy), unsafe.Pointer(old.hi-ncopy), ncopy)
++	taintAddressCopyRange(new.hi-ncopy, old.hi-ncopy, ncopy)
+ 
+ 	// Adjust remaining structures that have pointers into stacks.
+ 	// We have to do most of these before we traceback the new
+diff --git 1/src/runtime/taint_shadow.go 2/src/runtime/taint_shadow.go
+new file mode 100644
+index 0000000000..d03e1b4a11
+--- /dev/null
++++ 2/src/runtime/taint_shadow.go
+@@ -0,0 +1,173 @@
++// Copyright 2026 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++package runtime
++
++import (
++	"internal/goarch"
++	"internal/runtime/atomic"
++	"unsafe"
++)
++
++// taintSourceLabel returns a runtime shadow label for a source value.
++//
++//go:nosplit
++func taintSourceLabel(value string) uint8 {
++	if len(value) == 0 {
++		return 0
++	}
++	return 1
++}
++
++// taintSinkOpen reports a runtime shadow label observed at os.Open.
++//
++//go:nosplit
++func taintSinkOpen(label uint8) {
++	if label == 0 {
++		return
++	}
++	print("taint: os.Open received runtime shadow label\n")
++}
++
++//go:nosplit
++func taintTransitionEnter(targetPC uintptr, label uint8) uintptr {
++	gp := getg()
++	gp.taintTransitionGeneration++
++	if gp.taintTransitionGeneration == 0 {
++		gp.taintTransitionGeneration++
++	}
++	gp.taintTransitionTarget = targetPC
++	gp.taintTransitionReturn = gp.taintTransitionGeneration
++	gp.taintTransitionValues[0] = label
++	return gp.taintTransitionReturn
++}
++
++//go:nosplit
++func taintTransitionTake(selfPC uintptr) (uint8, uintptr) {
++	gp := getg()
++	if gp.taintTransitionTarget != selfPC {
++		return 0, 0
++	}
++	label := gp.taintTransitionValues[0]
++	auth := gp.taintTransitionReturn
++	gp.taintTransitionTarget = 0
++	gp.taintTransitionReturn = 0
++	gp.taintTransitionValues[0] = 0
++	return label, auth
++}
++
++//go:nosplit
++func taintTransitionPublish(auth uintptr, label uint8) {
++	if auth == 0 {
++		return
++	}
++	gp := getg()
++	gp.taintTransitionTarget = auth
++	gp.taintTransitionValues[0] = label
++}
++
++//go:nosplit
++func taintTransitionFinish(auth uintptr) uint8 {
++	gp := getg()
++	label := uint8(0)
++	if auth != 0 && gp.taintTransitionTarget == auth {
++		label = gp.taintTransitionValues[0]
++	}
++	taintTransitionClear()
++	return label
++}
++
++//go:nosplit
++func taintTransitionClear() {
++	gp := getg()
++	gp.taintTransitionTarget = 0
++	gp.taintTransitionReturn = 0
++	gp.taintTransitionValues[0] = 0
++}
++
++func taintStoreString(address unsafe.Pointer, label uint8) {
++	if shadow := taintHeapShadow(address); shadow != nil {
++		atomic.Store8(shadow, label)
++	}
++}
++
++func taintLoadString(address unsafe.Pointer) uint8 {
++	if shadow := taintHeapShadow(address); shadow != nil {
++		return atomic.Load8(shadow)
++	}
++	return 0
++}
++
++//go:linkname taintCopyString
++func taintCopyString(destination, source unsafe.Pointer) {
++	if destination == source {
++		return
++	}
++	taintStoreString(destination, taintLoadString(source))
++}
++
++//go:linkname taintClearString
++func taintClearString(address unsafe.Pointer) {
++	taintStoreString(address, 0)
++}
++
++//go:nosplit
++func taintHeapShadow(address unsafe.Pointer) *uint8 {
++	pointer := uintptr(address)
++	span := spanOf(pointer)
++	if span == nil || pointer < span.base() || pointer >= span.limit {
++		return nil
++	}
++	state := span.state.get()
++	if state != mSpanInUse && state != mSpanManual {
++		return nil
++	}
++	arenaIndex := arenaIndex(pointer)
++	arena := mheap_.arenas[arenaIndex.l1()][arenaIndex.l2()]
++	offset := (pointer - arenaBase(arenaIndex)) / goarch.PtrSize
++	return (*uint8)(add(unsafe.Pointer(arena.taintShadow), offset))
++}
++
++//go:nosplit
++func taintAddressClearRange(base, size uintptr) {
++	for offset := uintptr(0); offset < size; offset += goarch.PtrSize {
++		if shadow := taintHeapShadow(unsafe.Pointer(base + offset)); shadow != nil {
++			atomic.Store8(shadow, 0)
++		}
++	}
++}
++
++//go:nosplit
++func taintAddressCopyRange(destination, source, size uintptr) {
++	for offset := uintptr(0); offset < size; offset += goarch.PtrSize {
++		sourceShadow := taintHeapShadow(unsafe.Pointer(source + offset))
++		destinationShadow := taintHeapShadow(unsafe.Pointer(destination + offset))
++		if destinationShadow == nil {
++			continue
++		}
++		label := uint8(0)
++		if sourceShadow != nil {
++			label = atomic.Load8(sourceShadow)
++		}
++		atomic.Store8(destinationShadow, label)
++	}
++}
++
++//go:nosplit
++func taintHeapClearRange(base, size uintptr) {
++	end := base + size
++	for base < end {
++		arenaIndex := arenaIndex(base)
++		arena := mheap_.arenas[arenaIndex.l1()][arenaIndex.l2()]
++		arenaEnd := arenaBase(arenaIndex) + heapArenaBytes
++		segmentEnd := end
++		if segmentEnd > arenaEnd {
++			segmentEnd = arenaEnd
++		}
++		offset := (base - arenaBase(arenaIndex)) / goarch.PtrSize
++		words := (segmentEnd - base) / goarch.PtrSize
++		memclrNoHeapPointers(add(unsafe.Pointer(arena.taintShadow), offset), words)
++		base = segmentEnd
++	}
++}
