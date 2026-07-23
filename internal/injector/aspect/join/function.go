@@ -326,11 +326,11 @@ func AnyReceiver() FunctionOption {
 }
 
 func (hasReceiver) packageMayMatch(_ *may.PackageContext) may.MatchType {
-	return may.Match
+	return may.Unknown
 }
 
 func (hasReceiver) fileMayMatch(_ *may.FileContext) may.MatchType {
-	return may.Match
+	return may.Unknown
 }
 
 func (fo hasReceiver) evaluate(info functionInformation) bool {
