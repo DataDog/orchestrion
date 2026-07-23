@@ -1,0 +1,694 @@
+%YAML 1.1
+---
+meta:
+  name: github.com/DataDog/orchestrion/runtime/taint/instrument
+  description: Experimental explicit-flow string and byte taint tracking
+
+aspects:
+  - id: taint-source-os-getenv
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.SourceString({{ . }})
+
+  - id: taint-sink-os-open
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - function-call: os.Open
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.OpenFile
+
+  - id: taint-string-concat
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: string-concat
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.ConcatStrings({{ .AST.X }}, {{ .AST.Y }})
+
+  - id: taint-string-to-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: string-to-bytes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.StringToBytesAs[{{ .AST.Fun }}]({{ index .AST.Args 0 }})
+
+  - id: taint-bytes-to-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: bytes-to-string
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BytesToStringAs[{{ .AST.Fun }}]({{ index .AST.Args 0 }})
+
+  - id: taint-string-to-runes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: string-to-runes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.StringToRunesAs[{{ .AST.Fun }}]({{ index .AST.Args 0 }})
+
+  - id: taint-runes-to-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: runes-to-string
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.RunesToStringAs[{{ .AST.Fun }}]({{ index .AST.Args 0 }})
+
+  - id: taint-string-slice
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: string-slice
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.SliceString({{ .AST.X }}, {{ .AST.Low }}, {{ .AST.High }})
+
+  - id: taint-string-byte-at
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: string-byte-at
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $indexed := index .AST.Args 0 -}}
+            taint.StringByteAtAs[{{ .AST.Fun }}]({{ $indexed.X }}, {{ $indexed.Index }})
+
+  - id: taint-bytes-byte-at
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: bytes-byte-at
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $indexed := index .AST.Args 0 -}}
+            taint.BytesByteAtAs[{{ .AST.Fun }}]({{ $indexed.X }}, {{ $indexed.Index }})
+
+  - id: taint-bytes-slice
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: bytes-slice
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.SliceBytes({{ .AST.X }}, {{ .AST.Low }}, {{ .AST.High }})
+
+  - id: taint-append-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: append-bytes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.AppendBytes({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+
+  - id: taint-copy-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - not:
+            one-of:
+              - import-path: github.com/DataDog/orchestrion/runtime/taint
+              - import-path: github.com/DataDog/orchestrion/runtime/taint/instrument
+        - value-operation: copy-bytes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.CopyBytes({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+
+  - id: taint-append-byte-values
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: append-byte-values
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.AppendByteValues({{ range .AST.Args }}{{ . }},{{ end }})
+
+  - id: taint-append-string-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: append-string-bytes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.AppendStringBytes({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+
+  - id: taint-copy-string-to-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: copy-string-to-bytes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.CopyStringToBytes({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }})
+
+  - id: taint-clear-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: clear-bytes
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.ClearBytes({{ index .AST.Args 0 }})
+
+  - id: taint-set-byte
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: set-byte
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            taint.SetByte({{ $target.X }}, {{ $target.Index }}, {{ index .AST.Rhs 0 }})
+
+  - id: taint-set-byte-from-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: set-byte-from-string
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            {{- $source := index .AST.Rhs 0 -}}
+            taint.SetByteFromString({{ $target.X }}, {{ $target.Index }}, {{ $source.X }}, {{ $source.Index }})
+
+  - id: taint-set-byte-from-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: set-byte-from-bytes
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            {{- $source := index .AST.Rhs 0 -}}
+            taint.SetByteFromBytes({{ $target.X }}, {{ $target.Index }}, {{ $source.X }}, {{ $source.Index }})
+
+  - id: taint-strings-clone
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.Clone
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.CloneString
+
+  - id: taint-strings-replace
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.Replace
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.ReplaceString
+
+  - id: taint-strings-replace-all
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.ReplaceAll
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.ReplaceAllString
+
+  - id: taint-strings-repeat
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.Repeat
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.RepeatString
+
+  - id: taint-strings-upper
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.ToUpper
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.UpperString
+
+  - id: taint-strings-lower
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.ToLower
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.LowerString
+
+  - id: taint-strings-map
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.Map
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.MapString
+
+  - id: taint-bytes-clone
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: bytes.Clone
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.CloneBytes
+
+  - id: taint-bytes-new-buffer
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: bytes.NewBuffer
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.NewBuffer
+
+  - id: taint-bytes-new-buffer-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: bytes.NewBufferString
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.NewBufferString
+
+  - id: taint-fmt-sprintf
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: fmt.Sprintf
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.FormatString
+
+  - id: taint-strings-join
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: strings.Join
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.JoinStrings
+
+  - id: taint-filepath-join
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: path/filepath.Join
+    advice:
+      - replace-function: github.com/DataDog/orchestrion/runtime/taint.JoinPath
+
+  - id: taint-builder-write-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: strings.Builder
+            name: WriteString
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BuilderWriteString({{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-builder-value-write-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: strings.Builder
+            name: WriteString
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BuilderWriteString(&{{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-builder-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: strings.Builder
+            name: String
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BuilderString({{ .AST.Fun.X }})
+
+  - id: taint-builder-value-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: strings.Builder
+            name: String
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BuilderString(&{{ .AST.Fun.X }})
+
+  - id: taint-buffer-write-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: WriteString
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferWriteString({{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-write
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Write
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferWrite({{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-value-write
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Write
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferWrite(&{{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-value-write-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: WriteString
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferWriteString(&{{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: String
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferString({{ .AST.Fun.X }})
+
+  - id: taint-buffer-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Bytes
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferBytes({{ .AST.Fun.X }})
+
+  - id: taint-buffer-value-bytes
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Bytes
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferBytes(&{{ .AST.Fun.X }})
+
+  - id: taint-buffer-next
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Next
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferNext({{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-value-next
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Next
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferNext(&{{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-truncate
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Truncate
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferTruncate({{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-value-truncate
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Truncate
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferTruncate(&{{ .AST.Fun.X }}, {{ index .AST.Args 0 }})
+
+  - id: taint-buffer-reset
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Reset
+            match: pointer-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferReset({{ .AST.Fun.X }})
+
+  - id: taint-buffer-value-reset
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: Reset
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferReset(&{{ .AST.Fun.X }})
+
+  - id: taint-capture-string-byte
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: capture-string-byte
+    advice:
+      - insert-statements-after:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            {{- $source := index .AST.Rhs 0 -}}
+            taint.MarkByteFromString(&{{ $target.Copy }}, {{ $source.X.Copy }}, {{ $source.Index.Copy }})
+            defer taint.ReleaseByte(&{{ $target.Copy }})
+
+  - id: taint-capture-slice-byte
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: capture-slice-byte
+    advice:
+      - insert-statements-after:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            {{- $source := index .AST.Rhs 0 -}}
+            taint.MarkByteFromBytes(&{{ $target.Copy }}, {{ $source.X.Copy }}, {{ $source.Index.Copy }})
+            defer taint.ReleaseByte(&{{ $target.Copy }})
+
+  - id: taint-capture-slice-rune
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: capture-slice-rune
+    advice:
+      - insert-statements-after:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            {{- $source := index .AST.Rhs 0 -}}
+            taint.MarkRuneFromRunes(&{{ $target.Copy }}, {{ $source.X.Copy }}, {{ $source.Index.Copy }})
+            defer taint.ReleaseRune(&{{ $target.Copy }})
+
+  - id: taint-byte-scalar-to-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: byte-scalar-to-string
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.ByteScalarToStringAs[{{ .AST.Fun }}](&{{ index .AST.Args 0 }})
+
+  - id: taint-rune-scalar-to-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - value-operation: rune-scalar-to-string
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.RuneScalarToStringAs[{{ .AST.Fun }}](&{{ index .AST.Args 0 }})
+
+  - id: taint-buffer-value-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - method-call:
+            receiver: bytes.Buffer
+            name: String
+            match: value-only
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.BufferString(&{{ .AST.Fun.X }})
