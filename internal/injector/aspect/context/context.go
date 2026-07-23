@@ -53,6 +53,15 @@ type AspectContext interface {
 
 	// ResolveType resolves a dst.Expr to its corresponding types.Type.
 	ResolveType(dst.Expr) types.Type
+
+	// IsConstant reports whether an expression is a compile-time constant.
+	IsConstant(dst.Expr) bool
+
+	// IsBuiltin reports whether an identifier resolves to a predeclared builtin.
+	IsBuiltin(*dst.Ident) bool
+
+	// IsAddressable reports whether an expression denotes an addressable value.
+	IsAddressable(dst.Expr) bool
 }
 
 type AdviceContext interface {
@@ -64,6 +73,11 @@ type AdviceContext interface {
 
 	// ReplaceNode replaces the current AST node with the supplied one.
 	ReplaceNode(dst.Node)
+
+	// InsertAfter inserts an AST node after the current node in its containing list.
+	InsertAfter(dst.Node)
+	// CanInsertAfter reports whether the current node belongs to a list.
+	CanInsertAfter() bool
 
 	// ParseSource parses Go source code from the provided bytes and returns a
 	// *dst.File value.
@@ -230,6 +244,17 @@ func (c *context) ReplaceNode(newNode dst.Node) {
 	c.node = newNode
 }
 
+func (c *context) InsertAfter(newNode dst.Node) {
+	if !c.CanInsertAfter() {
+		panic("illegal attempt to insert a node without a cursor!")
+	}
+	c.cursor.InsertAfter(newNode)
+}
+
+func (c *context) CanInsertAfter() bool {
+	return c.cursor != nil && c.cursor.Index() >= 0
+}
+
 func (c *context) File() *dst.File {
 	return c.file
 }
@@ -346,4 +371,44 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 	}
 
 	return nil
+}
+
+func (c *context) IsConstant(expr dst.Expr) bool {
+	astNode, ok := c.nodeMap[expr]
+	if !ok {
+		return false
+	}
+	astExpr, ok := astNode.(ast.Expr)
+	if !ok {
+		return false
+	}
+	value, ok := c.typeInfo.Types[astExpr]
+	return ok && value.Value != nil
+}
+
+func (c *context) IsBuiltin(identifier *dst.Ident) bool {
+	astNode, ok := c.nodeMap[identifier]
+	if !ok {
+		return false
+	}
+	astIdentifier, ok := astNode.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	object := c.typeInfo.Uses[astIdentifier]
+	_, ok = object.(*types.Builtin)
+	return ok
+}
+
+func (c *context) IsAddressable(expr dst.Expr) bool {
+	astNode, ok := c.nodeMap[expr]
+	if !ok {
+		return false
+	}
+	astExpr, ok := astNode.(ast.Expr)
+	if !ok {
+		return false
+	}
+	value, ok := c.typeInfo.Types[astExpr]
+	return ok && value.Addressable()
 }

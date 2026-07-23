@@ -481,3 +481,6 @@ func (*mockAspectContext) Package() string                 { return "" }
 func (*mockAspectContext) TestMain() bool                  { return false }
 func (*mockAspectContext) Release()                        {}
 func (*mockAspectContext) ResolveType(dst.Expr) types.Type { return nil }
+func (*mockAspectContext) IsConstant(dst.Expr) bool        { return false }
+func (*mockAspectContext) IsBuiltin(*dst.Ident) bool       { return false }
+func (*mockAspectContext) IsAddressable(dst.Expr) bool     { return false }
