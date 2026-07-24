@@ -160,7 +160,7 @@ func TestLatestVersionEnv(t *testing.T) {
 
 	// Inherited conflicting values must be dropped, not just shadowed: each of the
 	// three normalized variables appears exactly once.
-	counts := map[string]int{}
+	counts := make(map[string]int)
 	for _, e := range env {
 		key, _, ok := strings.Cut(e, "=")
 		if !ok {
