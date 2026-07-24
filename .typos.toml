@@ -2,6 +2,9 @@
 # typos configuration file
 # See https://github.com/crate-ci/typos/blob/master/docs/reference.md for more options
 
+[files]
+extend-exclude = ["go.mod"]
+
 [default.extend-words]
 Hashi = "Hashi"
 Nd = "Nd"
