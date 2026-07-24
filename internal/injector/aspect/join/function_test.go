@@ -6,6 +6,7 @@
 package join
 
 import (
+	"go/types"
 	"testing"
 
 	"github.com/dave/dst"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
+	aspectcontext "github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
@@ -212,6 +214,128 @@ func TestSignatureContainsHash(t *testing.T) {
 
 	assert.NotEqual(t, fp1, fp3, "Hash() gave same result for different signatures")
 }
+
+func TestUnmarshalYAMLReceiver(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		want    FunctionOption
+		wantErr bool
+	}{
+		{
+			name: "receiver type",
+			yaml: `receiver: net/http.Server`,
+			want: Receiver(typed.TypeName{
+				ImportPath: "net/http",
+				Name:       "Server",
+			}),
+		},
+		{
+			name: "no receiver",
+			yaml: `receiver: false`,
+			want: NoReceiver(),
+		},
+		{
+			name: "quoted false is a receiver type",
+			yaml: `receiver: "false"`,
+			want: Receiver(typed.TypeName{Name: "false"}),
+		},
+		{
+			name: "any receiver",
+			yaml: `receiver: true`,
+			want: AnyReceiver(),
+		},
+		{
+			name:    "non-string is rejected",
+			yaml:    `receiver: 42`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var option unmarshalFuncDeclOption
+			err := yaml.Unmarshal([]byte(tt.yaml), &option)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, option.FunctionOption)
+		})
+	}
+}
+
+func TestHasReceiverMatches(t *testing.T) {
+	tests := []struct {
+		name            string
+		node            dst.Node
+		wantNoReceiver  bool
+		wantAnyReceiver bool
+	}{
+		{
+			name:            "function declaration",
+			node:            &dst.FuncDecl{Name: dst.NewIdent("function")},
+			wantNoReceiver:  true,
+			wantAnyReceiver: false,
+		},
+		{
+			name: "method declaration",
+			node: &dst.FuncDecl{
+				Recv: &dst.FieldList{List: []*dst.Field{{Type: dst.NewIdent("receiver")}}},
+				Name: dst.NewIdent("method"),
+			},
+			wantNoReceiver:  false,
+			wantAnyReceiver: true,
+		},
+		{
+			name: "pointer method declaration",
+			node: &dst.FuncDecl{
+				Recv: &dst.FieldList{List: []*dst.Field{{Type: &dst.StarExpr{X: dst.NewIdent("receiver")}}}},
+				Name: dst.NewIdent("method"),
+			},
+			wantNoReceiver:  false,
+			wantAnyReceiver: true,
+		},
+		{
+			name:            "function literal",
+			node:            &dst.FuncLit{Type: &dst.FuncType{}},
+			wantNoReceiver:  true,
+			wantAnyReceiver: false,
+		},
+		{
+			name:            "non-function node",
+			node:            &dst.GenDecl{},
+			wantNoReceiver:  false,
+			wantAnyReceiver: false,
+		},
+	}
+
+	noReceiver := Function(NoReceiver())
+	anyReceiver := Function(AnyReceiver())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := functionTestContext{node: tt.node}
+			assert.Equal(t, tt.wantNoReceiver, noReceiver.Matches(ctx))
+			assert.Equal(t, tt.wantAnyReceiver, anyReceiver.Matches(ctx))
+		})
+	}
+}
+
+type functionTestContext struct {
+	node dst.Node
+}
+
+func (functionTestContext) Chain() *aspectcontext.NodeChain     { return nil }
+func (ctx functionTestContext) Node() dst.Node                  { return ctx.node }
+func (functionTestContext) Parent() aspectcontext.AspectContext { return nil }
+func (functionTestContext) Config(string) (string, bool)        { return "", false }
+func (functionTestContext) File() *dst.File                     { return nil }
+func (functionTestContext) ImportPath() string                  { return "example.com/test" }
+func (functionTestContext) Package() string                     { return "test" }
+func (functionTestContext) TestMain() bool                      { return false }
+func (functionTestContext) Release()                            {}
+func (functionTestContext) ResolveType(dst.Expr) types.Type     { return nil }
 
 func TestUnmarshalYAMLSignatureContains(t *testing.T) {
 	yamlStr := `
