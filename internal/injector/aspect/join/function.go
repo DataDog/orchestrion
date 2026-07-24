@@ -284,6 +284,7 @@ type receiver struct {
 	TypeName typed.TypeName
 }
 
+// Receiver matches only methods declared to the provided receiver type.
 func Receiver(typeName typed.TypeName) FunctionOption {
 	return &receiver{typeName}
 }
@@ -310,6 +311,38 @@ func (fo *receiver) impliesImported() []string {
 
 func (fo *receiver) Hash(h *fingerprint.Hasher) error {
 	return h.Named("receiver", fo.TypeName)
+}
+
+type hasReceiver bool
+
+// NoReceiver matches functions and function literal expressions without a receiver.
+func NoReceiver() FunctionOption {
+	return hasReceiver(false)
+}
+
+// AnyReceiver matches methods with any receiver type.
+func AnyReceiver() FunctionOption {
+	return hasReceiver(true)
+}
+
+func (hasReceiver) packageMayMatch(_ *may.PackageContext) may.MatchType {
+	return may.Unknown
+}
+
+func (hasReceiver) fileMayMatch(_ *may.FileContext) may.MatchType {
+	return may.Unknown
+}
+
+func (fo hasReceiver) evaluate(info functionInformation) bool {
+	return (info.Receiver != nil) == bool(fo)
+}
+
+func (hasReceiver) impliesImported() []string {
+	return nil
+}
+
+func (fo hasReceiver) Hash(h *fingerprint.Hasher) error {
+	return h.Named("receiver", fingerprint.Bool(fo))
 }
 
 type functionBody struct {
@@ -586,15 +619,22 @@ func (o *unmarshalFuncDeclOption) UnmarshalYAML(ctx gocontext.Context, node ast.
 		}
 		o.FunctionOption = Name(name)
 	case "receiver":
-		var arg string
+		var arg any
 		if err := yaml.NodeToValueContext(ctx, mapping.Values[0].Value, &arg); err != nil {
 			return err
 		}
-		tn, err := typed.NewTypeName(arg)
-		if err != nil {
-			return err
+		switch arg := arg.(type) {
+		case string:
+			tn, err := typed.NewTypeName(arg)
+			if err != nil {
+				return err
+			}
+			o.FunctionOption = Receiver(tn)
+		case bool:
+			o.FunctionOption = hasReceiver(arg)
+		default:
+			return fmt.Errorf("cannot unmarshal into a FuncDeclOption: 'receiver' can only be a boolean or a string, got %T", arg)
 		}
-		o.FunctionOption = Receiver(tn)
 	case "signature", "signature-contains":
 		var sig struct {
 			Args  []string            `yaml:"args"`
