@@ -21,18 +21,19 @@ const (
 	NeverMatch MatchType = 'N'
 )
 
-// Not returns the logical NOT of a MatchType value
+// Not returns the conservative logical NOT of a MatchType value.
+// A Match only proves that some node may match, so its negation remains unknown.
 // Truth table:
 //
 // | A | NOT A |
 // |---|-------|
 // | N | Y     |
 // | ? | ?     |
-// | Y | N     |
+// | Y | ?     |
 func (m MatchType) Not() MatchType {
 	switch m {
 	case Match:
-		return NeverMatch
+		return Unknown
 	case NeverMatch:
 		return Match
 	case Unknown:

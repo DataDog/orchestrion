@@ -1,0 +1,17 @@
+//line input.go:1:1
+package sha1
+
+type digest struct{}
+
+func Sum(data []byte) [20]byte {
+//line <generated>:1
+  {
+    print("should trigger")
+  }
+//line input.go:6
+  return [20]byte{}
+}
+
+func (d *digest) Sum(data []byte) []byte {
+  return data
+}
