@@ -368,7 +368,7 @@ jobs:
     name: Integration Tests
     needs: generate
     if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
-    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@94dd7aae494a85154f600d7adc508978ff44cb8f # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
+    uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@03c4c2a4c771fb1a2d6fb2da2af32dee8a0f724c # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     permissions:
       id-token: write
       contents: read
