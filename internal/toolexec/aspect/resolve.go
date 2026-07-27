@@ -20,6 +20,10 @@ import (
 // to locate the archive for `importPath` and its dependencies using `go list`. If that fails, it
 // will try to resolve it using `go get`.
 func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (_ map[string]string, err error) {
+	return resolvePackageFilesForTest(ctx, importPath, "", workDir)
+}
+
+func resolvePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, workDir string) (_ map[string]string, err error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "aspect.resolvePackageFiles",
 		tracer.ResourceName(importPath),
 	)
@@ -36,6 +40,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	}
 
 	req := pkgs.NewResolveRequest(cwd, importPath)
+	req.TestVariantFor = testVariantFor
 	if workDir != "" {
 		// Nest the future GOTMPDIR under this $WORK directory, so that builds with `-work` are nested,
 		// and the root work tree contains all child work trees involved in resolutions.
@@ -66,20 +71,4 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	}
 
 	return archives, nil
-}
-
-func resolveTestVariantPackageFiles(ctx context.Context, packageUnderTest string, roots []string, workDir string) (pkgs.ResolveTestVariantsResponse, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	conn, err := client.FromEnvironment(ctx, workDir)
-	if err != nil {
-		return nil, err
-	}
-	req := pkgs.NewResolveTestVariantsRequest(cwd, packageUnderTest, roots)
-	if workDir != "" {
-		req.TempDir = filepath.Join(workDir, "__tmp__")
-	}
-	return client.Request(ctx, conn, req)
 }

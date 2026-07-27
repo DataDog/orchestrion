@@ -30,12 +30,28 @@ const (
 	envVarGotmpdir = "GOTMPDIR"
 )
 
+var envIgnoreList = map[string]func(*ResolveRequest, string){
+	// We don't use this, instead rely on the [ResolveRequest.Dir] field.
+	"PWD": nil,
+	// We override `GOTMPDIR` with the [ResolveRequest.TempDir] field.
+	envVarGotmpdir: func(r *ResolveRequest, dir string) {
+		if r.TempDir != "" {
+			return
+		}
+		r.TempDir = dir
+	},
+	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
+	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
+	envVarParentID:        func(r *ResolveRequest, id string) { r.resolveParentID = id },
+}
+
 type (
 	ResolveRequest struct {
-		Dir     string   `json:"dir"`              // The directory to resolve from (usually where `go.mod` is)
-		Env     []string `json:"env"`              // Environment variables to use during resolution
-		Pattern string   `json:"pattern"`          // Package pattern to resolve
-		TempDir string   `json:"tmpdir,omitempty"` // A temporary directory to use for Go build artifacts
+		Dir            string   `json:"dir"`                      // The directory to resolve from (usually where `go.mod` is)
+		Env            []string `json:"env"`                      // Environment variables to use during resolution
+		Pattern        string   `json:"pattern"`                  // Package pattern to resolve
+		TempDir        string   `json:"tmpdir,omitempty"`         // A temporary directory to use for Go build artifacts
+		TestVariantFor string   `json:"testVariantFor,omitempty"` // Resolve Pattern as built for this package's tests
 
 		// Fields set by canonicalization
 		resolveParentID    string // The value of the [envVarParentID] environment variable
@@ -60,32 +76,21 @@ func (ResolveRequest) ResponseIs(ResolveResponse) {}
 func (r ResolveRequest) ForeachSpanTag(set func(key string, value any)) {
 	set("request.dir", r.Dir)
 	set("request.pattern", r.Pattern)
+	if r.TestVariantFor != "" {
+		set("request.test-variant-for", r.TestVariantFor)
+	}
 }
 
 func (r *ResolveRequest) canonicalizeEnviron() {
-	r.Env, r.resolveParentID, r.toolexecImportpath = canonicalizeEnviron(r.Env, &r.TempDir)
-}
+	named := make(map[string]string, len(r.Env))
+	names := make([]string, 0, len(r.Env))
 
-func canonicalizeEnviron(env []string, tempDir *string) (canonical []string, resolveParentID string, toolexecImportPath string) {
-	named := make(map[string]string, len(env))
-	names := make([]string, 0, len(env))
-
-	for _, kv := range env {
+	for _, kv := range r.Env {
 		name, val, _ := strings.Cut(kv, "=")
-		switch name {
-		case "PWD":
-			// The request's Dir field is authoritative.
-			continue
-		case envVarGotmpdir:
-			if *tempDir == "" {
-				*tempDir = val
+		if cb, ignore := envIgnoreList[name]; ignore {
+			if cb != nil {
+				cb(r, val)
 			}
-			continue
-		case "TOOLEXEC_IMPORTPATH":
-			toolexecImportPath = val
-			continue
-		case envVarParentID:
-			resolveParentID = val
 			continue
 		}
 		if _, found := named[name]; !found {
@@ -95,11 +100,10 @@ func canonicalizeEnviron(env []string, tempDir *string) (canonical []string, res
 	}
 
 	slices.Sort(names)
-	canonical = make([]string, 0, len(names))
+	r.Env = make([]string, 0, len(names))
 	for _, name := range names {
-		canonical = append(canonical, named[name])
+		r.Env = append(r.Env, named[name])
 	}
-	return canonical, resolveParentID, toolexecImportPath
 }
 
 func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResponse, error) {
@@ -123,6 +127,10 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 	}
 
 	resp, err := s.resolved.Load(reqHash, func() (_ ResolveResponse, err error) {
+		if req.TestVariantFor != "" {
+			return s.resolveTestVariant(ctx, req)
+		}
+
 		log := log.With().Str("pattern", req.Pattern).Logger()
 		ctx := log.WithContext(ctx)
 

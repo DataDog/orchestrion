@@ -33,8 +33,10 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 	}
 
 	var changed bool
-	isTestLink := strings.HasSuffix(w.ImportPath, ".test")
-	var variantRoots []string
+	testVariantFor := ""
+	if strings.HasSuffix(w.ImportPath, ".test") {
+		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
+	}
 	for archiveImportPath, archive := range reg.PackageFile {
 		linkDeps, err := linkdeps.FromArchive(ctx, archive)
 		if err != nil {
@@ -48,37 +50,19 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 				continue
 			}
 
-			if isTestLink {
-				variantRoots = append(variantRoots, depPath)
-			}
 			log.Trace().Str("import-path", depPath).Msg("Resolving " + linkdeps.Filename + " dependency")
-			deps, err := resolvePackageFiles(ctx, depPath, cmd.WorkDir)
+			deps, err := resolvePackageFilesForTest(ctx, depPath, testVariantFor, cmd.WorkDir)
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)
 			}
 			for p, a := range deps {
-				if _, found := reg.PackageFile[p]; !found {
-					log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
-					reg.PackageFile[p] = a
-					changed = true
+				// Test-aware resolution merges test variants over an ordinary closure and omits the
+				// package under test. Let that merged closure replace existing entries so variants win.
+				if current, found := reg.PackageFile[p]; found && (testVariantFor == "" || current == a) {
+					continue
 				}
-			}
-		}
-	}
-
-	if len(variantRoots) > 0 {
-		packageUnderTest := strings.TrimSuffix(w.ImportPath, ".test")
-		variants, err := resolveTestVariantPackageFiles(ctx, packageUnderTest, variantRoots, cmd.WorkDir)
-		if err != nil {
-			return fmt.Errorf("resolving test variants for %q: %w", packageUnderTest, err)
-		}
-		for importPath, archive := range variants {
-			if importPath == packageUnderTest {
-				continue
-			}
-			if reg.PackageFile[importPath] != archive {
-				log.Debug().Str("import-path", importPath).Str("archive", archive).Msg("Recording resolved test variant")
-				reg.PackageFile[importPath] = archive
+				log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
+				reg.PackageFile[p] = a
 				changed = true
 			}
 		}

@@ -72,13 +72,9 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	}
 
 	newDeps := linkDeps.Dependencies()
-	variantRoots := make([]string, 0, len(newDeps))
+	testVariantFor := ""
 	if isTestMain {
-		for _, dep := range newDeps {
-			if reg.PackageFile[dep] == "" {
-				variantRoots = append(variantRoots, dep)
-			}
-		}
+		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
 	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
@@ -88,13 +84,15 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		linkDepPath := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 
-		deps, err := resolvePackageFiles(ctx, linkDepPath, cmd.WorkDir)
+		deps, err := resolvePackageFilesForTest(ctx, linkDepPath, testVariantFor, cmd.WorkDir)
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", linkDepPath, err)
 		}
 
 		for p, a := range deps {
-			if _, found := reg.PackageFile[p]; found {
+			// Test-aware resolution merges test variants over an ordinary closure and omits the
+			// package under test. Let that merged closure replace existing entries so variants win.
+			if _, found := reg.PackageFile[p]; found && testVariantFor == "" {
 				continue
 			}
 			log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
@@ -112,26 +110,8 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 				}
 				stack = append(stack, tDep)     // Push it to the stack
 				newDeps = append(newDeps, tDep) // Record it as a synthetic import to add
-				if isTestMain {
-					variantRoots = append(variantRoots, tDep)
-				}
-				cmd.LinkDeps.Add(tDep) // Record it as a link-time dependency
+				cmd.LinkDeps.Add(tDep)          // Record it as a link-time dependency
 			}
-		}
-	}
-
-	if len(variantRoots) > 0 {
-		packageUnderTest := strings.TrimSuffix(w.ImportPath, ".test")
-		variants, err := resolveTestVariantPackageFiles(ctx, packageUnderTest, variantRoots, cmd.WorkDir)
-		if err != nil {
-			return fmt.Errorf("resolving test variants for %q: %w", packageUnderTest, err)
-		}
-		for importPath, archive := range variants {
-			if importPath == packageUnderTest {
-				continue
-			}
-			log.Debug().Str("import-path", importPath).Str("archive", archive).Msg("Recording resolved test variant")
-			reg.PackageFile[importPath] = archive
 		}
 	}
 
@@ -150,8 +130,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 
 	// Generate a synthetic source file with blank imports to link-time
 	// dependencies, so the linker actually sees them.
-	slices.Sort(newDeps)
-	newDeps = slices.Compact(newDeps)
+	slices.Sort(newDeps) // Consistent order for deterministic output
 	genDecl := &ast.GenDecl{Tok: token.IMPORT, Specs: make([]ast.Spec, len(newDeps))}
 	fileAST := &ast.File{Name: ast.NewIdent("main"), Decls: []ast.Decl{genDecl}, Imports: make([]*ast.ImportSpec, len(newDeps))}
 	for idx, path := range newDeps {

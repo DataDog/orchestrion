@@ -102,43 +102,72 @@ func Test(t *testing.T) {
 			require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
 		}
 		writeFile("go.mod", "module example.com/testvariants\n\ngo 1.25\n")
-		writeFile("model/model.go", "package model\n\nconst Value = 42\n")
-		writeFile("model/model_test.go", "package model\n\nimport \"testing\"\n\nfunc TestValue(t *testing.T) { if Value != 42 { t.Fail() } }\n")
-		writeFile("middle/middle.go", "package middle\n\nimport \"example.com/testvariants/model\"\n\nconst Value = model.Value\n")
+		writeFile("subject/subject.go", "package subject\n\nconst Value = 42\n")
+		writeFile("subject/subject_test.go", "package subject\n\nimport \"testing\"\n\nfunc TestValue(t *testing.T) { if Value != 42 { t.Fail() } }\n")
+		writeFile("middle/middle.go", "package middle\n\nimport \"example.com/testvariants/subject\"\n\nconst Value = subject.Value\n")
 		writeFile("root/root.go", "package root\n\nimport \"example.com/testvariants/middle\"\n\nconst Value = middle.Value\n")
 		writeFile("unrelated/unrelated.go", "package unrelated\n\nconst Value = 42\n")
 
 		resp, err := client.Request(
 			context.Background(),
 			conn,
-			pkgs.NewResolveTestVariantsRequest(
-				dir,
-				"example.com/testvariants/model",
-				[]string{"example.com/testvariants/unrelated", "example.com/testvariants/root", "example.com/testvariants/root"},
-			),
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/root",
+				TestVariantFor: "example.com/testvariants/subject",
+			},
 		)
 		require.NoError(t, err)
 		require.Contains(t, resp, "example.com/testvariants/root")
 		require.Contains(t, resp, "example.com/testvariants/middle")
 		assert.NotEmpty(t, resp["example.com/testvariants/root"])
 		assert.NotEmpty(t, resp["example.com/testvariants/middle"])
-		assert.NotContains(t, resp, "example.com/testvariants/model")
-		assert.NotContains(t, resp, "example.com/testvariants/unrelated")
+		assert.NotContains(t, resp, "example.com/testvariants/subject")
 
-		writeFile("externalmodel/model.go", "package externalmodel\n\nconst Value = 42\n")
-		writeFile("externalmodel/model_test.go", "package externalmodel_test\n\nimport (\"testing\"; \"example.com/testvariants/externalmodel\")\n\nfunc TestValue(t *testing.T) { if externalmodel.Value != 42 { t.Fail() } }\n")
-		writeFile("externalroot/root.go", "package externalroot\n\nimport \"example.com/testvariants/externalmodel\"\n\nconst Value = externalmodel.Value\n")
 		resp, err = client.Request(
 			context.Background(),
 			conn,
-			pkgs.NewResolveTestVariantsRequest(
-				dir,
-				"example.com/testvariants/externalmodel",
-				[]string{"example.com/testvariants/externalroot"},
-			),
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/unrelated",
+				TestVariantFor: "example.com/testvariants/subject",
+			},
 		)
 		require.NoError(t, err)
-		assert.Empty(t, resp)
+		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"])
+
+		// An unrelated dependency does not need to load or validate the test target.
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/unrelated",
+				TestVariantFor: "example.com/testvariants/does-not-exist",
+			},
+		)
+		require.NoError(t, err)
+		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"])
+
+		writeFile("externalsubject/subject.go", "package externalsubject\n\nconst Value = 42\n")
+		writeFile("externalsubject/subject_test.go", "package externalsubject_test\n\nimport (\"testing\"; \"example.com/testvariants/externalsubject\")\n\nfunc TestValue(t *testing.T) { if externalsubject.Value != 42 { t.Fail() } }\n")
+		writeFile("externalroot/root.go", "package externalroot\n\nimport \"example.com/testvariants/externalsubject\"\n\nconst Value = externalsubject.Value\n")
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/externalroot",
+				TestVariantFor: "example.com/testvariants/externalsubject",
+			},
+		)
+		require.NoError(t, err)
+		assert.NotEmpty(t, resp["example.com/testvariants/externalroot"])
+		assert.NotContains(t, resp, "example.com/testvariants/externalsubject")
 	})
 
 	t.Run("Error", func(t *testing.T) {

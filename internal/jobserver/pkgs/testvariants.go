@@ -9,9 +9,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"crypto/sha512"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -21,12 +18,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/goflags"
-	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
@@ -34,203 +29,121 @@ import (
 
 const envVarResolvingTestVariants = "ORCHESTRION_RESOLVING_TEST_VARIANTS"
 
-type (
-	// ResolveTestVariantsRequest asks the jobserver to construct the Go test copies of synthetic
-	// dependencies that transitively import PackageUnderTest.
-	ResolveTestVariantsRequest struct {
-		Dir              string   `json:"dir"`
-		Env              []string `json:"env"`
-		TempDir          string   `json:"tmpdir,omitempty"`
-		PackageUnderTest string   `json:"packageUnderTest"`
-		SyntheticRoots   []string `json:"syntheticRoots"`
-
-		resolveParentID    string
-		toolexecImportpath string
-		canonical          bool
-	}
-
-	// ResolveTestVariantsResponse maps import paths to export archives built for the requested test.
-	ResolveTestVariantsResponse map[string]string
-)
-
-// NewResolveTestVariantsRequest creates a request using the current process environment.
-func NewResolveTestVariantsRequest(dir string, packageUnderTest string, syntheticRoots []string) *ResolveTestVariantsRequest {
-	return &ResolveTestVariantsRequest{
-		Dir:              dir,
-		Env:              os.Environ(),
-		PackageUnderTest: packageUnderTest,
-		SyntheticRoots:   slices.Clone(syntheticRoots),
-	}
-}
-
-func (ResolveTestVariantsRequest) Subject() string                        { return resolveTestVariantsSubject }
-func (ResolveTestVariantsRequest) ResponseIs(ResolveTestVariantsResponse) {}
-func (r ResolveTestVariantsRequest) ForeachSpanTag(set func(key string, value any)) {
-	set("request.dir", r.Dir)
-	set("request.package-under-test", r.PackageUnderTest)
-	set("request.synthetic-roots", r.SyntheticRoots)
-}
-
 // ResolvingTestVariants reports whether the current process belongs to the nested test load used
 // to construct synthetic dependency variants.
 func ResolvingTestVariants() bool {
 	return os.Getenv(envVarResolvingTestVariants) != ""
 }
 
-func (r *ResolveTestVariantsRequest) canonicalize() {
-	if r.canonical {
-		return
-	}
-	r.Env, r.resolveParentID, r.toolexecImportpath = canonicalizeEnviron(r.Env, &r.TempDir)
-	slices.Sort(r.SyntheticRoots)
-	r.SyntheticRoots = slices.Compact(r.SyntheticRoots)
-	r.canonical = true
-}
-
-func (r *ResolveTestVariantsRequest) hash() (string, error) {
-	r.canonicalize()
-	hash := sha512.New()
-	if err := json.NewEncoder(hash).Encode(r); err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(hash.Sum(nil)), nil
-}
-
-func (s *service) resolveTestVariants(ctx context.Context, req *ResolveTestVariantsRequest) (ResolveTestVariantsResponse, error) {
+func (s *service) resolveTestVariant(ctx context.Context, req *ResolveRequest) (_ ResolveResponse, err error) {
 	log := zerolog.Ctx(ctx)
+	span, ctx := tracer.StartSpanFromContext(ctx, "pkgs.ResolveTestVariant")
+	defer func() { span.Finish(tracer.WithError(err)) }()
 
-	req.Env = append(req.Env, fmt.Sprintf("%s=%s", client.EnvVarJobserverURL, s.serverURL))
-	req.canonicalize()
-	if req.PackageUnderTest == "" {
-		return nil, errors.New("test variant resolution requires a package under test")
-	}
-	if len(req.SyntheticRoots) == 0 {
-		return make(ResolveTestVariantsResponse), nil
+	if req.Pattern == "" {
+		return nil, errors.New("test variant resolution requires a package pattern")
 	}
 
-	reqHash, err := req.hash()
+	env, err := s.testVariantEnvironment(req, span)
 	if err != nil {
 		return nil, err
 	}
-	if req.resolveParentID != "" {
-		if err := s.graph.AddEdge(req.resolveParentID, req.toolexecImportpath); err != nil {
-			return nil, err
-		}
-		defer s.graph.RemoveEdge(req.resolveParentID, req.toolexecImportpath)
+	buildFlags, err := testVariantBuildFlags(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to obtain go build flags")
+	}
+	loadLogf := func(format string, args ...any) {
+		log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
 	}
 
-	return s.testVariants.Load(reqHash, func() (_ ResolveTestVariantsResponse, err error) {
-		span, ctx := tracer.StartSpanFromContext(ctx, "pkgs.ResolveTestVariants")
-		defer func() { span.Finish(tracer.WithError(err)) }()
+	ordinary, err := packages.Load(&packages.Config{
+		Context: ctx,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+			packages.NeedImports | packages.NeedDeps | packages.NeedExportFile,
+		Dir: req.Dir, Env: env, BuildFlags: buildFlags, Logf: loadLogf,
+	}, req.Pattern)
+	if err != nil {
+		return nil, fmt.Errorf("loading synthetic dependency graph: %w", err)
+	}
+	if err := packageErrors(ordinary); err != nil {
+		return nil, fmt.Errorf("loading synthetic dependency graph: %w", err)
+	}
 
-		env, err := s.testVariantEnvironment(req, span)
-		if err != nil {
-			return nil, err
+	var packageUnderTest, root *packages.Package
+	for _, pkg := range collectPackages(ordinary) {
+		switch pkg.PkgPath {
+		case req.TestVariantFor:
+			packageUnderTest = pkg
+		case req.Pattern:
+			root = pkg
 		}
-		buildFlags, err := testVariantBuildFlags(ctx)
-		if err != nil {
-			log.Warn().Err(err).Msg("Failed to obtain go build flags")
-		}
-		loadLogf := func(format string, args ...any) {
-			log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
-		}
+	}
+	if root == nil {
+		return nil, fmt.Errorf("synthetic dependency graph did not include root %q", req.Pattern)
+	}
 
-		patterns := append(slices.Clone(req.SyntheticRoots), req.PackageUnderTest)
-		ordinary, err := packages.Load(&packages.Config{
-			Context: ctx,
-			Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-				packages.NeedImports | packages.NeedDeps | packages.NeedExportFile,
-			Dir: req.Dir, Env: env, BuildFlags: buildFlags, Logf: loadLogf,
-		}, patterns...)
-		if err != nil {
-			return nil, fmt.Errorf("loading synthetic dependency graph: %w", err)
-		}
-		if err := packageErrors(ordinary); err != nil {
-			return nil, fmt.Errorf("loading synthetic dependency graph: %w", err)
-		}
-
-		var packageUnderTest *packages.Package
-		roots := make(map[string]*packages.Package, len(req.SyntheticRoots))
-		for _, pkg := range ordinary {
-			if pkg.PkgPath == req.PackageUnderTest {
-				packageUnderTest = pkg
-			}
-			if slices.Contains(req.SyntheticRoots, pkg.PkgPath) {
-				roots[pkg.PkgPath] = pkg
-			}
-		}
-		if packageUnderTest == nil || len(packageUnderTest.GoFiles) == 0 {
-			return nil, fmt.Errorf("package under test %q has no source directory", req.PackageUnderTest)
-		}
-
-		affected := make([]string, 0, len(req.SyntheticRoots))
-		for _, root := range req.SyntheticRoots {
-			pkg := roots[root]
-			if pkg == nil {
-				return nil, fmt.Errorf("synthetic dependency graph did not include root %q", root)
-			}
-			if importsPackage(pkg, req.PackageUnderTest, make(map[string]bool)) {
-				affected = append(affected, root)
-			}
-		}
-		if len(affected) == 0 {
-			return make(ResolveTestVariantsResponse), nil
-		}
-
-		overlayKey := sha256.Sum256([]byte(req.PackageUnderTest + "\x00" + strings.Join(affected, "\x00")))
-		overlayPath := filepath.Join(
-			filepath.Dir(packageUnderTest.GoFiles[0]),
-			fmt.Sprintf("zz_orchestrion_linkdeps_%x_test.go", overlayKey[:8]),
-		)
-		if _, err := os.Stat(overlayPath); err == nil {
-			return nil, fmt.Errorf("refusing to replace existing source file %q with a test variant overlay", overlayPath)
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("checking test variant overlay path %q: %w", overlayPath, err)
-		}
-		overlaySource, err := testVariantOverlay(packageUnderTest.Name, affected)
-		if err != nil {
-			return nil, err
-		}
-		loaded, err := packages.Load(&packages.Config{
-			Context: ctx,
-			Mode: packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
-				packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest,
-			Dir: req.Dir, Env: env, BuildFlags: buildFlags, Logf: loadLogf,
-			Tests:   true,
-			Overlay: map[string][]byte{overlayPath: overlaySource},
-		}, req.PackageUnderTest)
-		if err != nil {
-			return nil, fmt.Errorf("loading test variants for %q: %w", req.PackageUnderTest, err)
-		}
-		if err := packageErrors(loaded); err != nil {
-			return nil, fmt.Errorf(
-				"constructing test variants for synthetic dependencies %q that import %q: %w; ordinary archives cannot be used because they expect a different package fingerprint",
-				affected,
-				req.PackageUnderTest,
-				err,
-			)
-		}
-
-		all := collectPackages(loaded)
-		if findTestVariant(all, req.PackageUnderTest, req.PackageUnderTest) == nil {
-			// With external tests only, cmd/go does not augment the package under test and
-			// therefore has no fingerprints that synthetic dependencies must be rebuilt against.
-			return make(ResolveTestVariantsResponse), nil
-		}
-		resp := make(ResolveTestVariantsResponse)
-		for _, root := range affected {
-			variant := findTestVariant(all, root, req.PackageUnderTest)
-			if variant == nil || variant.ExportFile == "" {
-				return nil, fmt.Errorf("Go did not produce a test variant for synthetic dependency %q of %q", root, req.PackageUnderTest)
-			}
-			collectTestVariantClosure(resp, variant, req.PackageUnderTest, make(map[string]bool))
-		}
-		delete(resp, req.PackageUnderTest)
+	resp := make(ResolveResponse)
+	if err := resp.mergeFrom(root); err != nil {
+		return nil, fmt.Errorf("collecting ordinary synthetic dependency graph: %w", err)
+	}
+	if !importsPackage(root, req.TestVariantFor, make(map[string]bool)) {
 		return resp, nil
-	})
+	}
+	if packageUnderTest == nil || len(packageUnderTest.GoFiles) == 0 {
+		return nil, fmt.Errorf("package under test %q has no source directory", req.TestVariantFor)
+	}
+
+	overlayKey := sha256.Sum256([]byte(req.TestVariantFor + "\x00" + req.Pattern))
+	overlayPath := filepath.Join(
+		filepath.Dir(packageUnderTest.GoFiles[0]),
+		fmt.Sprintf("zz_orchestrion_linkdeps_%x_test.go", overlayKey[:8]),
+	)
+	if _, err := os.Stat(overlayPath); err == nil {
+		return nil, fmt.Errorf("refusing to replace existing source file %q with a test variant overlay", overlayPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("checking test variant overlay path %q: %w", overlayPath, err)
+	}
+	overlaySource, err := testVariantOverlay(packageUnderTest.Name, req.Pattern)
+	if err != nil {
+		return nil, err
+	}
+	loaded, err := packages.Load(&packages.Config{
+		Context: ctx,
+		Mode: packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
+			packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest,
+		Dir: req.Dir, Env: env, BuildFlags: buildFlags, Logf: loadLogf,
+		Tests:   true,
+		Overlay: map[string][]byte{overlayPath: overlaySource},
+	}, req.TestVariantFor)
+	if err != nil {
+		return nil, fmt.Errorf("loading test variants for %q: %w", req.TestVariantFor, err)
+	}
+	if err := packageErrors(loaded); err != nil {
+		return nil, fmt.Errorf(
+			"constructing a test variant for synthetic dependency %q that imports %q: %w; the ordinary archive cannot be used because it expects a different package fingerprint",
+			req.Pattern,
+			req.TestVariantFor,
+			err,
+		)
+	}
+
+	all := collectPackages(loaded)
+	if findTestVariant(all, req.TestVariantFor, req.TestVariantFor) == nil {
+		// With external tests only, cmd/go does not augment the package under test and
+		// therefore has no fingerprints that synthetic dependencies must be rebuilt against.
+		delete(resp, req.TestVariantFor)
+		return resp, nil
+	}
+	variant := findTestVariant(all, req.Pattern, req.TestVariantFor)
+	if variant == nil || variant.ExportFile == "" {
+		return nil, fmt.Errorf("Go did not produce a test variant for synthetic dependency %q of %q", req.Pattern, req.TestVariantFor)
+	}
+	collectTestVariantClosure(resp, variant, req.TestVariantFor, make(map[string]bool))
+	delete(resp, req.TestVariantFor)
+	return resp, nil
 }
 
-func (_ *service) testVariantEnvironment(req *ResolveTestVariantsRequest, span *tracer.Span) ([]string, error) {
+func (_ *service) testVariantEnvironment(req *ResolveRequest, span *tracer.Span) ([]string, error) {
 	env := slices.Clone(req.Env)
 	tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &env})
 	if req.toolexecImportpath != "" {
@@ -265,15 +178,11 @@ func importsPackage(pkg *packages.Package, target string, visited map[string]boo
 	return false
 }
 
-func testVariantOverlay(packageName string, roots []string) ([]byte, error) {
-	imports := slices.Clone(roots)
-	slices.Sort(imports)
-	imports = slices.Compact(imports)
-	decl := &ast.GenDecl{Tok: token.IMPORT, Specs: make([]ast.Spec, len(imports))}
+func testVariantOverlay(packageName string, root string) ([]byte, error) {
+	decl := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{
+		&ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(root)}},
+	}}
 	file := &ast.File{Name: ast.NewIdent(packageName + "_test"), Decls: []ast.Decl{decl}}
-	for i, path := range imports {
-		decl.Specs[i] = &ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(path)}}
-	}
 	var source bytes.Buffer
 	if err := format.Node(&source, token.NewFileSet(), file); err != nil {
 		return nil, fmt.Errorf("formatting test variant overlay: %w", err)
@@ -320,7 +229,7 @@ func findTestVariant(pkgs []*packages.Package, pkgPath string, forTest string) *
 	return nil
 }
 
-func collectTestVariantClosure(resp ResolveTestVariantsResponse, pkg *packages.Package, forTest string, visited map[string]bool) {
+func collectTestVariantClosure(resp ResolveResponse, pkg *packages.Package, forTest string, visited map[string]bool) {
 	if pkg == nil || visited[pkg.ID] {
 		return
 	}

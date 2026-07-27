@@ -18,34 +18,26 @@ import (
 const (
 	subjectPrefix = "packages."
 
-	resolveSubject             = subjectPrefix + "resolve"
-	resolveTestVariantsSubject = subjectPrefix + "resolve-test-variants"
-	loadSubject                = subjectPrefix + "load"
+	resolveSubject = subjectPrefix + "resolve"
+	loadSubject    = subjectPrefix + "load"
 )
 
 type service struct {
-	resolved     common.Cache[ResolveResponse]
-	testVariants common.Cache[ResolveTestVariantsResponse]
-	loaded       common.Cache[*packages.Package]
-	graph        common.Graph
-	serverURL    string
+	resolved  common.Cache[ResolveResponse]
+	loaded    common.Cache[*packages.Package]
+	graph     common.Graph
+	serverURL string
 }
 
 func Subscribe(ctx context.Context, serverURL string, conn *nats.Conn, stats *common.CacheStats) (config.PackageLoader, error) {
 	s := &service{
-		loaded:       common.NewCache[*packages.Package](stats),
-		resolved:     common.NewCache[ResolveResponse](stats),
-		testVariants: common.NewCache[ResolveTestVariantsResponse](stats),
-		serverURL:    serverURL,
+		loaded:    common.NewCache[*packages.Package](stats),
+		resolved:  common.NewCache[ResolveResponse](stats),
+		serverURL: serverURL,
 	}
 
 	ctx = zerolog.Ctx(ctx).With().Str("nats.subject", resolveSubject).Logger().WithContext(ctx)
 	_, err := conn.Subscribe(resolveSubject, common.HandleRequest(ctx, s.resolve))
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = conn.Subscribe(resolveTestVariantsSubject, common.HandleRequest(ctx, s.resolveTestVariants))
 	if err != nil {
 		return nil, err
 	}

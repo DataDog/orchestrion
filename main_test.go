@@ -57,7 +57,7 @@ aspects:
   - id: synthetic-test-variant
     join-point:
       all-of:
-        - import-path: example.com/testvariant/model
+        - import-path: example.com/testvariant/subject
         - function-body:
             function:
               - name: Value
@@ -69,8 +69,8 @@ aspects:
             //go:linkname __orchestrionRootValue example.com/testvariant/root.Value
             func __orchestrionRootValue() int
 `)
-	writeFile("model/model.go", "package model\n\nfunc Value() int { return 42 }\n")
-	writeFile("model/model_test.go", `package model
+	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
+	writeFile("subject/subject_test.go", `package subject
 
 import "testing"
 
@@ -82,12 +82,12 @@ func TestValue(t *testing.T) {
 `)
 	writeFile("root/root.go", `package root
 
-import "example.com/testvariant/model"
+import "example.com/testvariant/subject"
 
-func Value() int { return model.Value() }
+func Value() int { return subject.Value() }
 `)
 
-	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./model")
+	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./subject")
 }
 
 func TestBuildFromModuleSubdirectory(t *testing.T) {

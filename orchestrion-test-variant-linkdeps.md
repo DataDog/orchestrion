@@ -151,21 +151,24 @@ closure computation to Go instead of implementing a custom package compiler.
 
 ## Design overview
 
-Add a test-aware, batch package-resolution operation. For a generated test main:
+Make the existing package-resolution operation test-aware. For each unresolved
+synthetic dependency of a generated test main:
 
 1. Derive the package under test from the test executable import path.
-2. Collect unresolved synthetic dependency roots from `link.deps`.
-3. Determine which roots transitively import the package under test.
-4. Keep unrelated roots on the existing ordinary resolution path.
-5. Create an in-memory external-test overlay that blank-imports the affected
-   roots.
-6. Load the package under test with `Tests: true` and `NeedForTest`.
-7. Collect export archives whose `ForTest` field identifies this package under
-   test.
-8. Override ordinary archive entries with those test variants before compiling
-   the generated test main.
-9. Resolve the same variants when augmenting the linker's import configuration.
-10. Fail with a precise diagnostic if Go cannot construct a required variant.
+2. Resolve the synthetic dependency through the existing `ResolveRequest`, with
+   the package under test supplied as optional test-variant context.
+3. Determine whether that dependency transitively imports the package under
+   test. Return its ordinary closure unchanged when it does not.
+4. For an affected dependency, create an in-memory external-test overlay that
+   blank-imports it.
+5. Load the package under test with `Tests: true` and `NeedForTest`.
+6. Collect export archives whose `ForTest` field identifies this package under
+   test, and merge them over the ordinary resolution response.
+7. Exclude the package-under-test archive so Go's selected archive remains
+   authoritative.
+8. Use this same resolution path while compiling the generated test main and
+   while augmenting the linker's import configuration.
+9. Fail with a precise diagnostic if Go cannot construct a required variant.
 
 ## Detailed implementation steps
 
@@ -207,41 +210,36 @@ If the integration test framework cannot retain a deliberately failing fixture,
 first add the fixture plus a test harness that expects the current failure, then
 flip the expectation in the implementation change.
 
-### 2. Represent test-aware resolution separately
+### 2. Extend the existing resolution request
 
-Do not overload the existing `ResolveRequest` semantics. Add a dedicated
-jobserver request and response, with names consistent with the repository. A
-conceptual shape is:
+Add optional test context to `ResolveRequest` rather than introducing another
+jobserver subject, request type, response type, or cache:
 
 ```go
-type ResolveTestVariantsRequest struct {
-    Dir            string
-    Env            []string
-    TempDir        string
-    PackageUnderTest string
-    SyntheticRoots []string
+type ResolveRequest struct {
+    // Existing fields omitted.
+    Pattern        string
+    TestVariantFor string
 }
-
-type ResolveTestVariantsResponse map[string]string
 ```
 
-The response maps canonical package import paths to variant export archives.
-Using a separate response avoids the current `ResolveResponse.mergeFrom`
-behavior, which keys only by `PkgPath` and retains the first archive. A test load
-contains ordinary and `ForTest` packages with the same `PkgPath`; the normal
-response cannot represent both reliably.
+`Pattern` remains the package being resolved. A non-empty `TestVariantFor`
+asks the resolver to return that package's closure as built for the named
+package's tests. Because the field is serialized with the existing request, it
+naturally participates in the existing cache key and cannot collide with an
+ordinary resolution of the same pattern.
 
-Canonicalize and hash the new request. Include the sorted, deduplicated root
-set, package under test, effective environment/build flags, and any behavior
-that changes the overlay. Ensure root order does not make cache keys
-nondeterministic.
+Keep the existing `ResolveRequest.canonicalizeEnviron` implementation and
+`envIgnoreList`. In particular, strip volatile `PWD`, `TOOLEXEC_IMPORTPATH`,
+and resolve-parent identity values, and normalize `GOTMPDIR` through the
+request's `TempDir` field exactly as ordinary resolution already does.
+Compile-phase and link-phase requests that differ only in those process-local
+values must have the same cache key.
 
-Reuse the existing `ResolveRequest.canonicalizeEnviron` behavior and
-`envIgnoreList` rather than hashing `os.Environ()` naively. In particular,
-strip volatile `PWD`, `TOOLEXEC_IMPORTPATH`, and resolve-parent identity values,
-and normalize `GOTMPDIR` through the request's `TempDir` field exactly as the
-ordinary resolver does. Compile-phase and link-phase requests that differ only
-in those process-local values must have the same cache key.
+The response remains `ResolveResponse`. Build the ordinary closure first, then
+overwrite entries with packages selected by matching `ForTest` before reducing
+the graph to the response map. Remove the package-under-test entry from the
+result so the archive selected by the outer Go command remains authoritative.
 
 ### 3. Detect generated test-main compilation robustly
 
@@ -268,28 +266,19 @@ during `OnLink`; do not assume without an integration assertion.
 
 ### 4. Identify affected synthetic roots
 
-Only roots whose ordinary dependency graph reaches the package under test need
-test variants. Resolve/load the synthetic roots in ordinary mode and traverse
-`packages.Package.Imports` to answer:
+Only a synthetic dependency whose ordinary dependency graph reaches the package
+under test needs a test variant. The existing resolver loads the requested
+`Pattern` and traverses `packages.Package.Imports` to answer:
 
 ```text
-Does root R directly or transitively import packageUnderTest?
+Does Pattern directly or transitively import TestVariantFor?
 ```
 
 Use package identity/import path consistently and protect traversal with a
-visited set. Batch the roots where possible to avoid one nested Go invocation
-per root.
-
-Partition roots into:
-
-- `affectedRoots`: closure reaches the package under test;
-- `ordinaryRoots`: closure does not reach the package under test.
-
-Continue resolving `ordinaryRoots` through the existing path. This partition is
-important for internal-package legality: unrelated cross-module internal roots
+visited set. If the dependency is unrelated, return the already-collected
+ordinary closure without performing the `Tests: true` load. This is important
+for internal-package legality: an unrelated cross-module internal dependency
 must not be added to the external-test overlay.
-
-If no roots are affected, do not perform a test-aware load.
 
 ### 5. Construct the external-test overlay
 
@@ -306,15 +295,12 @@ Generate valid Go source using the package's actual name:
 ```go
 package <name>_test
 
-import (
-    _ "affected/root/one"
-    _ "affected/root/two"
-)
+import _ "affected/root"
 ```
 
-Sort and deduplicate imports before rendering. Use `go/ast` plus `go/format`, or
-another repository-standard deterministic generator, rather than string
-concatenation that can produce malformed source.
+Each resolution handles one `Pattern`, so the overlay contains one import. Use
+`go/ast` plus `go/format`, or another repository-standard deterministic
+generator, rather than string concatenation that can produce malformed source.
 
 Use `packages.Config.Overlay`; do not write into the user's source tree or
 module cache. Confirm that overlays for nonexistent files are supported by the
@@ -454,14 +440,11 @@ for importPath, archive := range variants {
 Limit overrides to packages explicitly returned for this `ForTest` target. Do
 not replace unrelated ordinary dependencies.
 
-Generate blank imports for the original synthetic roots as today. The compiler
-will then embed the fingerprints of the selected variant archives into the real
-test-main object.
-
-Deduplicate the generated import list. The investigation observed duplicate
-blank imports in generated output; do not rely on the compiler tolerating them.
-If deduplication is a separate pre-existing bug, either fix it in a small
-separate change or add an explicit follow-up, depending on repository policy.
+Generate blank imports for the original synthetic dependencies as today. The
+compiler will then embed the fingerprints of the selected variant archives into
+the real test-main object. `LinkDeps` is map-backed and the traversal already
+avoids resolved or pending dependencies, so this change does not add a separate
+import-list deduplication pass.
 
 ### 9. Use the same variants during final linking
 
@@ -469,13 +452,13 @@ Updating only the compile importcfg is insufficient. The real test-main archive
 will expect the test-variant fingerprints, so `OnLink` must put those same
 variant archives in the linker's importcfg.
 
-Refactor test-aware resolution/partitioning into a shared helper usable by
-`OnCompileMain` and `OnLink`, or call the same jobserver request from both. The
-request cache should make the second call inexpensive. Correctness requires the
-same package fingerprints and effective build configuration, not identical
-cache file paths: equivalent archives may legitimately live at different
-paths. Canonicalize all variant-affecting inputs so a cache miss still rebuilds
-fingerprint-equivalent variants.
+Both `OnCompileMain` and `OnLink` call the existing package-resolution helper
+with the same optional `TestVariantFor` value. The existing resolver cache makes
+an identical second call inexpensive. Correctness requires the same package
+fingerprints and effective build configuration, not identical cache file paths:
+equivalent archives may legitimately live at different paths. Canonicalize all
+variant-affecting inputs so a cache miss still rebuilds fingerprint-equivalent
+variants.
 
 Do not persist raw Go-cache archive paths into a long-lived build artifact;
 those paths are ephemeral and can become invalid across builds. If testing
@@ -537,14 +520,13 @@ not receive only the linker's opaque fingerprint mismatch.
 
 ### Unit tests
 
-1. Request canonicalization sorts and deduplicates synthetic roots.
+1. Setting `TestVariantFor` changes the existing resolution request's cache key.
 2. Requests differing only in `PWD`, `TOOLEXEC_IMPORTPATH`, or resolve-parent
    identity hash equally, while variant-affecting environment changes do not.
 3. Ordinary graph traversal identifies direct and transitive paths to the
    package under test.
-4. Unrelated roots are excluded from the overlay.
-5. Overlay generation uses `<actual-package-name>_test`, sorted blank imports,
-   and valid formatted Go.
+4. An unrelated pattern returns its ordinary closure without an overlay load.
+5. Overlay generation uses `<actual-package-name>_test` and valid formatted Go.
 6. Variant selection prefers `ForTest == packageUnderTest` archives over
    ordinary archives with the same `PkgPath`.
 7. The package-under-test archive is not overwritten.
@@ -634,8 +616,8 @@ commit policy:
 
 1. Add the failing integration fixture and document the expected graph.
 2. Add affected-root graph analysis and unit tests.
-3. Add the test-variant jobserver request, overlay generation, and selection
-   tests.
+3. Extend the existing jobserver resolution request with optional test context,
+   then add overlay generation and selection tests.
 4. Resolve nested jobserver identity/recursion and test it explicitly.
 5. Integrate variants into `OnCompileMain`.
 6. Integrate the same variants into `OnLink`.
@@ -646,9 +628,9 @@ commit policy:
 
 ### Nested build cost
 
-`packages.Load(Tests: true)` can be expensive. Only invoke it when at least one
-synthetic root reaches the package under test, batch all affected roots, and
-cache the request by deterministic inputs.
+`packages.Load(Tests: true)` can be expensive. Only invoke it when the requested
+synthetic dependency reaches the package under test, and cache the request by
+its existing deterministic inputs plus `TestVariantFor`.
 
 ### Resolver recursion or deadlock
 
@@ -662,8 +644,9 @@ disable global cycle protection.
 
 ### Variant collision in response maps
 
-Ordinary and test-copy packages share `PkgPath`. Keep the test-aware response
-separate and select by `ForTest` before reducing to a map.
+Ordinary and test-copy packages share `PkgPath`. Select packages by `ForTest`
+before merging them over the ordinary `ResolveResponse`, and omit the package
+under test from the final map.
 
 ### Flag mismatch
 
