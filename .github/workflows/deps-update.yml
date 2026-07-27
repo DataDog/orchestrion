@@ -12,10 +12,10 @@ jobs:
       changes-needed: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5
         with:
           # Run with current stable so we can evaluate all possible versions; as the Go toolchain
           # will bail out if it encounters a "candidate" that requires a newer release.
@@ -76,7 +76,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - name: Download patches
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -99,7 +99,7 @@ jobs:
           scope: DataDog/orchestrion
           policy: self.github.deps-update.schedule
       - name: Create Commit # Adds a commit to the branch we created above
-        uses: planetscale/ghcommit-action@25309d8005ac7c3bcd61d3fe19b69e0fe47dbdde # v0.2.20
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
         with:
           commit_message: "chore: update all dependencies"
           repo: ${{ github.repository }}

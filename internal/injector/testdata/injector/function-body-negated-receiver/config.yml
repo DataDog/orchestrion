@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+aspects:
+  - id: crypto/sha1.Sum
+    join-point:
+      all-of:
+        - import-path: crypto/sha1
+        - function-body:
+            all-of:
+              - function:
+                  - name: Sum
+              - not:
+                  function:
+                    - receiver: "*crypto/sha1.digest"
+    advice:
+      - prepend-statements:
+          template: print("should trigger")
+
+import-path: crypto/sha1
+
+code: |-
+  package sha1
+
+  type digest struct{}
+
+  func Sum(data []byte) [20]byte {
+    return [20]byte{}
+  }
+
+  func (d *digest) Sum(data []byte) []byte {
+    return data
+  }
