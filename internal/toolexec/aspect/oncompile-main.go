@@ -16,8 +16,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
@@ -37,6 +39,12 @@ var SyntheticPackageName = "synthetic"
 // linker automatically picks up these dependencies when creating the full binary.
 func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (err error) {
 	if cmd.Flags.Package != "main" {
+		return nil
+	}
+	isTestMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
+	if isTestMain && pkgs.ResolvingTestVariants() {
+		// The nested test main only exists to make cmd/go build the affected library variants.
+		// Processing its synthetic dependencies would recursively issue the same resolution request.
 		return nil
 	}
 
@@ -64,6 +72,14 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	}
 
 	newDeps := linkDeps.Dependencies()
+	variantRoots := make([]string, 0, len(newDeps))
+	if isTestMain {
+		for _, dep := range newDeps {
+			if reg.PackageFile[dep] == "" {
+				variantRoots = append(variantRoots, dep)
+			}
+		}
+	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
 	stack := append(make([]string, 0, len(newDeps)), newDeps...)
@@ -95,9 +111,27 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 					continue
 				}
 				stack = append(stack, tDep)     // Push it to the stack
-				newDeps = append(newDeps, tDep) // Record it as asynthetic import to add
-				cmd.LinkDeps.Add(tDep)          // Record it as a link-time dependency
+				newDeps = append(newDeps, tDep) // Record it as a synthetic import to add
+				if isTestMain {
+					variantRoots = append(variantRoots, tDep)
+				}
+				cmd.LinkDeps.Add(tDep) // Record it as a link-time dependency
 			}
+		}
+	}
+
+	if len(variantRoots) > 0 {
+		packageUnderTest := strings.TrimSuffix(w.ImportPath, ".test")
+		variants, err := resolveTestVariantPackageFiles(ctx, packageUnderTest, variantRoots, cmd.WorkDir)
+		if err != nil {
+			return fmt.Errorf("resolving test variants for %q: %w", packageUnderTest, err)
+		}
+		for importPath, archive := range variants {
+			if importPath == packageUnderTest {
+				continue
+			}
+			log.Debug().Str("import-path", importPath).Str("archive", archive).Msg("Recording resolved test variant")
+			reg.PackageFile[importPath] = archive
 		}
 	}
 
@@ -116,9 +150,10 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 
 	// Generate a synthetic source file with blank imports to link-time
 	// dependencies, so the linker actually sees them.
+	slices.Sort(newDeps)
+	newDeps = slices.Compact(newDeps)
 	genDecl := &ast.GenDecl{Tok: token.IMPORT, Specs: make([]ast.Spec, len(newDeps))}
 	fileAST := &ast.File{Name: ast.NewIdent("main"), Decls: []ast.Decl{genDecl}, Imports: make([]*ast.ImportSpec, len(newDeps))}
-	slices.Sort(newDeps) // Consistent order for deterministic output
 	for idx, path := range newDeps {
 		spec := &ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(path)}}
 		genDecl.Specs[idx] = spec

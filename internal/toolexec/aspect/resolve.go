@@ -67,3 +67,19 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 
 	return archives, nil
 }
+
+func resolveTestVariantPackageFiles(ctx context.Context, packageUnderTest string, roots []string, workDir string) (pkgs.ResolveTestVariantsResponse, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	conn, err := client.FromEnvironment(ctx, workDir)
+	if err != nil {
+		return nil, err
+	}
+	req := pkgs.NewResolveTestVariantsRequest(cwd, packageUnderTest, roots)
+	if workDir != "" {
+		req.TempDir = filepath.Join(workDir, "__tmp__")
+	}
+	return client.Request(ctx, conn, req)
+}

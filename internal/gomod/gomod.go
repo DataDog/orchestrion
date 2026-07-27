@@ -85,12 +85,27 @@ func (m *File) Requires(path string) (string, bool) {
 	return "", false
 }
 
+// commandEnv returns the environment for go subcommands that operate on an
+// explicit `-modfile`, starting from base (typically [os.Environ]).
+//
+// Every command run by this package targets a single module via `-modfile`, which
+// the go command rejects in workspace mode with "go: -modfile cannot be used in
+// workspace mode". A project can enter workspace mode simply by having a go.work
+// file (e.g. etcd-style monorepos), so workspace mode is disabled here to keep
+// these single-module operations working:
+//   - GOTOOLCHAIN=local avoids spurious toolchain switches during the command.
+//   - GOWORK=off disables workspace mode; it is appended last so it wins over any
+//     inherited GOWORK value.
+func commandEnv(base []string) []string {
+	return append(base, "GOTOOLCHAIN=local", "GOWORK=off")
+}
+
 // RunGet executes the `go get <modSpecs...>` subcommand with the provided
 // module specifications on the designated `go.mod` file.
 func RunGet(ctx context.Context, modfile string, modSpecs ...string) error {
 	cmd := exec.CommandContext(ctx, "go", "get", "-modfile", modfile)
 	cmd.Args = append(cmd.Args, modSpecs...)
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	cmd.Env = commandEnv(os.Environ())
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -103,7 +118,7 @@ func RunGet(ctx context.Context, modfile string, modSpecs ...string) error {
 func Run(ctx context.Context, command string, modfile string, stdout io.Writer, args ...string) error {
 	cmd := exec.CommandContext(ctx, "go", "mod", command, "-modfile", modfile)
 	cmd.Args = append(cmd.Args, args...)
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	cmd.Env = commandEnv(os.Environ())
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = os.Stderr

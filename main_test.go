@@ -24,6 +24,72 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
+func TestSyntheticLinkDependencyUsesTestVariant(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+	writeFile := func(name, contents string) {
+		t.Helper()
+		path := filepath.Join(run.dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	writeFile("go.mod", `module example.com/testvariant
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => `+rootDir+"\n")
+	writeFile("orchestrion.tool.go", `//go:build tools
+
+package tools
+
+import (
+	_ "example.com/testvariant/instrumentation"
+	_ "github.com/DataDog/orchestrion"
+)
+`)
+	writeFile("instrumentation/instrumentation.go", "package instrumentation\n")
+	writeFile("instrumentation/orchestrion.yml", `meta:
+  name: Test variant link dependency
+  description: Adds a synthetic dependency that imports the package under test.
+aspects:
+  - id: synthetic-test-variant
+    join-point:
+      all-of:
+        - import-path: example.com/testvariant/model
+        - function-body:
+            function:
+              - name: Value
+    advice:
+      - inject-declarations:
+          links:
+            - example.com/testvariant/root
+          template: |-
+            //go:linkname __orchestrionRootValue example.com/testvariant/root.Value
+            func __orchestrionRootValue() int
+`)
+	writeFile("model/model.go", "package model\n\nfunc Value() int { return 42 }\n")
+	writeFile("model/model_test.go", `package model
+
+import "testing"
+
+func TestValue(t *testing.T) {
+	if got := Value(); got != 42 {
+		t.Fatalf("Value() = %d, want 42", got)
+	}
+}
+`)
+	writeFile("root/root.go", `package root
+
+import "example.com/testvariant/model"
+
+func Value() int { return model.Value() }
+`)
+
+	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./model")
+}
+
 func TestBuildFromModuleSubdirectory(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 

@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/goflags"
@@ -82,6 +83,62 @@ func Test(t *testing.T) {
 		assert.GreaterOrEqual(t, len(resp), 3)
 		assert.EqualValues(t, 3, server.CacheStats.Count())
 		assert.EqualValues(t, 1, server.CacheStats.Hits())
+	})
+
+	t.Run("TestVariants", func(t *testing.T) {
+		server, err := jobserver.New(context.Background(), nil)
+		require.NoError(t, err)
+		defer server.Shutdown()
+
+		conn, err := server.Connect()
+		require.NoError(t, err)
+		defer conn.Close()
+
+		dir := t.TempDir()
+		writeFile := func(name, contents string) {
+			t.Helper()
+			path := filepath.Join(dir, filepath.FromSlash(name))
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+			require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+		}
+		writeFile("go.mod", "module example.com/testvariants\n\ngo 1.25\n")
+		writeFile("model/model.go", "package model\n\nconst Value = 42\n")
+		writeFile("model/model_test.go", "package model\n\nimport \"testing\"\n\nfunc TestValue(t *testing.T) { if Value != 42 { t.Fail() } }\n")
+		writeFile("middle/middle.go", "package middle\n\nimport \"example.com/testvariants/model\"\n\nconst Value = model.Value\n")
+		writeFile("root/root.go", "package root\n\nimport \"example.com/testvariants/middle\"\n\nconst Value = middle.Value\n")
+		writeFile("unrelated/unrelated.go", "package unrelated\n\nconst Value = 42\n")
+
+		resp, err := client.Request(
+			context.Background(),
+			conn,
+			pkgs.NewResolveTestVariantsRequest(
+				dir,
+				"example.com/testvariants/model",
+				[]string{"example.com/testvariants/unrelated", "example.com/testvariants/root", "example.com/testvariants/root"},
+			),
+		)
+		require.NoError(t, err)
+		require.Contains(t, resp, "example.com/testvariants/root")
+		require.Contains(t, resp, "example.com/testvariants/middle")
+		assert.NotEmpty(t, resp["example.com/testvariants/root"])
+		assert.NotEmpty(t, resp["example.com/testvariants/middle"])
+		assert.NotContains(t, resp, "example.com/testvariants/model")
+		assert.NotContains(t, resp, "example.com/testvariants/unrelated")
+
+		writeFile("externalmodel/model.go", "package externalmodel\n\nconst Value = 42\n")
+		writeFile("externalmodel/model_test.go", "package externalmodel_test\n\nimport (\"testing\"; \"example.com/testvariants/externalmodel\")\n\nfunc TestValue(t *testing.T) { if externalmodel.Value != 42 { t.Fail() } }\n")
+		writeFile("externalroot/root.go", "package externalroot\n\nimport \"example.com/testvariants/externalmodel\"\n\nconst Value = externalmodel.Value\n")
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			pkgs.NewResolveTestVariantsRequest(
+				dir,
+				"example.com/testvariants/externalmodel",
+				[]string{"example.com/testvariants/externalroot"},
+			),
+		)
+		require.NoError(t, err)
+		assert.Empty(t, resp)
 	})
 
 	t.Run("Error", func(t *testing.T) {

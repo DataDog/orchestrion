@@ -128,29 +128,43 @@ func resolveIntegrationVersion(ver *versions) (bool, string) {
 	return shouldUpgrade, targetVersion
 }
 
+// latestVersionEnv builds the environment used to query the Go module registry for
+// the latest version of a module, starting from base (typically [os.Environ]).
+//
+// Registry lookups must not depend on the target project's module configuration, so
+// this normalizes three variables:
+//   - GOTOOLCHAIN=local avoids spurious toolchain switches during the query.
+//   - GOFLAGS=-mod=mod overrides any inherited -mod=vendor, which would otherwise
+//     prevent querying the registry for @latest versions.
+//   - GOWORK=off disables workspace mode. When the target project uses a go.work file
+//     (e.g. etcd-style monorepos), the go command rejects -mod=mod with
+//     "-mod may only be set to readonly or vendor when in workspace mode".
+//
+// Any inherited value of these three variables is dropped so the canonical values win.
+func latestVersionEnv(base []string) []string {
+	cleanEnv := make([]string, 0, len(base)+3)
+	for _, e := range base {
+		if strings.HasPrefix(e, "GOFLAGS=") ||
+			strings.HasPrefix(e, "GOWORK=") ||
+			strings.HasPrefix(e, "GOTOOLCHAIN=") {
+			continue
+		}
+		cleanEnv = append(cleanEnv, e)
+	}
+	return append(cleanEnv,
+		"GOTOOLCHAIN=local",
+		"GOFLAGS=-mod=mod",
+		"GOWORK=off",
+	)
+}
+
 // fetchLatestVersion queries the Go module registry to get the actual latest version
 // of the specified module path.
 func fetchLatestVersion(ctx context.Context, modPath string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "go", "list", "-m", "-json", modPath+"@latest")
 
-	// Build environment with GOTOOLCHAIN=local and explicit -mod=mod
-	// This is necessary because GOFLAGS might contain -mod=vendor which prevents
-	// querying the module registry for @latest versions.
-	env := os.Environ()
-	env = append(env, "GOTOOLCHAIN=local")
-
-	// Remove any existing GOFLAGS that might contain -mod=vendor
-	var cleanEnv []string
-	for _, e := range env {
-		if !strings.HasPrefix(e, "GOFLAGS=") {
-			cleanEnv = append(cleanEnv, e)
-		}
-	}
-	// Set GOFLAGS with -mod=mod to ensure we can query the registry
-	cleanEnv = append(cleanEnv, "GOFLAGS=-mod=mod")
-
-	cmd.Env = cleanEnv
+	cmd.Env = latestVersionEnv(os.Environ())
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 

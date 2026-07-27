@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
@@ -32,6 +33,8 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 	}
 
 	var changed bool
+	isTestLink := strings.HasSuffix(w.ImportPath, ".test")
+	var variantRoots []string
 	for archiveImportPath, archive := range reg.PackageFile {
 		linkDeps, err := linkdeps.FromArchive(ctx, archive)
 		if err != nil {
@@ -45,6 +48,9 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 				continue
 			}
 
+			if isTestLink {
+				variantRoots = append(variantRoots, depPath)
+			}
 			log.Trace().Str("import-path", depPath).Msg("Resolving " + linkdeps.Filename + " dependency")
 			deps, err := resolvePackageFiles(ctx, depPath, cmd.WorkDir)
 			if err != nil {
@@ -56,6 +62,24 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 					reg.PackageFile[p] = a
 					changed = true
 				}
+			}
+		}
+	}
+
+	if len(variantRoots) > 0 {
+		packageUnderTest := strings.TrimSuffix(w.ImportPath, ".test")
+		variants, err := resolveTestVariantPackageFiles(ctx, packageUnderTest, variantRoots, cmd.WorkDir)
+		if err != nil {
+			return fmt.Errorf("resolving test variants for %q: %w", packageUnderTest, err)
+		}
+		for importPath, archive := range variants {
+			if importPath == packageUnderTest {
+				continue
+			}
+			if reg.PackageFile[importPath] != archive {
+				log.Debug().Str("import-path", importPath).Str("archive", archive).Msg("Recording resolved test variant")
+				reg.PackageFile[importPath] = archive
+				changed = true
 			}
 		}
 	}
