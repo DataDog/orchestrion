@@ -19,11 +19,6 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
-	"github.com/DataDog/orchestrion/internal/binpath"
-	"github.com/DataDog/orchestrion/internal/goflags"
-	"github.com/DataDog/orchestrion/internal/traceutil"
-	"github.com/rs/zerolog"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -35,40 +30,13 @@ func ResolvingTestVariants() bool {
 	return os.Getenv(envVarResolvingTestVariants) != ""
 }
 
-func (s *service) resolveTestVariant(ctx context.Context, req *ResolveRequest) (_ ResolveResponse, err error) {
-	log := zerolog.Ctx(ctx)
-	span, ctx := tracer.StartSpanFromContext(ctx, "pkgs.ResolveTestVariant")
-	defer func() { span.Finish(tracer.WithError(err)) }()
-
-	if req.Pattern == "" {
-		return nil, errors.New("test variant resolution requires a package pattern")
-	}
-
-	env, err := s.testVariantEnvironment(req, span)
-	if err != nil {
-		return nil, err
-	}
-	buildFlags, err := testVariantBuildFlags(ctx)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to obtain go build flags")
-	}
-	loadLogf := func(format string, args ...any) {
-		log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
-	}
-
-	ordinary, err := packages.Load(&packages.Config{
-		Context: ctx,
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-			packages.NeedImports | packages.NeedDeps | packages.NeedExportFile,
-		Dir: req.Dir, Env: env, BuildFlags: buildFlags, Logf: loadLogf,
-	}, req.Pattern)
-	if err != nil {
-		return nil, fmt.Errorf("loading synthetic dependency graph: %w", err)
-	}
-	if err := packageErrors(ordinary); err != nil {
-		return nil, fmt.Errorf("loading synthetic dependency graph: %w", err)
-	}
-
+func mergeTestVariant(
+	ctx context.Context,
+	req *ResolveRequest,
+	ordinary []*packages.Package,
+	resp ResolveResponse,
+	config packages.Config,
+) (ResolveResponse, error) {
 	var packageUnderTest, root *packages.Package
 	for _, pkg := range collectPackages(ordinary) {
 		switch pkg.PkgPath {
@@ -80,11 +48,6 @@ func (s *service) resolveTestVariant(ctx context.Context, req *ResolveRequest) (
 	}
 	if root == nil {
 		return nil, fmt.Errorf("synthetic dependency graph did not include root %q", req.Pattern)
-	}
-
-	resp := make(ResolveResponse)
-	if err := resp.mergeFrom(root); err != nil {
-		return nil, fmt.Errorf("collecting ordinary synthetic dependency graph: %w", err)
 	}
 	if !importsPackage(root, req.TestVariantFor, make(map[string]bool)) {
 		return resp, nil
@@ -107,14 +70,13 @@ func (s *service) resolveTestVariant(ctx context.Context, req *ResolveRequest) (
 	if err != nil {
 		return nil, err
 	}
-	loaded, err := packages.Load(&packages.Config{
-		Context: ctx,
-		Mode: packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
-			packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest,
-		Dir: req.Dir, Env: env, BuildFlags: buildFlags, Logf: loadLogf,
-		Tests:   true,
-		Overlay: map[string][]byte{overlayPath: overlaySource},
-	}, req.TestVariantFor)
+	config.Context = ctx
+	config.Mode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
+		packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest
+	config.Env = append(slices.Clone(config.Env), envVarResolvingTestVariants+"=1")
+	config.Tests = true
+	config.Overlay = map[string][]byte{overlayPath: overlaySource}
+	loaded, err := packages.Load(&config, req.TestVariantFor)
 	if err != nil {
 		return nil, fmt.Errorf("loading test variants for %q: %w", req.TestVariantFor, err)
 	}
@@ -141,28 +103,6 @@ func (s *service) resolveTestVariant(ctx context.Context, req *ResolveRequest) (
 	collectTestVariantClosure(resp, variant, req.TestVariantFor, make(map[string]bool))
 	delete(resp, req.TestVariantFor)
 	return resp, nil
-}
-
-func (_ *service) testVariantEnvironment(req *ResolveRequest, span *tracer.Span) ([]string, error) {
-	env := slices.Clone(req.Env)
-	tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &env})
-	if req.toolexecImportpath != "" {
-		env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
-	}
-	if req.TempDir != "" {
-		if err := os.MkdirAll(req.TempDir, 0o755); err != nil {
-			return nil, fmt.Errorf("creating temporary directory %q: %w", req.TempDir, err)
-		}
-		env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
-	}
-	env = append(env, envVarResolvingTestVariants+"=1")
-	return env, nil
-}
-
-func testVariantBuildFlags(ctx context.Context) ([]string, error) {
-	flags, err := goflags.Flags(ctx)
-	flags = flags.Except("-a", "-toolexec")
-	return append(flags.Slice(), fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion)), err
 }
 
 func importsPackage(pkg *packages.Package, target string, visited map[string]bool) bool {

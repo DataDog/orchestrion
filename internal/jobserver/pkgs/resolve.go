@@ -127,10 +127,6 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 	}
 
 	resp, err := s.resolved.Load(reqHash, func() (_ ResolveResponse, err error) {
-		if req.TestVariantFor != "" {
-			return s.resolveTestVariant(ctx, req)
-		}
-
 		log := log.With().Str("pattern", req.Pattern).Logger()
 		ctx := log.WithContext(ctx)
 
@@ -142,8 +138,6 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		env := slices.Clone(req.Env)
 		tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &env})
 		if req.toolexecImportpath != "" {
-			env = make([]string, 0, len(req.Env)+1)
-			env = append(env, req.Env...)
 			env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
 		}
 		if req.TempDir != "" {
@@ -167,25 +161,30 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 			goFlags.Slice(),
 			fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion),
 		)
+		loadLogf := func(format string, args ...any) {
+			log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
+		}
 
-		pkgs, err := packages.Load(
-			&packages.Config{
-				Mode:
-				// We need the export file (the whole point of the resolution)
-				packages.NeedExportFile |
-					// We want to also resolve transitive dependencies, so we need Deps & Imports. We also
-					// need CompiledGoFiles in order to see imports possibly added by the toolchain (cgo,
-					// cover, etc...)
-					packages.NeedCompiledGoFiles | packages.NeedDeps | packages.NeedImports |
-					// Finally, we need the resolved package import path
-					packages.NeedName,
-				Dir:        req.Dir,
-				Env:        env,
-				BuildFlags: buildFlags,
-				Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
-			},
-			req.Pattern,
-		)
+		loadConfig := &packages.Config{
+			Context: ctx,
+			Mode:
+			// We need the export file (the whole point of the resolution)
+			packages.NeedExportFile |
+				// We want to also resolve transitive dependencies, so we need Deps & Imports. We also
+				// need CompiledGoFiles in order to see imports possibly added by the toolchain (cgo,
+				// cover, etc...)
+				packages.NeedCompiledGoFiles | packages.NeedDeps | packages.NeedImports |
+				// Finally, we need the resolved package import path
+				packages.NeedName,
+			Dir:        req.Dir,
+			Env:        env,
+			BuildFlags: buildFlags,
+			Logf:       loadLogf,
+		}
+		if req.TestVariantFor != "" {
+			loadConfig.Mode |= packages.NeedFiles
+		}
+		pkgs, err := packages.Load(loadConfig, req.Pattern)
 		if err != nil {
 			log.Error().Str("pattern", req.Pattern).Err(err).Msg("pkgs.Resolve failed")
 			return nil, err
@@ -203,6 +202,13 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		if errs != nil {
 			log.Error().Str("pattern", req.Pattern).Err(errs).Msg("pkgs.Resolve failed")
 			return nil, errs
+		}
+
+		if req.TestVariantFor != "" {
+			resp, err = mergeTestVariant(ctx, req, pkgs, resp, *loadConfig)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		log.Trace().Any("result", resp).Msg("pkgs.Resolve finished")
