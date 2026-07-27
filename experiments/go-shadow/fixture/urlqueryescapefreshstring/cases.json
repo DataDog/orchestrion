@@ -1,0 +1,8 @@
+[
+  {
+    "name": "url query escape fresh string",
+    "taintPath": "/tmp/iast-urlqueryescapefreshstring",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

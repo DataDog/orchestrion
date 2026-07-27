@@ -1,0 +1,8 @@
+[
+  {
+    "name": "io copy into bytes buffer",
+    "taintPath": "/tmp/iast-iocopyintobytesbuffer",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

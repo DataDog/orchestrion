@@ -1,0 +1,8 @@
+[
+  {
+    "name": "bytes clone",
+    "taintPath": "/tmp/iast-bytesclone",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

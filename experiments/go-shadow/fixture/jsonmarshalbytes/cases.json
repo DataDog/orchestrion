@@ -1,0 +1,8 @@
+[
+  {
+    "name": "json marshal bytes",
+    "taintPath": "/tmp/iast-jsonmarshalbytes",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

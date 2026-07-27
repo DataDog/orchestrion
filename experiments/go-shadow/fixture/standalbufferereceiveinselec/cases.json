@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched standalone buffered receive in select",
+    "taintPath": "/tmp/iast-standalbufferereceiveinselec",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

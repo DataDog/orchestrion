@@ -1,0 +1,8 @@
+[
+  {
+    "name": "method value buffer grow",
+    "taintPath": "/tmp/iast-methodvaluebuffergrow",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

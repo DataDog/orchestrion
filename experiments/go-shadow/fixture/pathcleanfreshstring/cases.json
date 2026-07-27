@@ -1,0 +1,8 @@
+[
+  {
+    "name": "path clean fresh string",
+    "taintPath": "/tmp/iast-pathcleanfreshstring",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

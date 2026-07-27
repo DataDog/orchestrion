@@ -1,0 +1,18 @@
+[
+  {
+    "name": "disabled",
+    "taintPath": "/tmp/iast-disabled",
+    "taintEnabled": false
+  },
+  {
+    "name": "clean",
+    "taintPath": "",
+    "taintEnabled": true
+  },
+  {
+    "name": "local copy",
+    "taintPath": "/tmp/iast-local",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

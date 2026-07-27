@@ -1,0 +1,8 @@
+[
+  {
+    "name": "bytes buffer truncate",
+    "taintPath": "/tmp/iast-bytesbuffertruncate",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

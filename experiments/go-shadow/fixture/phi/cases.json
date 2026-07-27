@@ -1,0 +1,11 @@
+[
+  {
+    "name": "phi",
+    "taintPath": "/tmp/iast-phi",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "env": {
+      "USE_DIRTY": "1"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "strings to lower",
+    "taintPath": "/tmp/iast-stringstolower",
+    "dirtyReports": 0,
+    "taintEnabled": true,
+    "env": {"TAINT_PATH": "/tmp/IAST-stringstolower"}
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "string to bytes to string",
+    "taintPath": "/tmp/iast-stringtobytetostring",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

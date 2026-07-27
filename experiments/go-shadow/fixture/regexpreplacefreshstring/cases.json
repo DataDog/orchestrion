@@ -1,0 +1,8 @@
+[
+  {
+    "name": "regexp replace all string",
+    "taintPath": "/tmp/iast-regexpreplacefreshstring",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

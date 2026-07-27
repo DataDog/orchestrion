@@ -1,0 +1,8 @@
+[
+  {
+    "name": "fmt sprintf with string",
+    "taintPath": "/tmp/iast-fmtsprintfwithstring",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

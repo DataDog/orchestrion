@@ -1,0 +1,8 @@
+[
+  {
+    "name": "two-index string or byte slice",
+    "taintPath": "/tmp/iast-twoindexstringorbyteslice",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

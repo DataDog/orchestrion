@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strings replace all",
+    "taintPath": "/tmp/iast-stringsreplaceall",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "buffer write byte or rune",
+    "taintPath": "/tmp/iast-bufferwritebyteorwriterune",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

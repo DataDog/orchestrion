@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strings builder grow relocation",
+    "taintPath": "/tmp/iast-stringsbuildergrowrelocation",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

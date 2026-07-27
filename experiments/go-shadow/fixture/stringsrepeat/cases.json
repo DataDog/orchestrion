@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strings repeat",
+    "taintPath": "/tmp/iast-stringsrepeat",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

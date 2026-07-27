@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strconv quote fresh output",
+    "taintPath": "/tmp/iast-strconvquotefreshoutput",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

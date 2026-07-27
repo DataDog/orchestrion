@@ -1,0 +1,8 @@
+[
+  {
+    "name": "filepath join",
+    "taintPath": "/tmp/iast-filepathjoin",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

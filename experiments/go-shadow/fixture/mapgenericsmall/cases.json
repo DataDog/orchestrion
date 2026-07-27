@@ -1,0 +1,8 @@
+[
+  {
+    "name": "generic small map",
+    "taintPath": "/tmp/iast-map-generic",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

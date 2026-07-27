@@ -1,0 +1,8 @@
+[
+  {
+    "name": "bytes buffer next shifts ranges",
+    "taintPath": "/tmp/iast-bytesbuffernextshiftsranges",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

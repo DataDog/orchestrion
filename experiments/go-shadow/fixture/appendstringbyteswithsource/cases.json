@@ -1,0 +1,8 @@
+[
+  {
+    "name": "append string bytes with source spread",
+    "taintPath": "/tmp/iast-appendstringbyteswithsource",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

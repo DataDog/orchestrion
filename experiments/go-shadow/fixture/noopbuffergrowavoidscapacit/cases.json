@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched no-op buffer grow",
+    "taintPath": "/tmp/iast-noopbuffergrowavoidscapacit",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

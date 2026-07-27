@@ -1,0 +1,8 @@
+[
+  {
+    "name": "buffer write to another buffer",
+    "taintPath": "/tmp/iast-bytesbufferwritetointocopyp",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

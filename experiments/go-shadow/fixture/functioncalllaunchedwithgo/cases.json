@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched function call launched with go",
+    "taintPath": "/tmp/iast-functioncalllaunchedwithgo",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "fresh allocation in uninstrumented dependency",
+    "taintPath": "/tmp/iast-freshallocatinuninstrdepende",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

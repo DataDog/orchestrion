@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched prototype under 65536 tainted values",
+    "taintPath": "/tmp/iast-registrcategorreaches65536r",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

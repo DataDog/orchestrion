@@ -1,0 +1,15 @@
+[
+  {
+    "name": "bytes buffer reset clears taint",
+    "taintPath": "/tmp/iast-bytesbufferresetclearstaint",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "bytes buffer reset control without reset",
+    "taintPath": "/tmp/iast-bytesbufferresetclearstaint-control",
+    "dirtyReports": 0,
+    "taintEnabled": true,
+    "env": {"SKIP_RESET": "1"}
+  }
+]

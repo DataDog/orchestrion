@@ -1,0 +1,8 @@
+[
+  {
+    "name": "append scalar byte to tainted bytes",
+    "taintPath": "/tmp/iast-appendscalarbytetotaintedby",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

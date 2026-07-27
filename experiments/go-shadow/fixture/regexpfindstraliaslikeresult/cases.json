@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched regexp find string",
+    "taintPath": "/tmp/iast-regexpfindstraliaslikeresult",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

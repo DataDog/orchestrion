@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched strings trim prefix alias result",
+    "taintPath": "/tmp/iast-stringstrimprefixaliasresult",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

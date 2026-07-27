@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strings join",
+    "taintPath": "/tmp/iast-stringsjoin",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

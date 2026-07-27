@@ -8,252 +8,316 @@ package instrument
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/DataDog/orchestrion/runtime/taint"
 )
+
+type expectedCase struct {
+	id          int
+	name        string
+	wantsReport bool
+}
+
+type caseResult struct {
+	passed     bool
+	diagnostic string
+}
+
+type e2eModule struct {
+	root      string
+	directory string
+	expected  []expectedCase
+}
 
 func Test_InstrumentedProgramReportsTaintedOpenPath_when_SourceCrossesLanguageOperations(t *testing.T) {
 	// Given
-	root := repositoryRoot(t)
-	module := t.TempDir()
-	writeFixture(t, module, "go.mod", `module example.com/iast-e2e
-
-go 1.25.0
-
-require github.com/DataDog/orchestrion v0.0.0
-
-replace github.com/DataDog/orchestrion => `+root+`
-`)
-	writeFixture(t, module, "orchestrion.tool.go", `//go:build tools
-
-package tools
-
-import _ "github.com/DataDog/orchestrion/runtime/taint/instrument"
-`)
-	writeFixture(t, module, "main.go", `package main
-
-import (
-	"bytes"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-)
-
-type Path string
-type Data []byte
-type MoreData []byte
-type Octet byte
-type Octets []Octet
-
-const constantPath = "constant-" + "path"
-
-func genericJoin[T ~string](left, right T) T {
-	return left + right
-}
-
-func genericGrow[S ~[]E, E ~byte](value S, element E) S {
-	return append(value, element)
-}
-
-func shadowedAppend(source []byte) []byte {
-	append := func(_ []byte, _ ...byte) []byte { return []byte("clean") }
-	return append(nil, source...)
-}
-
-func mixedAppend(destination Data, source MoreData) Data {
-	return append(destination, source...)
-}
-
-func namedStringAppend(destination Data, source Path) Data {
-	return append(destination, source...)
-}
-
-func main() {
-	source := os.Getenv("INPUT")
-	joined := "safe-" + source
-	data := []byte(joined)
-	window := data[5:len(data)]
-	copied := make([]byte, len(window))
-	copy(copied, window)
-	copied = append([]byte{}, copied...)
-	path := string(copied)
-	_, _ = os.Open(path[0:len(path)])
-
-	_, _ = os.Open("clone-" + strings.Clone(source))
-	_, _ = os.Open(strings.Replace("replace-value", "value", source, 1))
-
-	var builder strings.Builder
-	builder.WriteString("builder-")
-	builder.WriteString(source)
-	_, _ = os.Open(builder.String())
-
-	clonedBytes := bytes.Clone([]byte(source))
-	_, _ = os.Open(string(append([]byte("bytes-"), clonedBytes...)))
-	_, _ = os.Open(fmt.Sprintf("fmt-%s", source))
-	_, _ = os.Open(strings.Join([]string{"join", source}, "-"))
-	_, _ = os.Open(filepath.Join("/tmp", source))
-
-	var buffer bytes.Buffer
-	buffer.WriteString("buffer-")
-	buffer.WriteString(source)
-	_, _ = os.Open(buffer.String())
-
-	fixedAppend := append([]byte(source), '!')
-	_, _ = os.Open(string(fixedAppend))
-	stringAppend := append([]byte("append-"), source...)
-	_, _ = os.Open(string(stringAppend))
-	stringCopy := make([]byte, len(source))
-	copy(stringCopy, source)
-	_, _ = os.Open("copy-" + string(stringCopy))
-
-	named := Path("named-") + Path(source)
-	namedBytes := Data(named)
-	_, _ = os.Open(string(Path(namedBytes)))
-	_, _ = os.Open(string(genericJoin(Path("generic-"), Path(source))))
-	_, _ = os.Open("scalar-" + string(source[0]))
-	indexedBytes := []byte(source)
-	_, _ = os.Open("byte-" + string(indexedBytes[0]))
-	assigned := []byte("x")
-	assigned[0] = indexedBytes[0]
-	_, _ = os.Open("assigned-" + string(assigned))
-	runes := []rune(source)
-	_, _ = os.Open("rune-" + string(runes))
-	genericBytes := genericGrow(Data(source), byte('!'))
-	_, _ = os.Open("generic-bytes-" + string(genericBytes))
-	_, _ = os.Open(fmt.Sprintf("map-%v", map[string]string{"value": source}))
-	octets := Octets(source)
-	_, _ = os.Open("octets-" + string(Path(octets)))
-	_, _ = os.Open("target-" + string(Path(source[0])))
-	localByte := source[0]
-	_, _ = os.Open("local-byte-" + string(localByte))
-	localRune := []rune(source)[0]
-	_, _ = os.Open("local-rune-" + string(localRune))
-	typedClone := bytes.Clone(Data("x"))
-	var _ *[]byte = &typedClone
-	_, _ = os.Open(string(shadowedAppend([]byte(source))))
-	_, _ = os.Open(string(mixedAppend(Data("mixed-"), MoreData(source))))
-	_, _ = os.Open(string(namedStringAppend(Data("named-append-"), Path(source))))
-	namedCopy := make(Data, len(source))
-	copy(namedCopy, Path(source))
-	_, _ = os.Open("named-copy-" + string(namedCopy))
-	_ = constantPath
-
-	var shifting bytes.Buffer
-	shifting.WriteString("x")
-	shifting.WriteString(source)
-	shifting.Next(1)
-	_, _ = os.Open("next-" + shifting.String())
-	_, _ = os.Open("repeat-" + strings.Repeat(source, 2))
-	_, _ = os.Open("upper-" + strings.ToUpper(source))
-	_, _ = os.Open("replace-all-" + strings.ReplaceAll(source, "e", "E"))
-
-	var byteBuffer bytes.Buffer
-	byteBuffer.Write([]byte(source))
-	_, _ = os.Open("view-" + string(byteBuffer.Bytes()))
-	byteBuffer.Truncate(3)
-	_, _ = os.Open("truncate-" + byteBuffer.String())
-	byteBuffer.Reset()
-	byteBuffer.WriteString("clean")
-	_, _ = os.Open(byteBuffer.String())
-	constructed := bytes.NewBufferString(source)
-	_, _ = os.Open("constructed-" + constructed.String())
-	aliasBuffer := bytes.NewBufferString("x")
-	aliasView := aliasBuffer.Bytes()
-	aliasSource := []byte(source)
-	aliasView[0] = aliasSource[0]
-	_, _ = os.Open("alias-" + aliasBuffer.String())
-	cleanAlias := bytes.NewBufferString(source[0:1])
-	cleanAlias.Bytes()[0] = 'X'
-	_, _ = os.Open(cleanAlias.String())
-
-	cleared := []byte(source)
-	clear(cleared)
-	_, _ = os.Open(string(cleared))
-	overwritten := []byte(source[0:1])
-	overwritten[0] = 'X'
-	_, _ = os.Open(string(overwritten))
-
-	_, _ = os.Open("secret")
-}
-`)
-
-	orchestrion := filepath.Join(t.TempDir(), "orchestrion")
-	runCommand(t, root, nil, 2*time.Minute, "go", "build", "-o", orchestrion, ".")
-	runCommand(t, module, nil, 2*time.Minute, "go", "mod", "tidy")
+	fixture := prepareE2EModule(t, true)
+	orchestrion := buildOrchestrion(t, fixture.root)
+	program := filepath.Join(t.TempDir(), "iast-e2e")
+	runCommand(t, fixture.directory, nil, 2*time.Minute, orchestrion, "go", "build", "-p=1", "-o", program, ".")
 
 	// When
-	program := filepath.Join(t.TempDir(), "iast-e2e")
-	runCommand(t, module, nil, 2*time.Minute, orchestrion, "go", "build", "-p=1", "-o", program, ".")
-	output := runCommand(t, module, []string{"INPUT=secret", "ORCHESTRION_TAINT_INCLUDE_VALUE=1"}, 5*time.Second, program)
+	output := runCommand(t, fixture.directory, nil, 5*time.Second, program)
 
 	// Then
-	reports := parseReports(t, output)
-	expected := map[string]bool{
-		"secret":                false,
-		"clone-secret":          false,
-		"replace-secret":        false,
-		"builder-secret":        false,
-		"bytes-secret":          false,
-		"fmt-secret":            false,
-		"join-secret":           false,
-		"/tmp/secret":           false,
-		"buffer-secret":         false,
-		"secret!":               false,
-		"append-secret":         false,
-		"copy-secret":           false,
-		"named-secret":          false,
-		"generic-secret":        false,
-		"scalar-s":              false,
-		"byte-s":                false,
-		"assigned-s":            false,
-		"rune-secret":           false,
-		"generic-bytes-secret!": false,
-		"map-map[value:secret]": false,
-		"octets-secret":         false,
-		"target-s":              false,
-		"local-byte-s":          false,
-		"local-rune-s":          false,
-		"mixed-secret":          false,
-		"named-append-secret":   false,
-		"named-copy-secret":     false,
-		"next-secret":           false,
-		"repeat-secretsecret":   false,
-		"upper-SECRET":          false,
-		"replace-all-sEcrEt":    false,
-		"view-secret":           false,
-		"truncate-sec":          false,
-		"constructed-secret":    false,
-		"alias-s":               false,
+	assertCaseResults(t, fixture.expected, output)
+}
+
+func Test_ProgramEmitsNoTaintReports_when_InstrumentationIsDisabled(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		includeTool bool
+	}{
+		{name: "tracking disabled", includeTool: false},
+		{name: "integration configured but disabled", includeTool: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// Given
+			fixture := prepareE2EModule(t, test.includeTool)
+			program := filepath.Join(t.TempDir(), "iast-e2e")
+			runCommand(t, fixture.directory, nil, 2*time.Minute, "go", "build", "-p=1", "-o", program, ".")
+
+			// When
+			output := runCommand(t, fixture.directory, nil, 30*time.Second, program)
+
+			// Then
+			assertNoTaintReports(t, fixture.expected, output)
+		})
 	}
-	if len(reports) != len(expected) {
-		t.Fatalf("reports = %#v, want values %#v", reports, expected)
+}
+
+func Test_InstrumentedProgramReportsExpectedTaint_when_BuiltWithRaceDetector(t *testing.T) {
+	// Given
+	fixture := prepareE2EModule(t, true)
+	orchestrion := buildOrchestrion(t, fixture.root)
+	program := filepath.Join(t.TempDir(), "iast-e2e-race")
+	runCommand(t, fixture.directory, nil, 5*time.Minute, orchestrion, "go", "build", "-race", "-p=1", "-o", program, ".")
+
+	// When
+	output := runCommand(t, fixture.directory, nil, 30*time.Second, program)
+
+	// Then
+	assertCaseResults(t, fixture.expected, output)
+}
+
+func discoverCases(t *testing.T, directory string) []expectedCase {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(directory, "case_*.go"))
+	if err != nil {
+		t.Fatalf("discover case files: %v", err)
 	}
-	for _, report := range reports {
-		if report.Sink != "os.Open" || len(report.Ranges) == 0 {
-			t.Fatalf("report = %#v", report)
-		}
-		if report.Value == "next-secret" &&
-			(len(report.Ranges) != 1 || report.Ranges[0] != (taint.Range{Start: 5, End: 11})) {
-			t.Fatalf("next report ranges = %#v, want [5,11)", report.Ranges)
-		}
-		if _, exists := expected[report.Value]; !exists {
-			t.Fatalf("unexpected report = %#v", report)
-		}
-		expected[report.Value] = true
+	if len(files) == 0 {
+		t.Fatal("no E2E case files found")
 	}
-	for value, found := range expected {
+
+	cases := make([]expectedCase, 0, len(files))
+	seenNames := make(map[string]string, len(files))
+	for _, file := range files {
+		current := parseCaseRegistration(t, file)
+		if previous, duplicate := seenNames[current.name]; duplicate {
+			t.Fatalf("duplicate case name %q in %s and %s", current.name, previous, file)
+		}
+		seenNames[current.name] = file
+		cases = append(cases, current)
+	}
+	return cases
+}
+
+func prepareE2EModule(t *testing.T, includeTool bool) e2eModule {
+	t.Helper()
+	root := repositoryRoot(t)
+	fixtures := filepath.Join(root, "runtime", "taint", "instrument", "testdata", "e2e")
+	module := t.TempDir()
+	copyFixtures(t, fixtures, module)
+	if !includeTool {
+		if err := os.Remove(filepath.Join(module, "orchestrion.tool.go")); err != nil {
+			t.Fatalf("remove Orchestrion tool fixture: %v", err)
+		}
+	}
+	materializeGoMod(t, module, root)
+	runCommand(t, module, nil, 2*time.Minute, "go", "mod", "tidy")
+	return e2eModule{root: root, directory: module, expected: discoverCases(t, fixtures)}
+}
+
+func buildOrchestrion(t *testing.T, root string) string {
+	t.Helper()
+	orchestrion := filepath.Join(t.TempDir(), "orchestrion")
+	runCommand(t, root, nil, 2*time.Minute, "go", "build", "-o", orchestrion, ".")
+	return orchestrion
+}
+
+func parseCaseRegistration(t *testing.T, file string) expectedCase {
+	t.Helper()
+	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+	if err != nil {
+		t.Fatalf("parse %s: %v", file, err)
+	}
+	var registrations []*ast.CallExpr
+	ast.Inspect(parsed, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		identifier, ok := call.Fun.(*ast.Ident)
+		if ok && identifier.Name == "register" {
+			registrations = append(registrations, call)
+		}
+		return true
+	})
+	if len(registrations) != 1 || len(registrations[0].Args) != 1 {
+		t.Fatalf("%s must contain exactly one register(Case{...}) call", file)
+	}
+	literal, ok := registrations[0].Args[0].(*ast.CompositeLit)
+	if !ok {
+		t.Fatalf("%s registration argument must be a Case literal", file)
+	}
+
+	current := expectedCase{id: -1}
+	for _, element := range literal.Elts {
+		field, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := field.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		switch key.Name {
+		case "ID":
+			value, ok := field.Value.(*ast.BasicLit)
+			if !ok {
+				continue
+			}
+			current.id, err = strconv.Atoi(value.Value)
+			if err != nil {
+				t.Fatalf("parse ID in %s: %v", file, err)
+			}
+		case "Name":
+			value, ok := field.Value.(*ast.BasicLit)
+			if !ok {
+				continue
+			}
+			current.name, err = strconv.Unquote(value.Value)
+			if err != nil {
+				t.Fatalf("parse Name in %s: %v", file, err)
+			}
+		case "Want":
+			value, ok := field.Value.(*ast.CompositeLit)
+			if !ok {
+				t.Fatalf("parse Want in %s: expected composite literal", file)
+			}
+			current.wantsReport = len(value.Elts) > 0
+		}
+	}
+	if current.id < 0 || current.name == "" {
+		t.Fatalf("%s Case literal must have static ID and Name fields", file)
+	}
+	return current
+}
+
+func copyFixtures(t *testing.T, source, destination string) {
+	t.Helper()
+	entries, err := os.ReadDir(source)
+	if err != nil {
+		t.Fatalf("read fixtures: %v", err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			t.Fatalf("unexpected fixture directory %s", entry.Name())
+		}
+		contents, err := os.ReadFile(filepath.Join(source, entry.Name()))
+		if err != nil {
+			t.Fatalf("read fixture %s: %v", entry.Name(), err)
+		}
+		if err := os.WriteFile(filepath.Join(destination, entry.Name()), contents, 0o644); err != nil {
+			t.Fatalf("write fixture %s: %v", entry.Name(), err)
+		}
+	}
+}
+
+func materializeGoMod(t *testing.T, module, root string) {
+	t.Helper()
+	template, err := os.ReadFile(filepath.Join(module, "go.mod.txt"))
+	if err != nil {
+		t.Fatalf("read go.mod template: %v", err)
+	}
+	contents := strings.ReplaceAll(string(template), "__REPO_ROOT__", root)
+	if err := os.WriteFile(filepath.Join(module, "go.mod"), []byte(contents), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+}
+
+func parseCaseResults(t *testing.T, output string) map[expectedCase]caseResult {
+	t.Helper()
+	if strings.Contains(output, "IAST-SOURCE") || strings.Contains(output, "IAST-SINK") {
+		t.Fatalf("unexpected IAST debug marker in output:\n%s", output)
+	}
+	results := make(map[expectedCase]caseResult)
+	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
+		parts := strings.SplitN(line, "\t", 5)
+		if len(parts) < 4 || parts[0] != "CASE" {
+			t.Fatalf("unexpected program output line %q", line)
+		}
+		id, err := strconv.Atoi(parts[1])
+		if err != nil {
+			t.Fatalf("parse case ID in %q: %v", line, err)
+		}
+		current := expectedCase{id: id, name: parts[2]}
+		if _, duplicate := results[current]; duplicate {
+			t.Fatalf("duplicate result for case %03d %q", current.id, current.name)
+		}
+		switch parts[3] {
+		case "PASS":
+			if len(parts) != 4 {
+				t.Fatalf("malformed PASS line %q", line)
+			}
+			results[current] = caseResult{passed: true}
+		case "FAIL":
+			if len(parts) != 5 || parts[4] == "" {
+				t.Fatalf("malformed FAIL line %q", line)
+			}
+			results[current] = caseResult{diagnostic: parts[4]}
+		default:
+			t.Fatalf("unknown case status in %q", line)
+		}
+	}
+	return results
+}
+
+func assertCaseResults(t *testing.T, expected []expectedCase, output string) {
+	t.Helper()
+	results := parseCaseResults(t, output)
+	for _, current := range expected {
+		key := expectedCase{id: current.id, name: current.name}
+		result, found := results[key]
 		if !found {
-			t.Errorf("missing report for %q", value)
+			t.Errorf("case %03d %q produced no result", current.id, current.name)
+			continue
 		}
+		delete(results, key)
+		t.Run(current.name, func(t *testing.T) {
+			if !result.passed {
+				t.Fatal(result.diagnostic)
+			}
+		})
+	}
+	for current := range results {
+		t.Errorf("result for unregistered case %03d %q", current.id, current.name)
+	}
+}
+
+func assertNoTaintReports(t *testing.T, expected []expectedCase, output string) {
+	t.Helper()
+	results := parseCaseResults(t, output)
+	for _, current := range expected {
+		key := expectedCase{id: current.id, name: current.name}
+		result, found := results[key]
+		if !found {
+			t.Errorf("case %03d %q produced no result", current.id, current.name)
+			continue
+		}
+		delete(results, key)
+		if current.wantsReport {
+			if result.passed || !strings.Contains(result.diagnostic, "captured=[]") {
+				t.Errorf("case %03d %q captured a taint report: %s", current.id, current.name, result.diagnostic)
+			}
+			continue
+		}
+		if !result.passed {
+			t.Errorf("case %03d %q failed without instrumentation: %s", current.id, current.name, result.diagnostic)
+		}
+	}
+	for current := range results {
+		t.Errorf("result for unregistered case %03d %q", current.id, current.name)
 	}
 }
 
@@ -264,13 +328,6 @@ func repositoryRoot(t *testing.T) string {
 		t.Fatal("runtime.Caller() failed")
 	}
 	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", ".."))
-}
-
-func writeFixture(t *testing.T, directory, name, content string) {
-	t.Helper()
-	if err := os.WriteFile(filepath.Join(directory, name), []byte(content), 0o644); err != nil {
-		t.Fatalf("write %s: %v", name, err)
-	}
 }
 
 func runCommand(t *testing.T, directory string, environment []string, timeout time.Duration, name string, arguments ...string) string {
@@ -290,20 +347,4 @@ func runCommand(t *testing.T, directory string, environment []string, timeout ti
 		t.Fatalf("%s %s: %v\n%s", name, strings.Join(arguments, " "), err, output.String())
 	}
 	return output.String()
-}
-
-func parseReports(t *testing.T, output string) []taint.Report {
-	t.Helper()
-	var reports []taint.Report
-	for line := range strings.SplitSeq(output, "\n") {
-		if !strings.HasPrefix(line, `{"sink":`) {
-			continue
-		}
-		var report taint.Report
-		if err := json.Unmarshal([]byte(line), &report); err != nil {
-			t.Fatalf("decode report %q: %v", line, err)
-		}
-		reports = append(reports, report)
-	}
-	return reports
 }
