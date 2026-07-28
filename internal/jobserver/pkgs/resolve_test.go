@@ -133,6 +133,19 @@ func Test(t *testing.T) {
 			&pkgs.ResolveRequest{
 				Dir:            dir,
 				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/subject",
+				TestVariantFor: "example.com/testvariants/subject",
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/subject"].ForTest)
+
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
 				Pattern:        "example.com/testvariants/unrelated",
 				TestVariantFor: "example.com/testvariants/subject",
 			},
@@ -173,6 +186,19 @@ func Test(t *testing.T) {
 		assert.NotEmpty(t, resp["example.com/testvariants/externalroot"].ExportFile)
 		assert.Empty(t, resp["example.com/testvariants/externalroot"].ForTest)
 		assert.NotContains(t, resp, "example.com/testvariants/externalsubject")
+
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/externalsubject",
+				TestVariantFor: "example.com/testvariants/externalsubject",
+			},
+		)
+		require.NoError(t, err)
+		assert.Empty(t, resp["example.com/testvariants/externalsubject"].ForTest)
 	})
 
 	t.Run("Error", func(t *testing.T) {

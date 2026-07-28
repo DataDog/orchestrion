@@ -23,7 +23,7 @@ func TestInitialLinkDependenciesRetainParent(t *testing.T) {
 	archive := writeLinkDepsArchive(t, "parent.a", "example.com/dependency", linkdeps.ImportDependency)
 	reg := importcfg.ImportConfig{PackageFile: map[string]string{"example.com/parent": archive}}
 
-	deps, err := initialLinkDependencies(context.Background(), &reg, "example.com/subject")
+	deps, err := initialLinkDependencies(context.Background(), &reg)
 	require.NoError(t, err)
 	require.Len(t, deps, 1)
 	assert.Equal(t, "example.com/dependency", deps[0].path)
@@ -31,14 +31,14 @@ func TestInitialLinkDependenciesRetainParent(t *testing.T) {
 	assert.Equal(t, linkdeps.ImportDependency, deps[0].kind)
 }
 
-func TestInitialLinkDependenciesClearTestTargetParent(t *testing.T) {
+func TestInitialLinkDependenciesPreserveTestTargetImportParent(t *testing.T) {
 	archive := writeLinkDepsArchive(t, "subject.a", "example.com/dependency", linkdeps.ImportDependency)
 	reg := importcfg.ImportConfig{PackageFile: map[string]string{"example.com/subject": archive}}
 
-	deps, err := initialLinkDependencies(context.Background(), &reg, "example.com/subject")
+	deps, err := initialLinkDependencies(context.Background(), &reg)
 	require.NoError(t, err)
 	require.Len(t, deps, 1)
-	assert.Empty(t, deps[0].parent)
+	assert.Equal(t, "example.com/subject", deps[0].parent)
 }
 
 func TestStrongestPendingLinkDep(t *testing.T) {

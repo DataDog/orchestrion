@@ -28,9 +28,17 @@ func TestDependencyKindsRoundTrip(t *testing.T) {
 }
 
 func TestV1DependenciesAreConservative(t *testing.T) {
-	decoded, err := Read(strings.NewReader("#link.deps@v1\nexample.com/legacy\n"))
+	for _, suffix := range []string{"\n", ""} {
+		decoded, err := Read(strings.NewReader("#link.deps@v1\nexample.com/legacy" + suffix))
+		require.NoError(t, err)
+		assert.Equal(t, ImportDependency, decoded.Kind("example.com/legacy"))
+	}
+}
+
+func TestV1HeaderWithoutNewline(t *testing.T) {
+	decoded, err := Read(strings.NewReader("#link.deps@v1"))
 	require.NoError(t, err)
-	assert.Equal(t, ImportDependency, decoded.Kind("example.com/legacy"))
+	assert.True(t, decoded.Empty())
 }
 
 func TestImportDependencyWins(t *testing.T) {

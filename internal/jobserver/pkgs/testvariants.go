@@ -40,15 +40,18 @@ func mergeTestVariant(
 ) (ResolveResponse, error) {
 	var packageUnderTest, root *packages.Package
 	for _, pkg := range collectPackages(ordinary) {
-		switch pkg.PkgPath {
-		case req.TestVariantFor:
+		if pkg.PkgPath == req.TestVariantFor {
 			packageUnderTest = pkg
-		case req.Pattern:
+		}
+		if pkg.PkgPath == req.Pattern {
 			root = pkg
 		}
 	}
 	if root == nil {
 		return nil, fmt.Errorf("synthetic dependency graph did not include root %q", req.Pattern)
+	}
+	if req.Pattern == req.TestVariantFor {
+		return resolveTestTargetProvenance(ctx, req, resp, config)
 	}
 	if !importsPackage(root, req.TestVariantFor, make(map[string]bool)) {
 		return resp, nil
@@ -119,6 +122,33 @@ func mergeTestVariant(
 		return nil, err
 	}
 	delete(resp, req.TestVariantFor)
+	return resp, nil
+}
+
+// resolveTestTargetProvenance returns the package-under-test archive solely so callers can
+// determine whether Go augmented it with same-package tests. This response must not be merged
+// into the outer importcfg, whose package-under-test archive remains authoritative.
+func resolveTestTargetProvenance(ctx context.Context, req *ResolveRequest, resp ResolveResponse, config packages.Config) (ResolveResponse, error) {
+	config.Context = ctx
+	config.Mode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
+		packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest
+	config.Env = append(slices.Clone(config.Env), envVarResolvingTestVariants+"=1")
+	config.Tests = true
+	loaded, err := packages.Load(&config, req.TestVariantFor)
+	if err != nil {
+		return nil, fmt.Errorf("loading test target provenance for %q: %w", req.TestVariantFor, err)
+	}
+	if err := packageErrors(loaded); err != nil {
+		return nil, fmt.Errorf("loading test target provenance for %q: %w", req.TestVariantFor, err)
+	}
+	variant := findTestVariant(collectPackages(loaded), req.TestVariantFor, req.TestVariantFor)
+	if variant == nil {
+		return resp, nil
+	}
+	if variant.ExportFile == "" {
+		return nil, fmt.Errorf("Go did not produce an export archive for test variant %q", req.TestVariantFor)
+	}
+	resp[req.TestVariantFor] = ResolvedArchive{ExportFile: variant.ExportFile, ForTest: req.TestVariantFor}
 	return resp, nil
 }
 

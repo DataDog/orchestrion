@@ -28,7 +28,7 @@ func (cmd *CompileCommand) MarkTestMain(packageUnderTest string) {
 	cmd.testVariantFor = packageUnderTest
 }
 
-func (cmd *CompileCommand) attachTestMain() error {
+func (cmd *CompileCommand) attachTestMain() (err error) {
 	if cmd.testVariantFor == "" {
 		return nil
 	}
@@ -41,7 +41,7 @@ func (cmd *CompileCommand) attachTestMain() error {
 	if err != nil {
 		return fmt.Errorf("opening test-main archive: %w", err)
 	}
-	defer file.Close()
+	defer func() { err = errors.Join(err, file.Close()) }()
 
 	contents := testMainHeader + "\n" + cmd.testVariantFor + "\n"
 	wr := ar.NewWriter(file)

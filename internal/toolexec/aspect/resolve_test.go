@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,12 +39,29 @@ func TestMergeResolvedArchives(t *testing.T) {
 
 func TestRejectSyntheticVariantDependency(t *testing.T) {
 	const target = "example.com/subject"
-	archives := pkgs.ResolveResponse{
-		"example.com/middle": {ExportFile: "/middle.a", ForTest: target},
+	variant := pkgs.ResolvedArchive{ExportFile: "/middle.a", ForTest: target}
+	ordinary := pkgs.ResolvedArchive{ExportFile: "/ordinary.a"}
+	require.Error(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, true, variant))
+	require.NoError(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, false, variant))
+	require.NoError(t, rejectSyntheticVariantDependency("", "example.com/middle", target, true, variant))
+	require.NoError(t, rejectSyntheticVariantDependency("example.com/root", "example.com/ordinary", target, true, ordinary))
+
+	mixed := pkgs.ResolveResponse{
+		"example.com/ordinary": ordinary,
+		"example.com/variant":  variant,
 	}
-	require.Error(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, true, archives))
-	require.NoError(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, false, archives))
-	require.NoError(t, rejectSyntheticVariantDependency("", "example.com/middle", target, true, archives))
+	require.NoError(t, rejectResolvedSyntheticVariantDependency("example.com/root", "example.com/ordinary", target, true, mixed))
+	require.Error(t, rejectResolvedSyntheticVariantDependency("example.com/root", "example.com/variant", target, true, mixed))
+}
+
+func TestRejectSatisfiedSyntheticDependency(t *testing.T) {
+	const target = "example.com/subject"
+	variant := pkgs.ResolvedArchive{ForTest: target}
+	ordinary := pkgs.ResolvedArchive{}
+	require.Error(t, rejectSatisfiedSyntheticDependency("example.com/root", target, target, linkdeps.ImportDependency, variant))
+	require.NoError(t, rejectSatisfiedSyntheticDependency("example.com/root", target, target, linkdeps.ImportDependency, ordinary))
+	require.NoError(t, rejectSatisfiedSyntheticDependency("example.com/root", target, target, linkdeps.RelocationDependency, variant))
+	require.NoError(t, rejectSatisfiedSyntheticDependency(target, target, target, linkdeps.RelocationDependency, variant))
 }
 
 func TestMergeResolvedArchivesRejectsWrongVariantTarget(t *testing.T) {

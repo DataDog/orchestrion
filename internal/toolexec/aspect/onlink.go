@@ -12,6 +12,7 @@ import (
 	"sort"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
@@ -53,6 +54,19 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 	}
 	sort.Slice(queue, less)
 	processed := make(map[archiveWork]bool)
+	var testTargetProvenance *pkgs.ResolvedArchive
+	resolveTestTargetProvenance := func() (pkgs.ResolvedArchive, error) {
+		if testTargetProvenance != nil {
+			return *testTargetProvenance, nil
+		}
+		archives, err := resolvePackageFilesForTest(ctx, testVariantFor, testVariantFor, cmd.WorkDir)
+		if err != nil {
+			return pkgs.ResolvedArchive{}, err
+		}
+		selected := archives[testVariantFor]
+		testTargetProvenance = &selected
+		return selected, nil
+	}
 	var changed bool
 	for len(queue) > 0 {
 		item := queue[0]
@@ -68,7 +82,18 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 		}
 		log.Debug().Str("import-path", item.importPath).Str("archive", item.archive).Msg("Processing " + linkdeps.Filename + " dependencies")
 		for _, depPath := range linkDeps.Dependencies() {
+			kind := linkDeps.Kind(depPath)
 			if arch, found := reg.PackageFile[depPath]; found && (testVariantFor == "" || depPath == testVariantFor) {
+				var selected pkgs.ResolvedArchive
+				if depPath == testVariantFor && kind == linkdeps.ImportDependency {
+					selected, err = resolveTestTargetProvenance()
+					if err != nil {
+						return fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+					}
+				}
+				if err := rejectSatisfiedSyntheticDependency(item.importPath, depPath, testVariantFor, kind, selected); err != nil {
+					return err
+				}
 				log.Debug().Str("import-path", depPath).Str("archive", arch).Msg("Already satisfied " + linkdeps.Filename + " dependency")
 				continue
 			}
@@ -78,12 +103,8 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)
 			}
-			parent := item.importPath
-			if parent == testVariantFor {
-				parent = ""
-			}
-			requiresRebuild := linkDeps.Kind(depPath) == linkdeps.ImportDependency
-			if err := rejectSyntheticVariantDependency(parent, depPath, testVariantFor, requiresRebuild, deps); err != nil {
+			requiresRebuild := kind == linkdeps.ImportDependency
+			if err := rejectResolvedSyntheticVariantDependency(item.importPath, depPath, testVariantFor, requiresRebuild, deps); err != nil {
 				return err
 			}
 			updates, err := mergeResolvedArchives(&reg, deps, testVariantFor)

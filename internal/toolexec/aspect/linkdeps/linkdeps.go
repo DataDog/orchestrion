@@ -113,9 +113,9 @@ func ReadFile(filename string) (LinkDeps, error) {
 func Read(r io.Reader) (l LinkDeps, err error) {
 	rd := bufio.NewReader(r)
 
-	var line string
-	if line, err = rd.ReadString('\n'); err != nil {
-		return
+	line, readErr := rd.ReadString('\n')
+	if readErr != nil && readErr != io.EOF {
+		return l, readErr
 	}
 
 	switch hdr := strings.TrimSpace(line); hdr {
@@ -132,26 +132,20 @@ func Read(r io.Reader) (l LinkDeps, err error) {
 // parseV1 parses the contents of V1 [Filename] files.
 func parseV1(r *bufio.Reader) (l LinkDeps, err error) {
 	for {
-		var line string
-		if line, err = r.ReadString('\n'); err != nil {
-			if err == io.EOF {
-				err = nil
-				return
-			}
-			return
-		}
-
-		if strings.HasPrefix(line, "#") {
-			continue
+		line, readErr := r.ReadString('\n')
+		if readErr != nil && readErr != io.EOF {
+			return l, readErr
 		}
 		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
+		if line != "" && !strings.HasPrefix(line, "#") {
+			// Accept a final unterminated entry for compatibility with hand-produced V1 metadata.
+			// V1 did not preserve edge kinds. Treat them as imports so consumers fail
+			// conservatively rather than substituting a potentially incompatible archive.
+			l.Add(line, ImportDependency)
 		}
-
-		// V1 did not preserve edge kinds. Treat them as imports so consumers fail
-		// conservatively rather than substituting a potentially incompatible archive.
-		l.Add(line, ImportDependency)
+		if readErr == io.EOF {
+			return l, nil
+		}
 	}
 }
 

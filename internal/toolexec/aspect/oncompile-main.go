@@ -74,7 +74,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		cmd.MarkTestMain(testVariantFor)
 	}
 
-	stack, err := initialLinkDependencies(ctx, &reg, testVariantFor)
+	stack, err := initialLinkDependencies(ctx, &reg)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
@@ -84,7 +84,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 
 	newDeps := make([]string, 0, len(stack))
 	pending := make(map[string]pendingLinkDep, len(stack))
-	processed := make(map[string]pkgs.ResolveResponse)
+	processed := make(map[string]pkgs.ResolvedArchive)
 	paths := make([]string, 0, len(stack))
 	for _, dep := range stack {
 		newDeps = append(newDeps, dep.path)
@@ -103,10 +103,12 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", item.path, err)
 		}
-		for path := range deps {
-			processed[path] = deps
+		for path, archive := range deps {
+			if current, found := processed[path]; !found || current.ForTest == "" || archive.ForTest != "" {
+				processed[path] = archive
+			}
 		}
-		if err := rejectSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
+		if err := rejectResolvedSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
 			return err
 		}
 		changed, err := mergeResolvedArchives(&reg, deps, testVariantFor)
@@ -125,14 +127,14 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, archive, err)
 			}
 			for _, tDep := range tDeps.Dependencies() {
-				candidate := pendingLinkDep{path: tDep, parent: p, kind: tDeps.Kind(tDep)}
+				kind := tDeps.Kind(tDep)
+				candidate := pendingLinkDep{path: tDep, parent: p, kind: kind}
 				if current, found := pending[tDep]; found {
 					cmd.LinkDeps.Add(tDep, candidate.kind)
 					pending[tDep] = strongestPendingLinkDep(current, candidate)
 					continue
 				}
 				if previous, found := processed[tDep]; found {
-					cmd.LinkDeps.Add(tDep, candidate.kind)
 					if err := rejectSyntheticVariantDependency(candidate.parent, candidate.path, testVariantFor, candidate.kind == linkdeps.ImportDependency, previous); err != nil {
 						return err
 					}
@@ -195,7 +197,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	return nil
 }
 
-func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig, testVariantFor string) ([]pendingLinkDep, error) {
+func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig) ([]pendingLinkDep, error) {
 	byPath := make(map[string]pendingLinkDep)
 	for parent, archive := range reg.PackageFile {
 		deps, err := linkdeps.FromArchive(ctx, archive)
@@ -203,14 +205,11 @@ func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig, t
 			return nil, fmt.Errorf("reading %s from %s=%s: %w", linkdeps.Filename, parent, archive, err)
 		}
 		for _, path := range deps.Dependencies() {
+			kind := deps.Kind(path)
 			if _, satisfied := reg.PackageFile[path]; satisfied {
 				continue
 			}
-			edgeParent := parent
-			if edgeParent == testVariantFor {
-				edgeParent = ""
-			}
-			candidate := pendingLinkDep{path: path, parent: edgeParent, kind: deps.Kind(path)}
+			candidate := pendingLinkDep{path: path, parent: parent, kind: kind}
 			if current, found := byPath[path]; found {
 				candidate = strongestPendingLinkDep(current, candidate)
 			}

@@ -14,6 +14,7 @@ import (
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 )
 
@@ -74,20 +75,22 @@ func resolvePackageFilesForTest(ctx context.Context, importPath string, testVari
 	return archives, nil
 }
 
-func rejectSyntheticVariantDependency(parent string, dependency string, testVariantFor string, requiresRebuild bool, archives pkgs.ResolveResponse) error {
-	if parent == "" || !requiresRebuild || !responseHasTestVariants(archives, testVariantFor) {
+func rejectSatisfiedSyntheticDependency(parent string, dependency string, testVariantFor string, kind linkdeps.DependencyKind, selected pkgs.ResolvedArchive) error {
+	if dependency != testVariantFor || testVariantFor == "" {
+		return nil
+	}
+	return rejectSyntheticVariantDependency(parent, dependency, testVariantFor, kind == linkdeps.ImportDependency, selected)
+}
+
+func rejectResolvedSyntheticVariantDependency(parent string, dependency string, testVariantFor string, requiresRebuild bool, archives pkgs.ResolveResponse) error {
+	return rejectSyntheticVariantDependency(parent, dependency, testVariantFor, requiresRebuild, archives[dependency])
+}
+
+func rejectSyntheticVariantDependency(parent string, dependency string, testVariantFor string, requiresRebuild bool, selected pkgs.ResolvedArchive) error {
+	if parent == "" || !requiresRebuild || testVariantFor == "" || selected.ForTest != testVariantFor {
 		return nil
 	}
 	return fmt.Errorf("synthetic dependency %q from archive %q requires a test variant for %q; the parent archive was compiled without this edge in Go's package graph and cannot safely use the variant", dependency, parent, testVariantFor)
-}
-
-func responseHasTestVariants(archives pkgs.ResolveResponse, testVariantFor string) bool {
-	for _, archive := range archives {
-		if archive.ForTest == testVariantFor && testVariantFor != "" {
-			return true
-		}
-	}
-	return false
 }
 
 func mergeResolvedArchives(reg *importcfg.ImportConfig, archives pkgs.ResolveResponse, testVariantFor string) (map[string]string, error) {

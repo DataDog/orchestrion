@@ -32,6 +32,12 @@ import (
 var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
+	if cmd.TestMain() && pkgs.ResolvingTestVariants() {
+		// The nested test main only exists to make cmd/go build affected variants.
+		// Weaving it can rediscover the outer test main's dependencies and self-resolve.
+		return nil
+	}
+
 	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile",
 		tracer.ResourceName(w.ImportPath),
 	)

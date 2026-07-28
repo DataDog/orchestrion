@@ -154,7 +154,7 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 	return err
 }
 
-func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
+func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) (err error) {
 	if cmd.LinkDeps.Empty() {
 		return nil
 	}
@@ -183,7 +183,7 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
 	if err != nil {
 		return fmt.Errorf("opening archive: %w", err)
 	}
-	defer file.Close()
+	defer func() { err = errors.Join(err, file.Close()) }()
 
 	wr := ar.NewWriter(file)
 	if err := wr.WriteHeader(&ar.Header{Name: linkdeps.Filename, Mode: 0o644, Size: int64(buf.Len())}); err != nil {
