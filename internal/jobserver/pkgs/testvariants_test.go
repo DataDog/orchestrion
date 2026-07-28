@@ -6,6 +6,7 @@
 package pkgs
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,6 +47,11 @@ func TestResolveRequestTestVariantHash(t *testing.T) {
 	changedHash, err := variant.hash()
 	require.NoError(t, err)
 	assert.NotEqual(t, variantHash, changedHash)
+}
+
+func TestPackageSourceDirUsesOtherFiles(t *testing.T) {
+	pkg := &packages.Package{OtherFiles: []string{filepath.Join("module", "subject", "subject.swig")}}
+	assert.Equal(t, filepath.Join("module", "subject"), packageSourceDir(pkg))
 }
 
 func TestCollectTestVariantClosureRequiresExports(t *testing.T) {
