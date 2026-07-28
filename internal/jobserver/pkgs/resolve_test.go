@@ -121,8 +121,10 @@ func Test(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, resp, "example.com/testvariants/root")
 		require.Contains(t, resp, "example.com/testvariants/middle")
-		assert.NotEmpty(t, resp["example.com/testvariants/root"])
-		assert.NotEmpty(t, resp["example.com/testvariants/middle"])
+		assert.NotEmpty(t, resp["example.com/testvariants/root"].ExportFile)
+		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/root"].ForTest)
+		assert.NotEmpty(t, resp["example.com/testvariants/middle"].ExportFile)
+		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/middle"].ForTest)
 		assert.NotContains(t, resp, "example.com/testvariants/subject")
 
 		resp, err = client.Request(
@@ -136,7 +138,8 @@ func Test(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"])
+		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"].ExportFile)
+		assert.Empty(t, resp["example.com/testvariants/unrelated"].ForTest)
 
 		// An unrelated dependency does not need to load or validate the test target.
 		resp, err = client.Request(
@@ -150,7 +153,8 @@ func Test(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"])
+		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"].ExportFile)
+		assert.Empty(t, resp["example.com/testvariants/unrelated"].ForTest)
 
 		writeFile("externalsubject/subject.go", "package externalsubject\n\nconst Value = 42\n")
 		writeFile("externalsubject/subject_test.go", "package externalsubject_test\n\nimport (\"testing\"; \"example.com/testvariants/externalsubject\")\n\nfunc TestValue(t *testing.T) { if externalsubject.Value != 42 { t.Fail() } }\n")
@@ -166,7 +170,8 @@ func Test(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		assert.NotEmpty(t, resp["example.com/testvariants/externalroot"])
+		assert.NotEmpty(t, resp["example.com/testvariants/externalroot"].ExportFile)
+		assert.Empty(t, resp["example.com/testvariants/externalroot"].ForTest)
 		assert.NotContains(t, resp, "example.com/testvariants/externalsubject")
 	})
 

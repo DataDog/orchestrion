@@ -87,7 +87,15 @@ import "example.com/testvariant/subject"
 func Value() int { return subject.Value() }
 `)
 
-	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./subject")
+	orchestrion := buildOrchestrion(t)
+	run.exec(t, orchestrion, "go", "test", "-a", "./subject")
+	run.exec(t, orchestrion, "go", "test", "-a", "-cover", "-coverpkg=./...", "./subject")
+
+	// The nested test-variant load must preserve an overlay supplied to the outer Go command.
+	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return missing }\n")
+	writeFile("overlay/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
+	writeFile("overlay.json", `{"Replace":{"subject/subject.go":"overlay/subject.go"}}`)
+	run.exec(t, orchestrion, "go", "test", "-a", "-overlay=overlay.json", "./subject")
 }
 
 func TestBuildFromModuleSubdirectory(t *testing.T) {

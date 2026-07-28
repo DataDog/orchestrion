@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
+	"sort"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
@@ -32,20 +32,43 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	var changed bool
-	testVariantFor := ""
-	if strings.HasSuffix(w.ImportPath, ".test") {
-		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
+	testVariantFor, _, err := cmd.TestVariantFor(ctx)
+	if err != nil {
+		return fmt.Errorf("reading test-main metadata: %w", err)
 	}
-	for archiveImportPath, archive := range reg.PackageFile {
-		linkDeps, err := linkdeps.FromArchive(ctx, archive)
-		if err != nil {
-			return fmt.Errorf("reading %s from %q: %w", linkdeps.Filename, archiveImportPath, err)
-		}
 
-		log.Debug().Str("import-path", archiveImportPath).Str("archive", archive).Msg("Processing " + linkdeps.Filename + " dependencies")
+	type archiveWork struct {
+		importPath string
+		archive    string
+	}
+	queue := make([]archiveWork, 0, len(reg.PackageFile))
+	for importPath, archive := range reg.PackageFile {
+		queue = append(queue, archiveWork{importPath: importPath, archive: archive})
+	}
+	less := func(i int, j int) bool {
+		if queue[i].importPath == queue[j].importPath {
+			return queue[i].archive < queue[j].archive
+		}
+		return queue[i].importPath < queue[j].importPath
+	}
+	sort.Slice(queue, less)
+	processed := make(map[archiveWork]bool)
+	var changed bool
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:]
+		if processed[item] {
+			continue
+		}
+		processed[item] = true
+
+		linkDeps, err := linkdeps.FromArchive(ctx, item.archive)
+		if err != nil {
+			return fmt.Errorf("reading %s from %q: %w", linkdeps.Filename, item.importPath, err)
+		}
+		log.Debug().Str("import-path", item.importPath).Str("archive", item.archive).Msg("Processing " + linkdeps.Filename + " dependencies")
 		for _, depPath := range linkDeps.Dependencies() {
-			if arch, found := reg.PackageFile[depPath]; found {
+			if arch, found := reg.PackageFile[depPath]; found && testVariantFor == "" {
 				log.Debug().Str("import-path", depPath).Str("archive", arch).Msg("Already satisfied " + linkdeps.Filename + " dependency")
 				continue
 			}
@@ -55,15 +78,26 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 			if err != nil {
 				return fmt.Errorf("resolving %q: %w", depPath, err)
 			}
-			for p, a := range deps {
-				// Test-aware resolution merges test variants over an ordinary closure and omits the
-				// package under test. Let that merged closure replace existing entries so variants win.
-				if current, found := reg.PackageFile[p]; found && (testVariantFor == "" || current == a) {
-					continue
-				}
-				log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
-				reg.PackageFile[p] = a
+			parent := item.importPath
+			if parent == testVariantFor {
+				parent = ""
+			}
+			if err := rejectSyntheticVariantDependency(parent, depPath, testVariantFor, deps); err != nil {
+				return err
+			}
+			updates, err := mergeResolvedArchives(&reg, deps, testVariantFor)
+			if err != nil {
+				return err
+			}
+			added := false
+			for p, archive := range updates {
+				log.Debug().Str("import-path", p).Str("archive", archive).Msg("Recording resolved " + linkdeps.Filename + " dependency")
+				queue = append(queue, archiveWork{importPath: p, archive: archive})
+				added = true
 				changed = true
+			}
+			if added {
+				sort.Slice(queue, less)
 			}
 		}
 	}

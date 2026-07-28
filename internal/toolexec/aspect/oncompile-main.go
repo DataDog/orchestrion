@@ -61,6 +61,12 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
+	testVariantFor := ""
+	if isTestMain {
+		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
+		cmd.MarkTestMain(testVariantFor)
+	}
+
 	linkDeps, err := linkdeps.FromImportConfig(ctx, &reg)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
@@ -71,46 +77,54 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		return nil
 	}
 
+	type pendingLinkDep struct {
+		path   string
+		parent string
+	}
 	newDeps := linkDeps.Dependencies()
-	testVariantFor := ""
-	if isTestMain {
-		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
+	stack := make([]pendingLinkDep, 0, len(newDeps))
+	queued := make(map[string]bool, len(newDeps))
+	for _, dep := range newDeps {
+		stack = append(stack, pendingLinkDep{path: dep})
+		queued[dep] = true
 	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
-	stack := append(make([]string, 0, len(newDeps)), newDeps...)
 	for len(stack) > 0 {
-		// Pop from the stack of things to process...
-		linkDepPath := stack[len(stack)-1]
+		item := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
+		delete(queued, item.path)
 
-		deps, err := resolvePackageFilesForTest(ctx, linkDepPath, testVariantFor, cmd.WorkDir)
+		deps, err := resolvePackageFilesForTest(ctx, item.path, testVariantFor, cmd.WorkDir)
 		if err != nil {
-			return fmt.Errorf("resolving %q: %w", linkDepPath, err)
+			return fmt.Errorf("resolving %q: %w", item.path, err)
+		}
+		if err := rejectSyntheticVariantDependency(item.parent, item.path, testVariantFor, deps); err != nil {
+			return err
+		}
+		changed, err := mergeResolvedArchives(&reg, deps, testVariantFor)
+		if err != nil {
+			return err
+		}
+		for p, archive := range changed {
+			log.Debug().Str("import-path", p).Str("archive", archive).Msg("Recording resolved " + linkdeps.Filename + " dependency")
 		}
 
-		for p, a := range deps {
-			// Test-aware resolution merges test variants over an ordinary closure and omits the
-			// package under test. Let that merged closure replace existing entries so variants win.
-			if _, found := reg.PackageFile[p]; found && testVariantFor == "" {
-				continue
-			}
-			log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
-			reg.PackageFile[p] = a
-
-			// The package may have its own link-time dependencies we need to resolve
-			tDeps, err := linkdeps.FromArchive(ctx, a)
+		for p, resolved := range deps {
+			archive := resolved.ExportFile
+			// The package may have its own link-time dependencies we need to resolve.
+			tDeps, err := linkdeps.FromArchive(ctx, archive)
 			if err != nil {
-				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, a, err)
+				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, archive, err)
 			}
 			for _, tDep := range tDeps.Dependencies() {
-				if reg.PackageFile[tDep] != "" || slices.Contains(stack, tDep) {
-					// Already resolved, or already going to be resolved...
+				if reg.PackageFile[tDep] != "" || queued[tDep] {
 					continue
 				}
-				stack = append(stack, tDep)     // Push it to the stack
-				newDeps = append(newDeps, tDep) // Record it as a synthetic import to add
-				cmd.LinkDeps.Add(tDep)          // Record it as a link-time dependency
+				stack = append(stack, pendingLinkDep{path: tDep, parent: p})
+				queued[tDep] = true
+				newDeps = append(newDeps, tDep)
+				cmd.LinkDeps.Add(tDep)
 			}
 		}
 	}

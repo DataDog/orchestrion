@@ -23,7 +23,8 @@ type linkFlagSet struct {
 // LinkCommand represents a go tool `link` invocation
 type LinkCommand struct {
 	command
-	Flags linkFlagSet
+	Flags  linkFlagSet
+	Inputs []string
 	// WorkDir is the $WORK directory managed by the go toolchain.
 	WorkDir string
 }
@@ -45,12 +46,13 @@ func parseLinkCommand(_ context.Context, args []string) (Command, error) {
 		return nil, errors.New("unexpected number of command arguments")
 	}
 	flags := &linkFlagSet{}
-	if _, err := flags.parse(args[1:]); err != nil {
+	inputs, err := flags.parse(args[1:])
+	if err != nil {
 		return nil, err
 	}
 
 	// The WorkDir is the parent of the stage dir, and the ImportCfg file is directly in the stage dir.
 	workDir := filepath.Dir(filepath.Dir(flags.ImportCfg))
 
-	return &LinkCommand{command: NewCommand(args), Flags: *flags, WorkDir: workDir}, nil
+	return &LinkCommand{command: NewCommand(args), Flags: *flags, Inputs: inputs, WorkDir: workDir}, nil
 }

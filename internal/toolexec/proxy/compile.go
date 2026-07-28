@@ -51,6 +51,8 @@ type CompileCommand struct {
 
 	// importPath is the import path of the package being built.
 	importPath string
+	// testVariantFor is set when this command produces Go's generated test-main archive.
+	testVariantFor string
 	// finishToken is the token returned by the job server in response to the
 	// [nbt.StartRequest] when the operation needs to continue, and that is then
 	// forwarded to the [nbt.FinishRequest].
@@ -134,8 +136,8 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 	defer func() { err = errors.Join(err, cmd.command.Close(ctx, cmdErr)) }()
 
 	if cmdErr == nil {
-		// Success so far, we attach link-time dependencies...
-		err = cmd.attachLinkDeps(ctx)
+		// Success so far, attach metadata before notifying the artifact cache.
+		err = errors.Join(cmd.attachLinkDeps(ctx), cmd.attachTestMain())
 	}
 
 	// Notify the job server of the status of the command, and combine with the previous error if any...

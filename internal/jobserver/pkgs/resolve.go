@@ -41,8 +41,9 @@ var envIgnoreList = map[string]func(*ResolveRequest, string){
 		r.TempDir = dir
 	},
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
-	"TOOLEXEC_IMPORTPATH": func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
-	envVarParentID:        func(r *ResolveRequest, id string) { r.resolveParentID = id },
+	"TOOLEXEC_IMPORTPATH":       func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
+	envVarParentID:              func(r *ResolveRequest, id string) { r.resolveParentID = id },
+	envVarResolvingTestVariants: nil,
 }
 
 type (
@@ -51,16 +52,21 @@ type (
 		Env            []string `json:"env"`                      // Environment variables to use during resolution
 		Pattern        string   `json:"pattern"`                  // Package pattern to resolve
 		TempDir        string   `json:"tmpdir,omitempty"`         // A temporary directory to use for Go build artifacts
-		TestVariantFor string   `json:"testVariantFor,omitempty"` // Resolve Pattern as built for this package's tests
+		TestVariantFor string   `json:"testVariantFor,omitempty"` // Resolve the literal Pattern as built for this package's tests
 
 		// Fields set by canonicalization
 		resolveParentID    string // The value of the [envVarParentID] environment variable
 		toolexecImportpath string // The value of the TOOLEXEC_IMPORTPATH environment variable
 		canonical          bool   // Whether this request was canonicalized yet
 	}
-	// ResolveResponse is a map of package import path to their respective export file, if one is
-	// found. Users should handle possibly missing export files as is relevant to their use-case.
-	ResolveResponse map[string]string
+	// ResolvedArchive identifies an export archive and, when non-empty, the test target for which
+	// Go rebuilt it.
+	ResolvedArchive struct {
+		ExportFile string `json:"exportFile"`
+		ForTest    string `json:"forTest,omitempty"`
+	}
+	// ResolveResponse maps package import paths to their resolved export archives.
+	ResolveResponse map[string]ResolvedArchive
 )
 
 func NewResolveRequest(dir string, pattern string) ResolveRequest {
@@ -243,7 +249,7 @@ func (r *ResolveRequest) hash() (string, error) {
 }
 
 func (r ResolveResponse) mergeFrom(pkg *packages.Package) error {
-	if pkg.PkgPath == "" || pkg.PkgPath == "unsafe" || r[pkg.PkgPath] != "" {
+	if pkg.PkgPath == "" || pkg.PkgPath == "unsafe" || r[pkg.PkgPath].ExportFile != "" {
 		// Ignore the "unsafe" package (no archive file, ever), packages with an empty import path
 		// (standard library), and those already present in the map (already processed previously).
 		return nil
@@ -254,7 +260,7 @@ func (r ResolveResponse) mergeFrom(pkg *packages.Package) error {
 		errs = errors.Join(errs, err)
 	}
 
-	r[pkg.PkgPath] = pkg.ExportFile
+	r[pkg.PkgPath] = ResolvedArchive{ExportFile: pkg.ExportFile}
 
 	for _, dep := range pkg.Imports {
 		errs = errors.Join(errs, r.mergeFrom(dep))
