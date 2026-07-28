@@ -52,13 +52,23 @@ func mergeTestVariant(
 	if !importsPackage(root, req.TestVariantFor, make(map[string]bool)) {
 		return resp, nil
 	}
-	if packageUnderTest == nil || len(packageUnderTest.GoFiles) == 0 {
-		return nil, fmt.Errorf("package under test %q has no source directory", req.TestVariantFor)
+	var srcFile string
+	if packageUnderTest != nil {
+		if len(packageUnderTest.GoFiles) > 0 {
+			srcFile = packageUnderTest.GoFiles[0]
+		} else if len(packageUnderTest.CompiledGoFiles) > 0 {
+			srcFile = packageUnderTest.CompiledGoFiles[0]
+		} else if len(packageUnderTest.CgoFiles) > 0 {
+			srcFile = packageUnderTest.CgoFiles[0]
+		}
+	}
+	if srcFile == "" {
+		return nil, fmt.Errorf("package under test %q has no files to locate its source directory", req.TestVariantFor)
 	}
 
 	overlayKey := sha256.Sum256([]byte(req.TestVariantFor + "\x00" + req.Pattern))
 	overlayPath := filepath.Join(
-		filepath.Dir(packageUnderTest.GoFiles[0]),
+		filepath.Dir(srcFile),
 		fmt.Sprintf("zz_orchestrion_linkdeps_%x_test.go", overlayKey[:8]),
 	)
 	if _, err := os.Stat(overlayPath); err == nil {
