@@ -41,8 +41,9 @@ func TestRejectSyntheticVariantDependency(t *testing.T) {
 	archives := pkgs.ResolveResponse{
 		"example.com/middle": {ExportFile: "/middle.a", ForTest: target},
 	}
-	require.Error(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, archives))
-	require.NoError(t, rejectSyntheticVariantDependency("", "example.com/middle", target, archives))
+	require.Error(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, true, archives))
+	require.NoError(t, rejectSyntheticVariantDependency("example.com/root", "example.com/middle", target, false, archives))
+	require.NoError(t, rejectSyntheticVariantDependency("", "example.com/middle", target, true, archives))
 }
 
 func TestMergeResolvedArchivesRejectsWrongVariantTarget(t *testing.T) {

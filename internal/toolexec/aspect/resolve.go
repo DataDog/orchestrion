@@ -74,8 +74,8 @@ func resolvePackageFilesForTest(ctx context.Context, importPath string, testVari
 	return archives, nil
 }
 
-func rejectSyntheticVariantDependency(parent string, dependency string, testVariantFor string, archives pkgs.ResolveResponse) error {
-	if parent == "" || !responseHasTestVariants(archives, testVariantFor) {
+func rejectSyntheticVariantDependency(parent string, dependency string, testVariantFor string, requiresRebuild bool, archives pkgs.ResolveResponse) error {
+	if parent == "" || !requiresRebuild || !responseHasTestVariants(archives, testVariantFor) {
 		return nil
 	}
 	return fmt.Errorf("synthetic dependency %q from archive %q requires a test variant for %q; the parent archive was compiled without this edge in Go's package graph and cannot safely use the variant", dependency, parent, testVariantFor)

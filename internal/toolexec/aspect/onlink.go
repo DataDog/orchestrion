@@ -68,7 +68,7 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 		}
 		log.Debug().Str("import-path", item.importPath).Str("archive", item.archive).Msg("Processing " + linkdeps.Filename + " dependencies")
 		for _, depPath := range linkDeps.Dependencies() {
-			if arch, found := reg.PackageFile[depPath]; found && testVariantFor == "" {
+			if arch, found := reg.PackageFile[depPath]; found && (testVariantFor == "" || depPath == testVariantFor) {
 				log.Debug().Str("import-path", depPath).Str("archive", arch).Msg("Already satisfied " + linkdeps.Filename + " dependency")
 				continue
 			}
@@ -82,7 +82,8 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 			if parent == testVariantFor {
 				parent = ""
 			}
-			if err := rejectSyntheticVariantDependency(parent, depPath, testVariantFor, deps); err != nil {
+			requiresRebuild := linkDeps.Kind(depPath) == linkdeps.ImportDependency
+			if err := rejectSyntheticVariantDependency(parent, depPath, testVariantFor, requiresRebuild, deps); err != nil {
 				return err
 			}
 			updates, err := mergeResolvedArchives(&reg, deps, testVariantFor)

@@ -26,6 +26,17 @@ const (
 	Filename = "link.deps"
 
 	headerV1 = "#" + Filename + "@v1"
+	headerV2 = "#" + Filename + "@v2"
+)
+
+// DependencyKind describes whether a synthetic dependency contributes a compiler fingerprint.
+type DependencyKind uint8
+
+const (
+	// RelocationDependency is referenced only by a linker relocation and does not contribute a compiler fingerprint.
+	RelocationDependency DependencyKind = iota
+	// ImportDependency is present in compiler imports and contributes a compiler fingerprint.
+	ImportDependency
 )
 
 // LinkDeps represents the contents of a [Filename] file. It lists all synthetic
@@ -36,7 +47,7 @@ const (
 // directives as well as new import-level directives that the Go toolchain is
 // not normally aware of.
 type LinkDeps struct {
-	deps map[string]struct{}
+	deps map[string]DependencyKind
 }
 
 // FromImportConfig aggregates entries from all [Filename] found in the
@@ -53,13 +64,13 @@ func FromImportConfig(ctx context.Context, importcfg *importcfg.ImportConfig) (L
 			return LinkDeps{}, fmt.Errorf("reading %s from %s=%s: %w", Filename, importPath, archivePath, err)
 		}
 
-		for dep := range ld.deps {
+		for dep, kind := range ld.deps {
 			if _, satisfied := importcfg.PackageFile[dep]; satisfied {
 				// This transitive link-time dependency is already satisfied at
 				// compile-time, so we don't need to carry it over.
 				continue
 			}
-			res.Add(dep)
+			res.Add(dep, kind)
 		}
 	}
 
@@ -110,6 +121,8 @@ func Read(r io.Reader) (l LinkDeps, err error) {
 	switch hdr := strings.TrimSpace(line); hdr {
 	case headerV1:
 		return parseV1(rd)
+	case headerV2:
+		return parseV2(rd)
 	default:
 		err = fmt.Errorf("unsupported data format %q, a newer Orchestion release may be required", hdr)
 		return
@@ -136,7 +149,38 @@ func parseV1(r *bufio.Reader) (l LinkDeps, err error) {
 			continue
 		}
 
-		l.Add(line)
+		// V1 did not preserve edge kinds. Treat them as imports so consumers fail
+		// conservatively rather than substituting a potentially incompatible archive.
+		l.Add(line, ImportDependency)
+	}
+}
+
+func parseV2(r *bufio.Reader) (l LinkDeps, err error) {
+	for {
+		line, readErr := r.ReadString('\n')
+		if readErr != nil && readErr != io.EOF {
+			return l, readErr
+		}
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			kindText, path, found := strings.Cut(line, "\t")
+			if !found || path == "" {
+				return l, fmt.Errorf("invalid %s entry %q", headerV2, line)
+			}
+			var kind DependencyKind
+			switch kindText {
+			case "relocation":
+				kind = RelocationDependency
+			case "import":
+				kind = ImportDependency
+			default:
+				return l, fmt.Errorf("invalid %s dependency kind %q", headerV2, kindText)
+			}
+			l.Add(path, kind)
+		}
+		if readErr == io.EOF {
+			return l, nil
+		}
 	}
 }
 
@@ -147,12 +191,19 @@ func (l *LinkDeps) Contains(importPath string) bool {
 	return found
 }
 
-// Add registers a new import path in this [LinkDeps] instance.
-func (l *LinkDeps) Add(importPath string) {
+// Add registers a new import path and edge kind in this [LinkDeps] instance.
+func (l *LinkDeps) Add(importPath string, kind DependencyKind) {
 	if l.deps == nil {
-		l.deps = make(map[string]struct{})
+		l.deps = make(map[string]DependencyKind)
 	}
-	l.deps[importPath] = struct{}{}
+	if current, found := l.deps[importPath]; !found || kind > current {
+		l.deps[importPath] = kind
+	}
+}
+
+// Kind returns the strongest recorded edge kind for importPath.
+func (l *LinkDeps) Kind(importPath string) DependencyKind {
+	return l.deps[importPath]
 }
 
 // Dependencies returns all import paths registered in this [LinkDeps] instance.
@@ -178,7 +229,7 @@ func (l *LinkDeps) Len() int {
 
 // Write writes this [LinkDeps] instance to the provided writer.
 func (l *LinkDeps) Write(w io.Writer) error {
-	if _, err := fmt.Fprintln(w, headerV1); err != nil {
+	if _, err := fmt.Fprintln(w, headerV2); err != nil {
 		return err
 	}
 
@@ -192,7 +243,11 @@ func (l *LinkDeps) Write(w io.Writer) error {
 	sort.Strings(sorted)
 
 	for _, dep := range sorted {
-		if _, err := fmt.Fprintln(w, dep); err != nil {
+		kind := "relocation"
+		if l.deps[dep] == ImportDependency {
+			kind = "import"
+		}
+		if _, err := fmt.Fprintf(w, "%s\t%s\n", kind, dep); err != nil {
 			return err
 		}
 	}

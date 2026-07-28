@@ -51,6 +51,8 @@ type CompileCommand struct {
 
 	// importPath is the import path of the package being built.
 	importPath string
+	// testMain records whether the original compiler inputs identify Go's generated test main.
+	testMain bool
 	// testVariantFor is set when this command produces Go's generated test-main archive.
 	testVariantFor string
 	// finishToken is the token returned by the job server in response to the
@@ -71,6 +73,10 @@ func (c *CompileCommand) ShowVersion() bool {
 // by `go test`. For more accurate readings, users should also validate the
 // declared package import path ends in `.test`.
 func (c *CompileCommand) TestMain() bool {
+	return c.testMain
+}
+
+func (c *CompileCommand) detectTestMain() bool {
 	if c.Flags.Package != "main" {
 		return false
 	}
@@ -242,6 +248,7 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 		return nil, err
 	}
 	cmd.Files = pos
+	cmd.testMain = cmd.detectTestMain()
 
 	if cmd.Flags.ImportCfg == "" {
 		return cmd, nil

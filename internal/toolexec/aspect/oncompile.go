@@ -135,7 +135,11 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		}
 
 		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
-		cmd.LinkDeps.Add(depImportPath)
+		edgeKind := linkdeps.RelocationDependency
+		if kind == typed.ImportStatement {
+			edgeKind = linkdeps.ImportDependency
+		}
+		cmd.LinkDeps.Add(depImportPath, edgeKind)
 
 		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
 			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
@@ -162,7 +166,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			for _, tDep := range deps.Dependencies() {
 				if _, found := imports.PackageFile[tDep]; !found {
 					log.Trace().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
-					cmd.LinkDeps.Add(tDep)
+					cmd.LinkDeps.Add(tDep, deps.Kind(tDep))
 				}
 			}
 

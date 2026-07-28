@@ -85,6 +85,19 @@ func TestParseCompile(t *testing.T) {
 	}
 }
 
+func TestTestMainIdentitySurvivesSourceRewrite(t *testing.T) {
+	stage := t.TempDir()
+	cmd := &CompileCommand{
+		Files: []string{filepath.Join(stage, "_testmain.go")},
+		Flags: compileFlagSet{Package: "main", ImportCfg: filepath.Join(stage, "importcfg")},
+	}
+	cmd.testMain = cmd.detectTestMain()
+	require.True(t, cmd.TestMain())
+
+	cmd.Files[0] = filepath.Join(stage, "orchestrion", "src", "main", "_testmain.go")
+	require.True(t, cmd.TestMain())
+}
+
 func TestSetLang(t *testing.T) {
 	work := t.TempDir()
 

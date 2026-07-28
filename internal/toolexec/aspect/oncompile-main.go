@@ -80,12 +80,13 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	type pendingLinkDep struct {
 		path   string
 		parent string
+		kind   linkdeps.DependencyKind
 	}
 	newDeps := linkDeps.Dependencies()
 	stack := make([]pendingLinkDep, 0, len(newDeps))
 	queued := make(map[string]bool, len(newDeps))
 	for _, dep := range newDeps {
-		stack = append(stack, pendingLinkDep{path: dep})
+		stack = append(stack, pendingLinkDep{path: dep, kind: linkDeps.Kind(dep)})
 		queued[dep] = true
 	}
 
@@ -99,7 +100,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", item.path, err)
 		}
-		if err := rejectSyntheticVariantDependency(item.parent, item.path, testVariantFor, deps); err != nil {
+		if err := rejectSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
 			return err
 		}
 		changed, err := mergeResolvedArchives(&reg, deps, testVariantFor)
@@ -121,10 +122,11 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 				if reg.PackageFile[tDep] != "" || queued[tDep] {
 					continue
 				}
-				stack = append(stack, pendingLinkDep{path: tDep, parent: p})
+				kind := tDeps.Kind(tDep)
+				stack = append(stack, pendingLinkDep{path: tDep, parent: p, kind: kind})
 				queued[tDep] = true
 				newDeps = append(newDeps, tDep)
-				cmd.LinkDeps.Add(tDep)
+				cmd.LinkDeps.Add(tDep, kind)
 			}
 		}
 	}
