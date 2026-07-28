@@ -22,8 +22,14 @@ type overlayManifest struct {
 }
 
 func addTestVariantOverlay(ctx context.Context, config *packages.Config, virtualPath string, contents []byte) (func(), error) {
-	if err := rejectModuleCacheOverlay(ctx, config, virtualPath); err != nil {
-		return nil, err
+	return addTestVariantOverlays(ctx, config, map[string][]byte{virtualPath: contents})
+}
+
+func addTestVariantOverlays(ctx context.Context, config *packages.Config, overlays map[string][]byte) (func(), error) {
+	for virtualPath := range overlays {
+		if err := rejectUnsupportedOverlayPath(ctx, config, virtualPath); err != nil {
+			return nil, err
+		}
 	}
 
 	dir, err := os.MkdirTemp("", "orchestrion-test-overlay-")
@@ -81,15 +87,19 @@ func addTestVariantOverlay(ctx context.Context, config *packages.Config, virtual
 		}
 	}
 
-	virtualPath = absoluteOverlayPath(config.Dir, virtualPath)
-	if _, exists := manifest.Replace[virtualPath]; exists {
-		return nil, fmt.Errorf("caller overlay already replaces Orchestrion test variant path %q", virtualPath)
+	index := 0
+	for virtualPath, contents := range overlays {
+		virtualPath = absoluteOverlayPath(config.Dir, virtualPath)
+		if _, exists := manifest.Replace[virtualPath]; exists {
+			return nil, fmt.Errorf("caller overlay already replaces Orchestrion test variant path %q", virtualPath)
+		}
+		backingPath := filepath.Join(dir, fmt.Sprintf("%d-%s", index, filepath.Base(virtualPath)))
+		if err := os.WriteFile(backingPath, contents, 0o644); err != nil {
+			return nil, fmt.Errorf("writing test variant overlay source: %w", err)
+		}
+		manifest.Replace[virtualPath] = backingPath
+		index++
 	}
-	backingPath := filepath.Join(dir, filepath.Base(virtualPath))
-	if err := os.WriteFile(backingPath, contents, 0o644); err != nil {
-		return nil, fmt.Errorf("writing test variant overlay source: %w", err)
-	}
-	manifest.Replace[virtualPath] = backingPath
 
 	manifestPath := filepath.Join(dir, "overlay.json")
 	file, err := os.Create(manifestPath)
@@ -110,24 +120,48 @@ func addTestVariantOverlay(ctx context.Context, config *packages.Config, virtual
 	return cleanup, nil
 }
 
-func rejectModuleCacheOverlay(ctx context.Context, config *packages.Config, virtualPath string) error {
-	cmd := exec.CommandContext(ctx, "go", "env", "GOMODCACHE")
+func rejectUnsupportedOverlayPath(ctx context.Context, config *packages.Config, virtualPath string) error {
+	cmd := exec.CommandContext(ctx, "go", "env", "-json", "GOMODCACHE", "GOROOT", "GOMOD")
 	cmd.Dir = config.Dir
 	cmd.Env = config.Env
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("determining GOMODCACHE: %w", err)
+		return fmt.Errorf("determining Go overlay roots: %w", err)
 	}
-	moduleCache := strings.TrimSpace(string(output))
-	if moduleCache == "" {
-		return nil
+	var goEnv struct {
+		GoModCache string `json:"GOMODCACHE"`
+		GoRoot     string `json:"GOROOT"`
+		GoMod      string `json:"GOMOD"`
 	}
-	inside, err := pathWithin(moduleCache, virtualPath)
-	if err != nil {
-		return err
+	if err := json.Unmarshal(output, &goEnv); err != nil {
+		return fmt.Errorf("parsing Go overlay roots: %w", err)
 	}
-	if inside {
-		return fmt.Errorf("cannot construct test variant overlay %q beneath GOMODCACHE %q; Go does not permit module-cache overlays", virtualPath, moduleCache)
+	unsupported := []struct {
+		name string
+		path string
+		why  string
+	}{
+		{name: "GOMODCACHE", path: goEnv.GoModCache, why: "Go does not permit module-cache overlays"},
+		{name: "GOROOT", path: goEnv.GoRoot, why: "the standard library cannot contain synthetic packages"},
+	}
+	if goEnv.GoMod != "" && goEnv.GoMod != os.DevNull {
+		unsupported = append(unsupported, struct {
+			name string
+			path string
+			why  string
+		}{name: "vendor directory", path: filepath.Join(filepath.Dir(goEnv.GoMod), "vendor"), why: "the synthetic package is not listed in vendor/modules.txt"})
+	}
+	for _, root := range unsupported {
+		if root.path == "" {
+			continue
+		}
+		inside, err := pathWithin(root.path, virtualPath)
+		if err != nil {
+			return err
+		}
+		if inside {
+			return fmt.Errorf("cannot construct test variant overlay %q beneath %s %q; %s", virtualPath, root.name, root.path, root.why)
+		}
 	}
 	return nil
 }

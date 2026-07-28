@@ -65,9 +65,13 @@ aspects:
       - inject-declarations:
           links:
             - example.com/testvariant/root
+            - example.com/testvariant/dep/internal/root
           template: |-
             //go:linkname __orchestrionRootValue example.com/testvariant/root.Value
             func __orchestrionRootValue() int
+
+            //go:linkname __orchestrionInternalRootValue example.com/testvariant/dep/internal/root.Value
+            func __orchestrionInternalRootValue() int
 `)
 	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
 	writeFile("subject/subject_test.go", `package subject
@@ -81,6 +85,12 @@ func TestValue(t *testing.T) {
 }
 `)
 	writeFile("root/root.go", `package root
+
+import "example.com/testvariant/subject"
+
+func Value() int { return subject.Value() }
+`)
+	writeFile("dep/internal/root/root.go", `package root
 
 import "example.com/testvariant/subject"
 

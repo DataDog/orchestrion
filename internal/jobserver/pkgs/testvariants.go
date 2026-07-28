@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -67,16 +68,25 @@ func mergeTestVariant(
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("checking test variant overlay path %q: %w", overlayPath, err)
 	}
-	overlaySource, err := testVariantOverlay(packageUnderTest.Name, req.Pattern)
+	overlays := make(map[string][]byte)
+	testImportPath := req.Pattern
+	if bridge, needed, err := internalImportBridge(root, req.TestVariantFor, overlayKey); err != nil {
+		return nil, err
+	} else if needed {
+		testImportPath = bridge.importPath
+		overlays[bridge.virtualPath] = bridge.source
+	}
+	overlaySource, err := testVariantOverlay(packageUnderTest.Name, testImportPath)
 	if err != nil {
 		return nil, err
 	}
+	overlays[overlayPath] = overlaySource
 	config.Context = ctx
 	config.Mode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
 		packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest
 	config.Env = append(slices.Clone(config.Env), envVarResolvingTestVariants+"=1")
 	config.Tests = true
-	cleanup, err := addTestVariantOverlay(ctx, &config, overlayPath, overlaySource)
+	cleanup, err := addTestVariantOverlays(ctx, &config, overlays)
 	if err != nil {
 		return nil, err
 	}
@@ -137,11 +147,69 @@ func importsPackage(pkg *packages.Package, target string, visited map[string]boo
 	return false
 }
 
+type importBridge struct {
+	importPath  string
+	virtualPath string
+	source      []byte
+}
+
+func internalImportBridge(root *packages.Package, importer string, key [sha256.Size]byte) (importBridge, bool, error) {
+	segments := strings.Split(root.PkgPath, "/")
+	var restrictedPrefix string
+	var restricted bool
+	for i, segment := range segments {
+		if segment != "internal" {
+			continue
+		}
+		prefix := strings.Join(segments[:i], "/")
+		if importer == prefix || strings.HasPrefix(importer, prefix+"/") {
+			continue
+		}
+		if restricted {
+			return importBridge{}, false, fmt.Errorf("cannot construct test variant for nested internal synthetic dependency %q imported by %q", root.PkgPath, importer)
+		}
+		restrictedPrefix = prefix
+		restricted = true
+	}
+	if !restricted {
+		return importBridge{}, false, nil
+	}
+
+	if restrictedPrefix == "" {
+		return importBridge{}, false, fmt.Errorf("cannot construct test variant for top-level internal synthetic dependency %q imported by %q", root.PkgPath, importer)
+	}
+	rootDir := packageSourceDir(root)
+	if rootDir == "" {
+		return importBridge{}, false, fmt.Errorf("synthetic dependency %q has no source directory", root.PkgPath)
+	}
+	prefixSegments := strings.Count(restrictedPrefix, "/") + 1
+	for range len(segments) - prefixSegments {
+		rootDir = filepath.Dir(rootDir)
+	}
+	name := fmt.Sprintf("orchestrion_test_variant_%x", key[:8])
+	importPath := restrictedPrefix + "/" + name
+	virtualPath := filepath.Join(rootDir, name, "bridge.go")
+	if _, err := os.Stat(virtualPath); err == nil {
+		return importBridge{}, false, fmt.Errorf("refusing to replace existing source file %q with a test variant bridge", virtualPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return importBridge{}, false, fmt.Errorf("checking test variant bridge path %q: %w", virtualPath, err)
+	}
+	source, err := blankImportSource("orchestrion_test_variant_bridge", root.PkgPath)
+	if err != nil {
+		return importBridge{}, false, err
+	}
+	return importBridge{importPath: importPath, virtualPath: virtualPath, source: source}, true, nil
+}
+
 func testVariantOverlay(packageName string, root string) ([]byte, error) {
+	return blankImportSource(packageName+"_test", root)
+}
+
+func blankImportSource(packageName string, imported string) ([]byte, error) {
 	decl := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{
-		&ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(root)}},
+		&ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(imported)}},
 	}}
-	file := &ast.File{Name: ast.NewIdent(packageName + "_test"), Decls: []ast.Decl{decl}}
+	file := &ast.File{Name: ast.NewIdent(packageName), Decls: []ast.Decl{decl}}
 	var source bytes.Buffer
 	if err := format.Node(&source, token.NewFileSet(), file); err != nil {
 		return nil, fmt.Errorf("formatting test variant overlay: %w", err)

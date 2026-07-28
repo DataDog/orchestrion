@@ -41,6 +41,33 @@ func TestInitialLinkDependenciesClearTestTargetParent(t *testing.T) {
 	assert.Empty(t, deps[0].parent)
 }
 
+func TestStrongestPendingLinkDep(t *testing.T) {
+	tests := []struct {
+		name  string
+		left  pendingLinkDep
+		right pendingLinkDep
+		want  pendingLinkDep
+	}{
+		{
+			name:  "import wins over relocation",
+			left:  pendingLinkDep{path: "dep", parent: "relocation-parent", kind: linkdeps.RelocationDependency},
+			right: pendingLinkDep{path: "dep", parent: "import-parent", kind: linkdeps.ImportDependency},
+			want:  pendingLinkDep{path: "dep", parent: "import-parent", kind: linkdeps.ImportDependency},
+		},
+		{
+			name:  "non-target parent wins for equal kinds",
+			left:  pendingLinkDep{path: "dep", kind: linkdeps.ImportDependency},
+			right: pendingLinkDep{path: "dep", parent: "parent", kind: linkdeps.ImportDependency},
+			want:  pendingLinkDep{path: "dep", parent: "parent", kind: linkdeps.ImportDependency},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, strongestPendingLinkDep(tt.left, tt.right))
+		})
+	}
+}
+
 func writeLinkDepsArchive(t *testing.T, name string, dependency string, kind linkdeps.DependencyKind) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)

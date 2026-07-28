@@ -48,6 +48,32 @@ func TestAddTestVariantOverlay(t *testing.T) {
 	assert.Equal(t, "package subject_test\n", string(contents))
 }
 
+func TestAddTestVariantOverlays(t *testing.T) {
+	dir := t.TempDir()
+	config := packages.Config{Dir: dir, Env: os.Environ()}
+	overlays := map[string][]byte{
+		filepath.Join(dir, "subject", "variant_test.go"): []byte("package subject_test\n"),
+		filepath.Join(dir, "bridge", "bridge.go"):        []byte("package bridge\n"),
+	}
+	cleanup, err := addTestVariantOverlays(context.Background(), &config, overlays)
+	require.NoError(t, err)
+	defer cleanup()
+
+	require.Len(t, config.BuildFlags, 1)
+	manifestPath, found := strings.CutPrefix(config.BuildFlags[0], "-overlay=")
+	require.True(t, found)
+	data, err := os.ReadFile(manifestPath)
+	require.NoError(t, err)
+	var manifest overlayManifest
+	require.NoError(t, json.Unmarshal(data, &manifest))
+	require.Len(t, manifest.Replace, 2)
+	for virtualPath, want := range overlays {
+		contents, err := os.ReadFile(manifest.Replace[virtualPath])
+		require.NoError(t, err)
+		assert.Equal(t, want, contents)
+	}
+}
+
 func TestAddTestVariantOverlayRejectsDuplicatePaths(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "caller.json"), []byte(`{"Replace":{"subject.go":"one.go","./subject.go":"two.go"}}`), 0o644))

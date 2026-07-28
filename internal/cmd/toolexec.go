@@ -40,7 +40,7 @@ var Toolexec = &cli.Command{
 			// An error occurred, or we have been instructed to skip this command.
 			return err
 		}
-		defer func() { proxyCmd.Close(ctx, resErr) }()
+		defer func() { resErr = errors.Join(resErr, proxyCmd.Close(ctx, resErr)) }()
 
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do

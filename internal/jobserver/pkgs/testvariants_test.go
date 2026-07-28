@@ -6,6 +6,7 @@
 package pkgs
 
 import (
+	"crypto/sha256"
 	"path/filepath"
 	"testing"
 
@@ -52,6 +53,40 @@ func TestResolveRequestTestVariantHash(t *testing.T) {
 func TestPackageSourceDirUsesOtherFiles(t *testing.T) {
 	pkg := &packages.Package{OtherFiles: []string{filepath.Join("module", "subject", "subject.swig")}}
 	assert.Equal(t, filepath.Join("module", "subject"), packageSourceDir(pkg))
+}
+
+func TestInternalImportBridge(t *testing.T) {
+	rootDir := filepath.Join(t.TempDir(), "dep", "internal", "root")
+	root := &packages.Package{
+		PkgPath: "example.com/module/dep/internal/root",
+		GoFiles: []string{filepath.Join(rootDir, "root.go")},
+	}
+	key := sha256.Sum256([]byte("bridge"))
+
+	bridge, needed, err := internalImportBridge(root, "example.com/module/subject", key)
+	require.NoError(t, err)
+	require.True(t, needed)
+	assert.Equal(t, "example.com/module/dep/orchestrion_test_variant_17f29b073143d8cd", bridge.importPath)
+	assert.Equal(t, filepath.Join(filepath.Dir(filepath.Dir(rootDir)), "orchestrion_test_variant_17f29b073143d8cd", "bridge.go"), bridge.virtualPath)
+	assert.Equal(t, "package orchestrion_test_variant_bridge\n\nimport _ \"example.com/module/dep/internal/root\"\n", string(bridge.source))
+
+	_, needed, err = internalImportBridge(root, "example.com/module/dep/subject", key)
+	require.NoError(t, err)
+	assert.False(t, needed)
+
+	_, needed, err = internalImportBridge(root, "example.com/module/depextra/subject", key)
+	require.NoError(t, err)
+	assert.True(t, needed)
+}
+
+func TestInternalImportBridgeRejectsNestedInternalRoot(t *testing.T) {
+	root := &packages.Package{
+		PkgPath: "example.com/module/internal/dep/internal/root",
+		GoFiles: []string{filepath.Join(t.TempDir(), "internal", "dep", "internal", "root", "root.go")},
+	}
+	_, _, err := internalImportBridge(root, "example.net/subject", sha256.Sum256([]byte("bridge")))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "nested internal")
 }
 
 func TestCollectTestVariantClosureRequiresExports(t *testing.T) {

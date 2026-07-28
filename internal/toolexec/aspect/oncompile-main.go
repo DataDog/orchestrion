@@ -83,21 +83,28 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	}
 
 	newDeps := make([]string, 0, len(stack))
-	queued := make(map[string]bool, len(stack))
+	pending := make(map[string]pendingLinkDep, len(stack))
+	processed := make(map[string]pkgs.ResolveResponse)
+	paths := make([]string, 0, len(stack))
 	for _, dep := range stack {
 		newDeps = append(newDeps, dep.path)
-		queued[dep.path] = true
+		pending[dep.path] = dep
+		paths = append(paths, dep.path)
 	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
-	for len(stack) > 0 {
-		item := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		delete(queued, item.path)
+	for len(paths) > 0 {
+		path := paths[len(paths)-1]
+		paths = paths[:len(paths)-1]
+		item := pending[path]
+		delete(pending, path)
 
 		deps, err := resolvePackageFilesForTest(ctx, item.path, testVariantFor, cmd.WorkDir)
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", item.path, err)
+		}
+		for path := range deps {
+			processed[path] = deps
 		}
 		if err := rejectSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
 			return err
@@ -118,14 +125,26 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, archive, err)
 			}
 			for _, tDep := range tDeps.Dependencies() {
-				if reg.PackageFile[tDep] != "" || queued[tDep] {
+				candidate := pendingLinkDep{path: tDep, parent: p, kind: tDeps.Kind(tDep)}
+				if current, found := pending[tDep]; found {
+					cmd.LinkDeps.Add(tDep, candidate.kind)
+					pending[tDep] = strongestPendingLinkDep(current, candidate)
 					continue
 				}
-				kind := tDeps.Kind(tDep)
-				stack = append(stack, pendingLinkDep{path: tDep, parent: p, kind: kind})
-				queued[tDep] = true
+				if previous, found := processed[tDep]; found {
+					cmd.LinkDeps.Add(tDep, candidate.kind)
+					if err := rejectSyntheticVariantDependency(candidate.parent, candidate.path, testVariantFor, candidate.kind == linkdeps.ImportDependency, previous); err != nil {
+						return err
+					}
+					continue
+				}
+				if reg.PackageFile[tDep] != "" {
+					continue
+				}
+				cmd.LinkDeps.Add(tDep, candidate.kind)
+				pending[tDep] = candidate
+				paths = append(paths, tDep)
 				newDeps = append(newDeps, tDep)
-				cmd.LinkDeps.Add(tDep, kind)
 			}
 		}
 	}
@@ -192,10 +211,10 @@ func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig, t
 				edgeParent = ""
 			}
 			candidate := pendingLinkDep{path: path, parent: edgeParent, kind: deps.Kind(path)}
-			current, found := byPath[path]
-			if !found || candidate.kind > current.kind || (candidate.kind == current.kind && current.parent == "" && candidate.parent != "") {
-				byPath[path] = candidate
+			if current, found := byPath[path]; found {
+				candidate = strongestPendingLinkDep(current, candidate)
 			}
+			byPath[path] = candidate
 		}
 	}
 
@@ -205,4 +224,11 @@ func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig, t
 	}
 	sort.Slice(result, func(i int, j int) bool { return result[i].path < result[j].path })
 	return result, nil
+}
+
+func strongestPendingLinkDep(left pendingLinkDep, right pendingLinkDep) pendingLinkDep {
+	if right.kind > left.kind || (right.kind == left.kind && left.parent == "" && right.parent != "") {
+		return right
+	}
+	return left
 }
