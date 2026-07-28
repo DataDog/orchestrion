@@ -98,6 +98,19 @@ func TestTestMainIdentitySurvivesSourceRewrite(t *testing.T) {
 	require.True(t, cmd.TestMain())
 }
 
+func TestCgoMainIsNotTestMain(t *testing.T) {
+	stage := t.TempDir()
+	cmd := &CompileCommand{
+		Files: []string{
+			filepath.Join(stage, "_cgo_gotypes.go"),
+			filepath.Join(stage, "main.cgo1.go"),
+			filepath.Join(stage, "_cgo_import.go"),
+		},
+		Flags: compileFlagSet{Package: "main", ImportCfg: filepath.Join(stage, "importcfg")},
+	}
+	require.False(t, cmd.detectTestMain())
+}
+
 func TestSetLang(t *testing.T) {
 	work := t.TempDir()
 

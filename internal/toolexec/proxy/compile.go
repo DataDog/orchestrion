@@ -82,13 +82,15 @@ func (c *CompileCommand) detectTestMain() bool {
 	}
 
 	stageDir := filepath.Dir(c.Flags.ImportCfg)
+	var foundTestMain bool
 	for _, f := range c.GoFiles() {
 		if filepath.Dir(f) != stageDir {
 			return false
 		}
+		foundTestMain = foundTestMain || filepath.Base(f) == "_testmain.go"
 	}
 
-	return true
+	return foundTestMain
 }
 
 func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {

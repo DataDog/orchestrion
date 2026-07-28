@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,12 @@ import (
 // package is performed. This folder contains blank imports for all link-time dependencies that are not already
 // in the build tree
 var SyntheticPackageName = "synthetic"
+
+type pendingLinkDep struct {
+	path   string
+	parent string
+	kind   linkdeps.DependencyKind
+}
 
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for
 // any linkdeps dependencies that are not yet satisfied by the importcfg file (this is the case for
@@ -67,27 +74,19 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		cmd.MarkTestMain(testVariantFor)
 	}
 
-	linkDeps, err := linkdeps.FromImportConfig(ctx, &reg)
+	stack, err := initialLinkDependencies(ctx, &reg, testVariantFor)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
-
-	if linkDeps.Empty() {
-		// Nothing was added, we're done!
+	if len(stack) == 0 {
 		return nil
 	}
 
-	type pendingLinkDep struct {
-		path   string
-		parent string
-		kind   linkdeps.DependencyKind
-	}
-	newDeps := linkDeps.Dependencies()
-	stack := make([]pendingLinkDep, 0, len(newDeps))
-	queued := make(map[string]bool, len(newDeps))
-	for _, dep := range newDeps {
-		stack = append(stack, pendingLinkDep{path: dep, kind: linkDeps.Kind(dep)})
-		queued[dep] = true
+	newDeps := make([]string, 0, len(stack))
+	queued := make(map[string]bool, len(stack))
+	for _, dep := range stack {
+		newDeps = append(newDeps, dep.path)
+		queued[dep.path] = true
 	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
@@ -175,4 +174,35 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	cmd.AddFiles([]string{genFile})
 
 	return nil
+}
+
+func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig, testVariantFor string) ([]pendingLinkDep, error) {
+	byPath := make(map[string]pendingLinkDep)
+	for parent, archive := range reg.PackageFile {
+		deps, err := linkdeps.FromArchive(ctx, archive)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s from %s=%s: %w", linkdeps.Filename, parent, archive, err)
+		}
+		for _, path := range deps.Dependencies() {
+			if _, satisfied := reg.PackageFile[path]; satisfied {
+				continue
+			}
+			edgeParent := parent
+			if edgeParent == testVariantFor {
+				edgeParent = ""
+			}
+			candidate := pendingLinkDep{path: path, parent: edgeParent, kind: deps.Kind(path)}
+			current, found := byPath[path]
+			if !found || candidate.kind > current.kind || (candidate.kind == current.kind && current.parent == "" && candidate.parent != "") {
+				byPath[path] = candidate
+			}
+		}
+	}
+
+	result := make([]pendingLinkDep, 0, len(byPath))
+	for _, dep := range byPath {
+		result = append(result, dep)
+	}
+	sort.Slice(result, func(i int, j int) bool { return result[i].path < result[j].path })
+	return result, nil
 }
