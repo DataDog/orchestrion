@@ -14,16 +14,17 @@ import (
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 )
 
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
 // to locate the archive for `importPath` and its dependencies using `go list`. If that fails, it
 // will try to resolve it using `go get`.
-func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (_ map[string]string, err error) {
+func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (_ pkgs.ResolveResponse, err error) {
 	return resolvePackageFilesForTest(ctx, importPath, "", workDir)
 }
 
-func resolvePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, workDir string) (_ map[string]string, err error) {
+func resolvePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, workDir string) (_ pkgs.ResolveResponse, err error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "aspect.resolvePackageFiles",
 		tracer.ResourceName(importPath),
 	)
@@ -58,7 +59,7 @@ func resolvePackageFilesForTest(ctx context.Context, importPath string, testVari
 	// Check for missing archives...
 	var found bool
 	for ip, arch := range archives {
-		if arch == "" {
+		if arch.ExportFile == "" {
 			return nil, fmt.Errorf("no archive found for %q", ip)
 		}
 		if ip == importPath {
@@ -71,4 +72,39 @@ func resolvePackageFilesForTest(ctx context.Context, importPath string, testVari
 	}
 
 	return archives, nil
+}
+
+func rejectSyntheticVariantDependency(parent string, dependency string, testVariantFor string, archives pkgs.ResolveResponse) error {
+	if parent == "" || !responseHasTestVariants(archives, testVariantFor) {
+		return nil
+	}
+	return fmt.Errorf("synthetic dependency %q from archive %q requires a test variant for %q; the parent archive was compiled without this edge in Go's package graph and cannot safely use the variant", dependency, parent, testVariantFor)
+}
+
+func responseHasTestVariants(archives pkgs.ResolveResponse, testVariantFor string) bool {
+	for _, archive := range archives {
+		if archive.ForTest == testVariantFor && testVariantFor != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeResolvedArchives(reg *importcfg.ImportConfig, archives pkgs.ResolveResponse, testVariantFor string) (map[string]string, error) {
+	changed := make(map[string]string)
+	for importPath, archive := range archives {
+		if archive.ForTest != "" && archive.ForTest != testVariantFor {
+			return nil, fmt.Errorf("resolved archive %q targets tests for %q, want %q", importPath, archive.ForTest, testVariantFor)
+		}
+		if importPath == testVariantFor {
+			return nil, fmt.Errorf("resolver attempted to replace authoritative package-under-test archive %q", importPath)
+		}
+		current, found := reg.PackageFile[importPath]
+		if found && (archive.ForTest == "" || current == archive.ExportFile) {
+			continue
+		}
+		reg.PackageFile[importPath] = archive.ExportFile
+		changed[importPath] = archive.ExportFile
+	}
+	return changed, nil
 }

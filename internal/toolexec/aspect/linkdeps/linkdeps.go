@@ -161,6 +161,7 @@ func (l *LinkDeps) Dependencies() []string {
 	for importPath := range l.deps {
 		deps = append(deps, importPath)
 	}
+	sort.Strings(deps)
 	return deps
 }
 

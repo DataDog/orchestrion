@@ -75,7 +75,11 @@ func mergeTestVariant(
 		packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest
 	config.Env = append(slices.Clone(config.Env), envVarResolvingTestVariants+"=1")
 	config.Tests = true
-	config.Overlay = map[string][]byte{overlayPath: overlaySource}
+	cleanup, err := addTestVariantOverlay(ctx, &config, overlayPath, overlaySource)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
 	loaded, err := packages.Load(&config, req.TestVariantFor)
 	if err != nil {
 		return nil, fmt.Errorf("loading test variants for %q: %w", req.TestVariantFor, err)
@@ -100,7 +104,9 @@ func mergeTestVariant(
 	if variant == nil || variant.ExportFile == "" {
 		return nil, fmt.Errorf("Go did not produce a test variant for synthetic dependency %q of %q", req.Pattern, req.TestVariantFor)
 	}
-	collectTestVariantClosure(resp, variant, req.TestVariantFor, make(map[string]bool))
+	if err := collectTestVariantClosure(resp, variant, req.TestVariantFor, make(map[string]bool)); err != nil {
+		return nil, err
+	}
 	delete(resp, req.TestVariantFor)
 	return resp, nil
 }
@@ -169,18 +175,24 @@ func findTestVariant(pkgs []*packages.Package, pkgPath string, forTest string) *
 	return nil
 }
 
-func collectTestVariantClosure(resp ResolveResponse, pkg *packages.Package, forTest string, visited map[string]bool) {
+func collectTestVariantClosure(resp ResolveResponse, pkg *packages.Package, forTest string, visited map[string]bool) error {
 	if pkg == nil || visited[pkg.ID] {
-		return
+		return nil
 	}
 	visited[pkg.ID] = true
 	if pkg.ForTest != forTest {
-		return
+		return nil
 	}
-	if pkg.PkgPath != "" && pkg.PkgPath != "unsafe" && pkg.ExportFile != "" {
-		resp[pkg.PkgPath] = pkg.ExportFile
+	if pkg.PkgPath != "" && pkg.PkgPath != "unsafe" {
+		if pkg.ExportFile == "" {
+			return fmt.Errorf("Go did not produce an export archive for test variant %q (%s) of %q", pkg.PkgPath, pkg.ID, forTest)
+		}
+		resp[pkg.PkgPath] = ResolvedArchive{ExportFile: pkg.ExportFile, ForTest: forTest}
 	}
 	for _, imported := range pkg.Imports {
-		collectTestVariantClosure(resp, imported, forTest, visited)
+		if err := collectTestVariantClosure(resp, imported, forTest, visited); err != nil {
+			return err
+		}
 	}
+	return nil
 }

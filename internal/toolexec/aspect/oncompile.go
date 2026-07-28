@@ -152,7 +152,8 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		if err != nil {
 			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 		}
-		for dep, archive := range deps {
+		for dep, resolved := range deps {
+			archive := resolved.ExportFile
 			deps, err := linkdeps.FromArchive(ctx, archive)
 			if err != nil {
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
