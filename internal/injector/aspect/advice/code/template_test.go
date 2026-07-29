@@ -44,6 +44,11 @@ func (m mockAdviceContext) ResolveType(dst.Expr) types.Type {
 	return nil
 }
 
+func (m mockAdviceContext) Selection(*dst.SelectorExpr) *types.Selection {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
+}
+
 func (m mockAdviceContext) IsConstant(dst.Expr) bool {
 	assert.FailNow(m.t, "unexpected method call")
 	return false

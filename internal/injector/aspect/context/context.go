@@ -54,6 +54,9 @@ type AspectContext interface {
 	// ResolveType resolves a dst.Expr to its corresponding types.Type.
 	ResolveType(dst.Expr) types.Type
 
+	// Selection resolves a dst selector expression to its corresponding method selection.
+	Selection(*dst.SelectorExpr) *types.Selection
+
 	// IsConstant reports whether an expression is a compile-time constant.
 	IsConstant(dst.Expr) bool
 
@@ -371,6 +374,19 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 	}
 
 	return nil
+}
+
+// Selection resolves a dst selector expression to its corresponding method selection.
+func (c *context) Selection(selector *dst.SelectorExpr) *types.Selection {
+	astNode, ok := c.nodeMap[selector]
+	if !ok {
+		return nil
+	}
+	astSelector, ok := astNode.(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	return c.typeInfo.Selections[astSelector]
 }
 
 func (c *context) IsConstant(expr dst.Expr) bool {
