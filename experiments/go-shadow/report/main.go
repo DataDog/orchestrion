@@ -57,6 +57,14 @@ type row struct {
 	Orchestrion cell
 }
 
+// Differs reports whether the two prototypes reached different verdicts for this case.
+// These rows are where the comparison carries information: the agreements mostly say the
+// capability is easy or impossible for both, while the disagreements isolate what one
+// design buys that the other does not.
+func (r row) Differs() bool {
+	return r.PatchedGo.Verdict != r.Orchestrion.Verdict
+}
+
 // tally counts verdicts for one prototype column.
 type tally struct {
 	Column   string
@@ -80,17 +88,18 @@ type notProven struct {
 }
 
 type reportData struct {
-	Title       string
-	Intro       template.HTML
-	Callouts    []template.HTML
-	Sections    []section
-	Tallies     []tally
-	NotProven   []notProven
-	HowToRun    string
-	SourcePath  string
-	TotalCases  int
-	TotalCells  int
-	MeasuredAny int
+	Title        string
+	Intro        template.HTML
+	Callouts     []template.HTML
+	Sections     []section
+	Tallies      []tally
+	NotProven    []notProven
+	HowToRun     string
+	SourcePath   string
+	TotalCases   int
+	TotalCells   int
+	MeasuredAny  int
+	DifferingAny int
 }
 
 func main() {
@@ -128,8 +137,8 @@ func main() {
 			t.Column, t.Counts[verdictWin], t.Counts[verdictLoss], t.Counts[verdictPartial],
 			t.Counts[verdictNotProven], t.Measured, t.Total)
 	}
-	fmt.Printf("  cases=%d measured cells=%d cases with a measured cell=%d\n",
-		data.TotalCases, data.TotalCells, data.MeasuredAny)
+	fmt.Printf("  cases=%d measured cells=%d cases with a measured cell=%d cases where the columns differ=%d\n",
+		data.TotalCases, data.TotalCells, data.MeasuredAny, data.DifferingAny)
 }
 
 func fatal(format string, args ...any) {
@@ -276,6 +285,9 @@ func parseLedger(contents, ledgerPath string) (reportData, error) {
 			accumulate(&orchestrion, r.ID, r.Orchestrion)
 			if r.PatchedGo.Measured || r.Orchestrion.Measured {
 				data.MeasuredAny++
+			}
+			if r.Differs() {
+				data.DifferingAny++
 			}
 		}
 	}

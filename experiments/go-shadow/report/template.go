@@ -96,6 +96,9 @@ const reportTemplate = `<!DOCTYPE html>
   td.case { font-weight: 550; min-width: 12rem; }
   td.evidence { color: var(--muted); font-size: .9em; }
   tr.hidden { display: none; }
+  /* Cases where the two prototypes disagree carry the comparison's information, so they
+     stay marked even when the "Differences only" filter is off. */
+  tr.differs td.id { box-shadow: inset 3px 0 0 var(--accent); font-weight: 650; color: var(--accent); }
 
   .tag { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap;
          border-radius: 999px; padding: .16rem .55rem; font-size: .8em; font-weight: 650; }
@@ -153,6 +156,8 @@ const reportTemplate = `<!DOCTYPE html>
   <button class="chip" data-verdict="Partial" aria-pressed="false">Partial</button>
   <button class="chip" data-verdict="Not proven" aria-pressed="false">Not proven</button>
   <button class="chip" data-measured="1" aria-pressed="false">Measured only</button>
+  <button class="chip chip-differ" data-differ="1" aria-pressed="false"
+          title="Show only the cases where the two prototypes reached different verdicts">Differences only</button>
   <span class="count" id="count"></span>
 </div>
 
@@ -166,7 +171,9 @@ const reportTemplate = `<!DOCTYPE html>
   {{- range .Rows }}
     <tr data-id="{{ .ID }}"
         data-verdicts="{{ .PatchedGo.Verdict }}|{{ .Orchestrion.Verdict }}"
-        data-measured="{{ if or .PatchedGo.Measured .Orchestrion.Measured }}1{{ else }}0{{ end }}">
+        data-measured="{{ if or .PatchedGo.Measured .Orchestrion.Measured }}1{{ else }}0{{ end }}"
+        data-differ="{{ if .Differs }}1{{ else }}0{{ end }}"
+        {{ if .Differs }}class="differs"{{ end }}>
       <td class="id">{{ .ID }}</td>
       <td class="case">{{ .Case }}</td>
       <td><span class="tag {{ .PatchedGo.Class }}">{{ .PatchedGo.Verdict }}</span>
@@ -225,19 +232,23 @@ const reportTemplate = `<!DOCTYPE html>
     var wanted = chips.filter(function (c) { return c.getAttribute("aria-pressed") === "true" && c.dataset.verdict; })
                       .map(function (c) { return c.dataset.verdict; });
     var measuredOnly = chips.some(function (c) { return c.dataset.measured && c.getAttribute("aria-pressed") === "true"; });
+    var differOnly = chips.some(function (c) { return c.dataset.differ && c.getAttribute("aria-pressed") === "true"; });
     var shown = 0;
+    var shownDiffering = 0;
 
     rows.forEach(function (row) {
       var verdicts = (row.dataset.verdicts || "").split("|");
       var matchesVerdict = wanted.length === 0 || wanted.some(function (v) { return verdicts.indexOf(v) !== -1; });
       var matchesMeasured = !measuredOnly || row.dataset.measured === "1";
+      var matchesDiffer = !differOnly || row.dataset.differ === "1";
       var matchesText = needle === "" || row.textContent.toLowerCase().indexOf(needle) !== -1;
-      var visible = matchesVerdict && matchesMeasured && matchesText;
+      var visible = matchesVerdict && matchesMeasured && matchesDiffer && matchesText;
       row.classList.toggle("hidden", !visible);
-      if (visible) { shown++; }
+      if (visible) { shown++; if (row.dataset.differ === "1") { shownDiffering++; } }
     });
 
-    count.textContent = shown + " of " + rows.length + " cases";
+    count.textContent = shown + " of " + rows.length + " cases"
+      + (shown > 0 ? " \u00b7 " + shownDiffering + " with differing verdicts" : "");
     document.querySelectorAll("table").forEach(function (table) {
       var body = table.querySelector("tbody");
       if (!body) { return; }
