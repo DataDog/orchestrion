@@ -96,6 +96,60 @@ func TestVendoredOverlayRestrictionAppliesOnlyToNewPackages(t *testing.T) {
 	assert.Contains(t, err.Error(), "vendor directory")
 }
 
+func TestUnsupportedOverlayRootPolicy(t *testing.T) {
+	root := t.TempDir()
+	virtualPath := filepath.Join(root, "pkg", "variant_test.go")
+	tests := []struct {
+		name       string
+		root       unsupportedOverlayRoot
+		newPackage bool
+		wantError  bool
+	}{
+		{
+			name:      "existing package beneath GOMODCACHE",
+			root:      unsupportedOverlayRoot{name: "GOMODCACHE", path: root, why: "prohibited"},
+			wantError: true,
+		},
+		{
+			name:       "new package beneath GOMODCACHE",
+			root:       unsupportedOverlayRoot{name: "GOMODCACHE", path: root, why: "prohibited"},
+			newPackage: true,
+			wantError:  true,
+		},
+		{
+			name: "existing package beneath GOROOT",
+			root: unsupportedOverlayRoot{name: "GOROOT", path: root, why: "prohibited", newPackageOnly: true},
+		},
+		{
+			name:       "new package beneath GOROOT",
+			root:       unsupportedOverlayRoot{name: "GOROOT", path: root, why: "prohibited", newPackageOnly: true},
+			newPackage: true,
+			wantError:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := rejectUnsupportedOverlayPath([]unsupportedOverlayRoot{tt.root}, virtualPath, tt.newPackage)
+			if tt.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAddTestVariantOverlaysRejectNormalizedDuplicatePaths(t *testing.T) {
+	dir := t.TempDir()
+	config := packages.Config{Dir: dir, Env: os.Environ()}
+	_, err := addTestVariantOverlays(context.Background(), &config, map[string]overlaySource{
+		filepath.Join("pkg", "variant_test.go"):      {contents: []byte("package pkg_test\n")},
+		filepath.Join(dir, "pkg", "variant_test.go"): {contents: []byte("package pkg_test\n")},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "duplicate path")
+}
+
 func TestAddTestVariantOverlayRejectsDuplicatePaths(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "caller.json"), []byte(`{"Replace":{"subject.go":"one.go","./subject.go":"two.go"}}`), 0o644))

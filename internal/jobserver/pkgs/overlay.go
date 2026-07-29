@@ -34,6 +34,16 @@ func addTestVariantOverlay(ctx context.Context, config *packages.Config, virtual
 }
 
 func addTestVariantOverlays(ctx context.Context, config *packages.Config, overlays map[string]overlaySource) (func(), error) {
+	normalized := make(map[string]overlaySource, len(overlays))
+	for virtualPath, overlay := range overlays {
+		virtualPath = absoluteOverlayPath(config.Dir, virtualPath)
+		if _, exists := normalized[virtualPath]; exists {
+			return nil, fmt.Errorf("Orchestrion test variant overlays contain duplicate path %q", virtualPath)
+		}
+		normalized[virtualPath] = overlay
+	}
+	overlays = normalized
+
 	roots, err := loadUnsupportedOverlayRoots(ctx, config)
 	if err != nil {
 		return nil, err
@@ -101,7 +111,6 @@ func addTestVariantOverlays(ctx context.Context, config *packages.Config, overla
 
 	index := 0
 	for virtualPath, overlay := range overlays {
-		virtualPath = absoluteOverlayPath(config.Dir, virtualPath)
 		if _, exists := manifest.Replace[virtualPath]; exists {
 			return nil, fmt.Errorf("caller overlay already replaces Orchestrion test variant path %q", virtualPath)
 		}
@@ -133,9 +142,10 @@ func addTestVariantOverlays(ctx context.Context, config *packages.Config, overla
 }
 
 type unsupportedOverlayRoot struct {
-	name string
-	path string
-	why  string
+	name           string
+	path           string
+	why            string
+	newPackageOnly bool
 }
 
 func loadUnsupportedOverlayRoots(ctx context.Context, config *packages.Config) ([]unsupportedOverlayRoot, error) {
@@ -155,7 +165,7 @@ func loadUnsupportedOverlayRoots(ctx context.Context, config *packages.Config) (
 	}
 	return []unsupportedOverlayRoot{
 		{name: "GOMODCACHE", path: goEnv.GoModCache, why: "Go does not permit module-cache overlays"},
-		{name: "GOROOT", path: goEnv.GoRoot, why: "the standard library cannot contain synthetic packages"},
+		{name: "GOROOT", path: goEnv.GoRoot, why: "the standard library cannot contain synthetic packages", newPackageOnly: true},
 	}, nil
 }
 
@@ -164,14 +174,15 @@ func rejectUnsupportedOverlayPath(roots []unsupportedOverlayRoot, virtualPath st
 	if newPackage {
 		if vendorDir := enclosingVendorDir(virtualPath); vendorDir != "" {
 			unsupported = append(unsupported, unsupportedOverlayRoot{
-				name: "vendor directory",
-				path: vendorDir,
-				why:  "the synthetic package is not listed in vendor/modules.txt",
+				name:           "vendor directory",
+				path:           vendorDir,
+				why:            "the synthetic package is not listed in vendor/modules.txt",
+				newPackageOnly: true,
 			})
 		}
 	}
 	for _, root := range unsupported {
-		if root.path == "" {
+		if root.path == "" || (root.newPackageOnly && !newPackage) {
 			continue
 		}
 		inside, err := pathWithin(root.path, virtualPath)
