@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -69,6 +70,12 @@ func TestRuntimeTaintFixtures(t *testing.T) {
 		t.Fatal("discovered 0 fixture cases; an empty suite must never report success")
 	}
 
+	// A passing case proves observation and expectation agree, but only the observation can
+	// be quoted as measured evidence. TAINT_OBSERVED records what each fixture actually
+	// emitted, under the exact invocation the suite asserts on, without changing any
+	// assertion.
+	observations := newObservationRecorder(t, os.Getenv("TAINT_OBSERVED"))
+
 	for _, testCase := range cases {
 		t.Run(testCase.Name, func(t *testing.T) {
 			arguments := []string{"run"}
@@ -90,6 +97,7 @@ func TestRuntimeTaintFixtures(t *testing.T) {
 				command.Env = replaceEnv(command.Env, key, value)
 			}
 			output, err := command.CombinedOutput()
+			observations.record(testCase, arguments, string(output))
 			if err != nil {
 				t.Fatalf("run fixture: %v\n%s", err, output)
 			}
@@ -193,6 +201,66 @@ func TestFixtureInventory(t *testing.T) {
 	}
 
 	t.Logf("fixture inventory: %d directories, %d cases", len(directories), len(cases))
+}
+
+// observationRecorder appends one JSON record per fixture case describing what the patched
+// binary actually printed. It is append-only, guarded by a mutex because subtests may run
+// concurrently, and a nil path disables it entirely.
+type observationRecorder struct {
+	mutex   sync.Mutex
+	encoder *json.Encoder
+}
+
+type fixtureObservation struct {
+	Name         string   `json:"name"`
+	Fixture      string   `json:"fixture"`
+	TaintPath    string   `json:"taintPath"`
+	TaintEnabled bool     `json:"taintEnabled"`
+	Race         bool     `json:"race"`
+	Arguments    []string `json:"arguments"`
+	WantReports  int      `json:"wantReports"`
+	GotReports   int      `json:"gotReports"`
+	RangeLines   []string `json:"rangeLines,omitempty"`
+	Output       string   `json:"output"`
+}
+
+func newObservationRecorder(t *testing.T, path string) *observationRecorder {
+	t.Helper()
+	if path == "" {
+		return &observationRecorder{}
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create observation file %s: %v", path, err)
+	}
+	t.Cleanup(func() { _ = file.Close() })
+	return &observationRecorder{encoder: json.NewEncoder(file)}
+}
+
+func (recorder *observationRecorder) record(testCase fixtureCase, arguments []string, output string) {
+	if recorder.encoder == nil {
+		return
+	}
+	var rangeLines []string
+	for line := range strings.SplitSeq(output, "\n") {
+		if strings.HasPrefix(line, "taint: os.Open ranges=") || strings.HasPrefix(line, "taint: os.Open sourceRanges=") {
+			rangeLines = append(rangeLines, line)
+		}
+	}
+	recorder.mutex.Lock()
+	defer recorder.mutex.Unlock()
+	_ = recorder.encoder.Encode(fixtureObservation{
+		Name:         testCase.Name,
+		Fixture:      filepath.Base(testCase.directory),
+		TaintPath:    testCase.TaintPath,
+		TaintEnabled: testCase.TaintEnabled,
+		Race:         testCase.Race,
+		Arguments:    arguments,
+		WantReports:  testCase.DirtyReports,
+		GotReports:   strings.Count(output, dirtyReport),
+		RangeLines:   rangeLines,
+		Output:       output,
+	})
 }
 
 func locateFixtureRoot(t *testing.T) string {

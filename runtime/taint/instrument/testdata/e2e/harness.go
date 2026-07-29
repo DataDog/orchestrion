@@ -6,7 +6,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -39,8 +41,15 @@ func main() {
 		}
 		return cases[left].ID < cases[right].ID
 	})
+
+	// The driver parses stdout line by line and rejects anything that is not a CASE
+	// record, so observations go to a file instead of the console.
+	observations := newObservationSink(os.Getenv("IAST_E2E_OBSERVED"))
+	defer observations.close()
+
 	for _, current := range cases {
-		diagnostic := runCase(current)
+		reports, diagnostic := runCase(current)
+		observations.record(current, reports, diagnostic)
 		if diagnostic == "" {
 			fmt.Printf("CASE\t%d\t%s\tPASS\n", current.ID, current.Name)
 			continue
@@ -49,7 +58,7 @@ func main() {
 	}
 }
 
-func runCase(current Case) string {
+func runCase(current Case) ([]taint.Report, string) {
 	reports := make([]taint.Report, 0, len(current.Want))
 	restore := taint.SetReporter(func(report taint.Report) {
 		reports = append(reports, report)
@@ -63,9 +72,58 @@ func runCase(current Case) string {
 		current.Run()
 	}()
 	if panicValue != nil {
-		return fmt.Sprintf("panic: %v", panicValue)
+		return reports, fmt.Sprintf("panic: %v", panicValue)
 	}
-	return compareReports(reports, current.Want)
+	return reports, compareReports(reports, current.Want)
+}
+
+// observation is what a case actually produced, as opposed to what it asserted. A passing
+// case proves observation and expectation agree, but only the observation can be quoted as
+// measured evidence, so IAST_E2E_OBSERVED makes it recoverable without weakening any
+// assertion or changing the console protocol.
+type observation struct {
+	ID         int            `json:"id"`
+	Name       string         `json:"name"`
+	Passed     bool           `json:"passed"`
+	Diagnostic string         `json:"diagnostic,omitempty"`
+	Reports    []taint.Report `json:"reports"`
+}
+
+type observationSink struct {
+	file    *os.File
+	encoder *json.Encoder
+}
+
+func newObservationSink(path string) *observationSink {
+	if path == "" {
+		return &observationSink{}
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		// Observation is a diagnostic aid; never fail a test run over it.
+		fmt.Fprintf(os.Stderr, "e2e: cannot write observations to %s: %v\n", path, err)
+		return &observationSink{}
+	}
+	return &observationSink{file: file, encoder: json.NewEncoder(file)}
+}
+
+func (sink *observationSink) record(current Case, reports []taint.Report, diagnostic string) {
+	if sink.encoder == nil {
+		return
+	}
+	_ = sink.encoder.Encode(observation{
+		ID:         current.ID,
+		Name:       current.Name,
+		Passed:     diagnostic == "",
+		Diagnostic: singleLine(diagnostic),
+		Reports:    reports,
+	})
+}
+
+func (sink *observationSink) close() {
+	if sink.file != nil {
+		_ = sink.file.Close()
+	}
 }
 
 func compareReports(reports []taint.Report, wants []Expect) string {
