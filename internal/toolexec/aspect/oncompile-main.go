@@ -48,12 +48,12 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	if cmd.Flags.Package != "main" {
 		return nil
 	}
-	isTestMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
-	if isTestMain && pkgs.ResolvingTestVariants() {
-		// The nested test main only exists to make cmd/go build the affected library variants.
-		// Processing its synthetic dependencies would recursively issue the same resolution request.
+	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && strings.HasSuffix(w.ImportPath, ".test") {
+		// The nested test main only exists to make cmd/go build affected variants.
+		// Its source may come from the build cache without the _testmain.go filename.
 		return nil
 	}
+	isTestMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
 
 	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompileMain",
 		tracer.ResourceName(w.ImportPath),
@@ -227,7 +227,11 @@ func initialLinkDependencies(
 		}
 		for _, path := range deps.Dependencies() {
 			kind := deps.Kind(path)
-			if _, satisfied := reg.PackageFile[path]; satisfied {
+			_, satisfied := reg.PackageFile[path]
+			if path == testVariantFor && !satisfied {
+				return nil, fmt.Errorf("test-main import configuration is missing the authoritative package-under-test archive %q", testVariantFor)
+			}
+			if satisfied {
 				if path == testVariantFor && kind == linkdeps.ImportDependency {
 					selected, err := resolveTestTargetProvenance()
 					if err != nil {

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -132,99 +133,121 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		defer s.graph.RemoveEdge(req.resolveParentID, req.toolexecImportpath)
 	}
 
-	resp, err := s.resolved.Load(reqHash, func() (_ ResolveResponse, err error) {
-		log := log.With().Str("pattern", req.Pattern).Logger()
-		ctx := log.WithContext(ctx)
-
-		span, ctx := tracer.StartSpanFromContext(ctx, "pkgs.Resolve")
-		defer func() { span.Finish(tracer.WithError(err)) }()
-
-		log.Trace().Str("dir", req.Dir).Msg("pkgs.Resolve starting")
-
-		env := slices.Clone(req.Env)
-		tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &env})
-		if req.toolexecImportpath != "" {
-			env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
-		}
-		if req.TempDir != "" {
-			// Make sure the directory exists (go blindly assumes that...)
-			if err := os.MkdirAll(req.TempDir, 0o755); err != nil {
-				return nil, fmt.Errorf("creating temporary directory %q: %w", req.TempDir, err)
-			}
-			env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
+	resolved, err := s.resolved.Load(reqHash, func() (_ resolvedPackageSet, err error) {
+		if req.TestVariantFor == "" {
+			return loadResolvedPackages(ctx, req, *log)
 		}
 
-		goFlags, err := goflags.Flags(ctx)
+		ordinaryReq := *req
+		ordinaryReq.TestVariantFor = ""
+		ordinaryHash, err := ordinaryReq.hash()
 		if err != nil {
-			log.Warn().Err(err).Msg("Failed to obtain go build flags")
+			return resolvedPackageSet{}, err
 		}
-		goFlags = goFlags.Except(
-			"-a",        // Re-building everything here would be VERY expensive, as we'd re-build a lot of stuff multiple times
-			"-toolexec", // We'll override `-toolexec` later with `orchestrion toolexec`, no need to pass multiple times...
-		)
-
-		buildFlags := append(
-			goFlags.Slice(),
-			fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion),
-		)
-		loadLogf := func(format string, args ...any) {
-			log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
-		}
-
-		loadConfig := &packages.Config{
-			Context: ctx,
-			Mode:
-			// We need the export file (the whole point of the resolution)
-			packages.NeedExportFile |
-				// We want to also resolve transitive dependencies, so we need Deps & Imports. We also
-				// need CompiledGoFiles in order to see imports possibly added by the toolchain (cgo,
-				// cover, etc...)
-				packages.NeedCompiledGoFiles | packages.NeedDeps | packages.NeedImports |
-				// Finally, we need the resolved package import path
-				packages.NeedName,
-			Dir:        req.Dir,
-			Env:        env,
-			BuildFlags: buildFlags,
-			Logf:       loadLogf,
-		}
-		if req.TestVariantFor != "" {
-			loadConfig.Mode |= packages.NeedFiles
-		}
-		pkgs, err := packages.Load(loadConfig, req.Pattern)
+		ordinary, err := s.resolved.Load(ordinaryHash, func() (resolvedPackageSet, error) {
+			return loadResolvedPackages(ctx, &ordinaryReq, *log)
+		})
 		if err != nil {
-			log.Error().Str("pattern", req.Pattern).Err(err).Msg("pkgs.Resolve failed")
-			return nil, err
+			return resolvedPackageSet{}, err
 		}
-		if len(pkgs) == 0 {
-			return nil, fmt.Errorf("no packages returned for pattern: %q", req.Pattern)
-		}
-
-		resp := make(ResolveResponse)
-		var errs error
-		for _, pkg := range pkgs {
-			errs = errors.Join(errs, resp.mergeFrom(pkg))
+		if ordinary.buildFlagsErr != "" {
+			return resolvedPackageSet{}, fmt.Errorf("obtaining Go build flags for test variant resolution: %s", ordinary.buildFlagsErr)
 		}
 
-		if errs != nil {
-			log.Error().Str("pattern", req.Pattern).Err(errs).Msg("pkgs.Resolve failed")
-			return nil, errs
+		resp := maps.Clone(ordinary.response)
+		config := ordinary.config
+		config.Env = resolveEnvironment(ctx, req)
+		resp, err = mergeTestVariant(ctx, req, ordinary.packages, resp, config)
+		if err != nil {
+			return resolvedPackageSet{}, err
 		}
-
-		if req.TestVariantFor != "" {
-			resp, err = mergeTestVariant(ctx, req, pkgs, resp, *loadConfig)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		log.Trace().Any("result", resp).Msg("pkgs.Resolve finished")
-		return resp, nil
+		return resolvedPackageSet{response: resp}, nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	return resolved.response, nil
+}
 
-	return resp, nil
+func loadResolvedPackages(ctx context.Context, req *ResolveRequest, log zerolog.Logger) (_ resolvedPackageSet, err error) {
+	log = log.With().Str("pattern", req.Pattern).Logger()
+	ctx = log.WithContext(ctx)
+
+	span, ctx := tracer.StartSpanFromContext(ctx, "pkgs.Resolve")
+	defer func() { span.Finish(tracer.WithError(err)) }()
+
+	log.Trace().Str("dir", req.Dir).Msg("pkgs.Resolve starting")
+
+	if req.TempDir != "" {
+		if err := os.MkdirAll(req.TempDir, 0o755); err != nil {
+			return resolvedPackageSet{}, fmt.Errorf("creating temporary directory %q: %w", req.TempDir, err)
+		}
+	}
+	env := resolveEnvironment(ctx, req)
+
+	goFlags, flagsErr := goflags.Flags(ctx)
+	var flagsErrText string
+	if flagsErr != nil {
+		flagsErrText = flagsErr.Error()
+		log.Warn().Err(flagsErr).Msg("Failed to obtain go build flags")
+	}
+	goFlags = goFlags.Except(
+		"-a",
+		"-toolexec",
+	)
+	buildFlags := append(goFlags.Slice(), fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion))
+	loadConfig := &packages.Config{
+		Context: ctx,
+		Mode: packages.NeedExportFile | packages.NeedFiles |
+			packages.NeedCompiledGoFiles | packages.NeedDeps | packages.NeedImports |
+			packages.NeedName,
+		Dir:        req.Dir,
+		Env:        env,
+		BuildFlags: buildFlags,
+		Logf: func(format string, args ...any) {
+			log.Trace().Str("operation", "packages.Load").Msgf(format, args...)
+		},
+	}
+	pkgs, err := packages.Load(loadConfig, req.Pattern)
+	if err != nil {
+		log.Error().Str("pattern", req.Pattern).Err(err).Msg("pkgs.Resolve failed")
+		return resolvedPackageSet{}, err
+	}
+	if len(pkgs) == 0 {
+		return resolvedPackageSet{}, fmt.Errorf("no packages returned for pattern: %q", req.Pattern)
+	}
+
+	resp := make(ResolveResponse)
+	var errs error
+	for _, pkg := range pkgs {
+		errs = errors.Join(errs, resp.mergeFrom(pkg))
+	}
+	if errs != nil {
+		log.Error().Str("pattern", req.Pattern).Err(errs).Msg("pkgs.Resolve failed")
+		return resolvedPackageSet{}, errs
+	}
+
+	log.Trace().Any("result", resp).Msg("pkgs.Resolve finished")
+	return resolvedPackageSet{
+		response:      resp,
+		packages:      pkgs,
+		config:        *loadConfig,
+		buildFlagsErr: flagsErrText,
+	}, nil
+}
+
+func resolveEnvironment(ctx context.Context, req *ResolveRequest) []string {
+	env := slices.Clone(req.Env)
+	if span, ok := tracer.SpanFromContext(ctx); ok {
+		tracer.Inject(span.Context(), traceutil.EnvVarCarrier{Env: &env})
+	}
+	if req.toolexecImportpath != "" {
+		env = append(env, fmt.Sprintf("%s=%s", envVarParentID, req.toolexecImportpath))
+	}
+	if req.TempDir != "" {
+		env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
+	}
+	return env
 }
 
 func (r *ResolveRequest) canonicalize() {

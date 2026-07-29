@@ -8,10 +8,13 @@ package pkgs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -21,13 +24,22 @@ type overlayManifest struct {
 	Replace map[string]string
 }
 
-func addTestVariantOverlay(ctx context.Context, config *packages.Config, virtualPath string, contents []byte) (func(), error) {
-	return addTestVariantOverlays(ctx, config, map[string][]byte{virtualPath: contents})
+type overlaySource struct {
+	contents   []byte
+	newPackage bool
 }
 
-func addTestVariantOverlays(ctx context.Context, config *packages.Config, overlays map[string][]byte) (func(), error) {
-	for virtualPath := range overlays {
-		if err := rejectUnsupportedOverlayPath(ctx, config, virtualPath); err != nil {
+func addTestVariantOverlay(ctx context.Context, config *packages.Config, virtualPath string, contents []byte) (func(), error) {
+	return addTestVariantOverlays(ctx, config, map[string]overlaySource{virtualPath: {contents: contents}})
+}
+
+func addTestVariantOverlays(ctx context.Context, config *packages.Config, overlays map[string]overlaySource) (func(), error) {
+	roots, err := loadUnsupportedOverlayRoots(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	for virtualPath, overlay := range overlays {
+		if err := rejectUnsupportedOverlayPath(roots, virtualPath, overlay.newPackage); err != nil {
 			return nil, err
 		}
 	}
@@ -88,13 +100,13 @@ func addTestVariantOverlays(ctx context.Context, config *packages.Config, overla
 	}
 
 	index := 0
-	for virtualPath, contents := range overlays {
+	for virtualPath, overlay := range overlays {
 		virtualPath = absoluteOverlayPath(config.Dir, virtualPath)
 		if _, exists := manifest.Replace[virtualPath]; exists {
 			return nil, fmt.Errorf("caller overlay already replaces Orchestrion test variant path %q", virtualPath)
 		}
 		backingPath := filepath.Join(dir, fmt.Sprintf("%d-%s", index, filepath.Base(virtualPath)))
-		if err := os.WriteFile(backingPath, contents, 0o644); err != nil {
+		if err := os.WriteFile(backingPath, overlay.contents, 0o644); err != nil {
 			return nil, fmt.Errorf("writing test variant overlay source: %w", err)
 		}
 		manifest.Replace[virtualPath] = backingPath
@@ -120,36 +132,43 @@ func addTestVariantOverlays(ctx context.Context, config *packages.Config, overla
 	return cleanup, nil
 }
 
-func rejectUnsupportedOverlayPath(ctx context.Context, config *packages.Config, virtualPath string) error {
-	cmd := exec.CommandContext(ctx, "go", "env", "-json", "GOMODCACHE", "GOROOT", "GOMOD")
+type unsupportedOverlayRoot struct {
+	name string
+	path string
+	why  string
+}
+
+func loadUnsupportedOverlayRoots(ctx context.Context, config *packages.Config) ([]unsupportedOverlayRoot, error) {
+	cmd := exec.CommandContext(ctx, "go", "env", "-json", "GOMODCACHE", "GOROOT")
 	cmd.Dir = config.Dir
 	cmd.Env = config.Env
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("determining Go overlay roots: %w", err)
+		return nil, fmt.Errorf("determining Go overlay roots: %w", err)
 	}
 	var goEnv struct {
 		GoModCache string `json:"GOMODCACHE"`
 		GoRoot     string `json:"GOROOT"`
-		GoMod      string `json:"GOMOD"`
 	}
 	if err := json.Unmarshal(output, &goEnv); err != nil {
-		return fmt.Errorf("parsing Go overlay roots: %w", err)
+		return nil, fmt.Errorf("parsing Go overlay roots: %w", err)
 	}
-	unsupported := []struct {
-		name string
-		path string
-		why  string
-	}{
+	return []unsupportedOverlayRoot{
 		{name: "GOMODCACHE", path: goEnv.GoModCache, why: "Go does not permit module-cache overlays"},
 		{name: "GOROOT", path: goEnv.GoRoot, why: "the standard library cannot contain synthetic packages"},
-	}
-	if goEnv.GoMod != "" && goEnv.GoMod != os.DevNull {
-		unsupported = append(unsupported, struct {
-			name string
-			path string
-			why  string
-		}{name: "vendor directory", path: filepath.Join(filepath.Dir(goEnv.GoMod), "vendor"), why: "the synthetic package is not listed in vendor/modules.txt"})
+	}, nil
+}
+
+func rejectUnsupportedOverlayPath(roots []unsupportedOverlayRoot, virtualPath string, newPackage bool) error {
+	unsupported := slices.Clone(roots)
+	if newPackage {
+		if vendorDir := enclosingVendorDir(virtualPath); vendorDir != "" {
+			unsupported = append(unsupported, unsupportedOverlayRoot{
+				name: "vendor directory",
+				path: vendorDir,
+				why:  "the synthetic package is not listed in vendor/modules.txt",
+			})
+		}
 	}
 	for _, root := range unsupported {
 		if root.path == "" {
@@ -166,20 +185,68 @@ func rejectUnsupportedOverlayPath(ctx context.Context, config *packages.Config, 
 	return nil
 }
 
+func enclosingVendorDir(path string) string {
+	for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
+		if filepath.Base(dir) == "vendor" {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+	}
+}
+
 func pathWithin(parent string, child string) (bool, error) {
-	parent, err := filepath.Abs(parent)
+	parent, err := canonicalPath(parent)
 	if err != nil {
 		return false, err
 	}
-	child, err = filepath.Abs(child)
+	child, err = canonicalPath(child)
 	if err != nil {
 		return false, err
+	}
+	if !strings.EqualFold(filepath.VolumeName(parent), filepath.VolumeName(child)) {
+		return false, nil
+	}
+	if runtime.GOOS == "windows" {
+		parent = strings.ToLower(parent)
+		child = strings.ToLower(child)
 	}
 	rel, err := filepath.Rel(parent, child)
 	if err != nil {
 		return false, err
 	}
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)), nil
+}
+
+func canonicalPath(path string) (string, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	var missing []string
+	for {
+		if _, err := os.Lstat(path); err == nil {
+			break
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+		parent := filepath.Dir(path)
+		if parent == path {
+			break
+		}
+		missing = append(missing, filepath.Base(path))
+		path = parent
+	}
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+	for i := len(missing) - 1; i >= 0; i-- {
+		path = filepath.Join(path, missing[i])
+	}
+	return filepath.Clean(path), nil
 }
 
 func absoluteOverlayPath(dir string, path string) string {

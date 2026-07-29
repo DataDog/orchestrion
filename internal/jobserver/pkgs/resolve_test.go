@@ -127,6 +127,22 @@ func Test(t *testing.T) {
 		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/middle"].ForTest)
 		assert.NotContains(t, resp, "example.com/testvariants/subject")
 
+		// A different test target reuses the cached ordinary package graph before
+		// applying target-specific refinement.
+		hitsBefore := server.CacheStats.Hits()
+		_, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/root",
+				TestVariantFor: "example.com/testvariants/other",
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, hitsBefore+1, server.CacheStats.Hits())
+
 		resp, err = client.Request(
 			context.Background(),
 			conn,

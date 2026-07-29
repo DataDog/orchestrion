@@ -108,6 +108,75 @@ func Value() int { return subject.Value() }
 	run.exec(t, orchestrion, "go", "test", "-a", "-overlay=overlay.json", "./subject")
 }
 
+func TestSyntheticLinkDependencyWithExternalTests(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+	writeFile := func(name, contents string) {
+		t.Helper()
+		path := filepath.Join(run.dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	writeFile("go.mod", `module example.com/externaltestvariant
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => `+rootDir+"\n")
+	writeFile("orchestrion.tool.go", `//go:build tools
+
+package tools
+
+import (
+	_ "example.com/externaltestvariant/instrumentation"
+	_ "github.com/DataDog/orchestrion"
+)
+`)
+	writeFile("instrumentation/instrumentation.go", "package instrumentation\n")
+	writeFile("instrumentation/orchestrion.yml", `meta:
+  name: External test variant link dependency
+  description: Exercises nested cached test-main inputs.
+aspects:
+  - id: synthetic-external-test-variant
+    join-point:
+      all-of:
+        - import-path: example.com/externaltestvariant/subject
+        - function-body:
+            function:
+              - name: Value
+    advice:
+      - inject-declarations:
+          links:
+            - example.com/externaltestvariant/root
+          template: |-
+            //go:linkname __orchestrionRootValue example.com/externaltestvariant/root.Value
+            func __orchestrionRootValue() int
+`)
+	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
+	writeFile("subject/subject_test.go", `package subject_test
+
+import (
+	"testing"
+	"example.com/externaltestvariant/subject"
+)
+
+func TestValue(t *testing.T) {
+	if got := subject.Value(); got != 42 {
+		t.Fatalf("Value() = %d, want 42", got)
+	}
+}
+`)
+	writeFile("root/root.go", `package root
+
+import "example.com/externaltestvariant/subject"
+
+func Value() int { return subject.Value() }
+`)
+
+	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./subject")
+}
+
 func TestBuildFromModuleSubdirectory(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 

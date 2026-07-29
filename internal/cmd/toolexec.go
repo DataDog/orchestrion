@@ -20,6 +20,19 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func joinCommandCloseError(result error, closeErr error) error {
+	if closeErr == nil {
+		return result
+	}
+	if result == nil {
+		return closeErr
+	}
+	if exitCoder, ok := result.(cli.ExitCoder); ok {
+		return cli.Exit(errors.Join(result, closeErr), exitCoder.ExitCode())
+	}
+	return errors.Join(result, closeErr)
+}
+
 var Toolexec = &cli.Command{
 	Name:            "toolexec",
 	Usage:           "Standard `-toolexec` plugin for the Go toolchain",
@@ -40,7 +53,7 @@ var Toolexec = &cli.Command{
 			// An error occurred, or we have been instructed to skip this command.
 			return err
 		}
-		defer func() { resErr = errors.Join(resErr, proxyCmd.Close(ctx, resErr)) }()
+		defer func() { resErr = joinCommandCloseError(resErr, proxyCmd.Close(ctx, resErr)) }()
 
 		if proxyCmd.Type() == proxy.CommandTypeOther {
 			// Immediately run the command if it's of the Other type, as we do not do

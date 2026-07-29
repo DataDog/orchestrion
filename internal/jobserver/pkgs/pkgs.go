@@ -22,8 +22,15 @@ const (
 	loadSubject    = subjectPrefix + "load"
 )
 
+type resolvedPackageSet struct {
+	response      ResolveResponse
+	packages      []*packages.Package
+	config        packages.Config
+	buildFlagsErr string
+}
+
 type service struct {
-	resolved  common.Cache[ResolveResponse]
+	resolved  common.Cache[resolvedPackageSet]
 	loaded    common.Cache[*packages.Package]
 	graph     common.Graph
 	serverURL string
@@ -32,7 +39,7 @@ type service struct {
 func Subscribe(ctx context.Context, serverURL string, conn *nats.Conn, stats *common.CacheStats) (config.PackageLoader, error) {
 	s := &service{
 		loaded:    common.NewCache[*packages.Package](stats),
-		resolved:  common.NewCache[ResolveResponse](stats),
+		resolved:  common.NewCache[resolvedPackageSet](stats),
 		serverURL: serverURL,
 	}
 

@@ -32,9 +32,10 @@ import (
 var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
-	if cmd.TestMain() && pkgs.ResolvingTestVariants() {
+	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && strings.HasSuffix(w.ImportPath, ".test") {
 		// The nested test main only exists to make cmd/go build affected variants.
-		// Weaving it can rediscover the outer test main's dependencies and self-resolve.
+		// Its source may come from the build cache without the _testmain.go filename,
+		// so identify it from cmd/go's package metadata instead of its input path.
 		return nil
 	}
 

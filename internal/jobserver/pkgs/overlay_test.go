@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -51,9 +52,9 @@ func TestAddTestVariantOverlay(t *testing.T) {
 func TestAddTestVariantOverlays(t *testing.T) {
 	dir := t.TempDir()
 	config := packages.Config{Dir: dir, Env: os.Environ()}
-	overlays := map[string][]byte{
-		filepath.Join(dir, "subject", "variant_test.go"): []byte("package subject_test\n"),
-		filepath.Join(dir, "bridge", "bridge.go"):        []byte("package bridge\n"),
+	overlays := map[string]overlaySource{
+		filepath.Join(dir, "subject", "variant_test.go"): {contents: []byte("package subject_test\n")},
+		filepath.Join(dir, "bridge", "bridge.go"):        {contents: []byte("package bridge\n"), newPackage: true},
 	}
 	cleanup, err := addTestVariantOverlays(context.Background(), &config, overlays)
 	require.NoError(t, err)
@@ -70,8 +71,29 @@ func TestAddTestVariantOverlays(t *testing.T) {
 	for virtualPath, want := range overlays {
 		contents, err := os.ReadFile(manifest.Replace[virtualPath])
 		require.NoError(t, err)
-		assert.Equal(t, want, contents)
+		assert.Equal(t, want.contents, contents)
 	}
+}
+
+func TestVendoredOverlayRestrictionAppliesOnlyToNewPackages(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/subject\n\ngo 1.25\n"), 0o644))
+	config := packages.Config{Dir: dir, Env: os.Environ()}
+	vendoredTestFile := filepath.Join(dir, "vendor", "example.com", "dependency", "variant_test.go")
+
+	cleanup, err := addTestVariantOverlay(context.Background(), &config, vendoredTestFile, []byte("package dependency_test\n"))
+	require.NoError(t, err)
+	cleanup()
+
+	config = packages.Config{Dir: dir, Env: os.Environ()}
+	_, err = addTestVariantOverlays(context.Background(), &config, map[string]overlaySource{
+		filepath.Join(dir, "vendor", "example.com", "dependency", "bridge", "bridge.go"): {
+			contents:   []byte("package bridge\n"),
+			newPackage: true,
+		},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "vendor directory")
 }
 
 func TestAddTestVariantOverlayRejectsDuplicatePaths(t *testing.T) {
@@ -91,4 +113,23 @@ func TestPathWithin(t *testing.T) {
 	outside, err := pathWithin(root, filepath.Join(filepath.Dir(root), "elsewhere", "file.go"))
 	require.NoError(t, err)
 	assert.False(t, outside)
+
+	realDir := filepath.Join(root, "real")
+	require.NoError(t, os.Mkdir(realDir, 0o755))
+	linkDir := filepath.Join(root, "link")
+	if err := os.Symlink(realDir, linkDir); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	inside, err = pathWithin(realDir, filepath.Join(linkDir, "missing", "file.go"))
+	require.NoError(t, err)
+	assert.True(t, inside)
+}
+
+func TestPathWithinDifferentWindowsVolumes(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows volume semantics")
+	}
+	inside, err := pathWithin(`C:\\module`, `D:\\module\\file.go`)
+	require.NoError(t, err)
+	assert.False(t, inside)
 }

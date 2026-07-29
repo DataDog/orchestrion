@@ -48,22 +48,23 @@ var (
 		"-work":       {}, // Keep working temporary directory instead of deleting it
 	}
 	longFlags = map[string]struct{}{
-		"-asmflags":   {}, // Flags passed through to the assembly
-		"-buildmode":  {}, // Set build mode
-		"-buildvcs":   {}, // Whether to stamp binaries with version control information
-		"-compiler":   {}, // Select what compiler to use
-		"-covermode":  {}, // Set coverage mode
-		"-coverpkg":   {}, // Set list of packages to collect coverage for
-		"-gccgoflags": {}, // Flags passed through to the gccgo compiler
-		"-gcflags":    {}, // Flags passed through to the gc compiler
-		"-ldflags":    {}, // Flags passed through to the linker
-		"-mod":        {}, // Set module download mode
-		"-modfile":    {}, // Set module file
-		"-overlay":    {}, // Set overlay file
-		"-pgo":        {}, // Set profile-guided optimization profile file
-		"-pkgdir":     {}, // Set package install & load directory
-		"-tags":       {}, // Set build tags
-		"-toolexec":   {}, // Set the command to run around tool execution
+		"-asmflags":      {}, // Flags passed through to the assembly
+		"-buildmode":     {}, // Set build mode
+		"-buildvcs":      {}, // Whether to stamp binaries with version control information
+		"-compiler":      {}, // Select what compiler to use
+		"-covermode":     {}, // Set coverage mode
+		"-coverpkg":      {}, // Set list of packages to collect coverage for
+		"-gccgoflags":    {}, // Flags passed through to the gccgo compiler
+		"-gcflags":       {}, // Flags passed through to the gc compiler
+		"-installsuffix": {}, // Suffix used in the package installation directory
+		"-ldflags":       {}, // Flags passed through to the linker
+		"-mod":           {}, // Set module download mode
+		"-modfile":       {}, // Set module file
+		"-overlay":       {}, // Set overlay file
+		"-pgo":           {}, // Set profile-guided optimization profile file
+		"-pkgdir":        {}, // Set package install & load directory
+		"-tags":          {}, // Set build tags
+		"-toolexec":      {}, // Set the command to run around tool execution
 	}
 )
 

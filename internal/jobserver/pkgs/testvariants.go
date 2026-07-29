@@ -71,19 +71,19 @@ func mergeTestVariant(
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("checking test variant overlay path %q: %w", overlayPath, err)
 	}
-	overlays := make(map[string][]byte)
+	overlays := make(map[string]overlaySource)
 	testImportPath := req.Pattern
 	if bridge, needed, err := internalImportBridge(root, req.TestVariantFor, overlayKey); err != nil {
 		return nil, err
 	} else if needed {
 		testImportPath = bridge.importPath
-		overlays[bridge.virtualPath] = bridge.source
+		overlays[bridge.virtualPath] = overlaySource{contents: bridge.source, newPackage: true}
 	}
-	overlaySource, err := testVariantOverlay(packageUnderTest.Name, testImportPath)
+	testSource, err := testVariantOverlay(packageUnderTest.Name, testImportPath)
 	if err != nil {
 		return nil, err
 	}
-	overlays[overlayPath] = overlaySource
+	overlays[overlayPath] = overlaySource{contents: testSource}
 	config.Context = ctx
 	config.Mode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
 		packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest
@@ -130,8 +130,7 @@ func mergeTestVariant(
 // into the outer importcfg, whose package-under-test archive remains authoritative.
 func resolveTestTargetProvenance(ctx context.Context, req *ResolveRequest, resp ResolveResponse, config packages.Config) (ResolveResponse, error) {
 	config.Context = ctx
-	config.Mode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports |
-		packages.NeedDeps | packages.NeedExportFile | packages.NeedForTest
+	config.Mode = packages.NeedName | packages.NeedImports | packages.NeedDeps | packages.NeedForTest
 	config.Env = append(slices.Clone(config.Env), envVarResolvingTestVariants+"=1")
 	config.Tests = true
 	loaded, err := packages.Load(&config, req.TestVariantFor)
@@ -145,10 +144,9 @@ func resolveTestTargetProvenance(ctx context.Context, req *ResolveRequest, resp 
 	if variant == nil {
 		return resp, nil
 	}
-	if variant.ExportFile == "" {
-		return nil, fmt.Errorf("Go did not produce an export archive for test variant %q", req.TestVariantFor)
-	}
-	resp[req.TestVariantFor] = ResolvedArchive{ExportFile: variant.ExportFile, ForTest: req.TestVariantFor}
+	selected := resp[req.TestVariantFor]
+	selected.ForTest = req.TestVariantFor
+	resp[req.TestVariantFor] = selected
 	return resp, nil
 }
 

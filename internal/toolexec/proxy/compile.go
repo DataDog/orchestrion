@@ -67,11 +67,9 @@ func (c *CompileCommand) ShowVersion() bool {
 	return c.Flags.ShowVersion
 }
 
-// TestMain returns true if the compiled package name is "main" and all source
-// Go files are rooted in the same directory as the importcfg file. This
-// indicates the package being compiled is a synthetic "main" package generated
-// by `go test`. For more accurate readings, users should also validate the
-// declared package import path ends in `.test`.
+// TestMain returns true if the compiled package name is "main" and its original
+// compiler inputs include Go's generated `_testmain.go` source. Callers should
+// also validate that the declared package import path ends in `.test`.
 func (c *CompileCommand) TestMain() bool {
 	return c.testMain
 }
@@ -81,16 +79,12 @@ func (c *CompileCommand) detectTestMain() bool {
 		return false
 	}
 
-	stageDir := filepath.Dir(c.Flags.ImportCfg)
-	var foundTestMain bool
 	for _, f := range c.GoFiles() {
-		if filepath.Dir(f) != stageDir {
-			return false
+		if filepath.Base(f) == "_testmain.go" {
+			return true
 		}
-		foundTestMain = foundTestMain || filepath.Base(f) == "_testmain.go"
 	}
-
-	return foundTestMain
+	return false
 }
 
 func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
@@ -145,7 +139,10 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 
 	if cmdErr == nil {
 		// Success so far, attach metadata before notifying the artifact cache.
-		err = errors.Join(cmd.attachLinkDeps(ctx), cmd.attachTestMain())
+		err = cmd.attachLinkDeps(ctx)
+		if err == nil {
+			err = cmd.attachTestMain()
+		}
 	}
 
 	// Notify the job server of the status of the command, and combine with the previous error if any...

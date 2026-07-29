@@ -88,7 +88,8 @@ func TestParseCompile(t *testing.T) {
 func TestTestMainIdentitySurvivesSourceRewrite(t *testing.T) {
 	stage := t.TempDir()
 	cmd := &CompileCommand{
-		Files: []string{filepath.Join(stage, "_testmain.go")},
+		// Nested package loads may pass a cached _testmain.go outside the stage directory.
+		Files: []string{filepath.Join(t.TempDir(), "_testmain.go")},
 		Flags: compileFlagSet{Package: "main", ImportCfg: filepath.Join(stage, "importcfg")},
 	}
 	cmd.testMain = cmd.detectTestMain()
