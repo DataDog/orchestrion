@@ -40,6 +40,10 @@ func isByte(value types.Type) bool {
 	return ok && basic.Kind() == types.Uint8
 }
 
+func isExactByte(value types.Type) bool {
+	return value != nil && types.Identical(value, types.Typ[types.Uint8])
+}
+
 func isRuneSlice(value types.Type) bool {
 	if value == nil {
 		return false
@@ -60,6 +64,10 @@ func isRune(value types.Type) bool {
 	}
 	basic, ok := value.Underlying().(*types.Basic)
 	return ok && basic.Kind() == types.Int32
+}
+
+func isExactRune(value types.Type) bool {
+	return value != nil && types.Identical(value, types.Typ[types.Int32])
 }
 
 func constraintOnly(constraint types.Type, predicate func(types.Type) bool) bool {

@@ -21,29 +21,49 @@ import (
 type valueOperation string
 
 const (
-	stringConcat      valueOperation = "string-concat"
-	stringToBytes     valueOperation = "string-to-bytes"
-	bytesToString     valueOperation = "bytes-to-string"
-	stringSlice       valueOperation = "string-slice"
-	bytesSlice        valueOperation = "bytes-slice"
-	appendBytes       valueOperation = "append-bytes"
-	appendValues      valueOperation = "append-byte-values"
-	appendString      valueOperation = "append-string-bytes"
-	copyBytes         valueOperation = "copy-bytes"
-	copyString        valueOperation = "copy-string-to-bytes"
-	clearBytes        valueOperation = "clear-bytes"
-	setByte           valueOperation = "set-byte"
-	stringByteAt      valueOperation = "string-byte-at"
-	bytesByteAt       valueOperation = "bytes-byte-at"
-	setFromString     valueOperation = "set-byte-from-string"
-	setFromBytes      valueOperation = "set-byte-from-bytes"
-	stringToRunes     valueOperation = "string-to-runes"
-	runesToString     valueOperation = "runes-to-string"
-	captureStringByte valueOperation = "capture-string-byte"
-	captureSliceByte  valueOperation = "capture-slice-byte"
-	captureSliceRune  valueOperation = "capture-slice-rune"
-	byteScalarString  valueOperation = "byte-scalar-to-string"
-	runeScalarString  valueOperation = "rune-scalar-to-string"
+	stringConcat               valueOperation = "string-concat"
+	stringToBytes              valueOperation = "string-to-bytes"
+	bytesToString              valueOperation = "bytes-to-string"
+	stringSlice                valueOperation = "string-slice"
+	bytesSlice                 valueOperation = "bytes-slice"
+	appendBytes                valueOperation = "append-bytes"
+	appendValues               valueOperation = "append-byte-values"
+	appendString               valueOperation = "append-string-bytes"
+	copyBytes                  valueOperation = "copy-bytes"
+	copyString                 valueOperation = "copy-string-to-bytes"
+	clearBytes                 valueOperation = "clear-bytes"
+	setByte                    valueOperation = "set-byte"
+	stringByteAt               valueOperation = "string-byte-at"
+	bytesByteAt                valueOperation = "bytes-byte-at"
+	setFromString              valueOperation = "set-byte-from-string"
+	setFromBytes               valueOperation = "set-byte-from-bytes"
+	stringToRunes              valueOperation = "string-to-runes"
+	runesToString              valueOperation = "runes-to-string"
+	captureStringByte          valueOperation = "capture-string-byte"
+	captureSliceByte           valueOperation = "capture-slice-byte"
+	captureSliceRune           valueOperation = "capture-slice-rune"
+	byteScalarString           valueOperation = "byte-scalar-to-string"
+	runeScalarString           valueOperation = "rune-scalar-to-string"
+	scalarByteArgument         valueOperation = "scalar-byte-argument"
+	runeFromScalarByteArgument valueOperation = "rune-from-scalar-byte-argument"
+	byteScalarCallResult       valueOperation = "byte-scalar-call-result"
+	runeScalarCallResult       valueOperation = "rune-scalar-call-result"
+	byteScalarMapMake          valueOperation = "byte-scalar-map-make"
+	runeScalarMapMake          valueOperation = "rune-scalar-map-make"
+	byteScalarMapStore         valueOperation = "byte-scalar-map-store"
+	runeScalarMapStore         valueOperation = "rune-scalar-map-store"
+	byteScalarMapStoreClean    valueOperation = "byte-scalar-map-store-clean"
+	runeScalarMapStoreClean    valueOperation = "rune-scalar-map-store-clean"
+	byteScalarMapLoad          valueOperation = "byte-scalar-map-load"
+	runeScalarMapLoad          valueOperation = "rune-scalar-map-load"
+	byteScalarChannelMake      valueOperation = "byte-scalar-channel-make"
+	runeScalarChannelMake      valueOperation = "rune-scalar-channel-make"
+	byteScalarChannelSend      valueOperation = "byte-scalar-channel-send"
+	runeScalarChannelSend      valueOperation = "rune-scalar-channel-send"
+	byteScalarChannelSendClean valueOperation = "byte-scalar-channel-send-clean"
+	runeScalarChannelSendClean valueOperation = "rune-scalar-channel-send-clean"
+	byteScalarChannelReceive   valueOperation = "byte-scalar-channel-receive"
+	runeScalarChannelReceive   valueOperation = "rune-scalar-channel-receive"
 )
 
 func (valueOperation) ImpliesImported() []string {
@@ -70,7 +90,12 @@ func (operation valueOperation) FileMayMatch(ctx *may.FileContext) may.MatchType
 		return ctx.FileContains("clear")
 	case setByte, setFromString, setFromBytes:
 		return ctx.FileContains("=")
-	case captureStringByte, captureSliceByte, captureSliceRune, byteScalarString, runeScalarString:
+	case captureStringByte, captureSliceByte, captureSliceRune, byteScalarString, runeScalarString,
+		scalarByteArgument, runeFromScalarByteArgument, byteScalarCallResult, runeScalarCallResult,
+		byteScalarMapMake, runeScalarMapMake, byteScalarMapStore, runeScalarMapStore,
+		byteScalarMapStoreClean, runeScalarMapStoreClean, byteScalarMapLoad, runeScalarMapLoad,
+		byteScalarChannelMake, runeScalarChannelMake, byteScalarChannelSend, runeScalarChannelSend,
+		byteScalarChannelSendClean, runeScalarChannelSendClean, byteScalarChannelReceive, runeScalarChannelReceive:
 		return may.Unknown
 	default:
 		return may.NeverMatch
@@ -163,6 +188,46 @@ func (operation valueOperation) Matches(ctx context.AspectContext) bool {
 	case runeScalarString:
 		call, source, ok := scalarStringConversion(ctx)
 		return ok && isString(ctx.ResolveType(call)) && isRune(ctx.ResolveType(source))
+	case scalarByteArgument:
+		return matchesScalarByteArgument(ctx)
+	case runeFromScalarByteArgument:
+		return matchesRuneFromScalarByteArgument(ctx)
+	case byteScalarCallResult:
+		return scalarCallResult(ctx, isByte)
+	case runeScalarCallResult:
+		return scalarCallResult(ctx, isRune)
+	case byteScalarMapMake:
+		return scalarMapMake(ctx, isExactByte)
+	case runeScalarMapMake:
+		return scalarMapMake(ctx, isExactRune)
+	case byteScalarMapStore:
+		return scalarMapStore(ctx, isExactByte, true)
+	case runeScalarMapStore:
+		return scalarMapStore(ctx, isExactRune, true)
+	case byteScalarMapStoreClean:
+		return scalarMapStore(ctx, isExactByte, false)
+	case runeScalarMapStoreClean:
+		return scalarMapStore(ctx, isExactRune, false)
+	case byteScalarMapLoad:
+		return scalarMapLoad(ctx, isExactByte)
+	case runeScalarMapLoad:
+		return scalarMapLoad(ctx, isExactRune)
+	case byteScalarChannelMake:
+		return scalarChannelMake(ctx, isExactByte)
+	case runeScalarChannelMake:
+		return scalarChannelMake(ctx, isExactRune)
+	case byteScalarChannelSend:
+		return scalarChannelSend(ctx, isExactByte, true)
+	case runeScalarChannelSend:
+		return scalarChannelSend(ctx, isExactRune, true)
+	case byteScalarChannelSendClean:
+		return scalarChannelSend(ctx, isExactByte, false)
+	case runeScalarChannelSendClean:
+		return scalarChannelSend(ctx, isExactRune, false)
+	case byteScalarChannelReceive:
+		return scalarChannelReceive(ctx, isExactByte)
+	case runeScalarChannelReceive:
+		return scalarChannelReceive(ctx, isExactRune)
 	default:
 		return false
 	}
@@ -172,20 +237,47 @@ func (operation valueOperation) Hash(h *fingerprint.Hasher) error {
 	return h.Named("value-operation", fingerprint.String(operation))
 }
 
+// allValueOperations is the single source of truth for the supported value operations.
+// The YAML unmarshaler below accepts exactly this set, and the `value-operation` enum in
+// internal/injector/config/schema.json must list exactly the same names -
+// Test_SchemaEnumListsEveryValueOperation fails if the two ever drift apart.
+var allValueOperations = []valueOperation{
+	stringConcat, stringToBytes, bytesToString, stringToRunes, runesToString,
+	stringSlice, bytesSlice, stringByteAt, bytesByteAt,
+	appendBytes, appendValues, appendString,
+	copyBytes, copyString, clearBytes,
+	setByte, setFromString, setFromBytes,
+	captureStringByte, captureSliceByte, captureSliceRune,
+	byteScalarString, runeScalarString,
+	scalarByteArgument, runeFromScalarByteArgument,
+	byteScalarCallResult, runeScalarCallResult,
+	byteScalarMapMake, runeScalarMapMake,
+	byteScalarMapStore, runeScalarMapStore,
+	byteScalarMapStoreClean, runeScalarMapStoreClean,
+	byteScalarMapLoad, runeScalarMapLoad,
+	byteScalarChannelMake, runeScalarChannelMake,
+	byteScalarChannelSend, runeScalarChannelSend,
+	byteScalarChannelSendClean, runeScalarChannelSendClean,
+	byteScalarChannelReceive, runeScalarChannelReceive,
+}
+
+var supportedValueOperations = func() map[valueOperation]struct{} {
+	supported := make(map[valueOperation]struct{}, len(allValueOperations))
+	for _, operation := range allValueOperations {
+		supported[operation] = struct{}{}
+	}
+	return supported
+}()
+
 func init() {
 	unmarshalers["value-operation"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
 		var operation valueOperation
 		if err := yaml.NodeToValueContext(ctx, node, &operation); err != nil {
 			return nil, err
 		}
-		switch operation {
-		case stringConcat, stringToBytes, bytesToString, stringSlice, bytesSlice,
-			appendBytes, appendValues, appendString, copyBytes, copyString, clearBytes, setByte,
-			stringByteAt, bytesByteAt, setFromString, setFromBytes, stringToRunes, runesToString,
-			captureStringByte, captureSliceByte, captureSliceRune, byteScalarString, runeScalarString:
-			return operation, nil
-		default:
+		if _, supported := supportedValueOperations[operation]; !supported {
 			return nil, fmt.Errorf("invalid value-operation %q", operation)
 		}
+		return operation, nil
 	}
 }

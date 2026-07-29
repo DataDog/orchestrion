@@ -373,6 +373,8 @@
         { "$ref": "#/$defs/join-point/function-call" },
         { "$ref": "#/$defs/join-point/import-path" },
         { "$ref": "#/$defs/join-point/method-call" },
+        { "$ref": "#/$defs/join-point/method-expression" },
+        { "$ref": "#/$defs/join-point/method-value" },
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
@@ -674,6 +676,82 @@
           }
         ]
       },
+      "method-value": {
+        "required": ["method-value"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "method-value": {
+            "title": "Target captured method values by receiver type",
+            "markdownDescription": "The `method-value` join point matches method selector expressions of the form `receiver.Method` when the selector is captured as a value, rather than called directly. Like `method-call`, it uses type information to distinguish receiver types sharing a method name. The `match` field controls whether to match pointer receivers (`pointer-only`), value receivers (`value-only`), or both (`any`, the default).",
+            "type": "object",
+            "required": ["receiver", "name"],
+            "properties": {
+              "receiver": {
+                "description": "The fully qualified type name of the method receiver (without pointer sigil).",
+                "$ref": "#/$defs/go/qualified-identifier"
+              },
+              "name": {
+                "description": "The name of the method to match.",
+                "$ref": "#/$defs/go/identifier"
+              },
+              "match": {
+                "description": "Whether to match pointer receivers, value receivers, or both (default: any).",
+                "type": "string",
+                "enum": ["pointer-only", "value-only", "any"],
+                "default": "any"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          {
+            "method-value": {
+              "receiver": "bytes.Buffer",
+              "name": "Grow",
+              "match": "value-only"
+            }
+          }
+        ]
+      },
+      "method-expression": {
+        "required": ["method-expression"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "method-expression": {
+            "title": "Target method expressions by receiver type",
+            "markdownDescription": "The `method-expression` join point matches method expressions of the form `(*Type).Method` captured as function values. It does not match method values such as `receiver.Method` or direct calls. Like `method-call`, it uses type information to distinguish receiver types sharing a method name. The `match` field controls whether to match pointer receivers (`pointer-only`), value receivers (`value-only`), or both (`any`, the default).",
+            "type": "object",
+            "required": ["receiver", "name"],
+            "properties": {
+              "receiver": {
+                "description": "The fully qualified type name of the method receiver (without pointer sigil).",
+                "$ref": "#/$defs/go/qualified-identifier"
+              },
+              "name": {
+                "description": "The name of the method to match.",
+                "$ref": "#/$defs/go/identifier"
+              },
+              "match": {
+                "description": "Whether to match pointer receivers, value receivers, or both (default: any).",
+                "type": "string",
+                "enum": ["pointer-only", "value-only", "any"],
+                "default": "any"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          {
+            "method-expression": {
+              "receiver": "bytes.Buffer",
+              "name": "Grow",
+              "match": "pointer-only"
+            }
+          }
+        ]
+      },
       "not": {
         "required": ["not"],
         "unevaluatedProperties": false,
@@ -867,7 +945,7 @@
         "properties": {
           "value-operation": {
             "title": "Typed Go value operation",
-            "markdownDescription": "Matches a supported typed language-level string, byte-slice, or rune-slice operation.",
+            "markdownDescription": "Matches a supported typed language-level string, byte-slice, or rune-slice operation, or a `byte`/`rune` scalar transition across a call, map or channel boundary.",
             "type": "string",
             "enum": [
               "string-concat",
@@ -892,7 +970,27 @@
               "capture-slice-byte",
               "capture-slice-rune",
               "byte-scalar-to-string",
-              "rune-scalar-to-string"
+              "rune-scalar-to-string",
+              "scalar-byte-argument",
+              "rune-from-scalar-byte-argument",
+              "byte-scalar-call-result",
+              "rune-scalar-call-result",
+              "byte-scalar-map-make",
+              "rune-scalar-map-make",
+              "byte-scalar-map-store",
+              "rune-scalar-map-store",
+              "byte-scalar-map-store-clean",
+              "rune-scalar-map-store-clean",
+              "byte-scalar-map-load",
+              "rune-scalar-map-load",
+              "byte-scalar-channel-make",
+              "rune-scalar-channel-make",
+              "byte-scalar-channel-send",
+              "rune-scalar-channel-send",
+              "byte-scalar-channel-send-clean",
+              "rune-scalar-channel-send-clean",
+              "byte-scalar-channel-receive",
+              "rune-scalar-channel-receive"
             ]
           }
         },
