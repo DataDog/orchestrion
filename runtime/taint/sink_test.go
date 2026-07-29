@@ -7,6 +7,9 @@ package taint
 
 import (
 	"bufio"
+	"encoding/json"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -259,5 +262,80 @@ func seedBufioReaders(t *testing.T) {
 	t.Helper()
 	for range maxTrackedOccurrences {
 		active.currentRegistry().bufioReaders[bufio.NewReader(strings.NewReader(""))] = readerState{}
+	}
+}
+
+// Test_WriteJSONReportRedactsValue_when_IncludeValueIsNotExactlyOne covers the default
+// reporter's redaction, which had no test at all: every other sink test replaces the
+// reporter via SetReporter, so writeJSONReport - the code path a real deployment actually
+// uses - was never exercised. Case 130 claimed this behaviour on the source report's word.
+//
+// The tainted value is the whole point of the redaction, so the assertions check both that
+// the placeholder appears AND that the secret does not.
+func Test_WriteJSONReportRedactsValue_when_IncludeValueIsNotExactlyOne(t *testing.T) {
+	const secret = "/etc/shadow-secret"
+
+	for _, test := range []struct {
+		name        string
+		set         bool
+		value       string
+		wantValue   string
+		wantLeaking bool
+	}{
+		{name: "unset", set: false, wantValue: "[REDACTED]"},
+		{name: "empty", set: true, value: "", wantValue: "[REDACTED]"},
+		{name: "zero", set: true, value: "0", wantValue: "[REDACTED]"},
+		{name: "true is not 1", set: true, value: "true", wantValue: "[REDACTED]"},
+		{name: "one opts in", set: true, value: "1", wantValue: secret, wantLeaking: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// Given
+			if test.set {
+				t.Setenv("ORCHESTRION_TAINT_INCLUDE_VALUE", test.value)
+			} else {
+				t.Setenv("ORCHESTRION_TAINT_INCLUDE_VALUE", "")
+				if err := os.Unsetenv("ORCHESTRION_TAINT_INCLUDE_VALUE"); err != nil {
+					t.Fatalf("unset ORCHESTRION_TAINT_INCLUDE_VALUE: %v", err)
+				}
+			}
+
+			reader, writer, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("create pipe: %v", err)
+			}
+			original := os.Stderr
+			os.Stderr = writer
+			t.Cleanup(func() { os.Stderr = original })
+
+			// When
+			writeJSONReport(Report{
+				Sink:   "os.Open",
+				Value:  secret,
+				Ranges: []Range{{Start: 5, End: 18}},
+			})
+			if err := writer.Close(); err != nil {
+				t.Fatalf("close pipe writer: %v", err)
+			}
+			encoded, err := io.ReadAll(reader)
+			if err != nil {
+				t.Fatalf("read pipe: %v", err)
+			}
+
+			// Then
+			var decoded Report
+			if err := json.Unmarshal(encoded, &decoded); err != nil {
+				t.Fatalf("decode report %q: %v", encoded, err)
+			}
+			if decoded.Value != test.wantValue {
+				t.Errorf("Value = %q, want %q", decoded.Value, test.wantValue)
+			}
+			if !test.wantLeaking && strings.Contains(string(encoded), secret) {
+				t.Errorf("emitted JSON leaked the tainted value: %s", encoded)
+			}
+			if decoded.Sink != "os.Open" {
+				t.Errorf("Sink = %q, want os.Open: redaction must not disturb other fields", decoded.Sink)
+			}
+			requireRanges(t, decoded.Ranges, Range{Start: 5, End: 18})
+		})
 	}
 }
