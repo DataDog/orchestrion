@@ -89,6 +89,93 @@ func Test_InstrumentedProgramReportsExpectedTaint_when_BuiltWithRaceDetector(t *
 	assertCaseResults(t, fixture.expected, output)
 }
 
+func Test_InstrumentedProgramPreservesExactRangePast65536(t *testing.T) {
+	// Given
+	root := repositoryRoot(t)
+	orchestrion := buildOrchestrion(t, root)
+	module := t.TempDir()
+	goMod := "module example.com/taint-capacity\n\ngo 1.25.0\n\nrequire github.com/DataDog/orchestrion v0.0.0\n\nreplace github.com/DataDog/orchestrion => " + root + "\n"
+	if err := os.WriteFile(filepath.Join(module, "go.mod"), []byte(goMod), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	tool := `//go:build tools
+
+package tools
+
+import _ "github.com/DataDog/orchestrion/runtime/taint/instrument"
+`
+	if err := os.WriteFile(filepath.Join(module, "orchestrion.tool.go"), []byte(tool), 0o644); err != nil {
+		t.Fatalf("write orchestrion tool file: %v", err)
+	}
+	programSource := `package main
+
+import (
+	"fmt"
+	"os"
+	"runtime"
+
+	"github.com/DataDog/orchestrion/runtime/taint"
+)
+
+func main() {
+	const environment = "IAST_CAPACITY_INPUT"
+	const value = "capacity-secret"
+	if err := os.Setenv(environment, value); err != nil {
+		panic(err)
+	}
+
+	values := make([]string, 0, 1<<16)
+	for range 1 << 16 {
+		values = append(values, os.Getenv(environment))
+	}
+	dirty := os.Getenv(environment)
+	reports := make([]taint.Report, 0, 1)
+	restore := taint.SetReporter(func(report taint.Report) {
+		reports = append(reports, report)
+	})
+	_, _ = os.Open(dirty)
+	_, _ = os.Open(value)
+	runtime.KeepAlive(values)
+	restore()
+
+	if len(reports) != 1 {
+		panic("unexpected report count")
+	}
+	report := reports[0]
+	if report.Sink != "os.Open" || report.Value != value || len(report.Ranges) != 1 || report.Ranges[0].Start != 0 || report.Ranges[0].End != len(value) {
+		panic("unexpected report")
+	}
+	fmt.Println("PASS")
+}
+`
+	if err := os.WriteFile(filepath.Join(module, "main.go"), []byte(programSource), 0o644); err != nil {
+		t.Fatalf("write main.go: %v", err)
+	}
+	runCommand(t, module, nil, 2*time.Minute, "go", "mod", "tidy")
+
+	for _, test := range []struct {
+		name string
+		args []string
+	}{
+		{name: "normal", args: []string{"go", "build", "-p=1"}},
+		{name: "race", args: []string{"go", "build", "-race", "-p=1"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			program := filepath.Join(t.TempDir(), "iast-capacity")
+			arguments := append(test.args, "-o", program, ".")
+			runCommand(t, module, nil, 5*time.Minute, orchestrion, arguments...)
+
+			// When
+			output := runCommand(t, module, nil, time.Minute, program)
+
+			// Then
+			if output != "PASS\n" {
+				t.Fatalf("program output = %q, want %q", output, "PASS\n")
+			}
+		})
+	}
+}
+
 func discoverCases(t *testing.T, directory string) []expectedCase {
 	t.Helper()
 	files, err := filepath.Glob(filepath.Join(directory, "case_*.go"))

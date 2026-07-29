@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 
@@ -15,8 +14,9 @@ import (
 )
 
 type Expect struct {
-	Value  string
-	Ranges []taint.Range
+	Value             string
+	Ranges            []taint.Range
+	DistinctSourceIDs int
 }
 
 type Case struct {
@@ -79,7 +79,10 @@ func compareReports(reports []taint.Report, wants []Expect) string {
 			if want.Ranges == nil && len(report.Ranges) == 0 {
 				continue
 			}
-			if want.Ranges != nil && !slices.Equal(report.Ranges, want.Ranges) {
+			if want.Ranges != nil && !sameRangeCoordinates(report.Ranges, want.Ranges) {
+				continue
+			}
+			if want.DistinctSourceIDs != 0 && distinctSourceIDCount(report.Ranges) != want.DistinctSourceIDs {
 				continue
 			}
 			matched[index] = true
@@ -96,6 +99,28 @@ func compareReports(reports []taint.Report, wants []Expect) string {
 		}
 	}
 	return ""
+}
+
+func sameRangeCoordinates(actual, expected []taint.Range) bool {
+	if len(actual) != len(expected) {
+		return false
+	}
+	for index := range expected {
+		if actual[index].Start != expected[index].Start || actual[index].End != expected[index].End {
+			return false
+		}
+	}
+	return true
+}
+
+func distinctSourceIDCount(ranges []taint.Range) int {
+	ids := make(map[uint64]struct{}, len(ranges))
+	for _, current := range ranges {
+		if current.SourceID != 0 {
+			ids[current.SourceID] = struct{}{}
+		}
+	}
+	return len(ids)
 }
 
 func singleLine(value string) string {
