@@ -54,19 +54,7 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 	}
 	sort.Slice(queue, less)
 	processed := make(map[archiveWork]bool)
-	var testTargetProvenance *pkgs.ResolvedArchive
-	resolveTestTargetProvenance := func() (pkgs.ResolvedArchive, error) {
-		if testTargetProvenance != nil {
-			return *testTargetProvenance, nil
-		}
-		archives, err := resolvePackageFilesForTest(ctx, testVariantFor, testVariantFor, cmd.WorkDir)
-		if err != nil {
-			return pkgs.ResolvedArchive{}, err
-		}
-		selected := archives[testVariantFor]
-		testTargetProvenance = &selected
-		return selected, nil
-	}
+	resolveTestTargetProvenance := newTestTargetProvenanceResolver(ctx, testVariantFor, cmd.WorkDir)
 	var changed bool
 	for len(queue) > 0 {
 		item := queue[0]

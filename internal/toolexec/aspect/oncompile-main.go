@@ -74,7 +74,8 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		cmd.MarkTestMain(testVariantFor)
 	}
 
-	stack, err := initialLinkDependencies(ctx, &reg)
+	resolveTestTargetProvenance := newTestTargetProvenanceResolver(ctx, testVariantFor, cmd.WorkDir)
+	stack, err := initialLinkDependencies(ctx, &reg, testVariantFor, resolveTestTargetProvenance)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
@@ -141,6 +142,15 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 					continue
 				}
 				if reg.PackageFile[tDep] != "" {
+					if tDep == testVariantFor && kind == linkdeps.ImportDependency {
+						selected, err := resolveTestTargetProvenance()
+						if err != nil {
+							return fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+						}
+						if err := rejectSatisfiedSyntheticDependency(p, tDep, testVariantFor, kind, selected); err != nil {
+							return err
+						}
+					}
 					continue
 				}
 				cmd.LinkDeps.Add(tDep, candidate.kind)
@@ -197,9 +207,20 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	return nil
 }
 
-func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig) ([]pendingLinkDep, error) {
+func initialLinkDependencies(
+	ctx context.Context,
+	reg *importcfg.ImportConfig,
+	testVariantFor string,
+	resolveTestTargetProvenance func() (pkgs.ResolvedArchive, error),
+) ([]pendingLinkDep, error) {
 	byPath := make(map[string]pendingLinkDep)
-	for parent, archive := range reg.PackageFile {
+	parents := make([]string, 0, len(reg.PackageFile))
+	for parent := range reg.PackageFile {
+		parents = append(parents, parent)
+	}
+	sort.Strings(parents)
+	for _, parent := range parents {
+		archive := reg.PackageFile[parent]
 		deps, err := linkdeps.FromArchive(ctx, archive)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s from %s=%s: %w", linkdeps.Filename, parent, archive, err)
@@ -207,6 +228,15 @@ func initialLinkDependencies(ctx context.Context, reg *importcfg.ImportConfig) (
 		for _, path := range deps.Dependencies() {
 			kind := deps.Kind(path)
 			if _, satisfied := reg.PackageFile[path]; satisfied {
+				if path == testVariantFor && kind == linkdeps.ImportDependency {
+					selected, err := resolveTestTargetProvenance()
+					if err != nil {
+						return nil, fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+					}
+					if err := rejectSatisfiedSyntheticDependency(parent, path, testVariantFor, kind, selected); err != nil {
+						return nil, err
+					}
+				}
 				continue
 			}
 			candidate := pendingLinkDep{path: path, parent: parent, kind: kind}
