@@ -11,7 +11,7 @@ index 5e0268bb88..9bd7e3281d 100644
  	WB                    int    `help:"print information about write barriers"`
  	ABIWrap               int    `help:"print information about ABI wrapper generation"`
 diff --git i/src/cmd/compile/internal/ssagen/ssa.go w/src/cmd/compile/internal/ssagen/ssa.go
-index 17feb90df7..75a3c3c5e7 100644
+index 17feb90df7..ac11c1ff8e 100644
 --- i/src/cmd/compile/internal/ssagen/ssa.go
 +++ w/src/cmd/compile/internal/ssagen/ssa.go
 @@ -392,9 +392,11 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
@@ -27,7 +27,15 @@ index 17feb90df7..75a3c3c5e7 100644
  	switch {
  	case base.Debug.NoOpenDefer != 0:
  		s.hasOpenDefers = false
-@@ -492,12 +494,37 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+@@ -437,6 +439,7 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+ 
+ 	s.startBlock(s.f.Entry)
+ 	s.vars[memVar] = s.startmem
++	s.vars[controlTaintVar] = s.cleanTaint()
+ 	if s.hasOpenDefers {
+ 		// Create the deferBits variable and stack slot.  deferBits is a
+ 		// bitmask showing which of the open-coded defers in this function
+@@ -492,12 +495,37 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
  
  	s.f.OwnAux = ssa.OwnAuxCall(fn.LSym, params)
  
@@ -39,7 +47,7 @@ index 17feb90df7..75a3c3c5e7 100644
 +		incomingTaint = transition[0]
 +		s.shadowReturnAuth = transition[1]
 +		for _, field := range fn.Type().Params() {
-+			if s.taintTrackedType(field.Type) {
++			if s.taintTrackedTransition(field.Type) {
 +				name, ok := field.Nname.(*ir.Name)
 +				if ok && !ir.IsBlank(name) {
 +					incomingTaintParam = name
@@ -65,7 +73,7 @@ index 17feb90df7..75a3c3c5e7 100644
  				s.addNamedValue(n, v) // This helps with debugging information, not needed for compilation itself.
  			} else { // address was taken AND/OR too large for SSA
  				paramAssignment := ssa.ParamAssignmentForArgName(s.f, n)
-@@ -511,6 +538,13 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+@@ -511,6 +539,13 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
  						s.storeParameterRegsToStack(s.f.ABISelf, paramAssignment, n, s.decladdrs[n], false)
  					}
  				}
@@ -79,7 +87,7 @@ index 17feb90df7..75a3c3c5e7 100644
  			}
  		}
  	}
-@@ -554,7 +588,12 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
+@@ -554,7 +589,12 @@ func buildssa(fn *ir.Func, worker int, isPgoHot bool) *ssa.Func {
  			if n.Byval() && !n.Addrtaken() && ssa.CanSSA(n.Type()) {
  				n.Class = ir.PAUTO
  				fn.Dcl = append(fn.Dcl, n)
@@ -93,7 +101,7 @@ index 17feb90df7..75a3c3c5e7 100644
  				continue
  			}
  
-@@ -678,7 +717,15 @@ func (s *state) paramsToHeap() {
+@@ -678,7 +718,15 @@ func (s *state) paramsToHeap() {
  			}
  			s.newHeapaddr(n)
  			if n.Class == ir.PPARAM {
@@ -109,7 +117,19 @@ index 17feb90df7..75a3c3c5e7 100644
  			}
  		}
  	}
-@@ -1050,6 +1097,14 @@ type state struct {
+@@ -1044,12 +1092,26 @@ type state struct {
+ 	// *Node is the unique identifier (an ONAME Node) for the variable.
+ 	// TODO: keep a single varnum map, then make all of these maps slices instead?
+ 	vars map[ir.Node]*ssa.Value
++	// condEvalDepth is nonzero while lowering a condition and its compiler-generated init.
++	condEvalDepth int
++	// controlInitDepth is nonzero while lowering a control construct's statement init.
++	controlInitDepth int
++	// controlDispatchDepth is nonzero while lowering a switch's compiled dispatch body.
++	controlDispatchDepth int
+ 
+ 	// fwdVars are variables that are used before they are defined in the current block.
+ 	// This map exists just to coalesce multiple references into a single FwdRef op.
  	// *Node is the unique identifier (an ONAME Node) for the variable.
  	fwdVars map[ir.Node]*ssa.Value
  
@@ -124,7 +144,116 @@ index 17feb90df7..75a3c3c5e7 100644
  	// all defined variables at the end of each block. Indexed by block ID.
  	defvars []map[ir.Node]*ssa.Value
  
-@@ -2382,6 +2437,9 @@ func (s *state) exit() *ssa.Block {
+@@ -1161,6 +1223,8 @@ func ssaMarker(name string) *ir.Name {
+ var (
+ 	// marker node for the memory variable
+ 	memVar = ssaMarker("mem")
++	// marker node for the synthetic program-counter taint variable
++	controlTaintVar = ssaMarker("taintControl")
+ 
+ 	// marker nodes for temporary variables
+ 	ptrVar       = ssaMarker("ptr")
+@@ -1664,7 +1728,11 @@ func (s *state) stmt(n ir.Node) {
+ 		return
+ 	}
+ 
+-	s.stmtList(n.Init())
++	switch n.Op() {
++	case ir.OIF, ir.OFOR, ir.OSWITCH, ir.OSELECT:
++	default:
++		s.stmtList(n.Init())
++	}
+ 	switch n.Op() {
+ 
+ 	case ir.OBLOCK:
+@@ -1945,6 +2013,10 @@ func (s *state) stmt(n ir.Node) {
+ 
+ 	case ir.OIF:
+ 		n := n.(*ir.IfStmt)
++		parentPC := s.activeControlTaint()
++		s.controlInitDepth++
++		s.stmtList(n.Init())
++		s.controlInitDepth--
+ 		if ir.IsConst(n.Cond, constant.Bool) {
+ 			s.stmtList(n.Cond.Init())
+ 			if ir.BoolVal(n.Cond) {
+@@ -1952,6 +2024,9 @@ func (s *state) stmt(n ir.Node) {
+ 			} else {
+ 				s.stmtList(n.Else)
+ 			}
++			if s.curBlock != nil && s.controlInitDepth == 0 && s.condEvalDepth == 0 {
++				s.vars[controlTaintVar] = parentPC
++			}
+ 			break
+ 		}
+ 
+@@ -1989,6 +2064,9 @@ func (s *state) stmt(n ir.Node) {
+ 			}
+ 		}
+ 		s.startBlock(bEnd)
++		if s.controlInitDepth == 0 && s.condEvalDepth == 0 {
++			s.vars[controlTaintVar] = parentPC
++		}
+ 
+ 	case ir.ORETURN:
+ 		n := n.(*ir.ReturnStmt)
+@@ -2036,6 +2114,8 @@ func (s *state) stmt(n ir.Node) {
+ 		// cond (Left); body (Nbody); incr (Right)
+ 		n := n.(*ir.ForStmt)
+ 		base.Assert(!n.DistinctVars) // Should all be rewritten before escape analysis
++		parentPC := s.activeControlTaint()
++		s.stmtList(n.Init())
+ 		bCond := s.f.NewBlock(ssa.BlockPlain)
+ 		bBody := s.f.NewBlock(ssa.BlockPlain)
+ 		bIncr := s.f.NewBlock(ssa.BlockPlain)
+@@ -2103,10 +2183,13 @@ func (s *state) stmt(n ir.Node) {
+ 		}
+ 
+ 		s.startBlock(bEnd)
++		s.vars[controlTaintVar] = parentPC
+ 
+ 	case ir.OSWITCH, ir.OSELECT:
+ 		// These have been mostly rewritten by the front end into their Nbody fields.
+ 		// Our main task is to correctly hook up any break statements.
++		parentPC := s.activeControlTaint()
++		s.stmtList(n.Init())
+ 		bEnd := s.f.NewBlock(ssa.BlockPlain)
+ 
+ 		prevBreak := s.breakTo
+@@ -2131,7 +2214,13 @@ func (s *state) stmt(n ir.Node) {
+ 		}
+ 
+ 		// generate body code
+-		s.stmtList(body)
++		if n.Op() == ir.OSWITCH {
++			s.controlDispatchDepth++
++			s.stmtList(body)
++			s.controlDispatchDepth--
++		} else {
++			s.stmtList(body)
++		}
+ 
+ 		s.breakTo = prevBreak
+ 		if lab != nil {
+@@ -2147,6 +2236,7 @@ func (s *state) stmt(n ir.Node) {
+ 			b.SetControl(m)
+ 		}
+ 		s.startBlock(bEnd)
++		s.vars[controlTaintVar] = parentPC
+ 
+ 	case ir.OJUMPTABLE:
+ 		n := n.(*ir.JumpTableStmt)
+@@ -2157,6 +2247,9 @@ func (s *state) stmt(n ir.Node) {
+ 
+ 		// The only thing that needs evaluating is the index we're looking up.
+ 		idx := s.expr(n.Idx)
++		if label := s.taint[idx]; label != nil {
++			s.vars[controlTaintVar] = s.joinTaint(s.activeControlTaint(), label)
++		}
+ 		unsigned := idx.Type.IsUnsigned()
+ 
+ 		// Extend so we can do everything in uintptr arithmetic.
+@@ -2382,6 +2475,9 @@ func (s *state) exit() *ssa.Block {
  			s.popLine()
  		}
  	}
@@ -134,7 +263,7 @@ index 17feb90df7..75a3c3c5e7 100644
  
  	// Do actual return.
  	// These currently turn into self-copies (in many cases).
-@@ -3068,9 +3126,19 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+@@ -3068,9 +3164,19 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
  			return s.entryNewValue1A(ssa.OpAddr, types.NewPtr(n.Type()), sym, s.sb)
  		}
  		if s.canSSA(n) {
@@ -156,7 +285,56 @@ index 17feb90df7..75a3c3c5e7 100644
  	case ir.OLINKSYMOFFSET:
  		n := n.(*ir.LinksymOffsetExpr)
  		return s.load(n.Type(), s.addr(n))
-@@ -3488,7 +3556,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+@@ -3164,6 +3270,11 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 		}
+ 
+ 		v := s.newValue1(ssa.OpCopy, to, x) // ensure that v has the right type
++		if s.taintByteFlow() && from.IsInteger() && to.IsInteger() {
++			if label := s.taint[x]; label != nil {
++				s.taint[v] = label
++			}
++		}
+ 
+ 		// CONVNOP closure
+ 		if to.Kind() == types.TFUNC && from.IsPtrShaped() {
+@@ -3218,7 +3329,13 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 	case ir.OCONV:
+ 		n := n.(*ir.ConvExpr)
+ 		x := s.expr(n.X)
+-		return s.conv(n, x, n.X.Type(), n.Type())
++		value := s.conv(n, x, n.X.Type(), n.Type())
++		if s.taintByteFlow() && n.X.Type().IsInteger() && n.Type().IsInteger() {
++			if label := s.taint[x]; label != nil {
++				s.taint[value] = label
++			}
++		}
++		return value
+ 
+ 	case ir.ODOTTYPE:
+ 		n := n.(*ir.TypeAssertExpr)
+@@ -3259,12 +3376,18 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 		case ir.OGT:
+ 			op, a, b = ir.OLT, b, a
+ 		}
++		var result *ssa.Value
+ 		if n.X.Type().IsFloat() {
+ 			// float comparison
+-			return s.newValueOrSfCall2(s.ssaOp(op, n.X.Type()), types.Types[types.TBOOL], a, b)
++			result = s.newValueOrSfCall2(s.ssaOp(op, n.X.Type()), types.Types[types.TBOOL], a, b)
++		} else {
++			// integer comparison
++			result = s.newValue2(s.ssaOp(op, n.X.Type()), types.Types[types.TBOOL], a, b)
++		}
++		if label := s.joinTaint(s.taint[a], s.taint[b]); label != nil {
++			s.taint[result] = label
+ 		}
+-		// integer comparison
+-		return s.newValue2(s.ssaOp(op, n.X.Type()), types.Types[types.TBOOL], a, b)
++		return result
+ 	case ir.OMUL:
+ 		n := n.(*ir.BinaryExpr)
+ 		a := s.expr(n.X)
+@@ -3488,7 +3611,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
  	case ir.ODEREF:
  		n := n.(*ir.StarExpr)
  		p := s.exprPtr(n.X, n.Bounded(), n.Pos())
@@ -170,7 +348,7 @@ index 17feb90df7..75a3c3c5e7 100644
  
  	case ir.ODOT:
  		n := n.(*ir.SelectorExpr)
-@@ -3507,7 +3580,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+@@ -3507,7 +3635,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
  		// instrumentation.
  		if ir.IsAddressable(n) && !s.canSSA(n) {
  			p := s.addr(n)
@@ -184,7 +362,7 @@ index 17feb90df7..75a3c3c5e7 100644
  		}
  		v := s.expr(n.X)
  		return s.newValue1I(ssa.OpStructSelect, n.Type(), int64(fieldIdx(n)), v)
-@@ -3516,7 +3594,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+@@ -3516,7 +3649,12 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
  		n := n.(*ir.SelectorExpr)
  		p := s.exprPtr(n.X, n.Bounded(), n.Pos())
  		p = s.newValue1I(ssa.OpOffPtr, types.NewPtr(n.Type()), n.Offset(), p)
@@ -198,25 +376,85 @@ index 17feb90df7..75a3c3c5e7 100644
  
  	case ir.OINDEX:
  		n := n.(*ir.IndexExpr)
-@@ -4535,6 +4618,13 @@ func (s *state) assignWhichMayOverlap(left ir.Node, right *ssa.Value, deref bool
+@@ -3539,10 +3677,20 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 			} else {
+ 				ptr = s.newValue2(ssa.OpAddPtr, ptrtyp, ptr, i)
+ 			}
+-			return s.load(types.Types[types.TUINT8], ptr)
++			value := s.load(types.Types[types.TUINT8], ptr)
++			if s.taintByteFlow() {
++				s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++					[]*types.Type{types.Types[types.TUINT8]}, ptr)[0]
++			}
++			return value
+ 		case n.X.Type().IsSlice():
+ 			p := s.addr(n)
+-			return s.load(n.X.Type().Elem(), p)
++			value := s.load(n.X.Type().Elem(), p)
++			if s.taintTrackedByte(n.X.Type().Elem()) {
++				s.taint[value] = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
++					[]*types.Type{types.Types[types.TUINT8]}, p)[0]
++			}
++			return value
+ 		case n.X.Type().IsArray():
+ 			if ssa.CanSSA(n.X.Type()) {
+ 				// SSA can handle arrays of length at most 1.
+@@ -3583,7 +3731,11 @@ func (s *state) exprCheckPtr(n ir.Node, checkPtrOK bool) *ssa.Value {
+ 			}
+ 			return s.newValue1(op, types.Types[types.TINT], a)
+ 		case t.IsString(): // string; not reachable for OCAP
+-			return s.newValue1(ssa.OpStringLen, types.Types[types.TINT], a)
++			result := s.newValue1(ssa.OpStringLen, types.Types[types.TINT], a)
++			if label := s.taint[a]; label != nil {
++				s.taint[result] = label
++			}
++			return result
+ 		case t.IsMap(), t.IsChan():
+ 			return s.referenceTypeBuiltin(n, a)
+ 		case t.IsArray():
+@@ -4396,6 +4548,8 @@ func (s *state) ternary(cond, x, y *ssa.Value) *ssa.Value {
+ // This function is intended to handle && and || better than just calling
+ // s.expr(cond) and branching on the result.
+ func (s *state) condBranch(cond ir.Node, yes, no *ssa.Block, likely int8) {
++	s.condEvalDepth++
++	defer func() { s.condEvalDepth-- }()
+ 	switch cond.Op() {
+ 	case ir.OANDAND:
+ 		cond := cond.(*ir.LogicalExpr)
+@@ -4434,6 +4588,9 @@ func (s *state) condBranch(cond ir.Node, yes, no *ssa.Block, likely int8) {
+ 		return
+ 	}
+ 	c := s.expr(cond)
++	if label := s.taint[c]; label != nil {
++		s.vars[controlTaintVar] = s.joinTaint(s.activeControlTaint(), label)
++	}
+ 	b := s.endBlock()
+ 	b.Kind = ssa.BlockIf
+ 	b.SetControl(c)
+@@ -4535,6 +4692,18 @@ func (s *state) assignWhichMayOverlap(left ir.Node, right *ssa.Value, deref bool
  		left := left.(*ir.Name)
  		// Update variable assignment.
  		s.vars[left] = right
 +		if s.taintTrackedType(left.Type()) {
-+			label := s.taint[right]
-+			if label == nil {
-+				label = s.cleanTaint()
++			s.vars[s.shadowVariable(left)] = s.effectiveAssignmentTaint(s.taint[right])
++		} else if s.taintByteFlow() && ir.IsAutoTmp(left) && left.Type().IsBoolean() {
++			if label := s.taint[right]; label != nil {
++				s.vars[controlTaintVar] = s.joinTaint(s.activeControlTaint(), label)
 +			}
-+			s.vars[s.shadowVariable(left)] = label
++		}
++		if s.controlDispatchDepth > 0 && ir.IsAutoTmp(left) {
++			if label := s.taint[right]; label != nil {
++				s.vars[controlTaintVar] = s.joinTaint(s.activeControlTaint(), label)
++			}
 +		}
  		s.addNamedValue(left, right)
  		return
  	}
-@@ -4556,16 +4646,31 @@ func (s *state) assignWhichMayOverlap(left ir.Node, right *ssa.Value, deref bool
+@@ -4556,16 +4725,29 @@ func (s *state) assignWhichMayOverlap(left ir.Node, right *ssa.Value, deref bool
  		t = types.Types[types.TUNSAFEPTR]
  	}
  	if deref {
-+		label := s.cleanTaint()
++		var label *ssa.Value
 +		if s.taintTrackedType(t) && right != nil {
 +			label = s.rtcall(typecheck.LookupRuntimeFunc("taintLoadString"), true,
 +				[]*types.Type{types.Types[types.TUINT8]}, right)[0]
@@ -228,35 +466,39 @@ index 17feb90df7..75a3c3c5e7 100644
  			s.moveWhichMayOverlap(t, addr, right, mayOverlap)
  		}
 +		if s.taintTrackedType(t) {
-+			s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, label)
++			s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, s.effectiveAssignmentTaint(label))
 +		}
  		return
  	}
  	// Treat as a store.
  	s.storeType(t, addr, right, skip, !ir.IsAutoTmp(left))
 +	if s.taintTrackedType(t) {
-+		label := s.taint[right]
-+		if label == nil {
-+			label = s.cleanTaint()
-+		}
-+		s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, label)
++		s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, s.effectiveAssignmentTaint(s.taint[right]))
++	} else if s.taintTrackedByte(t) {
++		s.rtcall(typecheck.LookupRuntimeFunc("taintStoreString"), true, nil, addr, s.effectiveAssignmentTaint(s.taint[right]))
 +	}
  }
  
  // zeroVal returns the zero value for type t.
-@@ -4952,6 +5057,11 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -4952,6 +5134,10 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
  
  	callABI := s.f.ABIDefault
  
 +	shadowCall := base.Debug.Taint != 0 && k == callNormal && n.Op() == ir.OCALLFUNC &&
-+		s.shadowFunctionType(n.Fun.Type()) && n.Fun.Op() == ir.ONAME && n.Fun.(*ir.Name).Class == ir.PFUNC &&
-+		n.Fun.(*ir.Name).Func != nil
++		s.shadowFunctionType(n.Fun.Type()) && n.Fun.Op() == ir.ONAME && n.Fun.(*ir.Name).Class == ir.PFUNC
 +	dynamicShadowCall := base.Debug.Taint != 0 && k == callNormal && s.shadowFunctionType(n.Fun.Type()) && !shadowCall
 +
  	if k != callNormal && k != callTail && (len(n.Args) != 0 || n.Op() == ir.OCALLINTER || n.Fun.Type().NumResults() != 0) {
  		s.Fatalf("go/defer call with arguments: %v", n)
  	}
-@@ -5007,7 +5117,6 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -5004,10 +5190,13 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+ 			closure = iclosure
+ 		}
+ 	}
++	taintCalleeLSym := calleeLSym
++	if taintCalleeLSym == nil {
++		taintCalleeLSym = taintLocalCallTargetLSym(n.Fun)
++	}
  	if deferExtra != nil {
  		dextra = s.expr(deferExtra)
  	}
@@ -264,15 +506,22 @@ index 17feb90df7..75a3c3c5e7 100644
  	params := callABI.ABIAnalyze(n.Fun.Type(), false /* Do not set (register) nNames from caller side -- can cause races. */)
  	types.CalcSize(fn.Type())
  	stksize := params.ArgWidth() // includes receiver, args, and results
-@@ -5020,6 +5129,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -5020,6 +5209,14 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
  	}
  
  	var call *ssa.Value
 +	var dynamicCallAuth *ssa.Value
++	var taintSourceKeyArg *ssa.Value
++	var intStringLabel *ssa.Value
++	var urlEscapeLabel *ssa.Value
++	var base64EncodeToStringLabel *ssa.Value
++	var strconvAppendQuotedWithSource *ssa.Value
++	var strconvAppendQuotedWithLabel *ssa.Value
++	var stringsToUpperSource *ssa.Value
  	if k == callDeferStack {
  		if stksize != 0 {
  			s.Fatalf("deferprocStack with non-zero stack size %d: %v", stksize, n)
-@@ -5067,6 +5177,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -5067,6 +5264,7 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
  		// Write args.
  		t := n.Fun.Type()
  		args := n.Args
@@ -280,25 +529,45 @@ index 17feb90df7..75a3c3c5e7 100644
  
  		for _, p := range params.InParams() { // includes receiver for interface calls
  			ACArgs = append(ACArgs, p.Type)
-@@ -5084,7 +5195,29 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -5084,7 +5282,49 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
  		}
  
  		for i, n := range args {
 -			callArgs = append(callArgs, s.putArg(n, t.Param(i).Type))
 +			arg := s.putArg(n, t.Param(i).Type)
 +			callArgs = append(callArgs, arg)
-+			if (shadowCall || dynamicShadowCall) && s.taintTrackedType(t.Param(i).Type) {
-+				label := s.taint[arg]
-+				if label == nil {
-+					label = s.cleanTaint()
-+				}
-+				shadowArgs = append(shadowArgs, label)
++			if s.taintByteFlow() && calleeLSym != nil && calleeLSym.Name == "runtime.intstring" && i == 1 {
++				intStringLabel = s.taint[arg]
 +			}
-+			if base.Debug.Taint != 0 && i == 0 && calleeLSym != nil &&
-+				(calleeLSym.Name == "os.Open" || calleeLSym.Name == "os.OpenFile") {
-+				if label := s.taint[arg]; label != nil {
-+					s.rtcall(typecheck.LookupRuntimeFunc("taintSinkOpen"), true, nil, label)
++			if s.taintByteFlow() && calleeLSym != nil && calleeLSym.Name == "net/url.escape" && i == 0 {
++				urlEscapeLabel = s.taint[arg]
++			}
++			if s.taintByteFlow() && calleeLSym != nil && calleeLSym.Name == "encoding/base64.(*Encoding).EncodeToString" && t.Param(i).Type.IsSlice() && t.Param(i).Type.Elem() == types.ByteType {
++				base64EncodeToStringLabel = s.rtcall(typecheck.LookupRuntimeFunc("taintBytesLabel"), true,
++					[]*types.Type{types.Types[types.TUINT8]}, arg)[0]
++			}
++			if s.taintByteFlow() && calleeLSym != nil && calleeLSym.Name == "strconv.appendQuotedWith" && t.Param(i).Type.IsString() {
++				strconvAppendQuotedWithSource = arg
++				strconvAppendQuotedWithLabel = s.taint[arg]
++				if strconvAppendQuotedWithLabel == nil {
++					strconvAppendQuotedWithLabel = s.cleanTaint()
 +				}
++			}
++			if base.Debug.Taint != 0 && calleeLSym != nil && calleeLSym.Name == "strings.ToUpper" && i == 0 {
++				stringsToUpperSource = arg
++			}
++			if (shadowCall || (dynamicShadowCall && !s.taintTrackedScalar(t.Param(i).Type))) && s.taintTrackedTransition(t.Param(i).Type) {
++				shadowArgs = append(shadowArgs, s.effectiveAssignmentTaint(s.taint[arg]))
++			}
++			if base.Debug.Taint != 0 && i == 0 && calleeLSym != nil && calleeLSym.Name == "os.OpenFile" {
++				// os.Open and os.Create funnel through os.OpenFile, so
++				// instrumenting only OpenFile reports each open once. Pass
++				// the actual string so the runtime can scan backing bytes
++				// in addition to the SSA header label.
++				s.rtcall(typecheck.LookupRuntimeFunc("taintSinkOpen"), true, nil, arg, s.effectiveAssignmentTaint(s.taint[arg]))
++			}
++			if base.Debug.Taint != 0 && i == 0 && taintCalleeLSym != nil && taintCalleeLSym.Name == "os.Getenv" {
++				taintSourceKeyArg = arg
 +			}
 +		}
 +
@@ -311,7 +580,7 @@ index 17feb90df7..75a3c3c5e7 100644
  		}
  
  		callArgs = append(callArgs, s.mem())
-@@ -5108,9 +5241,19 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -5108,9 +5348,19 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
  			// critical that we not clobber any arguments already
  			// stored onto the stack.
  			codeptr = s.rawLoad(types.Types[types.TUINTPTR], closure)
@@ -331,40 +600,124 @@ index 17feb90df7..75a3c3c5e7 100644
  			// Note that the "receiver" parameter is nil because the actual receiver is the first input parameter.
  			aux := ssa.InterfaceAuxCall(params)
  			call = s.newValue1A(ssa.OpInterLECall, aux.LateExpansionResultType(), aux, codeptr)
-@@ -5169,7 +5312,26 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
+@@ -5169,7 +5419,47 @@ func (s *state) call(n *ir.CallExpr, k callKind, returnResultAddr bool, deferExt
  	if returnResultAddr {
  		return s.resultAddrOfCall(call, 0, fp.Type)
  	}
 -	return s.newValue1I(ssa.OpSelectN, fp.Type, 0, call)
 +	result := s.newValue1I(ssa.OpSelectN, fp.Type, 0, call)
-+	if dynamicShadowCall && dynamicCallAuth != nil && s.taintTrackedType(fp.Type) {
++	if intStringLabel != nil {
++		s.taint[result] = intStringLabel
++	}
++	if dynamicShadowCall && dynamicCallAuth != nil && s.taintTrackedTransition(fp.Type) {
 +		label := s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionFinish"), true,
 +			[]*types.Type{types.Types[types.TUINT8]}, dynamicCallAuth)[0]
 +		s.taint[result] = label
 +		s.prevCall = call
 +	}
-+	if shadowCall && s.taintTrackedType(fp.Type) {
++	if shadowCall && s.taintTrackedTransition(fp.Type) {
 +		label := s.rtcall(typecheck.LookupRuntimeFunc("taintTransitionFinish"), true,
 +			[]*types.Type{types.Types[types.TUINT8]}, dynamicCallAuth)[0]
 +		s.taint[result] = label
 +		s.prevCall = call
 +	}
-+	if base.Debug.Taint != 0 && calleeLSym != nil && calleeLSym.Name == "os.Getenv" {
-+		label := s.rtcall(typecheck.LookupRuntimeFunc("taintSourceLabel"), true,
-+			[]*types.Type{types.Types[types.TUINT8]}, result)[0]
-+		s.taint[result] = label
++	if urlEscapeLabel != nil {
++		s.taint[result] = urlEscapeLabel
++	}
++	if base64EncodeToStringLabel != nil {
++		s.taint[result] = base64EncodeToStringLabel
++	}
++	if strconvAppendQuotedWithSource != nil {
++		s.rtcall(typecheck.LookupRuntimeFunc("taintMarkDerivedBytes"), true, nil,
++			result, strconvAppendQuotedWithSource, strconvAppendQuotedWithLabel)
++	}
++	if stringsToUpperSource != nil {
++		s.rtcall(typecheck.LookupRuntimeFunc("taintMarkDerivedString"), true, nil, result, stringsToUpperSource)
++	}
++	if base.Debug.Taint != 0 && taintCalleeLSym != nil && taintCalleeLSym.Name == "os.Getenv" {
++		keyArg := taintSourceKeyArg
++		if keyArg == nil {
++			keyArg = s.constEmptyString(types.Types[types.TSTRING])
++		}
++		source := s.rtcall(typecheck.LookupRuntimeFunc("taintSourceString"), true,
++			[]*types.Type{types.Types[types.TSTRING], types.Types[types.TUINT8]}, keyArg, result)
++		result = source[0]
++		s.taint[result] = source[1]
 +		s.prevCall = call
 +	}
 +	return result
  }
  
  // maybeNilCheckClosure checks if a nil check of a closure is needed in some
-@@ -6606,6 +6768,67 @@ func (s *state) variable(n ir.Node, t *types.Type) *ssa.Value {
+@@ -6606,6 +6896,153 @@ func (s *state) variable(n ir.Node, t *types.Type) *ssa.Value {
  	return v
  }
  
 +func (s *state) taintTrackedType(t *types.Type) bool {
-+	return base.Debug.Taint != 0 && !base.Flag.CompilingRuntime && t.IsString()
++	return s.taintByteFlow() && (t.IsString() || (!base.Flag.Std && s.taintTrackedScalar(t)) || s.taintBufferWriteScalar(t) || s.taintFilepathliteAppendScalar(t) || s.taintFilepathliteCleanScalar(t) || s.taintPathAppendScalar(t) || s.taintPathCleanScalar(t))
++}
++
++// taintTrackedScalar reports whether t is an exact predeclared scalar with a shadow label.
++func (s *state) taintTrackedScalar(t *types.Type) bool {
++	return t == types.ByteType || t == types.RuneType
++}
++
++func (s *state) taintBufferWriteScalar(t *types.Type) bool {
++	if !base.Flag.Std || !s.taintTrackedScalar(t) {
++		return false
++	}
++	sym := s.curfn.Sym()
++	return sym.Pkg.Path == "bytes" &&
++		(sym.Name == "(*Buffer).WriteByte" || sym.Name == "(*Buffer).WriteRune")
++}
++
++func (s *state) taintFilepathliteAppendScalar(t *types.Type) bool {
++	if !base.Flag.Std || !s.taintTrackedScalar(t) {
++		return false
++	}
++	sym := s.curfn.Sym()
++	return sym.Pkg.Path == "internal/filepathlite" && sym.Name == "(*lazybuf).append"
++}
++
++func (s *state) taintFilepathliteCleanScalar(t *types.Type) bool {
++	if !base.Flag.Std || !s.taintTrackedScalar(t) {
++		return false
++	}
++	sym := s.curfn.Sym()
++	return sym.Pkg.Path == "internal/filepathlite" && sym.Name == "Clean"
++}
++
++func (s *state) taintPathAppendScalar(t *types.Type) bool {
++	if !base.Flag.Std || !s.taintTrackedScalar(t) {
++		return false
++	}
++	sym := s.curfn.Sym()
++	return sym.Pkg.Path == "path" && sym.Name == "(*lazybuf).append"
++}
++
++func (s *state) taintPathCleanScalar(t *types.Type) bool {
++	if !base.Flag.Std || !s.taintTrackedScalar(t) {
++		return false
++	}
++	sym := s.curfn.Sym()
++	return sym.Pkg.Path == "path" && sym.Name == "Clean"
++}
++
++// taintByteFlow reports whether byte taint tracking is active.
++func (s *state) taintByteFlow() bool {
++	return base.Debug.Taint != 0 && !base.Flag.CompilingRuntime
++}
++
++// taintTrackedByte reports whether t is a single-byte scalar whose taint may
++// be carried through an integer conversion.
++func (s *state) taintTrackedByte(t *types.Type) bool {
++	return s.taintByteFlow() && t.IsInteger() && t.Size() == 1
++}
++
++// taintTrackedTransition reports whether t participates in the single-value
++// interprocedural transition.
++func (s *state) taintTrackedTransition(t *types.Type) bool {
++	return s.taintTrackedType(t)
 +}
 +
 +func (s *state) shadowVariable(n *ir.Name) *ir.Name {
@@ -382,16 +735,39 @@ index 17feb90df7..75a3c3c5e7 100644
 +	return s.constInt8(types.Types[types.TUINT8], 0)
 +}
 +
++func (s *state) joinTaint(left, right *ssa.Value) *ssa.Value {
++	if left == nil {
++		return right
++	}
++	if right == nil {
++		return left
++	}
++	return s.newValue2(ssa.OpOr8, types.Types[types.TUINT8], left, right)
++}
++
++func (s *state) effectiveAssignmentTaint(label *ssa.Value) *ssa.Value {
++	if label == nil {
++		label = s.cleanTaint()
++	}
++	return s.joinTaint(label, s.activeControlTaint())
++}
++
++func (s *state) activeControlTaint() *ssa.Value {
++	return s.variable(controlTaintVar, types.Types[types.TUINT8])
++}
++
 +func (s *state) shadowFunctionType(t *types.Type) bool {
-+	if base.Debug.Taint == 0 || t.NumResults() != 1 || !s.taintTrackedType(t.Result(0).Type) {
++	if base.Debug.Taint == 0 {
 +		return false
 +	}
 +	trackedParams := 0
 +	for index := 0; index < t.NumParams(); index++ {
-+		if s.taintTrackedType(t.Param(index).Type) {
++		if s.taintTrackedTransition(t.Param(index).Type) {
 +			trackedParams++
 +		}
 +	}
++	// The transition carries exactly one tracked value, taken at entry and
++	// published back to the caller.
 +	return trackedParams == 1
 +}
 +
@@ -427,32 +803,72 @@ index 17feb90df7..75a3c3c5e7 100644
  func (s *state) mem() *ssa.Value {
  	return s.variable(memVar, types.TypeMem)
  }
+@@ -8018,6 +8455,34 @@ func callTargetLSym(callee *ir.Name) *obj.LSym {
+ 	return callee.LinksymABI(callee.Func.ABI)
+ }
+ 
++func taintLocalCallTargetLSym(fn ir.Node) *obj.LSym {
++	if fn.Op() != ir.ONAME {
++		return nil
++	}
++	name := fn.(*ir.Name)
++	if name.Class != ir.PAUTO {
++		return nil
++	}
++	assignment, ok := name.Defn.(*ir.AssignStmt)
++	if !ok || !assignment.Def || assignment.X != name || name.Curfn == nil {
++		return nil
++	}
++	reassigned := false
++	ir.VisitFuncAndClosures(name.Curfn, func(node ir.Node) {
++		if current, ok := node.(*ir.AssignStmt); ok && current.X == name && current != assignment {
++			reassigned = true
++		}
++	})
++	if reassigned {
++		return nil
++	}
++	target, ok := assignment.Y.(*ir.Name)
++	if !ok || target.Op() != ir.ONAME || target.Class != ir.PFUNC {
++		return nil
++	}
++	return callTargetLSym(target)
++}
++
+ // deferStructFnField is the field index of _defer.fn.
+ const deferStructFnField = 4
+ 
 diff --git i/src/cmd/compile/internal/typecheck/_builtin/runtime.go w/src/cmd/compile/internal/typecheck/_builtin/runtime.go
-index a7603c3e33..58da4ee57d 100644
+index a7603c3e33..fc37da0fa3 100644
 --- i/src/cmd/compile/internal/typecheck/_builtin/runtime.go
 +++ w/src/cmd/compile/internal/typecheck/_builtin/runtime.go
-@@ -278,6 +278,16 @@ func msanmove(dst, src, size uintptr)
+@@ -278,6 +278,21 @@ func msanmove(dst, src, size uintptr)
  func asanread(addr, size uintptr)
  func asanwrite(addr, size uintptr)
  
 +// experimental runtime IAST shadow labels
-+func taintSourceLabel(string) uint8
-+func taintSinkOpen(uint8)
++func taintSourceString(string, string) (string, uint8)
++func taintBytesLabel([]byte) uint8
++func taintMarkDerivedBytes([]byte, string, uint8)
++func taintMarkDerivedString(string, string)
++func taintSinkOpen(string, uint8)
 +func taintTransitionEnter(uintptr, uint8) uintptr
 +func taintTransitionTake(uintptr) (uint8, uintptr)
 +func taintTransitionPublish(uintptr, uint8)
 +func taintTransitionFinish(uintptr) uint8
 +func taintStoreString(unsafe.Pointer, uint8)
 +func taintLoadString(unsafe.Pointer) uint8
++func taintDataMove(uintptr, uintptr, uintptr)
++func taintClearData(unsafe.Pointer, uintptr)
 +
  func checkptrAlignment(unsafe.Pointer, *byte, uintptr)
  func checkptrArithmetic(unsafe.Pointer, []unsafe.Pointer)
  
 diff --git i/src/cmd/compile/internal/typecheck/builtin.go w/src/cmd/compile/internal/typecheck/builtin.go
-index 955e65e598..fde8d149ff 100644
+index 955e65e598..7d783cfe89 100644
 --- i/src/cmd/compile/internal/typecheck/builtin.go
 +++ w/src/cmd/compile/internal/typecheck/builtin.go
-@@ -229,19 +229,27 @@ var runtimeDecls = [...]struct {
+@@ -229,19 +229,32 @@ var runtimeDecls = [...]struct {
  	{"msanmove", funcTag, 155},
  	{"asanread", funcTag, 154},
  	{"asanwrite", funcTag, 154},
@@ -469,40 +885,45 @@ index 955e65e598..fde8d149ff 100644
 -	{"libfuzzerHookStrCmp", funcTag, 163},
 -	{"libfuzzerHookEqualFold", funcTag, 163},
 -	{"addCovMeta", funcTag, 165},
-+	{"taintSourceLabel", funcTag, 156},
-+	{"taintSinkOpen", funcTag, 157},
-+	{"taintTransitionEnter", funcTag, 158},
-+	{"taintTransitionTake", funcTag, 159},
-+	{"taintTransitionPublish", funcTag, 160},
-+	{"taintTransitionFinish", funcTag, 161},
-+	{"taintStoreString", funcTag, 162},
-+	{"taintLoadString", funcTag, 163},
-+	{"checkptrAlignment", funcTag, 164},
-+	{"checkptrArithmetic", funcTag, 166},
-+	{"libfuzzerTraceCmp1", funcTag, 167},
-+	{"libfuzzerTraceCmp2", funcTag, 168},
-+	{"libfuzzerTraceCmp4", funcTag, 169},
-+	{"libfuzzerTraceCmp8", funcTag, 170},
-+	{"libfuzzerTraceConstCmp1", funcTag, 167},
-+	{"libfuzzerTraceConstCmp2", funcTag, 168},
-+	{"libfuzzerTraceConstCmp4", funcTag, 169},
-+	{"libfuzzerTraceConstCmp8", funcTag, 170},
-+	{"libfuzzerHookStrCmp", funcTag, 171},
-+	{"libfuzzerHookEqualFold", funcTag, 171},
-+	{"addCovMeta", funcTag, 173},
++	{"taintSourceString", funcTag, 156},
++	{"taintBytesLabel", funcTag, 157},
++	{"taintMarkDerivedBytes", funcTag, 158},
++	{"taintMarkDerivedString", funcTag, 159},
++	{"taintSinkOpen", funcTag, 160},
++	{"taintTransitionEnter", funcTag, 161},
++	{"taintTransitionTake", funcTag, 162},
++	{"taintTransitionPublish", funcTag, 163},
++	{"taintTransitionFinish", funcTag, 164},
++	{"taintStoreString", funcTag, 165},
++	{"taintLoadString", funcTag, 166},
++	{"taintDataMove", funcTag, 155},
++	{"taintClearData", funcTag, 136},
++	{"checkptrAlignment", funcTag, 167},
++	{"checkptrArithmetic", funcTag, 169},
++	{"libfuzzerTraceCmp1", funcTag, 170},
++	{"libfuzzerTraceCmp2", funcTag, 171},
++	{"libfuzzerTraceCmp4", funcTag, 172},
++	{"libfuzzerTraceCmp8", funcTag, 173},
++	{"libfuzzerTraceConstCmp1", funcTag, 170},
++	{"libfuzzerTraceConstCmp2", funcTag, 171},
++	{"libfuzzerTraceConstCmp4", funcTag, 172},
++	{"libfuzzerTraceConstCmp8", funcTag, 173},
++	{"libfuzzerHookStrCmp", funcTag, 174},
++	{"libfuzzerHookEqualFold", funcTag, 174},
++	{"addCovMeta", funcTag, 176},
  	{"x86HasAVX", varTag, 6},
  	{"x86HasFMA", varTag, 6},
  	{"x86HasPOPCNT", varTag, 6},
-@@ -257,7 +265,7 @@ var runtimeDecls = [...]struct {
+@@ -257,7 +270,7 @@ var runtimeDecls = [...]struct {
  }
  
  func runtimeTypes() []*types.Type {
 -	var typs [166]*types.Type
-+	var typs [174]*types.Type
++	var typs [177]*types.Type
  	typs[0] = types.ByteType
  	typs[1] = types.NewPtr(typs[0])
  	typs[2] = types.Types[types.TANY]
-@@ -414,16 +422,24 @@ func runtimeTypes() []*types.Type {
+@@ -414,16 +427,27 @@ func runtimeTypes() []*types.Type {
  	typs[153] = newSig(params(typs[26], typs[26]), params(typs[26]))
  	typs[154] = newSig(params(typs[5], typs[5]), nil)
  	typs[155] = newSig(params(typs[5], typs[5], typs[5]), nil)
@@ -516,37 +937,142 @@ index 955e65e598..fde8d149ff 100644
 -	typs[163] = newSig(params(typs[30], typs[30], typs[15]), nil)
 -	typs[164] = types.NewArray(typs[0], 16)
 -	typs[165] = newSig(params(typs[7], typs[67], typs[164], typs[30], typs[13], typs[71], typs[71]), params(typs[67]))
-+	typs[156] = newSig(params(typs[30]), params(typs[71]))
-+	typs[157] = newSig(params(typs[71]), nil)
-+	typs[158] = newSig(params(typs[5], typs[71]), params(typs[5]))
-+	typs[159] = newSig(params(typs[5]), params(typs[71], typs[5]))
-+	typs[160] = newSig(params(typs[5], typs[71]), nil)
-+	typs[161] = newSig(params(typs[5]), params(typs[71]))
-+	typs[162] = newSig(params(typs[7], typs[71]), nil)
-+	typs[163] = newSig(params(typs[7]), params(typs[71]))
-+	typs[164] = newSig(params(typs[7], typs[1], typs[5]), nil)
-+	typs[165] = types.NewSlice(typs[7])
-+	typs[166] = newSig(params(typs[7], typs[165]), nil)
-+	typs[167] = newSig(params(typs[71], typs[71], typs[15]), nil)
-+	typs[168] = newSig(params(typs[65], typs[65], typs[15]), nil)
-+	typs[169] = newSig(params(typs[67], typs[67], typs[15]), nil)
-+	typs[170] = newSig(params(typs[24], typs[24], typs[15]), nil)
-+	typs[171] = newSig(params(typs[30], typs[30], typs[15]), nil)
-+	typs[172] = types.NewArray(typs[0], 16)
-+	typs[173] = newSig(params(typs[7], typs[67], typs[172], typs[30], typs[13], typs[71], typs[71]), params(typs[67]))
++	typs[156] = newSig(params(typs[30], typs[30]), params(typs[30], typs[71]))
++	typs[157] = newSig(params(typs[42]), params(typs[71]))
++	typs[158] = newSig(params(typs[42], typs[30], typs[71]), nil)
++	typs[159] = newSig(params(typs[30], typs[30]), nil)
++	typs[160] = newSig(params(typs[30], typs[71]), nil)
++	typs[161] = newSig(params(typs[5], typs[71]), params(typs[5]))
++	typs[162] = newSig(params(typs[5]), params(typs[71], typs[5]))
++	typs[163] = newSig(params(typs[5], typs[71]), nil)
++	typs[164] = newSig(params(typs[5]), params(typs[71]))
++	typs[165] = newSig(params(typs[7], typs[71]), nil)
++	typs[166] = newSig(params(typs[7]), params(typs[71]))
++	typs[167] = newSig(params(typs[7], typs[1], typs[5]), nil)
++	typs[168] = types.NewSlice(typs[7])
++	typs[169] = newSig(params(typs[7], typs[168]), nil)
++	typs[170] = newSig(params(typs[71], typs[71], typs[15]), nil)
++	typs[171] = newSig(params(typs[65], typs[65], typs[15]), nil)
++	typs[172] = newSig(params(typs[67], typs[67], typs[15]), nil)
++	typs[173] = newSig(params(typs[24], typs[24], typs[15]), nil)
++	typs[174] = newSig(params(typs[30], typs[30], typs[15]), nil)
++	typs[175] = types.NewArray(typs[0], 16)
++	typs[176] = newSig(params(typs[7], typs[67], typs[175], typs[30], typs[13], typs[71], typs[71]), params(typs[67]))
  	return typs[:]
  }
  
+diff --git i/src/cmd/compile/internal/walk/assign.go w/src/cmd/compile/internal/walk/assign.go
+index 63b6a1d2c1..6aee425f05 100644
+--- i/src/cmd/compile/internal/walk/assign.go
++++ w/src/cmd/compile/internal/walk/assign.go
+@@ -541,7 +541,7 @@ func appendSlice(n *ir.CallExpr, init *ir.Nodes) ir.Node {
+ 		ptr1, len1 := backingArrayPtrLen(cheapExpr(slice, &nodes))
+ 		ptr2, len2 := backingArrayPtrLen(l2)
+ 		ncopy = mkcall1(fn, types.Types[types.TINT], &nodes, reflectdata.AppendElemRType(base.Pos, n), ptr1, len1, ptr2, len2)
+-	} else if base.Flag.Cfg.Instrumenting && !base.Flag.CompilingRuntime {
++	} else if (base.Flag.Cfg.Instrumenting || base.Debug.Taint != 0) && !base.Flag.CompilingRuntime {
+ 		// rely on runtime to instrument:
+ 		//  copy(s[idx:], l2)
+ 		// l2 can be a slice or string.
+diff --git i/src/cmd/compile/internal/walk/builtin.go w/src/cmd/compile/internal/walk/builtin.go
+index c698caddce..8eb02ea5c9 100644
+--- i/src/cmd/compile/internal/walk/builtin.go
++++ w/src/cmd/compile/internal/walk/builtin.go
+@@ -140,6 +140,24 @@ func walkClear(n *ir.UnaryExpr) ir.Node {
+ 	typ := n.X.Type()
+ 	switch {
+ 	case typ.IsSlice():
++		if base.Debug.Taint != 0 && !base.Flag.CompilingRuntime && !typ.Elem().HasPointers() {
++			var init ir.Nodes
++			cheap := cheapExpr(n.X, &init)
++			clearNode := arrayClear(cheap.Pos(), cheap, nil)
++			if clearNode == nil {
++				return ir.NewBlockStmt(n.Pos(), nil)
++			}
++			// clear() zeroes the backing bytes; also clear their taint shadow.
++			ptr, length := backingArrayPtrLen(cheap)
++			size := ir.NewBinaryExpr(base.Pos, ir.OMUL,
++				typecheck.Conv(length, types.Types[types.TUINTPTR]),
++				ir.NewInt(base.Pos, typ.Elem().Size()))
++			fn := typecheck.LookupRuntime("taintClearData")
++			call := mkcall1(fn, nil, &init, typecheck.Conv(ptr, types.Types[types.TUNSAFEPTR]), size)
++			init.Append(call)
++			init.Append(clearNode)
++			return ir.NewBlockStmt(n.Pos(), init)
++		}
+ 		if n := arrayClear(n.X.Pos(), n.X, nil); n != nil {
+ 			return n
+ 		}
+@@ -562,9 +580,11 @@ func walkMakeSliceCopy(n *ir.MakeExpr, init *ir.Nodes) ir.Node {
+ 	copylen := ir.NewUnaryExpr(base.Pos, ir.OLEN, n.Cap)
+ 	copyptr := ir.NewUnaryExpr(base.Pos, ir.OSPTR, n.Cap)
+ 
+-	if !t.Elem().HasPointers() && n.Bounded() {
++	if !t.Elem().HasPointers() && n.Bounded() && !(base.Debug.Taint != 0 && !base.Flag.CompilingRuntime) {
+ 		// When len(to)==len(from) and elements have no pointers:
+ 		// replace make+copy with runtime.mallocgc+runtime.memmove.
++		// Under -d=taint we instead fall through to runtime.makeslicecopy,
++		// which the taint runtime hooks to propagate shadow bits.
+ 
+ 		// We do not check for overflow of len(to)*elem.Width here
+ 		// since len(from) is an existing checked slice capacity
+@@ -586,6 +606,11 @@ func walkMakeSliceCopy(n *ir.MakeExpr, init *ir.Nodes) ir.Node {
+ 		fn = typecheck.LookupRuntime("memmove", t.Elem(), t.Elem())
+ 		ncopy := mkcall1(fn, nil, init, ir.NewUnaryExpr(base.Pos, ir.OSPTR, s), copyptr, size)
+ 		init.Append(walkExpr(typecheck.Stmt(ncopy), init))
++		fn = typecheck.LookupRuntime("taintDataMove")
++		taintMove := mkcall1(fn, nil, init,
++			typecheck.Conv(typecheck.Conv(ir.NewUnaryExpr(base.Pos, ir.OSPTR, s), types.Types[types.TUNSAFEPTR]), types.Types[types.TUINTPTR]),
++			typecheck.Conv(typecheck.Conv(copyptr, types.Types[types.TUNSAFEPTR]), types.Types[types.TUINTPTR]), size)
++		init.Append(walkExpr(typecheck.Stmt(taintMove), init))
+ 
+ 		return s
+ 	}
+diff --git i/src/cmd/compile/internal/walk/expr.go w/src/cmd/compile/internal/walk/expr.go
+index 2794671c73..686b72a8db 100644
+--- i/src/cmd/compile/internal/walk/expr.go
++++ w/src/cmd/compile/internal/walk/expr.go
+@@ -289,7 +289,7 @@ func walkExpr1(n ir.Node, init *ir.Nodes) ir.Node {
+ 		panic("unreachable")
+ 
+ 	case ir.OCOPY:
+-		return walkCopy(n.(*ir.BinaryExpr), init, base.Flag.Cfg.Instrumenting && !base.Flag.CompilingRuntime)
++		return walkCopy(n.(*ir.BinaryExpr), init, (base.Flag.Cfg.Instrumenting || base.Debug.Taint != 0) && !base.Flag.CompilingRuntime)
+ 
+ 	case ir.OCLEAR:
+ 		n := n.(*ir.UnaryExpr)
+diff --git i/src/cmd/internal/objabi/flag.go w/src/cmd/internal/objabi/flag.go
+index 603bf8746c..a7133570c7 100644
+--- i/src/cmd/internal/objabi/flag.go
++++ w/src/cmd/internal/objabi/flag.go
+@@ -111,6 +111,9 @@ func (versionFlag) Set(s string) error {
+ 			p += " buildID=" + buildID
+ 		}
+ 	}
++	if s == "full" && name == "compile" {
++		p += " iast-taint-shadow-v28"
++	}
+ 
+ 	fmt.Printf("%s version %s%s\n", name, buildcfg.Version, p)
+ 	os.Exit(0)
 diff --git i/src/internal/runtime/maps/group.go w/src/internal/runtime/maps/group.go
-index a56d32aca0..c32e30c492 100644
+index a56d32aca0..fb68fa469b 100644
 --- i/src/internal/runtime/maps/group.go
 +++ w/src/internal/runtime/maps/group.go
-@@ -299,6 +299,24 @@ func (g *groupReference) elem(typ *abi.MapType, i uintptr) unsafe.Pointer {
+@@ -299,6 +299,32 @@ func (g *groupReference) elem(typ *abi.MapType, i uintptr) unsafe.Pointer {
  	return unsafe.Pointer(uintptr(g.data) + offset)
  }
  
++func taintTrackedMapElem(typ *abi.MapType) bool {
++	if typ.IndirectElem() {
++		return false
++	}
++	kind := typ.Elem.Kind()
++	return kind == abi.String || kind == abi.Uint8 || kind == abi.Int32
++}
++
 +func (g *groupReference) copyTaintLabels(typ *abi.MapType, source groupReference) {
-+	if typ.Elem.Kind() != abi.String || typ.IndirectElem() {
++	if !taintTrackedMapElem(typ) {
 +		return
 +	}
 +	for i := uintptr(0); i < abi.MapGroupSlots; i++ {
@@ -555,7 +1081,7 @@ index a56d32aca0..c32e30c492 100644
 +}
 +
 +func (g *groupReference) clearTaintLabels(typ *abi.MapType) {
-+	if typ.Elem.Kind() != abi.String || typ.IndirectElem() {
++	if !taintTrackedMapElem(typ) {
 +		return
 +	}
 +	for i := uintptr(0); i < abi.MapGroupSlots; i++ {
@@ -566,7 +1092,7 @@ index a56d32aca0..c32e30c492 100644
  // groupsReference is a wrapper type describing an array of groups stored at
  // data.
  type groupsReference struct {
-@@ -336,6 +354,7 @@ func (g *groupsReference) group(typ *abi.MapType, i uint64) groupReference {
+@@ -336,6 +362,7 @@ func (g *groupsReference) group(typ *abi.MapType, i uint64) groupReference {
  
  func cloneGroup(typ *abi.MapType, newGroup, oldGroup groupReference) {
  	typedmemmove(typ.Group, newGroup.data, oldGroup.data)
@@ -575,14 +1101,14 @@ index a56d32aca0..c32e30c492 100644
  		// Deep copy keys if indirect.
  		for i := uintptr(0); i < abi.MapGroupSlots; i++ {
 diff --git i/src/internal/runtime/maps/map.go w/src/internal/runtime/maps/map.go
-index 515558a94f..97bcb07779 100644
+index 515558a94f..1dbce9f91d 100644
 --- i/src/internal/runtime/maps/map.go
 +++ w/src/internal/runtime/maps/map.go
 @@ -710,6 +710,9 @@ func (m *Map) deleteSmall(typ *abi.MapType, hash uintptr, key unsafe.Pointer) {
  			}
  
  			slotElem := g.elem(typ, i)
-+			if typ.Elem.Kind() == abi.String && !typ.IndirectElem() {
++			if taintTrackedMapElem(typ) {
 +				taintClearString(slotElem)
 +			}
  			if typ.IndirectElem() {
@@ -614,14 +1140,14 @@ index 8bba23f070..85be34081b 100644
  //
  //go:linkname errNilAssign
 diff --git i/src/internal/runtime/maps/table.go w/src/internal/runtime/maps/table.go
-index 977f3091ad..97874b6a60 100644
+index 977f3091ad..3275b2819f 100644
 --- i/src/internal/runtime/maps/table.go
 +++ w/src/internal/runtime/maps/table.go
 @@ -409,6 +409,9 @@ func (t *table) uncheckedPutSlot(typ *abi.MapType, hash uintptr, key, elem unsaf
  			} else {
  				typedmemmove(typ.Elem, slotElem, elem)
  			}
-+			if typ.Elem.Kind() == abi.String && !typ.IndirectElem() {
++			if taintTrackedMapElem(typ) {
 +				taintCopyString(slotElem, elem)
 +			}
  
@@ -631,7 +1157,7 @@ index 977f3091ad..97874b6a60 100644
  				}
  
  				slotElem := g.elem(typ, i)
-+				if typ.Elem.Kind() == abi.String && !typ.IndirectElem() {
++				if taintTrackedMapElem(typ) {
 +					taintClearString(slotElem)
 +				}
  				if typ.IndirectElem() {
@@ -654,7 +1180,7 @@ index 977f3091ad..97874b6a60 100644
  			g.ctrls().setEmpty()
  		}
 diff --git i/src/runtime/chan.go w/src/runtime/chan.go
-index 3320c248b4..75173bfee1 100644
+index 3320c248b4..67735638b2 100644
 --- i/src/runtime/chan.go
 +++ w/src/runtime/chan.go
 @@ -32,18 +32,19 @@ const (
@@ -676,7 +1202,7 @@ index 3320c248b4..75173bfee1 100644
 +	qcount      uint           // total data in the queue
 +	dataqsiz    uint           // size of the circular queue
 +	buf         unsafe.Pointer // points to an array of dataqsiz elements
-+	taintLabels unsafe.Pointer // runtime IAST labels for buffered string channels
++	taintLabels unsafe.Pointer // runtime IAST labels for buffered taint-tracked channels
 +	elemsize    uint16
 +	closed      uint32
 +	timer       *timer // timer feeding this chan
@@ -694,13 +1220,13 @@ index 3320c248b4..75173bfee1 100644
  		panic(plainError("makechan: size out of range"))
  	}
 +	var taintSize uintptr
-+	if elem.Kind() == abi.String && size > 0 {
++	if taintTrackedChannelElemKind(elem.Kind()) && size > 0 {
 +		taintSize = uintptr(size)
 +	}
  
  	// Hchan does not contain pointers interesting for GC when elements stored in buf do not contain pointers.
  	// buf points into the same allocation, elemtype is persistent.
-@@ -96,18 +101,19 @@ func makechan(t *chantype, size int) *hchan {
+@@ -96,12 +101,10 @@ func makechan(t *chantype, size int) *hchan {
  	switch {
  	case mem == 0:
  		// Queue or element size is zero.
@@ -714,21 +1240,26 @@ index 3320c248b4..75173bfee1 100644
  		c = (*hchan)(mallocgc(hchanSize+mem, nil, true))
  		c.buf = add(unsafe.Pointer(c), hchanSize)
  	default:
- 		// Elements contain pointers.
+@@ -109,6 +112,9 @@ func makechan(t *chantype, size int) *hchan {
  		c = new(hchan)
  		c.buf = mallocgc(mem, elem, true)
-+		if taintSize != 0 {
-+			c.taintLabels = mallocgc(taintSize, nil, true)
-+		}
  	}
++	if taintSize != 0 {
++		c.taintLabels = mallocgc(taintSize, nil, true)
++	}
  
  	c.elemsize = uint16(elem.Size_)
-@@ -139,6 +145,23 @@ func chanbuf(c *hchan, i uint) unsafe.Pointer {
+ 	c.elemtype = elem
+@@ -139,6 +145,27 @@ func chanbuf(c *hchan, i uint) unsafe.Pointer {
  	return add(c.buf, uintptr(i)*uintptr(c.elemsize))
  }
  
 +func (c *hchan) taintEnabled() bool {
-+	return c.elemtype != nil && c.elemtype.Kind() == abi.String
++	return c.elemtype != nil && taintTrackedChannelElemKind(c.elemtype.Kind())
++}
++
++func taintTrackedChannelElemKind(kind abi.Kind) bool {
++	return kind == abi.String || kind == abi.Uint8 || kind == abi.Int32
 +}
 +
 +func (c *hchan) taintLabel(index uint) uint8 {
@@ -747,7 +1278,7 @@ index 3320c248b4..75173bfee1 100644
  // full reports whether a send on c would block (that is, the channel is full).
  // It uses a single word-sized read of mutable state, so although
  // the answer is instantaneously true, the correct answer may have changed
-@@ -174,6 +197,10 @@ func chansend1(c *hchan, elem unsafe.Pointer) {
+@@ -174,6 +201,10 @@ func chansend1(c *hchan, elem unsafe.Pointer) {
   * the operation; we'll see that it's now closed.
   */
  func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
@@ -758,7 +1289,7 @@ index 3320c248b4..75173bfee1 100644
  	if c == nil {
  		if !block {
  			return false
-@@ -229,7 +256,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+@@ -229,7 +260,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
  	if sg := c.recvq.dequeue(); sg != nil {
  		// Found a waiting receiver. We pass the value we want to send
  		// directly to the receiver, bypassing the channel buffer (if any).
@@ -767,7 +1298,7 @@ index 3320c248b4..75173bfee1 100644
  		return true
  	}
  
-@@ -240,6 +267,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+@@ -240,6 +271,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
  			racenotify(c, c.sendx, nil)
  		}
  		typedmemmove(c.elemtype, qp, ep)
@@ -775,7 +1306,7 @@ index 3320c248b4..75173bfee1 100644
  		c.sendx++
  		if c.sendx == c.dataqsiz {
  			c.sendx = 0
-@@ -264,6 +292,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+@@ -264,6 +296,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
  	// No stack splits between assigning elem and enqueuing mysg
  	// on gp.waiting where copystack can find it.
  	mysg.elem.set(ep)
@@ -783,7 +1314,7 @@ index 3320c248b4..75173bfee1 100644
  	mysg.waitlink = nil
  	mysg.g = gp
  	mysg.isSelect = false
-@@ -299,6 +328,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+@@ -299,6 +332,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
  		blockevent(mysg.releasetime-t0, 2)
  	}
  	mysg.c.set(nil)
@@ -791,7 +1322,7 @@ index 3320c248b4..75173bfee1 100644
  	releaseSudog(mysg)
  	if closed {
  		if c.closed == 0 {
-@@ -315,7 +345,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
+@@ -315,7 +349,7 @@ func chansend(c *hchan, ep unsafe.Pointer, block bool, callerpc uintptr) bool {
  // Channel c must be empty and locked.  send unlocks c with unlockf.
  // sg must already be dequeued from c.
  // ep must be non-nil and point to the heap or the caller's stack.
@@ -800,7 +1331,7 @@ index 3320c248b4..75173bfee1 100644
  	if c.bubble != nil && getg().bubble != c.bubble {
  		unlockf()
  		fatal("send on synctest channel from outside bubble")
-@@ -338,6 +368,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
+@@ -338,6 +372,7 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
  	}
  	if sg.elem.get() != nil {
  		sendDirect(c.elemtype, sg, ep)
@@ -808,7 +1339,7 @@ index 3320c248b4..75173bfee1 100644
  		sg.elem.set(nil)
  	}
  	gp := sg.g
-@@ -369,6 +400,7 @@ func timerchandrain(c *hchan) bool {
+@@ -369,6 +404,7 @@ func timerchandrain(c *hchan) bool {
  	for c.qcount > 0 {
  		any = true
  		typedmemclr(c.elemtype, chanbuf(c, c.recvx))
@@ -816,7 +1347,7 @@ index 3320c248b4..75173bfee1 100644
  		c.recvx++
  		if c.recvx == c.dataqsiz {
  			c.recvx = 0
-@@ -445,6 +477,7 @@ func closechan(c *hchan) {
+@@ -445,6 +481,7 @@ func closechan(c *hchan) {
  			typedmemclr(c.elemtype, sg.elem.get())
  			sg.elem.set(nil)
  		}
@@ -824,7 +1355,7 @@ index 3320c248b4..75173bfee1 100644
  		if sg.releasetime != 0 {
  			sg.releasetime = cputicks()
  		}
-@@ -573,6 +606,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+@@ -573,6 +610,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
  			}
  			if ep != nil {
  				typedmemclr(c.elemtype, ep)
@@ -834,7 +1365,7 @@ index 3320c248b4..75173bfee1 100644
  			}
  			return true, false
  		}
-@@ -593,6 +629,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+@@ -593,6 +633,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
  			unlock(&c.lock)
  			if ep != nil {
  				typedmemclr(c.elemtype, ep)
@@ -844,7 +1375,7 @@ index 3320c248b4..75173bfee1 100644
  			}
  			return true, false
  		}
-@@ -618,6 +657,8 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+@@ -618,6 +661,8 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
  		if ep != nil {
  			typedmemmove(c.elemtype, ep, qp)
  		}
@@ -853,7 +1384,7 @@ index 3320c248b4..75173bfee1 100644
  		typedmemclr(c.elemtype, qp)
  		c.recvx++
  		if c.recvx == c.dataqsiz {
-@@ -625,6 +666,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+@@ -625,6 +670,9 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
  		}
  		c.qcount--
  		unlock(&c.lock)
@@ -863,7 +1394,7 @@ index 3320c248b4..75173bfee1 100644
  		return true, true
  	}
  
-@@ -679,6 +723,10 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+@@ -679,6 +727,10 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
  		blockevent(mysg.releasetime-t0, 2)
  	}
  	success := mysg.success
@@ -874,7 +1405,7 @@ index 3320c248b4..75173bfee1 100644
  	gp.param = nil
  	mysg.c.set(nil)
  	releaseSudog(mysg)
-@@ -700,6 +748,10 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
+@@ -700,6 +752,10 @@ func chanrecv(c *hchan, ep unsafe.Pointer, block bool) (selected, received bool)
  // sg must already be dequeued from c.
  // A non-nil ep must point to the heap or the caller's stack.
  func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
@@ -885,7 +1416,7 @@ index 3320c248b4..75173bfee1 100644
  	if c.bubble != nil && getg().bubble != c.bubble {
  		unlockf()
  		fatal("receive on synctest channel from outside bubble")
-@@ -726,8 +778,10 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
+@@ -726,8 +782,10 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
  		if ep != nil {
  			typedmemmove(c.elemtype, ep, qp)
  		}
@@ -896,7 +1427,7 @@ index 3320c248b4..75173bfee1 100644
  		c.recvx++
  		if c.recvx == c.dataqsiz {
  			c.recvx = 0
-@@ -735,8 +789,12 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
+@@ -735,8 +793,12 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func(), skip int) {
  		c.sendx = c.recvx // c.sendx = (c.sendx+1) % c.dataqsiz
  	}
  	sg.elem.set(nil)
@@ -910,10 +1441,10 @@ index 3320c248b4..75173bfee1 100644
  	sg.success = true
  	if sg.releasetime != 0 {
 diff --git i/src/runtime/malloc.go w/src/runtime/malloc.go
-index c08bc7574b..78ee36a910 100644
+index c08bc7574b..579db09220 100644
 --- i/src/runtime/malloc.go
 +++ w/src/runtime/malloc.go
-@@ -884,6 +884,11 @@ mapped:
+@@ -884,6 +884,16 @@ mapped:
  				throw("out of memory allocating heap arena metadata")
  			}
  		}
@@ -922,6 +1453,11 @@ index c08bc7574b..78ee36a910 100644
 +			throw("out of memory allocating IAST heap shadow")
 +		}
 +		atomic.StorepNoWB(unsafe.Pointer(&r.taintShadow), taintShadow)
++		taintSourceShadow := sysAlloc(heapArenaBytes*unsafe.Sizeof(uint64(0)), &memstats.gcMiscSys, "IAST source shadow")
++		if taintSourceShadow == nil {
++			throw("out of memory allocating IAST source shadow")
++		}
++		atomic.StorepNoWB(unsafe.Pointer(&r.taintSourceShadow), taintSourceShadow)
  
  		// Register the arena in allArenas if requested.
  		if len((*arenaList)) == cap((*arenaList)) {
@@ -948,16 +1484,19 @@ index 4eecb1cfd9..14119c836e 100644
  					trace := traceAcquire()
  					if trace.ok() {
 diff --git i/src/runtime/mheap.go w/src/runtime/mheap.go
-index 9b62ee4273..a6b0431118 100644
+index 9b62ee4273..500d1e7de6 100644
 --- i/src/runtime/mheap.go
 +++ w/src/runtime/mheap.go
-@@ -268,6 +268,10 @@ var mheap_ mheap
+@@ -268,6 +268,13 @@ var mheap_ mheap
  type heapArena struct {
  	_ sys.NotInHeap
  
 +	// taintShadow stores one runtime IAST label per pointer-sized heap word.
 +	// It is allocated outside the Go heap and lives as long as this arena.
 +	taintShadow *uint8
++
++	// taintSourceShadow stores one source root-set token per heap byte.
++	taintSourceShadow *uint64
 +
  	// spans maps from virtual address page ID within this arena to *mspan.
  	// For allocated spans, their pages map to the span itself.
@@ -1168,6 +1707,34 @@ index 219bcb9259..006bf40396 100644
  	}
  
  	if xreg > runtime.PtrSize {
+diff --git i/src/runtime/slice.go w/src/runtime/slice.go
+index 2a44297754..5c80b81c38 100644
+--- i/src/runtime/slice.go
++++ w/src/runtime/slice.go
+@@ -86,6 +86,7 @@ func makeslicecopy(et *_type, tolen int, fromlen int, from unsafe.Pointer) unsaf
+ 	}
+ 
+ 	memmove(to, from, copymem)
++	taintDataMove(uintptr(to), uintptr(from), copymem)
+ 
+ 	return to
+ }
+@@ -282,6 +283,7 @@ func growslice(oldPtr unsafe.Pointer, newLen, oldCap, num int, et *_type) slice
+ 		}
+ 	}
+ 	memmove(p, oldPtr, lenmem)
++	taintDataMove(uintptr(p), uintptr(oldPtr), lenmem)
+ 
+ 	return slice{p, newLen, newcap}
+ }
+@@ -425,6 +427,7 @@ func slicecopy(toPtr unsafe.Pointer, toLen int, fromPtr unsafe.Pointer, fromLen
+ 	} else {
+ 		memmove(toPtr, fromPtr, size)
+ 	}
++	taintDataMove(uintptr(toPtr), uintptr(fromPtr), size)
+ 	return n
+ }
+ 
 diff --git i/src/runtime/stack.go w/src/runtime/stack.go
 index 6f89cc142c..1488901b4a 100644
 --- i/src/runtime/stack.go
@@ -1196,12 +1763,99 @@ index 6f89cc142c..1488901b4a 100644
  
  	// Adjust remaining structures that have pointers into stacks.
  	// We have to do most of these before we traceback the new
-diff --git 1/src/runtime/taint_shadow.go 2/src/runtime/taint_shadow.go
+diff --git i/src/runtime/string.go w/src/runtime/string.go
+index 15b3868cbc..f1bdbb16db 100644
+--- i/src/runtime/string.go
++++ w/src/runtime/string.go
+@@ -52,10 +52,23 @@ func concatstrings(buf *tmpBuf, a []string) string {
+ 		return a[idx]
+ 	}
+ 	s, b := rawstringtmp(buf, l)
++	resultBase := uintptr(unsafe.Pointer(&b[0]))
+ 	for _, x := range a {
+ 		n := copy(b, x)
+ 		b = b[n:]
+ 	}
++	// Propagate source shadow bits into the freshly built result. The fill
++	// loop above copies every part in order via copy() (a raw memmove that the
++	// taint runtime does not observe), so mirror it here.
++	offset := uintptr(0)
++	for _, x := range a {
++		n := uintptr(len(x))
++		if n != 0 {
++			source, _ := taintStringData(x)
++			taintDataMove(resultBase+offset, source, n)
++			offset += n
++		}
++	}
+ 	return s
+ }
+ 
+@@ -155,7 +168,10 @@ func slicebytetostring(buf *tmpBuf, ptr *byte, n int) string {
+ 	if asanenabled {
+ 		asanread(unsafe.Pointer(ptr), uintptr(n))
+ 	}
+-	if n == 1 {
++	if n == 1 && taintLoadString(unsafe.Pointer(ptr)) == 0 {
++		// The single-byte interning table lives outside the heap arenas and
++		// cannot carry a shadow bit, so only use it for clean bytes. A tainted
++		// byte falls through to a fresh allocation whose shadow is propagated.
+ 		p := unsafe.Pointer(&staticuint64s[*ptr])
+ 		if goarch.BigEndian {
+ 			p = add(p, 7)
+@@ -170,6 +186,7 @@ func slicebytetostring(buf *tmpBuf, ptr *byte, n int) string {
+ 		p = mallocgc(uintptr(n), nil, false)
+ 	}
+ 	memmove(p, unsafe.Pointer(ptr), uintptr(n))
++	taintDataMove(uintptr(p), uintptr(unsafe.Pointer(ptr)), uintptr(n))
+ 	return unsafe.String((*byte)(p), n)
+ }
+ 
+@@ -230,6 +247,10 @@ func stringtoslicebyte(buf *tmpBuf, s string) []byte {
+ 		b = rawbyteslice(len(s))
+ 	}
+ 	copy(b, s)
++	if len(s) != 0 {
++		source, _ := taintStringData(s)
++		taintDataMove(uintptr(unsafe.Pointer(&b[0])), source, uintptr(len(s)))
++	}
+ 	return b
+ }
+ 
+@@ -254,6 +275,14 @@ func stringtoslicerune(buf *[tmpStringBufSize]rune, s string) []rune {
+ 		a[n] = r
+ 		n++
+ 	}
++	// Rune conversion transforms rather than copies bytes, so track coarsely:
++	// if any source byte is tainted, taint the whole rune destination.
++	if len(a) != 0 {
++		source, length := taintStringData(s)
++		if rootSet, dirty := taintDataRootSet(source, length); dirty {
++			taintDataSetRootSet(uintptr(unsafe.Pointer(&a[0])), uintptr(len(a))*unsafe.Sizeof(a[0]), rootSet)
++		}
++	}
+ 	return a
+ }
+ 
+@@ -284,6 +313,12 @@ func slicerunetostring(buf *tmpBuf, a []rune) string {
+ 		}
+ 		size2 += encoderune(b[size2:], r)
+ 	}
++	// Coarse: if any input rune byte is tainted, taint the whole result.
++	if len(a) != 0 && size2 != 0 {
++		if rootSet, dirty := taintDataRootSet(uintptr(unsafe.Pointer(&a[0])), uintptr(len(a))*unsafe.Sizeof(a[0])); dirty {
++			taintDataSetRootSet(uintptr(unsafe.Pointer(&b[0])), uintptr(size2), rootSet)
++		}
++	}
+ 	return s[:size2]
+ }
+ 
+diff --git i/src/runtime/taint_shadow.go w/src/runtime/taint_shadow.go
 new file mode 100644
-index 0000000000..d03e1b4a11
+index 0000000000..276f6b5ff9
 --- /dev/null
-+++ 2/src/runtime/taint_shadow.go
-@@ -0,0 +1,173 @@
++++ w/src/runtime/taint_shadow.go
+@@ -0,0 +1,583 @@
 +// Copyright 2026 The Go Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style
 +// license that can be found in the LICENSE file.
@@ -1214,24 +1868,421 @@ index 0000000000..d03e1b4a11
 +	"unsafe"
 +)
 +
-+// taintSourceLabel returns a runtime shadow label for a source value.
-+//
-+//go:nosplit
-+func taintSourceLabel(value string) uint8 {
++// taintActive becomes nonzero once a real source has been observed. Copy and
++// conversion hooks consult it to stay cheap in programs that never taint.
++var taintActive uint32
++var taintNextSourceID uint64
++
++type taintRootSet struct {
++	sourceID uint64
++	next     *taintRootSet
++}
++
++// taintSourceString returns a fresh tainted source string with a unique
++// occurrence ID. Only os.Getenv("TAINT_PATH") is treated as a source so
++// unrelated environment reads never taint.
++func taintSourceString(key, value string) (string, uint8) {
++	if key != "TAINT_PATH" || len(value) == 0 {
++		return value, 0
++	}
++	fresh, bytes := rawstring(len(value))
++	copy(bytes, value)
++	sourceID := atomic.Xadd64(&taintNextSourceID, 1)
++	if sourceID == 0 {
++		throw("IAST source ID overflow")
++	}
++	atomic.Store(&taintActive, 1)
++	base := uintptr(unsafe.Pointer(&bytes[0]))
++	taintDataSetRootSet(base, uintptr(len(bytes)), taintNewRootSet(sourceID))
++	return fresh, 1
++}
++
++func taintBytesLabel(value []byte) uint8 {
 +	if len(value) == 0 {
 +		return 0
 +	}
-+	return 1
++	data := (*slice)(unsafe.Pointer(&value))
++	if taintDataAny(uintptr(data.array), uintptr(data.len)) {
++		return 1
++	}
++	return 0
 +}
 +
-+// taintSinkOpen reports a runtime shadow label observed at os.Open.
-+//
-+//go:nosplit
-+func taintSinkOpen(label uint8) {
-+	if label == 0 {
++func taintMarkDerivedBytes(destination []byte, source string, label uint8) {
++	if len(destination) == 0 {
++		return
++	}
++	sourceBase, sourceLength := taintStringData(source)
++	rootSet, dirty := taintDataRootSet(sourceBase, sourceLength)
++	if label == 0 && !dirty {
++		return
++	}
++	destinationData := (*slice)(unsafe.Pointer(&destination))
++	taintDataSetRootSet(uintptr(destinationData.array), uintptr(destinationData.len), rootSet)
++}
++
++func taintMarkDerivedString(destination, source string) {
++	sourceBase, sourceLength := taintStringData(source)
++	rootSet, dirty := taintDataRootSet(sourceBase, sourceLength)
++	if !dirty {
++		return
++	}
++	destinationBase, destinationLength := taintStringData(destination)
++	taintDataSetRootSet(destinationBase, destinationLength, rootSet)
++}
++
++// taintSinkOpen reports when os.OpenFile receives a tainted value, either via
++// the SSA header label or via any tainted byte in the value's backing data.
++func taintSinkOpen(value string, label uint8) {
++	base, size := taintStringData(value)
++	if label == 0 && !taintDataAny(base, size) {
 +		return
 +	}
 +	print("taint: os.Open received runtime shadow label\n")
++	taintPrintRanges(base, size)
++	taintPrintSourceRanges(base, size)
++}
++
++// taintPrintRanges prints coalesced half-open tainted byte ranges relative to
++// [base, base+size) without allocating.
++func taintPrintRanges(base, size uintptr) {
++	print("taint: os.Open ranges=[")
++	hasRange := false
++	inRange := false
++	start := uintptr(0)
++	for offset := uintptr(0); ; offset++ {
++		dirty := false
++		if offset < size {
++			if shadow, mask := taintShadowBit(base + offset); shadow != nil {
++				dirty = atomic.Load8(shadow)&mask != 0
++			}
++		}
++		if dirty {
++			if !inRange {
++				start = offset
++				inRange = true
++			}
++		} else if inRange {
++			if hasRange {
++				print(",")
++			}
++			print("[", start, ",", offset, "]")
++			hasRange = true
++			inRange = false
++		}
++		if offset == size {
++			break
++		}
++	}
++	print("]\n")
++}
++
++// taintPrintSourceRanges prints coalesced root-set byte ranges relative to
++// [base, base+size) without allocating.
++func taintPrintSourceRanges(base, size uintptr) {
++	print("taint: os.Open sourceRanges=[")
++	hasRange := false
++	inRange := false
++	start := uintptr(0)
++	rootSet := uint64(0)
++	for offset := uintptr(0); ; offset++ {
++		dirty := false
++		currentRootSet := uint64(0)
++		if offset < size {
++			if shadow, mask := taintShadowBit(base + offset); shadow != nil && atomic.Load8(shadow)&mask != 0 {
++				dirty = true
++				if sourceShadow := taintRootSetShadow(base + offset); sourceShadow != nil {
++					currentRootSet = atomic.Load64(sourceShadow)
++				}
++			}
++		}
++		if inRange && (!dirty || currentRootSet != rootSet) {
++			if rootSet == 0 {
++				if hasRange {
++					print(",")
++				}
++				print("[", start, ",", offset, ",0]")
++				hasRange = true
++			} else {
++				for root := taintRootSetFromToken(rootSet); root != nil; root = root.next {
++					if hasRange {
++						print(",")
++					}
++					print("[", start, ",", offset, ",", root.sourceID, "]")
++					hasRange = true
++				}
++			}
++			inRange = false
++		}
++		if dirty && !inRange {
++			start = offset
++			rootSet = currentRootSet
++			inRange = true
++		}
++		if offset == size {
++			break
++		}
++	}
++	print("]\n")
++}
++
++func taintNewRootSet(sourceID uint64) uint64 {
++	root := (*taintRootSet)(persistentalloc(unsafe.Sizeof(taintRootSet{}), unsafe.Alignof(taintRootSet{}), &memstats.gcMiscSys))
++	if root == nil {
++		throw("out of memory allocating IAST root set")
++	}
++	root.sourceID = sourceID
++	return uint64(uintptr(unsafe.Pointer(root)))
++}
++
++func taintRootSetFromToken(token uint64) *taintRootSet {
++	return (*taintRootSet)(unsafe.Pointer(uintptr(token)))
++}
++
++type taintRootSetIterator struct {
++	root      *taintRootSet
++	anonymous bool
++}
++
++func taintRootSetIteratorFor(token uint64) taintRootSetIterator {
++	if token == 0 {
++		return taintRootSetIterator{anonymous: true}
++	}
++	return taintRootSetIterator{root: taintRootSetFromToken(token)}
++}
++
++func (iterator *taintRootSetIterator) current() (uint64, bool) {
++	if iterator.anonymous {
++		return 0, true
++	}
++	if iterator.root == nil {
++		return 0, false
++	}
++	return iterator.root.sourceID, true
++}
++
++func (iterator *taintRootSetIterator) advance() {
++	if iterator.anonymous {
++		iterator.anonymous = false
++		return
++	}
++	iterator.root = iterator.root.next
++}
++
++func taintRootSetMerge(leftToken, rightToken uint64) uint64 {
++	if leftToken == rightToken {
++		return leftToken
++	}
++	left := taintRootSetIteratorFor(leftToken)
++	right := taintRootSetIteratorFor(rightToken)
++	var head, tail *taintRootSet
++	for {
++		leftID, leftOK := left.current()
++		rightID, rightOK := right.current()
++		if !leftOK && !rightOK {
++			break
++		}
++		sourceID := rightID
++		if !rightOK || leftOK && leftID < rightID {
++			sourceID = leftID
++		}
++		if leftOK && leftID == sourceID {
++			left.advance()
++		}
++		if rightOK && rightID == sourceID {
++			right.advance()
++		}
++		root := (*taintRootSet)(persistentalloc(unsafe.Sizeof(taintRootSet{}), unsafe.Alignof(taintRootSet{}), &memstats.gcMiscSys))
++		if root == nil {
++			throw("out of memory merging IAST root sets")
++		}
++		root.sourceID = sourceID
++		if tail == nil {
++			head = root
++		} else {
++			tail.next = root
++		}
++		tail = root
++	}
++	if head == nil || head.next == nil && head.sourceID == 0 {
++		return 0
++	}
++	return uint64(uintptr(unsafe.Pointer(head)))
++}
++
++// taintShadowBit resolves the shadow byte and bit mask for a single heap byte
++// address. The arena shadow stores one bit per application byte: each shadow
++// byte covers one pointer-sized word (8 bytes on 64-bit), matching the
++// per-word allocation exactly.
++//
++//go:nosplit
++func taintShadowBit(pointer uintptr) (*uint8, uint8) {
++	span := spanOf(pointer)
++	if span == nil || pointer < span.base() || pointer >= span.limit {
++		return nil, 0
++	}
++	state := span.state.get()
++	if state != mSpanInUse && state != mSpanManual {
++		return nil, 0
++	}
++	arenaIndex := arenaIndex(pointer)
++	arena := mheap_.arenas[arenaIndex.l1()][arenaIndex.l2()]
++	if arena == nil || arena.taintShadow == nil {
++		return nil, 0
++	}
++	offset := pointer - arenaBase(arenaIndex)
++	word := offset / goarch.PtrSize
++	bit := uint8(offset % goarch.PtrSize)
++	return (*uint8)(add(unsafe.Pointer(arena.taintShadow), word)), uint8(1) << bit
++}
++
++// taintRootSetShadow resolves the source root-set token for a heap byte.
++//
++//go:nosplit
++func taintRootSetShadow(pointer uintptr) *uint64 {
++	span := spanOf(pointer)
++	if span == nil || pointer < span.base() || pointer >= span.limit {
++		return nil
++	}
++	state := span.state.get()
++	if state != mSpanInUse && state != mSpanManual {
++		return nil
++	}
++	arenaIndex := arenaIndex(pointer)
++	arena := mheap_.arenas[arenaIndex.l1()][arenaIndex.l2()]
++	if arena == nil || arena.taintSourceShadow == nil {
++		return nil
++	}
++	offset := pointer - arenaBase(arenaIndex)
++	return (*uint64)(add(unsafe.Pointer(arena.taintSourceShadow), offset*unsafe.Sizeof(uint64(0))))
++}
++
++// taintDataAny reports whether any byte in [base, base+size) is tainted.
++//
++//go:nosplit
++func taintDataAny(base, size uintptr) bool {
++	for offset := uintptr(0); offset < size; offset++ {
++		if shadow, mask := taintShadowBit(base + offset); shadow != nil && atomic.Load8(shadow)&mask != 0 {
++			return true
++		}
++	}
++	return false
++}
++
++func taintDataRootSet(base, size uintptr) (uint64, bool) {
++	rootSet := uint64(0)
++	dirty := false
++	for offset := uintptr(0); offset < size; offset++ {
++		if shadow, mask := taintShadowBit(base + offset); shadow != nil && atomic.Load8(shadow)&mask != 0 {
++			currentRootSet := uint64(0)
++			if sourceShadow := taintRootSetShadow(base + offset); sourceShadow != nil {
++				currentRootSet = atomic.Load64(sourceShadow)
++			}
++			if dirty && rootSet != currentRootSet {
++				rootSet = taintRootSetMerge(rootSet, currentRootSet)
++			} else {
++				rootSet = currentRootSet
++			}
++			dirty = true
++		}
++	}
++	return rootSet, dirty
++}
++
++// taintDataSet taints every byte in [base, base+size).
++//
++//go:nosplit
++func taintDataSet(base, size uintptr) {
++	taintDataSetRootSet(base, size, 0)
++}
++
++//go:nosplit
++func taintDataSetRootSet(base, size uintptr, rootSet uint64) {
++	for offset := uintptr(0); offset < size; offset++ {
++		if shadow, mask := taintShadowBit(base + offset); shadow != nil {
++			atomic.Or8(shadow, mask)
++		}
++		if sourceShadow := taintRootSetShadow(base + offset); sourceShadow != nil {
++			atomic.Store64(sourceShadow, rootSet)
++		}
++	}
++}
++
++// taintDataClear clears every byte in [base, base+size).
++//
++//go:nosplit
++func taintDataClear(base, size uintptr) {
++	for offset := uintptr(0); offset < size; offset++ {
++		if shadow, mask := taintShadowBit(base + offset); shadow != nil {
++			atomic.And8(shadow, ^mask)
++		}
++		if sourceShadow := taintRootSetShadow(base + offset); sourceShadow != nil {
++			atomic.Store64(sourceShadow, 0)
++		}
++	}
++}
++
++// taintDataCopyByte copies one source byte's shadow bit to the destination,
++// overwriting it (including clearing when the source is clean).
++//
++//go:nosplit
++func taintDataCopyByte(destination, source uintptr) {
++	destinationShadow, destinationMask := taintShadowBit(destination)
++	if destinationShadow == nil {
++		return
++	}
++	tainted := false
++	rootSet := uint64(0)
++	if sourceShadow, sourceMask := taintShadowBit(source); sourceShadow != nil {
++		tainted = atomic.Load8(sourceShadow)&sourceMask != 0
++		if tainted {
++			if sourceIDShadow := taintRootSetShadow(source); sourceIDShadow != nil {
++				rootSet = atomic.Load64(sourceIDShadow)
++			}
++		}
++	}
++	if tainted {
++		atomic.Or8(destinationShadow, destinationMask)
++	} else {
++		atomic.And8(destinationShadow, ^destinationMask)
++	}
++	if destinationSourceShadow := taintRootSetShadow(destination); destinationSourceShadow != nil {
++		atomic.Store64(destinationSourceShadow, rootSet)
++	}
++}
++
++// taintDataMove copies shadow bits from source to destination for size bytes,
++// overlap-safe and overwriting (clean source clears the destination).
++//
++//go:nosplit
++func taintDataMove(destination, source, size uintptr) {
++	if atomic.Load(&taintActive) == 0 || size == 0 || destination == source {
++		return
++	}
++	if destination < source {
++		for offset := uintptr(0); offset < size; offset++ {
++			taintDataCopyByte(destination+offset, source+offset)
++		}
++		return
++	}
++	for offset := size; offset > 0; offset-- {
++		taintDataCopyByte(destination+offset-1, source+offset-1)
++	}
++}
++
++// taintClearData clears the shadow for a heap byte range, used by clear().
++//
++//go:nosplit
++func taintClearData(address unsafe.Pointer, size uintptr) {
++	taintDataClear(uintptr(address), size)
++}
++
++// taintStringData returns the backing pointer and length of a string.
++//
++//go:nosplit
++func taintStringData(value string) (uintptr, uintptr) {
++	data := (*stringStruct)(unsafe.Pointer(&value))
++	return uintptr(data.str), uintptr(data.len)
 +}
 +
 +//go:nosplit
@@ -1290,15 +2341,24 @@ index 0000000000..d03e1b4a11
 +	gp.taintTransitionValues[0] = 0
 +}
 +
++// taintStoreString records the header label for the string stored at address,
++// using the bit for that exact byte address.
++//
++//go:nosplit
 +func taintStoreString(address unsafe.Pointer, label uint8) {
-+	if shadow := taintHeapShadow(address); shadow != nil {
-+		atomic.Store8(shadow, label)
++	if shadow, mask := taintShadowBit(uintptr(address)); shadow != nil {
++		if label != 0 {
++			atomic.Or8(shadow, mask)
++		} else {
++			atomic.And8(shadow, ^mask)
++		}
 +	}
 +}
 +
++//go:nosplit
 +func taintLoadString(address unsafe.Pointer) uint8 {
-+	if shadow := taintHeapShadow(address); shadow != nil {
-+		return atomic.Load8(shadow)
++	if shadow, mask := taintShadowBit(uintptr(address)); shadow != nil && atomic.Load8(shadow)&mask != 0 {
++		return 1
 +	}
 +	return 0
 +}
@@ -1369,9 +2429,13 @@ index 0000000000..d03e1b4a11
 +		if segmentEnd > arenaEnd {
 +			segmentEnd = arenaEnd
 +		}
-+		offset := (base - arenaBase(arenaIndex)) / goarch.PtrSize
-+		words := (segmentEnd - base) / goarch.PtrSize
-+		memclrNoHeapPointers(add(unsafe.Pointer(arena.taintShadow), offset), words)
++		arenaStart := arenaBase(arenaIndex)
++		byteOffset := base - arenaStart
++		byteCount := segmentEnd - base
++		shadowOffset := byteOffset / goarch.PtrSize
++		shadowBytes := byteCount / goarch.PtrSize
++		memclrNoHeapPointers(add(unsafe.Pointer(arena.taintShadow), shadowOffset), shadowBytes)
++		memclrNoHeapPointers(add(unsafe.Pointer(arena.taintSourceShadow), byteOffset*unsafe.Sizeof(uint64(0))), byteCount*unsafe.Sizeof(uint64(0)))
 +		base = segmentEnd
 +	}
 +}
