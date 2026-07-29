@@ -5,7 +5,10 @@
 
 package taint
 
-import "testing"
+import (
+	"encoding/xml"
+	"testing"
+)
 
 func Test_ConversionRoundTripPreservesRanges_when_StringPassesThroughBytes(t *testing.T) {
 	// Given
@@ -101,4 +104,43 @@ func Test_CloneBytesCopiesRanges_when_ResultHasIndependentStorage(t *testing.T) 
 
 	// Then
 	requireRanges(t, RangesBytes(cloned), Range{Start: 5, End: 8})
+}
+
+func Test_JSONMarshalConservativelyTaintsFreshBytes_when_MapValueIsTainted(t *testing.T) {
+	// Given
+	value := map[string]string{"path": SourceString("secret")}
+
+	// When
+	encoded, err := JSONMarshal(value)
+
+	// Then
+	if err != nil {
+		t.Fatalf("JSONMarshal() error = %v", err)
+	}
+	if string(encoded) != `{"path":"secret"}` {
+		t.Fatalf("JSONMarshal() = %q, want %q", encoded, `{"path":"secret"}`)
+	}
+	requireRanges(t, RangesBytes(encoded), Range{Start: 0, End: 17})
+}
+
+func Test_XMLMarshalConservativelyTaintsFreshBytes_when_StructFieldIsTainted(t *testing.T) {
+	type payload struct {
+		XMLName xml.Name `xml:"payload"`
+		Path    string
+	}
+
+	// Given
+	value := payload{Path: SourceString("secret")}
+
+	// When
+	encoded, err := XMLMarshal(value)
+
+	// Then
+	if err != nil {
+		t.Fatalf("XMLMarshal() error = %v", err)
+	}
+	if string(encoded) != "<payload><Path>secret</Path></payload>" {
+		t.Fatalf("XMLMarshal() = %q, want %q", encoded, "<payload><Path>secret</Path></payload>")
+	}
+	requireRanges(t, RangesBytes(encoded), Range{Start: 0, End: 38})
 }

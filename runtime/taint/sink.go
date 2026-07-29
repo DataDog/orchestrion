@@ -11,11 +11,20 @@ import (
 	"sync"
 )
 
+// TaintState describes how confidently a sink report identifies tainted bytes.
+type TaintState string
+
+const (
+	// Unknown indicates bounded propagation metadata saturated before the sink was reached.
+	Unknown TaintState = "unknown"
+)
+
 // Report describes tainted data observed at a sink.
 type Report struct {
-	Sink   string  `json:"sink"`
-	Value  string  `json:"value"`
-	Ranges []Range `json:"ranges"`
+	Sink   string     `json:"sink"`
+	Value  string     `json:"value"`
+	Ranges []Range    `json:"ranges"`
+	State  TaintState `json:"state,omitempty"`
 }
 
 var reportState = struct {
@@ -38,10 +47,25 @@ func SetReporter(reporter func(Report)) func() {
 
 // OpenFile is a drop-in os.Open sink that reports tainted path bytes.
 func OpenFile(name string) (*os.File, error) {
-	if ranges := RangesString(name); len(ranges) > 0 {
-		emitReport(Report{Sink: "os.Open", Value: name, Ranges: ranges})
-	}
+	reportOpenPath(name)
 	return os.Open(name)
+}
+
+// OpenFileWithMode is a drop-in os.OpenFile sink that reports tainted path bytes.
+func OpenFileWithMode(name string, flag int, perm os.FileMode) (*os.File, error) {
+	reportOpenPath(name)
+	return os.OpenFile(name, flag, perm)
+}
+
+func reportOpenPath(name string) {
+	ranges, saturated := active.stringRangesAndSaturation(name)
+	if len(ranges) > 0 {
+		emitReport(Report{Sink: "os.Open", Value: name, Ranges: ranges})
+		return
+	}
+	if saturated {
+		emitReport(Report{Sink: "os.Open", Value: name, State: Unknown})
+	}
 }
 
 func emitReport(report Report) {

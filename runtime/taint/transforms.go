@@ -5,7 +5,14 @@
 
 package taint
 
-import "strings"
+import (
+	"encoding/base64"
+	"net/url"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
+)
 
 // ReplaceAllString applies strings.ReplaceAll with range propagation.
 func ReplaceAllString(value, old, replacement string) string {
@@ -45,8 +52,52 @@ func MapString(mapping func(rune) rune, value string) string {
 	return result
 }
 
+// QuoteString quotes value and conservatively taints the full result.
+func QuoteString(value string) string {
+	result := strconv.Quote(value)
+	registerTransformedString(result, value)
+	return result
+}
+
+// QueryEscapeString escapes value for a URL query and conservatively taints the full result.
+func QueryEscapeString(value string) string {
+	result := url.QueryEscape(value)
+	registerTransformedString(result, value)
+	return result
+}
+
+// RegexpReplaceAllString applies expression to source and conservatively taints the full result.
+func RegexpReplaceAllString(expression *regexp.Regexp, source, replacement string) string {
+	result := expression.ReplaceAllString(source, replacement)
+	registerTransformedString(result, source)
+	return result
+}
+
+// Base64EncodeToString encodes source and conservatively taints the full result.
+func Base64EncodeToString(encoding *base64.Encoding, source []byte) string {
+	result := encoding.EncodeToString(source)
+	if ranges := conservativeRanges(len(result), RangesBytes(source)); len(ranges) > 0 {
+		registerString(result, ranges)
+	}
+	return result
+}
+
+// CleanPath cleans value and conservatively taints the full result.
+func CleanPath(value string) string {
+	result := path.Clean(value)
+	registerTransformedString(result, value)
+	return result
+}
+
+// CallStringTransform applies a known fresh-output function and conservatively taints its result.
+func CallStringTransform(function func(string) string, input string) string {
+	result := function(input)
+	registerTransformedString(result, input)
+	return result
+}
+
 func registerTransformedString(result, input string) {
-	if len(RangesString(input)) > 0 {
-		registerString(result, []Range{{Start: 0, End: len(result)}})
+	if ranges := conservativeRanges(len(result), RangesString(input)); len(ranges) > 0 {
+		registerString(result, ranges)
 	}
 }

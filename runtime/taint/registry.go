@@ -6,8 +6,10 @@
 package taint
 
 import (
+	"bufio"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -19,34 +21,50 @@ type builderState struct {
 type registry struct {
 	mu sync.RWMutex
 
-	stringOwners []string
-	stringRanges []addressRange
-	byteOwners   []any
-	byteRanges   []addressRange
-	runeOwners   []any
-	runeRanges   []addressRange
-	byteScalars  map[uintptr]struct{}
-	runeScalars  map[uintptr]struct{}
-	builders     map[*strings.Builder]builderState
+	stringOwners   map[uintptr]string
+	stringRanges   []addressRange
+	stringRangeEnd uintptr
+	byteOwners     map[uintptr]any
+	byteRanges     []addressRange
+	byteRangeEnd   uintptr
+	runeOwners     map[uintptr]any
+	runeRanges     []addressRange
+	runeRangeEnd   uintptr
+	byteScalars    map[unsafe.Pointer]struct{}
+	runeScalars    map[unsafe.Pointer]struct{}
+	builders       map[*strings.Builder]builderState
+	stringReaders  map[*strings.Reader]readerState
+	bufioReaders   map[*bufio.Reader]readerState
+	stateSaturated bool
 }
 
 const maxTrackedOccurrences = 1 << 16
 
-var active = registry{
-	byteScalars: make(map[uintptr]struct{}),
-	runeScalars: make(map[uintptr]struct{}),
-	builders:    make(map[*strings.Builder]builderState),
+func newRegistry() registry {
+	return registry{
+		stringOwners:  make(map[uintptr]string),
+		byteOwners:    make(map[uintptr]any),
+		runeOwners:    make(map[uintptr]any),
+		byteScalars:   make(map[unsafe.Pointer]struct{}),
+		runeScalars:   make(map[unsafe.Pointer]struct{}),
+		builders:      make(map[*strings.Builder]builderState),
+		stringReaders: make(map[*strings.Reader]readerState),
+		bufioReaders:  make(map[*bufio.Reader]readerState),
+	}
+}
+
+var active = newRegistryLifecycle()
+
+var sourceIDs atomic.Uint64
+
+func newSourceID() uint64 {
+	return sourceIDs.Add(1)
 }
 
 // RangesString returns the tainted byte ranges visible through value.
 func RangesString(value string) []Range {
-	start, ok := stringAddress(value)
-	if !ok {
-		return nil
-	}
-	active.mu.RLock()
-	defer active.mu.RUnlock()
-	return relativeRanges(active.stringRanges, start, len(value))
+	ranges, _ := active.stringRangesAndSaturation(value)
+	return ranges
 }
 
 // RangesBytes returns the tainted byte ranges visible through value.
@@ -55,9 +73,7 @@ func RangesBytes[T ~[]E, E ~byte](value T) []Range {
 	if !ok {
 		return nil
 	}
-	active.mu.RLock()
-	defer active.mu.RUnlock()
-	return relativeRanges(active.byteRanges, start, len(value))
+	return active.byteRanges(start, len(value))
 }
 
 // RangesRunes returns the tainted rune-index ranges visible through value.
@@ -66,33 +82,49 @@ func RangesRunes[T ~[]E, E ~rune](value T) []Range {
 		return nil
 	}
 	start := uintptr(unsafe.Pointer(unsafe.SliceData(value)))
-	active.mu.RLock()
-	defer active.mu.RUnlock()
-	byteRanges := relativeRanges(active.runeRanges, start, len(value)*4)
+	byteRanges := active.runeRanges(start, len(value)*4)
 	result := make([]Range, len(byteRanges))
 	for index, current := range byteRanges {
-		result[index] = Range{Start: current.Start / 4, End: current.End / 4}
+		result[index] = Range{Start: current.Start / 4, End: current.End / 4, SourceID: current.SourceID}
 	}
 	return result
 }
 
 func registerString(value string, ranges []Range) {
+	active.currentRegistry().registerString(value, ranges)
+}
+
+func registerFreshString(value string, sourceID uint64) {
+	active.currentRegistry().registerFreshString(value, sourceID)
+}
+
+func (registry *registry) registerString(value string, ranges []Range) {
 	start, ok := stringAddress(value)
 	if !ok {
 		return
 	}
-	active.mu.Lock()
-	defer active.mu.Unlock()
-	registerStringLocked(value, start, ranges)
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.registerStringLocked(value, start, ranges)
 }
 
-func registerStringLocked(value string, start uintptr, ranges []Range) {
-	if len(ranges) > 0 && len(active.stringOwners) >= maxTrackedOccurrences {
+func (registry *registry) registerFreshString(value string, sourceID uint64) {
+	start, ok := stringAddress(value)
+	if !ok {
 		return
 	}
-	active.stringRanges = replaceAddressRanges(active.stringRanges, start, len(value), ranges)
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	end := start + uintptr(len(value))
+	registry.stringRanges = append(registry.stringRanges, addressRange{start: start, end: end, sourceID: sourceID})
+	registry.stringRangeEnd = max(registry.stringRangeEnd, end)
+	registry.stringOwners[start] = value
+}
+
+func (registry *registry) registerStringLocked(value string, start uintptr, ranges []Range) {
+	registry.stringRanges, registry.stringRangeEnd = replaceAddressRanges(registry.stringRanges, registry.stringRangeEnd, start, len(value), ranges)
 	if len(ranges) > 0 {
-		active.stringOwners = append(active.stringOwners, value)
+		registry.stringOwners[start] = value
 	}
 }
 
@@ -101,14 +133,16 @@ func registerBytes[T ~[]E, E ~byte](value T, ranges []Range) {
 	if !ok {
 		return
 	}
-	active.mu.Lock()
-	defer active.mu.Unlock()
-	if len(ranges) > 0 && len(active.byteOwners) >= maxTrackedOccurrences {
-		return
-	}
-	active.byteRanges = replaceAddressRanges(active.byteRanges, start, len(value), ranges)
+	registry := active.currentRegistry()
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.registerBytesLocked(start, len(value), value, ranges)
+}
+
+func (registry *registry) registerBytesLocked(start uintptr, length int, owner any, ranges []Range) {
+	registry.byteRanges, registry.byteRangeEnd = replaceAddressRanges(registry.byteRanges, registry.byteRangeEnd, start, length, ranges)
 	if len(ranges) > 0 {
-		active.byteOwners = append(active.byteOwners, value)
+		registry.byteOwners[start] = owner
 	}
 }
 
@@ -119,16 +153,18 @@ func registerRunes[T ~[]E, E ~rune](value T, ranges []Range) {
 	start := uintptr(unsafe.Pointer(unsafe.SliceData(value)))
 	scaled := make([]Range, len(ranges))
 	for index, current := range ranges {
-		scaled[index] = Range{Start: current.Start * 4, End: current.End * 4}
+		scaled[index] = Range{Start: current.Start * 4, End: current.End * 4, SourceID: current.SourceID}
 	}
-	active.mu.Lock()
-	defer active.mu.Unlock()
-	if len(ranges) > 0 && len(active.runeOwners) >= maxTrackedOccurrences {
-		return
-	}
-	active.runeRanges = replaceAddressRanges(active.runeRanges, start, len(value)*4, scaled)
+	registry := active.currentRegistry()
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.registerRunesLocked(start, len(value)*4, value, scaled)
+}
+
+func (registry *registry) registerRunesLocked(start uintptr, length int, owner any, ranges []Range) {
+	registry.runeRanges, registry.runeRangeEnd = replaceAddressRanges(registry.runeRanges, registry.runeRangeEnd, start, length, ranges)
 	if len(ranges) > 0 {
-		active.runeOwners = append(active.runeOwners, value)
+		registry.runeOwners[start] = owner
 	}
 }
 

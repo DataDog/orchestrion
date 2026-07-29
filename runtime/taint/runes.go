@@ -35,8 +35,8 @@ func RunesToStringAs[T ~string, R ~[]E, E ~rune](value R) T {
 		runes[index] = rune(value[index])
 	}
 	result := T(isolatedString(string(runes)))
-	if len(RangesRunes(value)) > 0 {
-		registerString(string(result), []Range{{Start: 0, End: len(result)}})
+	if ranges := conservativeRanges(len(result), RangesRunes(value)); len(ranges) > 0 {
+		registerString(string(result), ranges)
 	}
 	return result
 }

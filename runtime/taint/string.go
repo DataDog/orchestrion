@@ -13,7 +13,7 @@ import (
 // SourceString marks every byte in a fresh occurrence of value as tainted.
 func SourceString(value string) string {
 	result := isolatedString(value)
-	registerString(result, []Range{{Start: 0, End: len(result)}})
+	registerFreshString(result, newSourceID())
 	return result
 }
 
@@ -122,8 +122,9 @@ func projectRanges(ranges []Range, sourceStart, sourceEnd, destinationStart int)
 		end := min(current.End, sourceEnd)
 		if start < end {
 			result = append(result, Range{
-				Start: destinationStart + start - sourceStart,
-				End:   destinationStart + end - sourceStart,
+				Start:    destinationStart + start - sourceStart,
+				End:      destinationStart + end - sourceStart,
+				SourceID: current.SourceID,
 			})
 		}
 	}
