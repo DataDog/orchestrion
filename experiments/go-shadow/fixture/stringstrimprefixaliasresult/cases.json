@@ -2,7 +2,7 @@
   {
     "name": "patched strings trim prefix alias result",
     "taintPath": "/tmp/iast-stringstrimprefixaliasresult",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

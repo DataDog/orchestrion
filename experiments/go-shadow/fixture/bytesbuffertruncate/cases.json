@@ -2,7 +2,7 @@
   {
     "name": "bytes buffer truncate",
     "taintPath": "/tmp/iast-bytesbuffertruncate",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

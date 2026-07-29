@@ -12,6 +12,9 @@ import (
 
 func main() {
 	source := os.Getenv("TAINT_PATH")
+	if source == "" {
+		source = "/tmp/iast-pathcleanfreshstring"
+	}
 	dirty := "a/../" + source
 	value := path.Clean(dirty)
 	_, _ = os.Open(value)

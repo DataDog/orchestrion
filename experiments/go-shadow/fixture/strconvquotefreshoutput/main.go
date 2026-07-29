@@ -11,6 +11,9 @@ import (
 )
 
 func main() {
+	clean := strconv.Quote("/tmp/iast-strconvquotefreshoutput")
+	_, _ = os.Open(clean)
+
 	value := strconv.Quote(os.Getenv("TAINT_PATH"))
 	_, _ = os.Open(value)
 }

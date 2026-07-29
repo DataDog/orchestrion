@@ -2,7 +2,7 @@
   {
     "name": "patched no-op buffer grow",
     "taintPath": "/tmp/iast-noopbuffergrowavoidscapacit",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

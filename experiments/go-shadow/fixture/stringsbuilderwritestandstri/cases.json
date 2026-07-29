@@ -2,7 +2,7 @@
   {
     "name": "strings builder write string",
     "taintPath": "/tmp/iast-stringsbuilderwritestandstri",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

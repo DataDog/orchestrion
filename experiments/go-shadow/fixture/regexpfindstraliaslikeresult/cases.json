@@ -2,7 +2,7 @@
   {
     "name": "patched regexp find string",
     "taintPath": "/tmp/iast-regexpfindstraliaslikeresult",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

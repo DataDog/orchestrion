@@ -2,7 +2,7 @@
   {
     "name": "string concatenation with exact ranges",
     "taintPath": "/tmp/iast-stringconcatewithexactranges",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

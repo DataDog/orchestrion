@@ -2,7 +2,7 @@
   {
     "name": "method value buffer grow",
     "taintPath": "/tmp/iast-methodvaluebuffergrow",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

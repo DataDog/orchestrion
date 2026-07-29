@@ -2,7 +2,7 @@
   {
     "name": "strings builder grow relocation",
     "taintPath": "/tmp/iast-stringsbuildergrowrelocation",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

@@ -2,7 +2,7 @@
   {
     "name": "strings repeat",
     "taintPath": "/tmp/iast-stringsrepeat",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

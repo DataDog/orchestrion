@@ -2,7 +2,7 @@
   {
     "name": "buffer bytes alias gets dirty byte write",
     "taintPath": "/tmp/iast-bufferbytesaliasgetsdirtyby",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

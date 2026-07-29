@@ -2,7 +2,7 @@
   {
     "name": "sql scan driver bytes into string",
     "taintPath": "/tmp/iast-databassqlscanfromdriverbyt",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

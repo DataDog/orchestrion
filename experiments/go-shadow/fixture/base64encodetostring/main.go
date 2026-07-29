@@ -11,6 +11,9 @@ import (
 )
 
 func main() {
+	clean := base64.StdEncoding.EncodeToString([]byte("/tmp/iast-base64encodetostring"))
+	_, _ = os.Open(clean)
+
 	source := os.Getenv("TAINT_PATH")
 	value := base64.StdEncoding.EncodeToString([]byte(source))
 	_, _ = os.Open(value)

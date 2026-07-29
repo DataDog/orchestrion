@@ -2,6 +2,7 @@
   {
     "name": "unnamed parameters",
     "taintPath": "/tmp/iast-unnamed",
+    "dirtyReports": 0,
     "taintEnabled": true
   }
 ]

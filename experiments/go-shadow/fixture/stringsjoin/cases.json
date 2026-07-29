@@ -2,7 +2,7 @@
   {
     "name": "strings join",
     "taintPath": "/tmp/iast-stringsjoin",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

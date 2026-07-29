@@ -2,7 +2,7 @@
   {
     "name": "regexp replace all string",
     "taintPath": "/tmp/iast-regexpreplacefreshstring",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

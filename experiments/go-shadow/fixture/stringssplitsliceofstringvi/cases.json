@@ -2,7 +2,7 @@
   {
     "name": "patched strings split slice of views",
     "taintPath": "/tmp/iast-stringssplitsliceofstringvi",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

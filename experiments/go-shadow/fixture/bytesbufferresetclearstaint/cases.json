@@ -8,8 +8,10 @@
   {
     "name": "bytes buffer reset control without reset",
     "taintPath": "/tmp/iast-bytesbufferresetclearstaint-control",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true,
-    "env": {"SKIP_RESET": "1"}
+    "env": {
+      "SKIP_RESET": "1"
+    }
   }
 ]

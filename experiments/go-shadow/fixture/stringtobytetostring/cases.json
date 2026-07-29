@@ -2,7 +2,7 @@
   {
     "name": "string to bytes to string",
     "taintPath": "/tmp/iast-stringtobytetostring",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

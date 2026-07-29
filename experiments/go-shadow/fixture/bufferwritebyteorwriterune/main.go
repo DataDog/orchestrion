@@ -13,7 +13,7 @@ import (
 func main() {
 	source := os.Getenv("TAINT_PATH")
 
-	var first byte
+	first := byte('/')
 	if len(source) > 0 {
 		first = source[0]
 	}

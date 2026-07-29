@@ -2,7 +2,7 @@
   {
     "name": "strings replace",
     "taintPath": "/tmp/iast-stringsreplace",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

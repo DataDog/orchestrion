@@ -2,7 +2,19 @@
   {
     "name": "path clean fresh string",
     "taintPath": "/tmp/iast-pathcleanfreshstring",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "path clean fresh string clean",
+    "taintPath": "",
     "dirtyReports": 0,
     "taintEnabled": true
+  },
+  {
+    "name": "path clean fresh string disabled",
+    "taintPath": "/tmp/iast-pathcleanfreshstring-disabled",
+    "dirtyReports": 0,
+    "taintEnabled": false
   }
 ]

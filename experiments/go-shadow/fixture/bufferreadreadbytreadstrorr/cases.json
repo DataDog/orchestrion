@@ -2,7 +2,7 @@
   {
     "name": "buffer read string",
     "taintPath": "/tmp/iast-bufferreadreadbytreadstrorr",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

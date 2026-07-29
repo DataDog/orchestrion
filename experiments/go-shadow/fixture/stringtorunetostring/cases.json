@@ -2,7 +2,7 @@
   {
     "name": "string to runes to string",
     "taintPath": "/tmp/iast-stringtorunetostring",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

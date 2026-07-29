@@ -2,7 +2,7 @@
   {
     "name": "fmt sprintf with string",
     "taintPath": "/tmp/iast-fmtsprintfwithstring",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

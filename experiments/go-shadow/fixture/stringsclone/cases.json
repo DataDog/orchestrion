@@ -2,7 +2,7 @@
   {
     "name": "strings clone",
     "taintPath": "/tmp/iast-stringsclone",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

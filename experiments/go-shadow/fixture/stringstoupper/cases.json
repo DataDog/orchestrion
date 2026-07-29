@@ -2,7 +2,7 @@
   {
     "name": "strings to upper",
     "taintPath": "/tmp/iast-stringstoupper",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

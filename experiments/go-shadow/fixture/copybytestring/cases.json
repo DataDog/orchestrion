@@ -2,7 +2,7 @@
   {
     "name": "copy bytes from string",
     "taintPath": "/tmp/iast-copybytestring",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

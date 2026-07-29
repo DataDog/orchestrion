@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "name": "select over buffered and blocked channels",
+    "taintPath": "/tmp/iast-selectchannel",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "select over buffered and blocked channels clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "select over buffered and blocked channels disabled",
+    "taintPath": "/tmp/iast-selectchannel",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

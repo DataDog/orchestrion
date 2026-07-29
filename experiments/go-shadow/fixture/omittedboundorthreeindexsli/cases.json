@@ -2,7 +2,7 @@
   {
     "name": "omitted-bound or three-index slice",
     "taintPath": "/tmp/iast-omittedboundorthreeindexsli",
-    "dirtyReports": 0,
+    "dirtyReports": 2,
     "taintEnabled": true
   }
 ]

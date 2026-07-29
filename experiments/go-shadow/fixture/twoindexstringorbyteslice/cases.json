@@ -2,7 +2,7 @@
   {
     "name": "two-index string or byte slice",
     "taintPath": "/tmp/iast-twoindexstringorbyteslice",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

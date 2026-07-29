@@ -2,7 +2,7 @@
   {
     "name": "buffer write to another buffer",
     "taintPath": "/tmp/iast-bytesbufferwritetointocopyp",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

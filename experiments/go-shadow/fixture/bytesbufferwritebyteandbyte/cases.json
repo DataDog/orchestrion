@@ -2,7 +2,7 @@
   {
     "name": "bytes buffer write bytes and view",
     "taintPath": "/tmp/iast-bytesbufferwritebyteandbyte",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

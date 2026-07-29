@@ -11,6 +11,9 @@ import (
 )
 
 func main() {
+	clean := url.QueryEscape("/tmp/iast-urlqueryescapefreshstring")
+	_, _ = os.Open(clean)
+
 	source := os.Getenv("TAINT_PATH")
 	escaped := url.QueryEscape(source)
 	_, _ = os.Open(escaped)

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "no inline prebuilt identity function",
+    "taintPath": "/tmp/iast-noinlineprebuiltidentity",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "uninstrumentedPackages": [
+      "github.com/DataDog/orchestrion/experiments/go-shadow/fixture/noinlineprebuiltidentity/dependency"
+    ]
+  },
+  {
+    "name": "no inline prebuilt identity function clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true,
+    "uninstrumentedPackages": [
+      "github.com/DataDog/orchestrion/experiments/go-shadow/fixture/noinlineprebuiltidentity/dependency"
+    ]
+  },
+  {
+    "name": "no inline prebuilt identity function disabled",
+    "taintPath": "/tmp/iast-noinlineprebuiltidentity",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

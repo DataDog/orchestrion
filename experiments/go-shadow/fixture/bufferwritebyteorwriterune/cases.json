@@ -2,7 +2,19 @@
   {
     "name": "buffer write byte or rune",
     "taintPath": "/tmp/iast-bufferwritebyteorwriterune",
+    "dirtyReports": 2,
+    "taintEnabled": true
+  },
+  {
+    "name": "buffer write byte or rune clean",
+    "taintPath": "",
     "dirtyReports": 0,
     "taintEnabled": true
+  },
+  {
+    "name": "buffer write byte or rune disabled",
+    "taintPath": "/tmp/iast-bufferwritebyteorwriterune-disabled",
+    "dirtyReports": 0,
+    "taintEnabled": false
   }
 ]

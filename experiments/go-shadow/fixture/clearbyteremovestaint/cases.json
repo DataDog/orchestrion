@@ -8,8 +8,10 @@
   {
     "name": "clear bytes control without clear",
     "taintPath": "/tmp/iast-clearbyteremovestaint-control",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true,
-    "env": {"SKIP_CLEAR": "1"}
+    "env": {
+      "SKIP_CLEAR": "1"
+    }
   }
 ]

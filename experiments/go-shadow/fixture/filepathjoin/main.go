@@ -12,6 +12,9 @@ import (
 
 func main() {
 	source := os.Getenv("TAINT_PATH")
+	if source == "" {
+		source = "/tmp/iast-filepathjoin"
+	}
 	path := filepath.Join("/tmp", source)
 	_, _ = os.Open(path)
 }

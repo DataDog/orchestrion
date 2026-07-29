@@ -2,7 +2,7 @@
   {
     "name": "patched strings cut alias result",
     "taintPath": "/tmp/iast-stringscutaliasresult",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

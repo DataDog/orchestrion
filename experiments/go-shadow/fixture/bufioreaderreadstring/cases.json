@@ -2,7 +2,7 @@
   {
     "name": "bufio reader read string",
     "taintPath": "/tmp/iast-bufioreaderreadstring",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

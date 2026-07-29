@@ -2,7 +2,7 @@
   {
     "name": "strings map",
     "taintPath": "/tmp/iast-stringsmap",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

@@ -2,7 +2,19 @@
   {
     "name": "strconv quote fresh output",
     "taintPath": "/tmp/iast-strconvquotefreshoutput",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "strconv quote fresh output clean",
+    "taintPath": "",
     "dirtyReports": 0,
     "taintEnabled": true
+  },
+  {
+    "name": "strconv quote fresh output disabled",
+    "taintPath": "/tmp/iast-strconvquotefreshoutput-disabled",
+    "dirtyReports": 0,
+    "taintEnabled": false
   }
 ]

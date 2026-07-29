@@ -2,7 +2,19 @@
   {
     "name": "filepath join",
     "taintPath": "/tmp/iast-filepathjoin",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "filepath join clean",
+    "taintPath": "",
     "dirtyReports": 0,
     "taintEnabled": true
+  },
+  {
+    "name": "filepath join disabled",
+    "taintPath": "/tmp/iast-filepathjoin-disabled",
+    "dirtyReports": 0,
+    "taintEnabled": false
   }
 ]

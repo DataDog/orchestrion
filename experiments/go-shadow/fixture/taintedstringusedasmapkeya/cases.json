@@ -2,7 +2,7 @@
   {
     "name": "patched tainted string as map key",
     "taintPath": "/tmp/iast-taintedstringusedasmapkeya",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]

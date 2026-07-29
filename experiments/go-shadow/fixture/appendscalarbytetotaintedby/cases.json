@@ -2,7 +2,7 @@
   {
     "name": "append scalar byte to tainted bytes",
     "taintPath": "/tmp/iast-appendscalarbytetotaintedby",
-    "dirtyReports": 0,
+    "dirtyReports": 1,
     "taintEnabled": true
   }
 ]
