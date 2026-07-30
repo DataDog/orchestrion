@@ -51,6 +51,10 @@ type CompileCommand struct {
 
 	// importPath is the import path of the package being built.
 	importPath string
+	// testMain records whether the original compiler inputs identify Go's generated test main.
+	testMain bool
+	// testVariantFor is set when this command produces Go's generated test-main archive.
+	testVariantFor string
 	// finishToken is the token returned by the job server in response to the
 	// [nbt.StartRequest] when the operation needs to continue, and that is then
 	// forwarded to the [nbt.FinishRequest].
@@ -63,24 +67,24 @@ func (c *CompileCommand) ShowVersion() bool {
 	return c.Flags.ShowVersion
 }
 
-// TestMain returns true if the compiled package name is "main" and all source
-// Go files are rooted in the same directory as the importcfg file. This
-// indicates the package being compiled is a synthetic "main" package generated
-// by `go test`. For more accurate readings, users should also validate the
-// declared package import path ends in `.test`.
+// TestMain returns true if the compiled package name is "main" and its original
+// compiler inputs include Go's generated `_testmain.go` source. Callers should
+// also validate that the declared package import path ends in `.test`.
 func (c *CompileCommand) TestMain() bool {
+	return c.testMain
+}
+
+func (c *CompileCommand) detectTestMain() bool {
 	if c.Flags.Package != "main" {
 		return false
 	}
 
-	stageDir := filepath.Dir(c.Flags.ImportCfg)
 	for _, f := range c.GoFiles() {
-		if filepath.Dir(f) != stageDir {
-			return false
+		if filepath.Base(f) == "_testmain.go" {
+			return true
 		}
 	}
-
-	return true
+	return false
 }
 
 func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
@@ -134,8 +138,11 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 	defer func() { err = errors.Join(err, cmd.command.Close(ctx, cmdErr)) }()
 
 	if cmdErr == nil {
-		// Success so far, we attach link-time dependencies...
+		// Success so far, attach metadata before notifying the artifact cache.
 		err = cmd.attachLinkDeps(ctx)
+		if err == nil {
+			err = cmd.attachTestMain()
+		}
 	}
 
 	// Notify the job server of the status of the command, and combine with the previous error if any...
@@ -144,7 +151,7 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 	return err
 }
 
-func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
+func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) (err error) {
 	if cmd.LinkDeps.Empty() {
 		return nil
 	}
@@ -173,7 +180,7 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) error {
 	if err != nil {
 		return fmt.Errorf("opening archive: %w", err)
 	}
-	defer file.Close()
+	defer func() { err = errors.Join(err, file.Close()) }()
 
 	wr := ar.NewWriter(file)
 	if err := wr.WriteHeader(&ar.Header{Name: linkdeps.Filename, Mode: 0o644, Size: int64(buf.Len())}); err != nil {
@@ -240,6 +247,7 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 		return nil, err
 	}
 	cmd.Files = pos
+	cmd.testMain = cmd.detectTestMain()
 
 	if cmd.Flags.ImportCfg == "" {
 		return cmd, nil

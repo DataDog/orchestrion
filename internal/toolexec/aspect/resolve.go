@@ -14,12 +14,18 @@ import (
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
+	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
+	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 )
 
 // resolvePackageFiles attempts to retrieve the archive for the designated import path. It attempts
 // to locate the archive for `importPath` and its dependencies using `go list`. If that fails, it
 // will try to resolve it using `go get`.
-func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (_ map[string]string, err error) {
+func resolvePackageFiles(ctx context.Context, importPath string, workDir string) (_ pkgs.ResolveResponse, err error) {
+	return resolvePackageFilesForTest(ctx, importPath, "", workDir)
+}
+
+func resolvePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, workDir string) (_ pkgs.ResolveResponse, err error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "aspect.resolvePackageFiles",
 		tracer.ResourceName(importPath),
 	)
@@ -36,6 +42,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	}
 
 	req := pkgs.NewResolveRequest(cwd, importPath)
+	req.TestVariantFor = testVariantFor
 	if workDir != "" {
 		// Nest the future GOTMPDIR under this $WORK directory, so that builds with `-work` are nested,
 		// and the root work tree contains all child work trees involved in resolutions.
@@ -53,7 +60,7 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	// Check for missing archives...
 	var found bool
 	for ip, arch := range archives {
-		if arch == "" {
+		if arch.ExportFile == "" {
 			return nil, fmt.Errorf("no archive found for %q", ip)
 		}
 		if ip == importPath {
@@ -66,4 +73,57 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 	}
 
 	return archives, nil
+}
+
+func newTestTargetProvenanceResolver(ctx context.Context, testVariantFor string, workDir string) func() (pkgs.ResolvedArchive, error) {
+	var cached *pkgs.ResolvedArchive
+	return func() (pkgs.ResolvedArchive, error) {
+		if cached != nil {
+			return *cached, nil
+		}
+		archives, err := resolvePackageFilesForTest(ctx, testVariantFor, testVariantFor, workDir)
+		if err != nil {
+			return pkgs.ResolvedArchive{}, err
+		}
+		selected := archives[testVariantFor]
+		cached = &selected
+		return selected, nil
+	}
+}
+
+func rejectSatisfiedSyntheticDependency(parent string, dependency string, testVariantFor string, kind linkdeps.DependencyKind, selected pkgs.ResolvedArchive) error {
+	if dependency != testVariantFor || testVariantFor == "" {
+		return nil
+	}
+	return rejectSyntheticVariantDependency(parent, dependency, testVariantFor, kind == linkdeps.ImportDependency, selected)
+}
+
+func rejectResolvedSyntheticVariantDependency(parent string, dependency string, testVariantFor string, requiresRebuild bool, archives pkgs.ResolveResponse) error {
+	return rejectSyntheticVariantDependency(parent, dependency, testVariantFor, requiresRebuild, archives[dependency])
+}
+
+func rejectSyntheticVariantDependency(parent string, dependency string, testVariantFor string, requiresRebuild bool, selected pkgs.ResolvedArchive) error {
+	if parent == "" || !requiresRebuild || testVariantFor == "" || selected.ForTest != testVariantFor {
+		return nil
+	}
+	return fmt.Errorf("synthetic dependency %q discovered through archive %q requires a test variant for %q; an archive in that synthetic dependency closure was compiled without this edge in Go's package graph and cannot safely use the variant", dependency, parent, testVariantFor)
+}
+
+func mergeResolvedArchives(reg *importcfg.ImportConfig, archives pkgs.ResolveResponse, testVariantFor string) (map[string]string, error) {
+	changed := make(map[string]string)
+	for importPath, archive := range archives {
+		if archive.ForTest != "" && archive.ForTest != testVariantFor {
+			return nil, fmt.Errorf("resolved archive %q targets tests for %q, want %q", importPath, archive.ForTest, testVariantFor)
+		}
+		if importPath == testVariantFor {
+			return nil, fmt.Errorf("resolver attempted to replace authoritative package-under-test archive %q", importPath)
+		}
+		current, found := reg.PackageFile[importPath]
+		if found && (archive.ForTest == "" || current == archive.ExportFile) {
+			continue
+		}
+		reg.PackageFile[importPath] = archive.ExportFile
+		changed[importPath] = archive.ExportFile
+	}
+	return changed, nil
 }

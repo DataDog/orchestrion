@@ -32,6 +32,13 @@ import (
 var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
+	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && strings.HasSuffix(w.ImportPath, ".test") {
+		// The nested test main only exists to make cmd/go build affected variants.
+		// Its source may come from the build cache without the _testmain.go filename,
+		// so identify it from cmd/go's package metadata instead of its input path.
+		return nil
+	}
+
 	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile",
 		tracer.ResourceName(w.ImportPath),
 	)
@@ -135,7 +142,11 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		}
 
 		log.Debug().Stringer("kind", kind).Str("import-path", depImportPath).Msg("Recording synthetic " + linkdeps.Filename + " dependency")
-		cmd.LinkDeps.Add(depImportPath)
+		edgeKind := linkdeps.RelocationDependency
+		if kind == typed.ImportStatement {
+			edgeKind = linkdeps.ImportDependency
+		}
+		cmd.LinkDeps.Add(depImportPath, edgeKind)
 
 		if kind != typed.ImportStatement && cmd.Flags.Package != "main" {
 			// We cannot attempt to resolve link-time dependencies (relocation targets), as these are
@@ -152,7 +163,8 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		if err != nil {
 			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
 		}
-		for dep, archive := range deps {
+		for dep, resolved := range deps {
+			archive := resolved.ExportFile
 			deps, err := linkdeps.FromArchive(ctx, archive)
 			if err != nil {
 				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, dep, archive, err)
@@ -161,7 +173,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			for _, tDep := range deps.Dependencies() {
 				if _, found := imports.PackageFile[tDep]; !found {
 					log.Trace().Str("import-path", dep).Str("transitive", tDep).Str("inherited-from", depImportPath).Msg("Copying transitive " + linkdeps.Filename + " dependency")
-					cmd.LinkDeps.Add(tDep)
+					cmd.LinkDeps.Add(tDep, deps.Kind(tDep))
 				}
 			}
 

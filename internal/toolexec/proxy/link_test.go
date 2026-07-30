@@ -15,11 +15,13 @@ import (
 
 func TestParseLink(t *testing.T) {
 	for name, tc := range map[string]struct {
-		input []string
-		flags linkFlagSet
+		input  []string
+		flags  linkFlagSet
+		inputs []string
 	}{
 		"version_print": {
-			input: []string{"/path/link", "-V=full"},
+			input:  []string{"/path/link", "-V=full"},
+			inputs: make([]string, 0),
 			flags: linkFlagSet{
 				ShowVersion: true,
 			},
@@ -31,6 +33,7 @@ func TestParseLink(t *testing.T) {
 				Output:    "/buildDir/b001/exe/a.out",
 				BuildMode: "exe",
 			},
+			inputs: []string{"/buildDir/b001/_pkg_.a"},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -39,6 +42,7 @@ func TestParseLink(t *testing.T) {
 			require.Equal(t, CommandTypeLink, cmd.Type())
 			c := cmd.(*LinkCommand)
 			require.True(t, reflect.DeepEqual(tc.flags, c.Flags))
+			require.Equal(t, tc.inputs, c.Inputs)
 		})
 	}
 }

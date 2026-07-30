@@ -15,9 +15,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
@@ -29,6 +32,12 @@ import (
 // in the build tree
 var SyntheticPackageName = "synthetic"
 
+type pendingLinkDep struct {
+	path   string
+	parent string
+	kind   linkdeps.DependencyKind
+}
+
 // OnCompileMain only performs changes when compiling the "main" package, adding blank imports for
 // any linkdeps dependencies that are not yet satisfied by the importcfg file (this is the case for
 // link-time dependencies implied by use of the go:linkname directive, which are used to avoid
@@ -39,6 +48,12 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	if cmd.Flags.Package != "main" {
 		return nil
 	}
+	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && strings.HasSuffix(w.ImportPath, ".test") {
+		// The nested test main only exists to make cmd/go build affected variants.
+		// Its source may come from the build cache without the _testmain.go filename.
+		return nil
+	}
+	isTestMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
 
 	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompileMain",
 		tracer.ResourceName(w.ImportPath),
@@ -53,50 +68,95 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		return fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
 	}
 
-	linkDeps, err := linkdeps.FromImportConfig(ctx, &reg)
+	testVariantFor := ""
+	if isTestMain {
+		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
+		cmd.MarkTestMain(testVariantFor)
+	}
+
+	resolveTestTargetProvenance := newTestTargetProvenanceResolver(ctx, testVariantFor, cmd.WorkDir)
+	stack, err := initialLinkDependencies(ctx, &reg, testVariantFor, resolveTestTargetProvenance)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
-
-	if linkDeps.Empty() {
-		// Nothing was added, we're done!
+	if len(stack) == 0 {
 		return nil
 	}
 
-	newDeps := linkDeps.Dependencies()
+	newDeps := make([]string, 0, len(stack))
+	pending := make(map[string]pendingLinkDep, len(stack))
+	processed := make(map[string]pkgs.ResolvedArchive)
+	paths := make([]string, 0, len(stack))
+	for _, dep := range stack {
+		newDeps = append(newDeps, dep.path)
+		pending[dep.path] = dep
+		paths = append(paths, dep.path)
+	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
-	stack := append(make([]string, 0, len(newDeps)), newDeps...)
-	for len(stack) > 0 {
-		// Pop from the stack of things to process...
-		linkDepPath := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
+	for len(paths) > 0 {
+		path := paths[len(paths)-1]
+		paths = paths[:len(paths)-1]
+		item := pending[path]
+		delete(pending, path)
 
-		deps, err := resolvePackageFiles(ctx, linkDepPath, cmd.WorkDir)
+		deps, err := resolvePackageFilesForTest(ctx, item.path, testVariantFor, cmd.WorkDir)
 		if err != nil {
-			return fmt.Errorf("resolving %q: %w", linkDepPath, err)
+			return fmt.Errorf("resolving %q: %w", item.path, err)
+		}
+		for path, archive := range deps {
+			if current, found := processed[path]; !found || current.ForTest == "" || archive.ForTest != "" {
+				processed[path] = archive
+			}
+		}
+		if err := rejectResolvedSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
+			return err
+		}
+		changed, err := mergeResolvedArchives(&reg, deps, testVariantFor)
+		if err != nil {
+			return err
+		}
+		for p, archive := range changed {
+			log.Debug().Str("import-path", p).Str("archive", archive).Msg("Recording resolved " + linkdeps.Filename + " dependency")
 		}
 
-		for p, a := range deps {
-			if _, found := reg.PackageFile[p]; found {
-				continue
-			}
-			log.Debug().Str("import-path", p).Str("archive", a).Msg("Recording resolved " + linkdeps.Filename + " dependency")
-			reg.PackageFile[p] = a
-
-			// The package may have its own link-time dependencies we need to resolve
-			tDeps, err := linkdeps.FromArchive(ctx, a)
+		for p, resolved := range deps {
+			archive := resolved.ExportFile
+			// The package may have its own link-time dependencies we need to resolve.
+			tDeps, err := linkdeps.FromArchive(ctx, archive)
 			if err != nil {
-				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, a, err)
+				return fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, p, archive, err)
 			}
 			for _, tDep := range tDeps.Dependencies() {
-				if reg.PackageFile[tDep] != "" || slices.Contains(stack, tDep) {
-					// Already resolved, or already going to be resolved...
+				kind := tDeps.Kind(tDep)
+				candidate := pendingLinkDep{path: tDep, parent: p, kind: kind}
+				if current, found := pending[tDep]; found {
+					cmd.LinkDeps.Add(tDep, candidate.kind)
+					pending[tDep] = strongestPendingLinkDep(current, candidate)
 					continue
 				}
-				stack = append(stack, tDep)     // Push it to the stack
-				newDeps = append(newDeps, tDep) // Record it as asynthetic import to add
-				cmd.LinkDeps.Add(tDep)          // Record it as a link-time dependency
+				if previous, found := processed[tDep]; found {
+					if err := rejectSyntheticVariantDependency(candidate.parent, candidate.path, testVariantFor, candidate.kind == linkdeps.ImportDependency, previous); err != nil {
+						return err
+					}
+					continue
+				}
+				if reg.PackageFile[tDep] != "" {
+					if tDep == testVariantFor && kind == linkdeps.ImportDependency {
+						selected, err := resolveTestTargetProvenance()
+						if err != nil {
+							return fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+						}
+						if err := rejectSatisfiedSyntheticDependency(p, tDep, testVariantFor, kind, selected); err != nil {
+							return err
+						}
+					}
+					continue
+				}
+				cmd.LinkDeps.Add(tDep, candidate.kind)
+				pending[tDep] = candidate
+				paths = append(paths, tDep)
+				newDeps = append(newDeps, tDep)
 			}
 		}
 	}
@@ -116,9 +176,9 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 
 	// Generate a synthetic source file with blank imports to link-time
 	// dependencies, so the linker actually sees them.
+	slices.Sort(newDeps) // Consistent order for deterministic output
 	genDecl := &ast.GenDecl{Tok: token.IMPORT, Specs: make([]ast.Spec, len(newDeps))}
 	fileAST := &ast.File{Name: ast.NewIdent("main"), Decls: []ast.Decl{genDecl}, Imports: make([]*ast.ImportSpec, len(newDeps))}
-	slices.Sort(newDeps) // Consistent order for deterministic output
 	for idx, path := range newDeps {
 		spec := &ast.ImportSpec{Name: ast.NewIdent("_"), Path: &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(path)}}
 		genDecl.Specs[idx] = spec
@@ -145,4 +205,63 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	cmd.AddFiles([]string{genFile})
 
 	return nil
+}
+
+func initialLinkDependencies(
+	ctx context.Context,
+	reg *importcfg.ImportConfig,
+	testVariantFor string,
+	resolveTestTargetProvenance func() (pkgs.ResolvedArchive, error),
+) ([]pendingLinkDep, error) {
+	byPath := make(map[string]pendingLinkDep)
+	parents := make([]string, 0, len(reg.PackageFile))
+	for parent := range reg.PackageFile {
+		parents = append(parents, parent)
+	}
+	sort.Strings(parents)
+	for _, parent := range parents {
+		archive := reg.PackageFile[parent]
+		deps, err := linkdeps.FromArchive(ctx, archive)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s from %s=%s: %w", linkdeps.Filename, parent, archive, err)
+		}
+		for _, path := range deps.Dependencies() {
+			kind := deps.Kind(path)
+			_, satisfied := reg.PackageFile[path]
+			if path == testVariantFor && !satisfied {
+				return nil, fmt.Errorf("test-main import configuration is missing the authoritative package-under-test archive %q", testVariantFor)
+			}
+			if satisfied {
+				if path == testVariantFor && kind == linkdeps.ImportDependency {
+					selected, err := resolveTestTargetProvenance()
+					if err != nil {
+						return nil, fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+					}
+					if err := rejectSatisfiedSyntheticDependency(parent, path, testVariantFor, kind, selected); err != nil {
+						return nil, err
+					}
+				}
+				continue
+			}
+			candidate := pendingLinkDep{path: path, parent: parent, kind: kind}
+			if current, found := byPath[path]; found {
+				candidate = strongestPendingLinkDep(current, candidate)
+			}
+			byPath[path] = candidate
+		}
+	}
+
+	result := make([]pendingLinkDep, 0, len(byPath))
+	for _, dep := range byPath {
+		result = append(result, dep)
+	}
+	sort.Slice(result, func(i int, j int) bool { return result[i].path < result[j].path })
+	return result, nil
+}
+
+func strongestPendingLinkDep(left pendingLinkDep, right pendingLinkDep) pendingLinkDep {
+	if right.kind > left.kind || (right.kind == left.kind && left.parent == "" && right.parent != "") {
+		return right
+	}
+	return left
 }

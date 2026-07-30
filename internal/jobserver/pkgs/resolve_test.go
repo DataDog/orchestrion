@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/DataDog/orchestrion/internal/goflags"
@@ -82,6 +83,138 @@ func Test(t *testing.T) {
 		assert.GreaterOrEqual(t, len(resp), 3)
 		assert.EqualValues(t, 3, server.CacheStats.Count())
 		assert.EqualValues(t, 1, server.CacheStats.Hits())
+	})
+
+	t.Run("TestVariants", func(t *testing.T) {
+		server, err := jobserver.New(context.Background(), nil)
+		require.NoError(t, err)
+		defer server.Shutdown()
+
+		conn, err := server.Connect()
+		require.NoError(t, err)
+		defer conn.Close()
+
+		dir := t.TempDir()
+		writeFile := func(name, contents string) {
+			t.Helper()
+			path := filepath.Join(dir, filepath.FromSlash(name))
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+			require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+		}
+		writeFile("go.mod", "module example.com/testvariants\n\ngo 1.25\n")
+		writeFile("subject/subject.go", "package subject\n\nconst Value = 42\n")
+		writeFile("subject/subject_test.go", "package subject\n\nimport \"testing\"\n\nfunc TestValue(t *testing.T) { if Value != 42 { t.Fail() } }\n")
+		writeFile("middle/middle.go", "package middle\n\nimport \"example.com/testvariants/subject\"\n\nconst Value = subject.Value\n")
+		writeFile("root/root.go", "package root\n\nimport \"example.com/testvariants/middle\"\n\nconst Value = middle.Value\n")
+		writeFile("unrelated/unrelated.go", "package unrelated\n\nconst Value = 42\n")
+
+		resp, err := client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/root",
+				TestVariantFor: "example.com/testvariants/subject",
+			},
+		)
+		require.NoError(t, err)
+		require.Contains(t, resp, "example.com/testvariants/root")
+		require.Contains(t, resp, "example.com/testvariants/middle")
+		assert.NotEmpty(t, resp["example.com/testvariants/root"].ExportFile)
+		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/root"].ForTest)
+		assert.NotEmpty(t, resp["example.com/testvariants/middle"].ExportFile)
+		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/middle"].ForTest)
+		assert.NotContains(t, resp, "example.com/testvariants/subject")
+
+		// A different test target reuses the cached ordinary package graph before
+		// applying target-specific refinement.
+		hitsBefore := server.CacheStats.Hits()
+		_, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/root",
+				TestVariantFor: "example.com/testvariants/other",
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, hitsBefore+1, server.CacheStats.Hits())
+
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/subject",
+				TestVariantFor: "example.com/testvariants/subject",
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "example.com/testvariants/subject", resp["example.com/testvariants/subject"].ForTest)
+
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/unrelated",
+				TestVariantFor: "example.com/testvariants/subject",
+			},
+		)
+		require.NoError(t, err)
+		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"].ExportFile)
+		assert.Empty(t, resp["example.com/testvariants/unrelated"].ForTest)
+
+		// An unrelated dependency does not need to load or validate the test target.
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/unrelated",
+				TestVariantFor: "example.com/testvariants/does-not-exist",
+			},
+		)
+		require.NoError(t, err)
+		assert.NotEmpty(t, resp["example.com/testvariants/unrelated"].ExportFile)
+		assert.Empty(t, resp["example.com/testvariants/unrelated"].ForTest)
+
+		writeFile("externalsubject/subject.go", "package externalsubject\n\nconst Value = 42\n")
+		writeFile("externalsubject/subject_test.go", "package externalsubject_test\n\nimport (\"testing\"; \"example.com/testvariants/externalsubject\")\n\nfunc TestValue(t *testing.T) { if externalsubject.Value != 42 { t.Fail() } }\n")
+		writeFile("externalroot/root.go", "package externalroot\n\nimport \"example.com/testvariants/externalsubject\"\n\nconst Value = externalsubject.Value\n")
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/externalroot",
+				TestVariantFor: "example.com/testvariants/externalsubject",
+			},
+		)
+		require.NoError(t, err)
+		assert.NotEmpty(t, resp["example.com/testvariants/externalroot"].ExportFile)
+		assert.Empty(t, resp["example.com/testvariants/externalroot"].ForTest)
+		assert.NotContains(t, resp, "example.com/testvariants/externalsubject")
+
+		resp, err = client.Request(
+			context.Background(),
+			conn,
+			&pkgs.ResolveRequest{
+				Dir:            dir,
+				Env:            os.Environ(),
+				Pattern:        "example.com/testvariants/externalsubject",
+				TestVariantFor: "example.com/testvariants/externalsubject",
+			},
+		)
+		require.NoError(t, err)
+		assert.Empty(t, resp["example.com/testvariants/externalsubject"].ForTest)
 	})
 
 	t.Run("Error", func(t *testing.T) {
