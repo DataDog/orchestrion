@@ -78,14 +78,14 @@ func TestAddTestVariantOverlays(t *testing.T) {
 func TestVendoredOverlayRestrictionAppliesOnlyToNewPackages(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/subject\n\ngo 1.25\n"), 0o644))
-	config := packages.Config{Dir: dir, Env: os.Environ()}
+	config := packages.Config{Dir: dir, Env: append(os.Environ(), "GOWORK=off")}
 	vendoredTestFile := filepath.Join(dir, "vendor", "example.com", "dependency", "variant_test.go")
 
 	cleanup, err := addTestVariantOverlay(context.Background(), &config, vendoredTestFile, []byte("package dependency_test\n"))
 	require.NoError(t, err)
 	cleanup()
 
-	config = packages.Config{Dir: dir, Env: os.Environ()}
+	config = packages.Config{Dir: dir, Env: append(os.Environ(), "GOWORK=off")}
 	_, err = addTestVariantOverlays(context.Background(), &config, map[string]overlaySource{
 		filepath.Join(dir, "vendor", "example.com", "dependency", "bridge", "bridge.go"): {
 			contents:   []byte("package bridge\n"),
@@ -94,6 +94,38 @@ func TestVendoredOverlayRestrictionAppliesOnlyToNewPackages(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "vendor directory")
+}
+
+func TestActiveVendorDir(t *testing.T) {
+	tests := []struct {
+		name   string
+		goMod  string
+		goWork string
+		want   string
+	}{
+		{name: "module", goMod: filepath.Join("workspace", "module", "go.mod"), want: filepath.Join("workspace", "module", "vendor")},
+		{name: "workspace", goMod: filepath.Join("workspace", "module", "go.mod"), goWork: filepath.Join("workspace", "go.work"), want: filepath.Join("workspace", "vendor")},
+		{name: "workspace off", goMod: filepath.Join("workspace", "module", "go.mod"), goWork: "off", want: filepath.Join("workspace", "module", "vendor")},
+		{name: "no module"},
+		{name: "no module sentinel", goMod: os.DevNull},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, activeVendorDir(tt.goMod, tt.goWork))
+		})
+	}
+}
+
+func TestUnrelatedVendorAncestorIsAllowed(t *testing.T) {
+	project := filepath.Join(t.TempDir(), "vendor", "project")
+	require.NoError(t, os.MkdirAll(project, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(project, "go.mod"), []byte("module example.com/project\n\ngo 1.25\n"), 0o644))
+	config := packages.Config{Dir: project, Env: append(os.Environ(), "GOWORK=off")}
+	cleanup, err := addTestVariantOverlays(context.Background(), &config, map[string]overlaySource{
+		filepath.Join(project, "bridge", "bridge.go"): {contents: []byte("package bridge\n"), newPackage: true},
+	})
+	require.NoError(t, err)
+	cleanup()
 }
 
 func TestUnsupportedOverlayRootPolicy(t *testing.T) {

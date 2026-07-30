@@ -14,7 +14,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -149,7 +148,7 @@ type unsupportedOverlayRoot struct {
 }
 
 func loadUnsupportedOverlayRoots(ctx context.Context, config *packages.Config) ([]unsupportedOverlayRoot, error) {
-	cmd := exec.CommandContext(ctx, "go", "env", "-json", "GOMODCACHE", "GOROOT")
+	cmd := exec.CommandContext(ctx, "go", "env", "-json", "GOMODCACHE", "GOROOT", "GOMOD", "GOWORK")
 	cmd.Dir = config.Dir
 	cmd.Env = config.Env
 	output, err := cmd.Output()
@@ -159,29 +158,39 @@ func loadUnsupportedOverlayRoots(ctx context.Context, config *packages.Config) (
 	var goEnv struct {
 		GoModCache string `json:"GOMODCACHE"`
 		GoRoot     string `json:"GOROOT"`
+		GoMod      string `json:"GOMOD"`
+		GoWork     string `json:"GOWORK"`
 	}
 	if err := json.Unmarshal(output, &goEnv); err != nil {
 		return nil, fmt.Errorf("parsing Go overlay roots: %w", err)
 	}
-	return []unsupportedOverlayRoot{
+	roots := []unsupportedOverlayRoot{
 		{name: "GOMODCACHE", path: goEnv.GoModCache, why: "Go does not permit module-cache overlays"},
 		{name: "GOROOT", path: goEnv.GoRoot, why: "the standard library cannot contain synthetic packages", newPackageOnly: true},
-	}, nil
+	}
+	if vendorDir := activeVendorDir(goEnv.GoMod, goEnv.GoWork); vendorDir != "" {
+		roots = append(roots, unsupportedOverlayRoot{
+			name:           "vendor directory",
+			path:           vendorDir,
+			why:            "the synthetic package is not listed in vendor/modules.txt",
+			newPackageOnly: true,
+		})
+	}
+	return roots, nil
+}
+
+func activeVendorDir(goMod string, goWork string) string {
+	if goWork != "" && goWork != "off" && goWork != os.DevNull {
+		return filepath.Join(filepath.Dir(goWork), "vendor")
+	}
+	if goMod != "" && goMod != os.DevNull {
+		return filepath.Join(filepath.Dir(goMod), "vendor")
+	}
+	return ""
 }
 
 func rejectUnsupportedOverlayPath(roots []unsupportedOverlayRoot, virtualPath string, newPackage bool) error {
-	unsupported := slices.Clone(roots)
-	if newPackage {
-		if vendorDir := enclosingVendorDir(virtualPath); vendorDir != "" {
-			unsupported = append(unsupported, unsupportedOverlayRoot{
-				name:           "vendor directory",
-				path:           vendorDir,
-				why:            "the synthetic package is not listed in vendor/modules.txt",
-				newPackageOnly: true,
-			})
-		}
-	}
-	for _, root := range unsupported {
+	for _, root := range roots {
 		if root.path == "" || (root.newPackageOnly && !newPackage) {
 			continue
 		}
@@ -194,18 +203,6 @@ func rejectUnsupportedOverlayPath(roots []unsupportedOverlayRoot, virtualPath st
 		}
 	}
 	return nil
-}
-
-func enclosingVendorDir(path string) string {
-	for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
-		if filepath.Base(dir) == "vendor" {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return ""
-		}
-	}
 }
 
 func pathWithin(parent string, child string) (bool, error) {
