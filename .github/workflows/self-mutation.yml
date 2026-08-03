@@ -1,0 +1,63 @@
+name: Self Mutation
+# Pushes the generated-file patch produced by the `generate` job of validate.yml back onto the pull
+# request's own branch.
+#
+# SECURITY: this workflow mints a `contents: write` token for DataDog/orchestrion, so it MUST stay
+# isolated from pull-request-authored code. For `pull_request` events GitHub runs workflows from the
+# PR merge ref, meaning anything living in validate.yml can be rewritten by the PR itself. Keeping
+# the token minting here, and having validate.yml call this file pinned at `@main`, makes the OIDC
+# `job_workflow_ref` claim resolve to `...self-mutation.yml@refs/heads/main` -- a ref the PR cannot
+# influence -- which is what .github/chainguard/self.github.validate.self-mutation.sts.yaml asserts.
+#
+# Consequently:
+#   - Callers MUST use the full `DataDog/orchestrion/.github/workflows/self-mutation.yml@main` form.
+#     A relative `./.github/workflows/self-mutation.yml` reference resolves to the *caller's* commit
+#     (i.e. the untrusted merge ref), which would silently defeat the whole point.
+#   - This workflow MUST NOT take the push target as an input, since the calling workflow is
+#     untrusted. Everything is derived from the `pull_request` event context instead.
+#
+# NOTE: nothing calls this workflow yet. GitHub resolves `uses: ...@main` references when it creates
+# a workflow run, so this file has to exist on `main` before validate.yml can point at it -- adding
+# the reference in the same pull request makes the whole run fail to load. The validate.yml wiring
+# and the matching trust policy update therefore land in a follow-up, once this is on `main`.
+on:
+  workflow_call: {}
+permissions: read-all
+jobs:
+  self-mutation:
+    runs-on: ubuntu-latest
+    name: Commit generated files
+    permissions:
+      id-token: write # To mint the dd-octo-sts token
+      contents: read
+    # Guard lives here, in trusted code, rather than in the (PR-modifiable) caller.
+    if: github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - name: Download patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: repo.patch
+          path: ${{ runner.temp }}
+      - name: Apply patch
+        run: |-
+          [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
+      - name: Get GitHub token (DataDog/orchestrion)
+        id: generate-token
+        uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        with:
+          scope: DataDog/orchestrion
+          policy: self.github.validate.self-mutation
+      # We use ghcommit to create signed commits directly using the GitHub API
+      - name: Push changes
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+        with:
+          commit_message: "chore: update generated files"
+          repo: ${{ github.event.pull_request.head.repo.full_name }}
+          branch: ${{ github.event.pull_request.head.ref }}
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
