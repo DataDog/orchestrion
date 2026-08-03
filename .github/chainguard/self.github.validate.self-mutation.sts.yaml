@@ -1,10 +1,18 @@
-# Policy for: .github/workflows/validate.yml (self-mutation job) in DataDog/orchestrion
+# Policy for: .github/workflows/self-mutation.yml in DataDog/orchestrion, which is called by the
+# self-mutation job of .github/workflows/validate.yml.
+#
+# `job_workflow_ref` is anchored to `self-mutation.yml@refs/heads/main` rather than to validate.yml.
+# For `pull_request` events GitHub runs workflows from the PR merge ref, so a claim pattern matching
+# validate.yml can only ever match a ref the pull request itself controls -- which would let a PR
+# rewrite the token-minting steps and use this `contents: write` token for anything. Because
+# `job_workflow_ref` resolves to the *called* reusable workflow, pinning the call at `@main` keeps
+# this claim tied to code that has already landed on the default branch.
 issuer: https://token.actions.githubusercontent.com
 subject_pattern: repo:DataDog/orchestrion:pull_request
 
 claim_pattern:
   event_name: pull_request
-  job_workflow_ref: DataDog/orchestrion/\.github/workflows/validate\.yml@refs/heads/main
+  job_workflow_ref: DataDog/orchestrion/\.github/workflows/self-mutation\.yml@refs/heads/main
   base_ref: main
   repository: DataDog/orchestrion
 

@@ -99,41 +99,19 @@ jobs:
   # proactively do it with the mutator token.
   self-mutation:
     needs: generate
-    runs-on: ubuntu-latest
     name: Update PR with generated files
     permissions:
-      id-token: write
+      id-token: write # To mint the dd-octo-sts token
       contents: read
-    if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-      - name: Download patch
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: repo.patch
-          path: ${{ runner.temp }}
-      - name: Apply patch
-        run: |-
-          [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
-      - name: Get GitHub token (DataDog/orchestrion)
-        id: generate-token
-        uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
-        with:
-          scope: DataDog/orchestrion
-          policy: self.github.validate.self-mutation
-      # We use ghcommit to create signed commits directly using the GitHub API
-      - name: Push changes
-        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
-        with:
-          commit_message: "chore: update generated files"
-          repo: ${{ github.event.pull_request.head.repo.full_name }}
-          branch: ${{ github.event.pull_request.head.ref }}
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+    if: always() && needs.generate.outputs.has-patch == 'true'
+    # SECURITY: pinned at `@main` on purpose, and NOT via a relative
+    # `./.github/workflows/self-mutation.yml` path. This job mints a `contents: write` token, and for
+    # `pull_request` events GitHub runs workflows from the PR merge ref -- so anything defined in this
+    # file is rewritable by the pull request itself. Referencing the called workflow at `@main` keeps
+    # the OIDC `job_workflow_ref` claim anchored to a ref the PR cannot influence, which is what the
+    # dd-octo-sts trust policy asserts. A relative reference would resolve to this (untrusted) commit.
+    # See .github/workflows/self-mutation.yml for the full rationale.
+    uses: DataDog/orchestrion/.github/workflows/self-mutation.yml@main # ratchet:exclude
   ##############################################################################
   # Run the various linters we have set up...
   lint:
@@ -187,7 +165,14 @@ jobs:
       - name: Ensure SHA pinned actions
         uses: zgosalvez/github-actions-ensure-sha-pinned-actions@3db98c0363e2fa5df3e1c4c471777a7c10b24cc9 # v3
         with:
-          allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
+          # - DataDog/dd-trace-go: trust actions/workflows in the dd-trace-go repository.
+          # - DataDog/orchestrion: this repository's own reusable workflows are referenced by branch
+          #   (@main) rather than by SHA, because the OIDC `job_workflow_ref` claim must resolve to a
+          #   stable `@refs/heads/main` value for the dd-octo-sts trust policy to match. See
+          #   .github/workflows/self-mutation.yml for details.
+          allowlist: |
+            DataDog/dd-trace-go
+            DataDog/orchestrion
       - name: Verify actions are pinned with ratchet
         uses: sethvargo/ratchet@9ca118155b0f79464185703a50da367e111107cd # ratchet:exclude
         with:
