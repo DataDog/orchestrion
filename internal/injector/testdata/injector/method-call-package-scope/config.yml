@@ -1,0 +1,47 @@
+%YAML 1.1
+---
+# Verifies that a wrap-expression template using .Function.ArgumentOfType applies to matched calls
+# that are not enclosed in any function (package-level declarations), where the lookup yields an
+# empty string instead of failing the compilation.
+aspects:
+  - id: http-client-do
+    join-point:
+      method-call:
+        receiver: "net/http.Client"
+        name: Do
+        match: pointer-only
+    advice:
+      - wrap-expression:
+          template: |-
+            {{- $ctx := .Function.ArgumentOfType "context.Context" -}}
+            {{ .AST.Fun }}(
+              {{ index .AST.Args 0 }}.WithContext(
+                {{- if $ctx -}}
+                  {{ $ctx }}
+                {{- else -}}
+                  context.Background()
+                {{- end -}}
+              ),
+            )
+          imports:
+            context: context
+
+code: |-
+  package test
+
+  import (
+    "context"
+    "net/http"
+  )
+
+  var pkgClient = &http.Client{}
+
+  var pkgReq, _ = http.NewRequest("GET", "https://example.com", nil)
+
+  // Matched at package scope: there is no enclosing function, so ArgumentOfType finds nothing.
+  var pkgResp, pkgErr = pkgClient.Do(pkgReq)
+
+  // Matched inside a function: ArgumentOfType resolves the context argument.
+  func doRequest(ctx context.Context, client *http.Client, req *http.Request) {
+    _, _ = client.Do(req)
+  }

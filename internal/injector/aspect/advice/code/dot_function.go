@@ -110,32 +110,36 @@ func (noFunc) Argument(int) (string, error) {
 	return "", errNoFunction
 }
 
-func (noFunc) ArgumentOfType(string) (string, error) {
-	return "", errNoFunction
-}
-
-func (noFunc) ArgumentThatImplements(string) (string, error) {
-	return "", errNoFunction
-}
-
 func (noFunc) Result(int) (string, error) {
 	return "", errNoFunction
 }
 
+// The methods below are searches, so outside of a function they report "not found" instead of an
+// error. This lets templates branch on the result, e.g. `{{ if $ctx }}`, and still apply to nodes
+// at package scope.
+
+func (noFunc) ArgumentOfType(string) (string, error) {
+	return "", nil
+}
+
+func (noFunc) ArgumentThatImplements(string) (string, error) {
+	return "", nil
+}
+
 func (noFunc) ResultOfType(string) (string, error) {
-	return "", errNoFunction
+	return "", nil
 }
 
 func (noFunc) ResultThatImplements(string) (string, error) {
-	return "", errNoFunction
+	return "", nil
 }
 
 func (noFunc) LastResultThatImplements(string) (string, error) {
-	return "", errNoFunction
+	return "", nil
 }
 
 func (noFunc) FinalResultImplements(string) (bool, error) {
-	return false, errNoFunction
+	return false, nil
 }
 
 type signature struct {
