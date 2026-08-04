@@ -18,8 +18,6 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     name: Run all generators
-    outputs:
-      has-patch: ${{ steps.is-tree-dirty.outputs.result }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -81,6 +79,9 @@ jobs:
           git status
           git diff --staged --patch --exit-code > .repo.patch || echo 'result=true' >> "${GITHUB_OUTPUT}"
       - name: Upload patch
+        # CONTRACT: .github/workflows/self-mutation.yml watches this workflow via `workflow_run` and
+        # commits this artifact back onto the pull request's branch. Renaming the artifact, the file,
+        # or this workflow's `name:` breaks that silently -- the two files are not otherwise linked.
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -90,50 +91,20 @@ jobs:
           path: .repo.patch
       - name: Fail build if working tree is dirty
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
+        env:
+          IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         run: |-
           echo "::error::Files have been modified by 'go generate ./...' (see logs)."
           cat .repo.patch
+          if [ "${IS_FORK}" = 'true' ]; then
+            echo '::notice::Automatic fixups are not available for fork pull requests. Run the' \
+                 'generators locally and commit the result: `find . -name go.mod -execdir go' \
+                 'generate ./... \;`, `./_tools/make-licenses.sh`, then `make docs`.'
+          else
+            echo '::notice::The "Self Mutation" workflow will push these changes to this branch' \
+                 'once this run completes; see the Actions tab.'
+          fi
           exit 1
-  ##############################################################################
-  # If the generators changed anything, and we can update the PR, then we'll
-  # proactively do it with the mutator token.
-  self-mutation:
-    needs: generate
-    runs-on: ubuntu-latest
-    name: Update PR with generated files
-    permissions:
-      id-token: write
-      contents: read
-    if: always() && needs.generate.outputs.has-patch == 'true' && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.maintainer_can_modify)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-      - name: Download patch
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: repo.patch
-          path: ${{ runner.temp }}
-      - name: Apply patch
-        run: |-
-          [ -s '${{ runner.temp }}/.repo.patch' ] && git apply '${{ runner.temp }}/.repo.patch' || echo 'Empty patch. Skipping.'
-      - name: Get GitHub token (DataDog/orchestrion)
-        id: generate-token
-        uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
-        with:
-          scope: DataDog/orchestrion
-          policy: self.github.validate.self-mutation
-      # We use ghcommit to create signed commits directly using the GitHub API
-      - name: Push changes
-        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
-        with:
-          commit_message: "chore: update generated files"
-          repo: ${{ github.event.pull_request.head.repo.full_name }}
-          branch: ${{ github.event.pull_request.head.ref }}
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
   ##############################################################################
   # Run the various linters we have set up...
   lint:
