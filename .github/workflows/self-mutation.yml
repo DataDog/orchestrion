@@ -1,0 +1,278 @@
+name: Self Mutation
+# Commits the generated-file patch produced by the `generate` job of `Tests` (validate.yml) back onto
+# the pull request's own branch.
+#
+# SECURITY: this workflow mints a `contents: write` token for DataDog/orchestrion, so it must never
+# execute code a pull request can influence. It is deliberately a separate, `workflow_run`-driven
+# workflow rather than a job (or a reusable workflow called by a job) in validate.yml:
+#   - `workflow_run` workflows always run from the default branch, so the file GitHub executes here is
+#     always the reviewed `main` version -- never a pull request's merge ref. The OIDC
+#     `job_workflow_ref` claim is therefore always `...self-mutation.yml@refs/heads/main`, which is what
+#     .github/chainguard/self.github.self-mutation.workflow-run.sts.yaml asserts.
+#   - There is no `uses:` reference between the two files, so nothing here is load-bearing for
+#     validate.yml: a mistake in this file cannot make the `Tests` run fail to load.
+#
+# The only thing this workflow consumes from a pull request is the `repo.patch` artifact, which is
+# untrusted data (the `generate` job runs `go generate ./...`, i.e. arbitrary pull-request-authored
+# code). The `sanitize` job vets and re-serialises that patch -- asserting it is a single file, contains
+# no symlinks, and only touches known generated-file paths -- entirely without a privileged token, so
+# that no attacker-authored bytes are ever extracted in the job that holds one (`commit`). The blast
+# radius of what does reach `commit` is bounded by the guards in `resolve`: we only ever push to the head
+# branch of an *open* pull request that lives in DataDog/orchestrion itself and targets the default
+# branch. Creating such a branch already requires push access to it.
+on:
+  workflow_run:
+    workflows: [Tests] # .github/workflows/validate.yml -- matched by *name*, not path.
+    types: [completed] # `requested` and `in_progress` fire by default; we only want `completed`.
+    # Filters the *triggering* run's head branch. Merge-queue and default-branch runs can never need a
+    # self-mutation commit, and filtering here means no run is even created for them.
+    branches-ignore:
+      - main
+      - "gh-readonly-queue/**"
+permissions: read-all
+concurrency:
+  # NOTE: `github.event.number` (used by validate.yml's concurrency group) does not exist for
+  # `workflow_run` events. `head_repository` disambiguates identically-named branches across forks.
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+jobs:
+  ##############################################################################
+  # Decide whether there is anything to commit, and where. Entirely unprivileged: every value the
+  # later jobs consume is validated here first.
+  resolve:
+    runs-on: ubuntu-latest
+    name: Resolve target pull request
+    permissions:
+      actions: read # To list the triggering run's artifacts
+      contents: read
+      pull-requests: read # To resolve and validate the pull request
+    # SECURITY: which `github.event.workflow_run` fields may be trusted, and why:
+    #   - `event`: set by GitHub from the triggering run's own trigger; a pull request cannot forge it.
+    #     Restricting to `pull_request` keeps merge_group runs out -- which matters because a queued
+    #     fork PR runs fork code in a *non-fork* context where OIDC is available, and its
+    #     `head_repository` already equals `github.repository`, so the fork check below would not catch
+    #     it on its own.
+    #   - `head_repository.full_name`: fork pull requests are skipped. The dd-octo-sts token is scoped
+    #     to DataDog/orchestrion and cannot write to a fork, so fork support would be fiction; requiring
+    #     a same-repository branch is also what bounds the blast radius of a malicious patch, since
+    #     creating such a branch already requires push access to it.
+    #   - `head_branch`: GitHub-reported, but the *value* is chosen by whoever created the branch --
+    #     including, legitimately, `main` (validate.yml runs for pull requests into any branch).
+    #     Compared against the default branch here, and never interpolated into a `run:` block: ref
+    #     names may contain shell metacharacters.
+    #   - `conclusion`: the `generate` job intentionally exits 1 when the tree is dirty, so a successful
+    #     self-mutation is normally preceded by a *failed* Tests run -- this must NOT require `success`.
+    #     Only `cancelled` is excluded, where the uploaded patch may be stale (validate.yml's
+    #     `cancel-in-progress` concurrency group cancels aggressively).
+    if: >-
+      github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch != github.event.repository.default_branch
+    outputs:
+      branch: ${{ steps.pull-request.outputs.branch }}
+      head-sha: ${{ steps.pull-request.outputs.head-sha }}
+      number: ${{ steps.pull-request.outputs.number }}
+    steps:
+      - name: Look for the repo.patch artifact
+        id: artifact
+        # `actions/download-artifact` hard-fails when the named artifact is missing and has no
+        # tolerate-missing input, so gate on it here instead. A missing artifact is the *normal* case:
+        # the `generate` job only uploads one when the working tree came out dirty.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |-
+          set -euo pipefail
+          count=$(gh api "repos/${GH_REPO}/actions/runs/${RUN_ID}/artifacts?name=repo.patch" \
+            --jq '[.artifacts[] | select(.expired == false)] | length')
+          echo "Found ${count} non-expired repo.patch artifact(s) in run ${RUN_ID}."
+          if [ "${count}" -eq 0 ]; then
+            echo '::notice::The generators produced no changes; nothing to commit.'
+            echo 'found=false' >> "${GITHUB_OUTPUT}"
+          else
+            echo 'found=true' >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Resolve pull request
+        id: pull-request
+        if: steps.artifact.outputs.found == 'true'
+        # `workflow_run.pull_requests` is unreliable (empty for forks, and only a point-in-time
+        # projection of *open* pull requests otherwise), so resolve from the head commit instead and
+        # re-validate everything against the live API:
+        #   - `base.ref == <default branch>` reproduces the `base_ref: main` claim the old,
+        #     pull_request-scoped trust policy asserted (a `workflow_run` token carries no such claim).
+        #     It is also what makes pushing to the default branch impossible: a pull request whose head
+        #     is `main` cannot also target `main`.
+        #   - `head.sha == <the sha we tested>` is the staleness check: `.head.sha` here is the branch's
+        #     *current* tip, so if the branch has moved on we skip and let the newer Tests run produce
+        #     a fresh patch, rather than committing a patch that may no longer apply cleanly.
+        # Values reach jq via `env`, never via shell interpolation.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |-
+          set -euo pipefail
+          gh api "repos/${GH_REPO}/commits/${HEAD_SHA}/pulls" --jq '
+            [ .[]
+              | select(.state == "open")
+              | select(.base.repo.full_name == env.GH_REPO)
+              | select(.head.repo.full_name == env.GH_REPO)
+              | select(.base.ref == env.DEFAULT_BRANCH)
+              | select(.head.ref != env.DEFAULT_BRANCH)
+              | select(.head.sha == env.HEAD_SHA)
+            ]' > "${RUNNER_TEMP}/pulls.json"
+          count=$(jq 'length' "${RUNNER_TEMP}/pulls.json")
+          if [ "${count}" -ne 1 ]; then
+            echo "::notice::Found ${count} eligible pull request(s) for ${HEAD_SHA}; nothing to do." \
+                 "The branch has most likely moved on (a newer Tests run will produce a fresh patch)," \
+                 "or the pull request was closed."
+            exit 0
+          fi
+          jq -r '"number=\(.[0].number)", "branch=\(.[0].head.ref)"' "${RUNNER_TEMP}/pulls.json" \
+            | tee -a "${GITHUB_OUTPUT}"
+          echo "head-sha=${HEAD_SHA}" | tee -a "${GITHUB_OUTPUT}"
+  ##############################################################################
+  # Vet and re-serialise the untrusted patch. Still fully unprivileged: this exists so that no
+  # attacker-authored bytes are ever extracted in the job that holds the `contents: write` token
+  # (`commit`, below). An attacker can bypass `upload-artifact`'s own sanitisation by calling the
+  # artifact API directly (crafted entry names, symlink entries), so extraction happens here instead.
+  sanitize:
+    needs: resolve
+    runs-on: ubuntu-latest
+    name: Vet generated-file patch
+    if: needs.resolve.outputs.branch != ''
+    permissions:
+      actions: read # To download the triggering run's artifact
+      contents: read
+    env:
+      # Every path a legitimate generator run can touch. In particular this blocks a patch that writes
+      # to .github/workflows/** or .github/chainguard/** -- trust policies are read from the default
+      # branch (see the header comment), so a patch reaching them here would be catastrophic.
+      ALLOWLIST: '^(LICENSE-3rdparty\.csv|CONTRIBUTING\.md|([^/]+/)*go\.(mod|sum)|internal/toolexec/proxy/(compile|link)\.flags\.go|internal/injector/aspect/advice/code/dot_ast\.proxies\.go)$'
+    outputs:
+      ready: ${{ steps.reserialize.outputs.ready }}
+    steps:
+      - name: Checkout
+        # `needs.resolve.outputs.head-sha` is the head commit of an open, same-repository,
+        # default-branch-targeting pull request whose tip still matches -- all validated in `resolve`.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.head-sha }}
+      - name: Download untrusted patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          github-token: ${{ github.token }} # Required to reach another run's artifacts
+          name: repo.patch
+          path: ${{ runner.temp }}/untrusted
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Vet patch
+        env:
+          PATCH: ${{ runner.temp }}/untrusted/.repo.patch
+        run: |-
+          set -euo pipefail
+          # The artifact must contain exactly the one file validate.yml uploaded -- nothing else.
+          contents=$(cd "${{ runner.temp }}/untrusted" && find . -mindepth 1 -printf '%y %p\n' | sort | tr '\n' ';')
+          if [ "${contents}" != 'f ./.repo.patch;' ]; then
+            echo "::error::unexpected artifact contents: ${contents}"
+            exit 1
+          fi
+          test -s "${PATCH}"
+          # ghcommit (used by the `commit` job) reads changed files with os.Open, which follows
+          # symlinks -- a symlink patched in here would end up committing its *target's* bytes,
+          # including, in that job, the minted token itself.
+          if grep -qE '^(old mode|new mode|new file mode|deleted file mode) 120000$' "${PATCH}"; then
+            echo '::error::patch introduces a symlink'
+            exit 1
+          fi
+          git apply --numstat -- "${PATCH}" | awk -F'\t' '{print $3}' > "${RUNNER_TEMP}/paths.txt"
+          if grep -Ev "${ALLOWLIST}" "${RUNNER_TEMP}/paths.txt" | grep -q .; then
+            echo '::error::patch touches paths outside the generated-file allowlist:'
+            grep -Ev "${ALLOWLIST}" "${RUNNER_TEMP}/paths.txt"
+            exit 1
+          fi
+      - name: Apply patch
+        env:
+          PATCH: ${{ runner.temp }}/untrusted/.repo.patch
+        run: |-
+          set -euo pipefail
+          git apply --check --whitespace=nowarn -- "${PATCH}"
+          git apply --whitespace=nowarn -- "${PATCH}"
+      - name: Re-serialise
+        id: reserialize
+        run: |-
+          set -euo pipefail
+          git add -A
+          git diff --staged --numstat | awk -F'\t' '{print $3}' > "${RUNNER_TEMP}/clean-paths.txt"
+          if grep -Ev "${ALLOWLIST}" "${RUNNER_TEMP}/clean-paths.txt" | grep -q .; then
+            echo '::error::re-serialised patch touches paths outside the generated-file allowlist:'
+            grep -Ev "${ALLOWLIST}" "${RUNNER_TEMP}/clean-paths.txt"
+            exit 1
+          fi
+          git diff --staged --patch > "${{ runner.temp }}/repo.patch.clean"
+          echo 'ready=true' >> "${GITHUB_OUTPUT}"
+      - name: Upload clean patch
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          if-no-files-found: error
+          include-hidden-files: true
+          name: repo.patch.clean
+          path: ${{ runner.temp }}/repo.patch.clean
+  ##############################################################################
+  # The only privileged job. Never runs generator or build code -- only applies an already-vetted
+  # patch and pushes it.
+  commit:
+    needs: [resolve, sanitize]
+    runs-on: ubuntu-latest # planetscale/ghcommit-action is a docker action: Linux only.
+    name: Commit generated files
+    if: needs.sanitize.outputs.ready == 'true'
+    permissions:
+      contents: read
+      id-token: write # To mint the dd-octo-sts token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.head-sha }}
+      - name: Download vetted patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: repo.patch.clean
+          path: ${{ runner.temp }}
+      - name: Apply patch
+        run: |-
+          set -euo pipefail
+          git apply --whitespace=nowarn -- "${{ runner.temp }}/repo.patch.clean"
+      - name: Get GitHub token (DataDog/orchestrion)
+        id: generate-token
+        uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        with:
+          scope: DataDog/orchestrion
+          policy: self.github.self-mutation.workflow-run
+      # We use ghcommit to create signed commits directly using the GitHub API. It derives
+      # `expectedHeadOid` from the local HEAD, so because we checked out the exact commit the patch was
+      # generated from, a branch that has moved on in the meantime makes the push fail loudly instead of
+      # silently clobbering newer work.
+      - name: Push changes
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+        with:
+          branch: ${{ needs.resolve.outputs.branch }}
+          commit_message: "chore: update generated files"
+          # A constant -- never head_repository.full_name: forks are already excluded in `resolve`,
+          # and pairing this with an unvalidated branch name is exactly what would let a crafted
+          # head_branch reach a repository we did not intend to push to.
+          repo: ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+      - name: Summary
+        env:
+          NUMBER: ${{ needs.resolve.outputs.number }}
+          BRANCH: ${{ needs.resolve.outputs.branch }}
+        run: |-
+          {
+            echo "### Self mutation"
+            echo
+            echo "Committed the generated-file patch to \`${BRANCH}\`"
+            echo "(${{ github.server_url }}/${{ github.repository }}/pull/${NUMBER})."
+          } >> "${GITHUB_STEP_SUMMARY}"

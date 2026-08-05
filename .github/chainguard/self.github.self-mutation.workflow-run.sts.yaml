@@ -1,0 +1,23 @@
+# Policy for: .github/workflows/self-mutation.yml (commit job) in DataDog/orchestrion.
+#
+# That workflow is driven by `workflow_run`, which GitHub always runs from the default branch. Every
+# claim below is therefore a fixed string: there is no pull-request-controlled ref anywhere in the
+# token. `job_workflow_ref` is the load-bearing claim -- it names the workflow file GitHub actually
+# executed, so a pull request cannot borrow this token by editing validate.yml (which holds no
+# `id-token: write` for self-mutation at all).
+#
+# A `workflow_run` token carries no `base_ref`/`head_ref` claim (both are empty), so the "only ever
+# commit to the head branch of an open, same-repository, main-targeting pull request" invariant is
+# enforced by the `resolve` job in self-mutation.yml instead of here. Those guards live on `main`,
+# behind the "Main branch" ruleset -- see the SECURITY comment in that workflow.
+issuer: https://token.actions.githubusercontent.com
+subject: repo:DataDog/orchestrion:ref:refs/heads/main
+
+claim_pattern:
+  event_name: workflow_run
+  job_workflow_ref: DataDog/orchestrion/\.github/workflows/self-mutation\.yml@refs/heads/main
+  ref: refs/heads/main
+  repository: DataDog/orchestrion
+
+permissions:
+  contents: write
