@@ -1,0 +1,39 @@
+//line input.go:1:1
+package test
+
+import (
+  "context"
+  "net/http"
+)
+
+var pkgClient = &http.Client{}
+
+var pkgReq, _ = http.NewRequest("GET", "https://example.com", nil)
+
+// Matched at package scope: there is no enclosing function, so ArgumentOfType finds nothing.
+var pkgResp, pkgErr =
+//line <generated>:1
+//line input.go:13
+pkgClient.Do(
+//line <generated>:1
+//line input.go:13
+  pkgReq.
+//line <generated>:1
+    WithContext(context.Background()),
+)
+
+// Matched inside a function: ArgumentOfType resolves the context argument.
+//
+//line input.go:16
+func doRequest(ctx context.Context, client *http.Client, req *http.Request) {
+  _, _ =
+//line <generated>:1
+//line input.go:17
+    client.Do(
+//line <generated>:1
+//line input.go:17
+      req.
+//line <generated>:1
+        WithContext(ctx),
+    )
+}
