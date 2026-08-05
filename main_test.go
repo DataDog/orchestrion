@@ -274,9 +274,6 @@ func benchmarkGithub(owner string, repo string, subdir string, build string, tes
 		}
 		// traefik needs a few tweaks in order to build successfully
 		if repo == "traefik" {
-			// it fails to build if we don't upgrade the version go.opentelemetry.io/otel/sdk/log
-			tc.exec(b, "go", "get", "go.opentelemetry.io/otel/sdk/log@latest")
-
 			// it fails to build if ./webui/static does not exist, so just create a folder with mock content
 			webuiPath := filepath.Join(tc.dir, "webui")
 			if stat, err := os.Stat(webuiPath); err == nil && stat.IsDir() {
