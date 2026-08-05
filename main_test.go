@@ -101,6 +101,10 @@ func Value() int { return subject.Value() }
 	run.exec(t, orchestrion, "go", "test", "-a", "./subject")
 	run.exec(t, orchestrion, "go", "test", "-a", "-cover", "-coverpkg=./...", "./subject")
 
+	// A multi-package coverage run compiles root against the ordinary subject archive before
+	// Orchestrion injects it into the subject test binary, whose subject archive has coverage.
+	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./root", "./subject")
+
 	// The nested test-variant load must preserve an overlay supplied to the outer Go command.
 	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return missing }\n")
 	writeFile("overlay/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
