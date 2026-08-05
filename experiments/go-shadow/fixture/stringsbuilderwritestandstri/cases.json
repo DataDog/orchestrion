@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strings builder write string",
+    "taintPath": "/tmp/iast-stringsbuilderwritestandstri",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

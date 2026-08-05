@@ -1,0 +1,8 @@
+[
+  {
+    "name": "map growth",
+    "taintPath": "/tmp/iast-map-growth",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

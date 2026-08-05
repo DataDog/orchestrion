@@ -1,0 +1,8 @@
+[
+  {
+    "name": "method expression buffer grow",
+    "taintPath": "/tmp/iast-methodexpresspromoteorinterf",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

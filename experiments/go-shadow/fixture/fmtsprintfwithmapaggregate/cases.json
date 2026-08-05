@@ -1,0 +1,20 @@
+[
+  {
+    "name": "fmt sprintf with map aggregate",
+    "taintPath": "/tmp/iast-fmtsprintfwithmapaggregate",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "fmt sprintf with map aggregate clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "fmt sprintf with map aggregate disabled",
+    "taintPath": "/tmp/iast-fmtsprintfwithmapaggregate",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

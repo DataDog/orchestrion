@@ -1,0 +1,14 @@
+[
+  {
+    "name": "named-rune-slice-conversion",
+    "taintPath": "/tmp/iast-named-rune-slice-conversion",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "named-rune-slice-conversion-disabled",
+    "taintPath": "/tmp/iast-named-rune-slice-conversion",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

@@ -1,0 +1,26 @@
+%YAML 1.1
+---
+# Verifies that method-value captures a typed method selector while leaving
+# direct method invocations to method-call aspects.
+aspects:
+  - id: buffer-grow-method-value
+    join-point:
+      method-value:
+        receiver: bytes.Buffer
+        name: Grow
+        match: value-only
+    advice:
+      - wrap-expression:
+          template: func(size int) { {{ . }}(size) }
+
+code: |-
+  package test
+
+  import "bytes"
+
+  func growBuffer() {
+    var buffer bytes.Buffer
+    grow := buffer.Grow
+    grow(1024)
+    buffer.Grow(2048)
+  }

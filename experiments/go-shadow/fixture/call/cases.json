@@ -1,0 +1,8 @@
+[
+  {
+    "name": "static call",
+    "taintPath": "/tmp/iast-call",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

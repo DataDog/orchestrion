@@ -1,0 +1,21 @@
+[
+  {
+    "name": "select matrix",
+    "taintPath": "/tmp/iast-select",
+    "dirtyReports": 3,
+    "taintEnabled": true
+  },
+  {
+    "name": "select clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "select race",
+    "taintPath": "/tmp/iast-select-race",
+    "dirtyReports": 3,
+    "taintEnabled": true,
+    "race": true
+  }
+]

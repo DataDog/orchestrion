@@ -1,0 +1,8 @@
+[
+  {
+    "name": "unbuffered channel",
+    "taintPath": "/tmp/iast-unbuffered",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]
