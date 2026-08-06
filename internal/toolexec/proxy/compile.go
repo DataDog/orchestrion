@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/DataDog/orchestrion/internal/files"
@@ -68,11 +69,18 @@ func (c *CompileCommand) ShowVersion() bool {
 }
 
 // TestMain returns true if the compiled package name is "main" and its original
-// compiler inputs include Go's generated `_testmain.go` source. Callers should
-// also validate that the declared package import path ends in `.test`.
+// compiler inputs include Go's generated test-main source, which is named
+// `_testmain.go`, or `_testmain.cover.go` in coverage-enabled builds. Callers
+// should also validate that the declared package import path ends in `.test`.
 func (c *CompileCommand) TestMain() bool {
 	return c.testMain
 }
+
+// testMainFileNames are the base names Go may use for the generated test-main
+// source file. Coverage-enabled builds run the generated file through
+// `go tool cover`, which renames it by replacing the `.go` suffix with
+// `.cover.go`.
+var testMainFileNames = []string{"_testmain.go", "_testmain.cover.go"}
 
 func (c *CompileCommand) detectTestMain() bool {
 	if c.Flags.Package != "main" {
@@ -80,7 +88,7 @@ func (c *CompileCommand) detectTestMain() bool {
 	}
 
 	for _, f := range c.GoFiles() {
-		if filepath.Base(f) == "_testmain.go" {
+		if slices.Contains(testMainFileNames, filepath.Base(f)) {
 			return true
 		}
 	}

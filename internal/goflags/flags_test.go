@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -139,6 +140,124 @@ func TestParse(t *testing.T) {
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
+		"coverprofile-implies-cover": {
+			// `-coverprofile` is not a build flag (it must not be forwarded to child builds), but it implies
+			// coverage instrumentation is enabled, so child builds must apply it to the same packages.
+			flags: []string{"test", "-coverprofile=coverage.out", "./..."},
+			expected: CommandFlags{
+				Long: map[string]string{
+					"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags,github.com/DataDog/orchestrion/internal/goflags/quoted",
+				},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out"},
+			},
+			useStdFlags: true,
+		},
+		"test-coverprofile-implies-cover": {
+			// The Go CLI accepts test flags with a `test.` prefix, too.
+			flags: []string{"test", "-test.coverprofile", "coverage.out", "."},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-test.coverprofile", "coverage.out"},
+			},
+			useStdFlags: true,
+		},
+		"valueless-unknown-flag-keeps-positional": {
+			// `-v` accepts no value, so `./quoted` is a positional argument (and hence, the only package
+			// coverage must be applied to).
+			flags: []string{"test", "-coverprofile=coverage.out", "-v", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-v"},
+			},
+			useStdFlags: true,
+		},
+		"value-accepting-unknown-flag-consumes-value": {
+			// `-run` accepts a value, so `TestFoo` is not a positional argument.
+			flags: []string{"test", "-cover", "-run", "TestFoo", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-run", "TestFoo"},
+			},
+			useStdFlags: true,
+		},
+		"package-patterns-are-a-contiguous-run": {
+			// The Go CLI stops accepting package patterns once a flag follows them, so `./quoted` is an
+			// argument destined to the test binary here, and not a package pattern.
+			flags: []string{"test", "-coverprofile=coverage.out", ".", "-v", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-v"},
+			},
+			useStdFlags: true,
+		},
+		"coverprofile-is-ignored-outside-go-test": {
+			// The Go CLI silently ignores flags from $GOFLAGS that the command at hand does not accept, so
+			// `go build` does not enable coverage here; and neither must child builds.
+			flags:   []string{"build", "./quoted"},
+			goflags: "-coverprofile=coverage.out",
+			expected: CommandFlags{
+				Unknown: []string{"-coverprofile=coverage.out"},
+			},
+			useStdFlags: true,
+		},
+		"go-test-ignores-patterns-after-terminator": {
+			// `go test` never accepts package patterns after the "--" marker; everything that follows is
+			// destined to the test binary, and coverage hence applies to the working directory's package.
+			flags: []string{"test", "-coverprofile=coverage.out", "--", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out"},
+			},
+			useStdFlags: true,
+		},
+		"args-terminates-parsing": {
+			// Everything after `-args` is destined to the test binary.
+			flags: []string{"test", "-cover", "-args", "./quoted", "-some-flag"},
+			expected: CommandFlags{
+				// No package pattern was provided, so coverage applies to the package in the working directory.
+				Long:  map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+			useStdFlags: true,
+		},
+		"bare-buildvcs-accepts-no-value": {
+			// `-buildvcs` accepts an optional value, so `./quoted` is a package pattern, and not the flag's
+			// value.
+			flags: []string{"test", "-cover", "-buildvcs", "./quoted"},
+			expected: CommandFlags{
+				Long:  map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short: map[string]struct{}{"-cover": {}, "-buildvcs": {}},
+			},
+			useStdFlags: true,
+		},
+		"assigned-buildvcs-keeps-its-value": {
+			flags: []string{"test", "-cover", "-buildvcs=false", "./quoted"},
+			expected: CommandFlags{
+				Long: map[string]string{
+					"-buildvcs": "false",
+					"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted",
+				},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+			useStdFlags: true,
+		},
+		"trailing-flag-without-value": {
+			// A value-accepting flag with no value is invalid; the Go CLI reports the error in its canonical
+			// way, and we must not panic trying to read the missing value.
+			flags: []string{"test", "-cover", "./quoted", "-tags"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-tags"},
+			},
+			useStdFlags: true,
+		},
 		"coverpkg-relative-with-goflags": {
 			flags:   []string{"test", "./...", "-timeout", "30m", "-cover", "-covermode=atomic", "-coverprofile=coverage.out", "-coverpkg", "./..."},
 			goflags: `"-toolexec=orchestrion toolexec"`,
@@ -185,6 +304,17 @@ func TestParse(t *testing.T) {
 				flags.Long = make(map[string]string)
 			}
 			assert.True(t, reflect.DeepEqual(tc.expected.Long, flags.Long), "expected:\n%#v\nactual:\n%#v", tc.expected.Long, flags.Long)
+
+			if tc.expected.Unknown != nil {
+				assert.Equal(t, tc.expected.Unknown, flags.Unknown)
+			}
+
+			// Flags that are not build flags must never be forwarded to child commands.
+			for _, flag := range flags.Slice() {
+				name, _, _ := strings.Cut(flag, "=")
+				assert.False(t, impliesCover(name), "flag %q must not be forwarded to child commands", flag)
+				assert.False(t, isValueless(name), "flag %q must not be forwarded to child commands", flag)
+			}
 		})
 	}
 }

@@ -105,6 +105,10 @@ func Value() int { return subject.Value() }
 	// Orchestrion injects it into the subject test binary, whose subject archive has coverage.
 	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./root", "./subject")
 
+	// Value-less test flags must not consume the package patterns that follow them, as coverage is
+	// otherwise applied to the wrong packages in nested loads.
+	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage-v.out"), "-v", "./subject", "./root")
+
 	// The nested test-variant load must preserve an overlay supplied to the outer Go command.
 	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return missing }\n")
 	writeFile("overlay/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")

@@ -66,6 +66,42 @@ var (
 		"-tags":          {}, // Set build tags
 		"-toolexec":      {}, // Set the command to run around tool execution
 	}
+	// coverImplyingFlags are `go test`-only flags which are not build flags (and
+	// hence must not be forwarded to `go list` or child build commands, which do
+	// not accept them), but which implicitly enable coverage instrumentation,
+	// exactly as the `-cover` flag does. Child builds must apply the same coverage
+	// instrumentation as the parent command, as otherwise archives produced by
+	// child builds are not compatible with those produced by the parent command
+	// (the Go linker rejects them with a "fingerprint mismatch" error).
+	coverImplyingFlags = map[string]struct{}{
+		"-coverprofile": {}, // Write a coverage profile to the designated file
+	}
+	// optionalValueFlags are flags from [longFlags] which accept an optional value,
+	// meaning their bare form does not consume the argument that follows them (the
+	// value can only be provided using the `-flag=value` form).
+	optionalValueFlags = map[string]struct{}{
+		"-buildvcs": {}, // Whether to stamp binaries with version control information
+	}
+	// valuelessFlags are flags Orchestrion does not otherwise process (they are
+	// not build flags, and are consequently not forwarded to child commands), but
+	// which are known not to accept a value. Identifying those is necessary to
+	// correctly tell flags apart from positional arguments (package patterns), as
+	// a flag that accepts a value consumes the argument that follows it when it is
+	// provided in the `-flag value` form.
+	valuelessFlags = map[string]struct{}{
+		// `go test` flags
+		"-artifacts": {}, // Retain test artifacts
+		"-benchmem":  {}, // Print memory allocation statistics for benchmarks
+		"-c":         {}, // Compile the test binary but do not run it
+		"-failfast":  {}, // Do not start new tests after the first test failure
+		"-fullpath":  {}, // Show full file names in the error messages
+		"-json":      {}, // Convert test output to JSON
+		"-short":     {}, // Tell long-running tests to shorten their run time
+		"-v":         {}, // Verbose output
+		// Build flags that are irrelevant to (and must not be forwarded to) child builds
+		"-n": {}, // Print the commands but do not run them
+		"-x": {}, // Print the commands
+	}
 )
 
 // Get returns the value of the specified long-form flag if present. The name is
@@ -150,32 +186,57 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 		}
 	}
 
-	// The next argument after a `-C` (if present) would be the go command name ("run", "test", "list", etc...). This is
-	// not interesting for our purposes, so we skip it.
+	// The next argument after a `-C` (if present) is the go command name ("run", "test", "list", etc...).
+	var command string
 	if len(args) > 0 {
-		log.Trace().Str("command", args[0]).Msg("Go command from arguments")
+		command = args[0]
+		log.Trace().Str("command", command).Msg("Go command from arguments")
 		args = args[1:]
 	}
+	// Some arguments are only meaningful to `go test`. The Go CLI silently ignores flags from $GOFLAGS
+	// that the command at hand does not accept, and fails on unaccepted flags from the command line; so
+	// we must not honor test-only flags when running another command.
+	isTestCommand := command == "test"
 
 	// Compose the complete list of arguments: those from GOFLAGS, and the rest of the command line so far; in this order
 	// as the CLI arguments have precedence over those from GOFLAGS.
 	args = append(append(make([]string, 0, len(goflagsArgs)+len(args)), goflagsArgs...), args...)
 
-	var positional []string
+	var (
+		positional []string
+		// The Go CLI accepts package patterns as a single contiguous run of non-flag arguments: any
+		// non-flag argument that follows a flag once that run has ended is a flag value or an argument
+		// destined to the built program (see `cmd/go/internal/test.testFlags`), and must consequently not
+		// be mistaken for a package pattern.
+		positionalRunEnded bool
+	)
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
-		// Any argument after "--" is a positional argument, so we are done parsing.
+		// Any argument after "--" is a positional argument, so we are done parsing. If package patterns
+		// were already provided, the arguments that follow are destined to the built program instead.
+		// The `go test` command is special, as it never accepts package patterns after the "--" marker.
 		if arg == "--" {
-			positional = append(positional, args[i+1:]...)
+			if !isTestCommand && len(positional) == 0 {
+				positional = append(positional, args[i+1:]...)
+			}
+			break
+		}
+
+		// Every argument after "-args" is passed to the built test binary, so we are done parsing.
+		if isTestCommand && (arg == "-args" || arg == "--args") {
 			break
 		}
 
 		// Any argument without a leading "-" is a positional argument (until proven otherwise).
 		if !strings.HasPrefix(arg, "-") {
-			positional = append(positional, arg)
+			if !positionalRunEnded {
+				positional = append(positional, arg)
+			}
 			continue
 		}
+		// This argument is a flag, so any positional argument run has now ended.
+		positionalRunEnded = len(positional) > 0
 
 		normArg := arg
 		if strings.HasPrefix(arg, "--") {
@@ -184,24 +245,44 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 			normArg = arg[1:]
 		}
 
-		if key, val, isAssigned := strings.Cut(normArg, "="); isAssigned {
-			if isLong(key) {
-				flags.Long[key] = val
-			} else {
-				// Intentionally the un-normalized variant in Unknown flags.
-				flags.Unknown = append(flags.Unknown, arg)
+		key, val, isAssigned := strings.Cut(normArg, "=")
+		hasNextArg := i+1 < len(args)
+		switch {
+		case isAssigned && isLong(key):
+			flags.Long[key] = val
+
+		case isAssigned:
+			if isTestCommand {
+				flags.honorTestOnlyFlag(log, key)
 			}
-		} else if isLong(normArg) {
-			flags.Long[normArg] = args[i+1]
-			i++
-		} else if isShort(normArg) {
-			flags.Short[normArg] = struct{}{}
-		} else {
 			// Intentionally the un-normalized variant in Unknown flags.
 			flags.Unknown = append(flags.Unknown, arg)
-			// If there's more args, and the next one does not have a leading -, we'll assume this is the value of this
-			// unknown flag and consume it.
-			if len(args) > i+1 && !strings.HasPrefix(args[i+1], "-") {
+
+		case isOptionalValue(normArg):
+			// The bare form of these flags does not consume the argument that follows it.
+			flags.Short[normArg] = struct{}{}
+
+		case isLong(normArg) && hasNextArg:
+			flags.Long[normArg] = args[i+1]
+			i++
+
+		case isLong(normArg):
+			// The flag is missing its value; let the Go CLI report this error in its canonical way.
+			log.Trace().Str("flag", arg).Msg("Ignoring flag that is missing its value")
+			flags.Unknown = append(flags.Unknown, arg)
+
+		case isShort(normArg):
+			flags.Short[normArg] = struct{}{}
+
+		default:
+			if isTestCommand {
+				flags.honorTestOnlyFlag(log, normArg)
+			}
+			// Intentionally the un-normalized variant in Unknown flags.
+			flags.Unknown = append(flags.Unknown, arg)
+			// If this flag consumes the argument that follows it, that argument is its value, and not a
+			// positional argument.
+			if consumesValue(normArg, args[i+1:]) {
 				flags.Unknown = append(flags.Unknown, args[i+1])
 				i++
 			}
@@ -219,6 +300,8 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 // inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and
 // `-coverpkg` is not, as otherwise, sub-commands triggered with these flags will not apply coverage
 // to the intended packages.
+// Coverage may have been enabled by way of `-cover`, `-covermode`, or one of the [coverImplyingFlags]
+// (in which case `-cover` was added to the parsed flags during parsing).
 // If `-coverpkg` is present, it will expand any relative paths (recognized by a `./` prefix) into
 // absolute package names, so that child builds do not interpret these relative to a different
 // package root.
@@ -363,6 +446,56 @@ func isLong(str string) bool {
 func isShort(str string) bool {
 	_, ok := shortFlags[str]
 	return ok
+}
+
+// impliesCover returns true if the provided flag name (including its leading
+// hyphen, e.g: "-coverprofile") implicitly enables coverage instrumentation.
+func impliesCover(str string) bool {
+	_, ok := coverImplyingFlags[canonicalTestFlag(str)]
+	return ok
+}
+
+// isValueless returns true if the provided flag name (including its leading
+// hyphen, e.g: "-v") is known not to accept a value.
+func isValueless(str string) bool {
+	_, ok := valuelessFlags[canonicalTestFlag(str)]
+	return ok
+}
+
+// consumesValue returns true if the provided flag, which Orchestrion does not
+// otherwise process, consumes the first of the arguments that follow it as its
+// value.
+func consumesValue(flag string, rest []string) bool {
+	return !isValueless(flag) && len(rest) > 0 && !strings.HasPrefix(rest[0], "-")
+}
+
+// honorTestOnlyFlag records the side effects of `go test`-only flags that
+// Orchestrion does not otherwise process; meaning those that implicitly enable
+// coverage instrumentation.
+func (f *CommandFlags) honorTestOnlyFlag(log *zerolog.Logger, flag string) {
+	if !impliesCover(flag) {
+		return
+	}
+	log.Trace().Str("flag", flag).Msg("Flag implies coverage instrumentation is enabled")
+	f.Short["-cover"] = struct{}{}
+}
+
+// isOptionalValue returns true if the provided flag name (including its leading
+// hyphen, e.g: "-buildvcs") accepts an optional value, meaning its bare form
+// does not consume the argument that follows it.
+func isOptionalValue(str string) bool {
+	_, ok := optionalValueFlags[str]
+	return ok
+}
+
+// canonicalTestFlag removes the `test.` prefix from test flag names, as the Go
+// CLI accepts both the bare (e.g, `-v`) and prefixed (e.g, `-test.v`) forms of
+// all flags it forwards to the test binary.
+func canonicalTestFlag(str string) string {
+	if name, isPrefixed := strings.CutPrefix(str, "-test."); isPrefixed {
+		return "-" + name
+	}
+	return str
 }
 
 // parentGoCommandFlags backtracks through the process tree
