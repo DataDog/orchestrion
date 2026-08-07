@@ -38,12 +38,20 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		return nil
 	}
 
-	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile",
-		tracer.ResourceName(w.ImportPath),
-	)
+	spanOptions := []tracer.StartSpanOption{tracer.ResourceName(w.ImportPath)}
+	if w.Variant != "" {
+		spanOptions = append(spanOptions, tracer.Tag("variant", w.Variant))
+	}
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompile", spanOptions...)
 	defer func() { span.Finish(tracer.WithError(resErr)) }()
 
-	log := zerolog.Ctx(ctx).With().Str("phase", "compile").Str("import-path", w.ImportPath).Logger()
+	logContext := zerolog.Ctx(ctx).With().
+		Str("phase", "compile").
+		Str("import-path", w.ImportPath)
+	if w.Variant != "" {
+		logContext = logContext.Str("variant", w.Variant)
+	}
+	log := logContext.Logger()
 	ctx = log.WithContext(ctx)
 
 	imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
@@ -96,9 +104,12 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
-		TestMain:   cmd.TestMain() && w.isTestMain(),
-		ImportMap:  imports.PackageFile,
-		GoVersion:  cmd.Flags.Lang,
+		// Both signals are required: cmd.TestMain validates the generated source,
+		// while w.isTestMain validates a variant-free ".test" identity; package
+		// names may themselves end in ".test".
+		TestMain:  cmd.TestMain() && w.isTestMain(),
+		ImportMap: imports.PackageFile,
+		GoVersion: cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
 		},

@@ -20,12 +20,18 @@ import (
 )
 
 func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) {
-	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnLink",
-		tracer.ResourceName(w.ImportPath),
-	)
+	spanOptions := []tracer.StartSpanOption{tracer.ResourceName(w.ImportPath)}
+	if w.Variant != "" {
+		spanOptions = append(spanOptions, tracer.Tag("variant", w.Variant))
+	}
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnLink", spanOptions...)
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
-	log := zerolog.Ctx(ctx).With().Str("phase", "link").Logger()
+	logContext := zerolog.Ctx(ctx).With().Str("phase", "link")
+	if w.Variant != "" {
+		logContext = logContext.Str("variant", w.Variant)
+	}
+	log := logContext.Logger()
 	ctx = log.WithContext(ctx)
 
 	reg, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)

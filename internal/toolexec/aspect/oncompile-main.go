@@ -52,14 +52,23 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		// Its source may come from the build cache without the _testmain.go filename.
 		return nil
 	}
+	// Both signals are required: cmd.TestMain validates the generated source,
+	// while w.isTestMain validates a variant-free ".test" identity; package
+	// names may themselves end in ".test".
 	isTestMain := cmd.TestMain() && w.isTestMain()
 
-	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompileMain",
-		tracer.ResourceName(w.ImportPath),
-	)
+	spanOptions := []tracer.StartSpanOption{tracer.ResourceName(w.ImportPath)}
+	if w.Variant != "" {
+		spanOptions = append(spanOptions, tracer.Tag("variant", w.Variant))
+	}
+	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompileMain", spanOptions...)
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
-	log := zerolog.Ctx(ctx).With().Str("phase", "compile(main)").Logger()
+	logContext := zerolog.Ctx(ctx).With().Str("phase", "compile(main)")
+	if w.Variant != "" {
+		logContext = logContext.Str("variant", w.Variant)
+	}
+	log := logContext.Logger()
 	ctx = log.WithContext(ctx)
 
 	reg, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)

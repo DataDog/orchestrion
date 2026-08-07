@@ -65,13 +65,14 @@ func TestNewWeaver(t *testing.T) {
 	}
 }
 
-func TestBehaviorOverrideAppliesToTestVariants(t *testing.T) {
-	// Special cases are keyed on import paths, so they must be evaluated against the import path of the
-	// package being built, and not the variant-annotated `$TOOLEXEC_IMPORTPATH` value; as failing to do
-	// so would for example allow circular instrumentation of the tracer's own test variants.
-	weaver := NewWeaver("github.com/DataDog/dd-trace-go/v2/ddtrace/tracer [github.com/DataDog/dd-trace-go/v2/ddtrace/tracer.test]")
+func TestBehaviorOverrideAppliesToExactMatchTestVariants(t *testing.T) {
+	// Exact-match special cases do not match a variant-annotated `$TOOLEXEC_IMPORTPATH` directly.
+	toolexecImportPath := "github.com/DataDog/go-tuf/client [github.com/DataDog/go-tuf/client.test]"
+	_, found := FindBehaviorOverride(toolexecImportPath)
+	require.False(t, found)
 
+	weaver := NewWeaver(toolexecImportPath)
 	behavior, found := FindBehaviorOverride(weaver.ImportPath)
 	require.True(t, found)
-	assert.Equal(t, WeaveTracerInternal, behavior)
+	assert.Equal(t, NeverWeave, behavior)
 }
