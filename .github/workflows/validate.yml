@@ -268,10 +268,9 @@ jobs:
         shell: bash
         run: |-
           mkdir -p coverage
-          test_args=("-shuffle=on" "-race")
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            test_args+=("-timeout=30m")
-          fi
+          # The root package's tests each run several complete instrumented builds of a synthetic module,
+          # which takes them well past Go's default 10 minute per-package timeout on CI runners.
+          test_args=("-shuffle=on" "-race" "-timeout=30m")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
           fi
@@ -397,9 +396,13 @@ jobs:
       - name: Build orchestrion
         run: go build -o bin/orchestrion .
       - name: Run E2E tests
-        run: go test -tags=e2e -v -timeout=10m ./test/e2e/ 2>&1 | tee test-e2e.log
+        run: go test -tags=e2e -v -timeout=15m ./test/e2e/ 2>&1 | tee test-e2e.log
         env:
-          E2E_TEST_TIMEOUT: 5m
+          # These tests pin Orchestrion into a synthetic module, which downloads the complete
+          # `dd-trace-go` integration set. Those modules are not part of any committed `go.mod` file, so
+          # they are never in the Go module cache restored by `actions/setup-go`, and downloading them
+          # alone can take several minutes on the slowest runners.
+          E2E_TEST_TIMEOUT: 12m
       - name: Upload E2E artifacts on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

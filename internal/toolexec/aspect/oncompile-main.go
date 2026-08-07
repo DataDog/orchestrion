@@ -17,7 +17,6 @@ import (
 	"slices"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
@@ -48,12 +47,12 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	if cmd.Flags.Package != "main" {
 		return nil
 	}
-	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && strings.HasSuffix(w.ImportPath, ".test") {
+	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && w.isTestMain() {
 		// The nested test main only exists to make cmd/go build affected variants.
 		// Its source may come from the build cache without the _testmain.go filename.
 		return nil
 	}
-	isTestMain := cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test")
+	isTestMain := cmd.TestMain() && w.isTestMain()
 
 	span, ctx := tracer.StartSpanFromContext(ctx, "Weaver.OnCompileMain",
 		tracer.ResourceName(w.ImportPath),
@@ -70,7 +69,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 
 	testVariantFor := ""
 	if isTestMain {
-		testVariantFor = strings.TrimSuffix(w.ImportPath, ".test")
+		testVariantFor = w.packageUnderTest()
 		cmd.MarkTestMain(testVariantFor)
 	}
 

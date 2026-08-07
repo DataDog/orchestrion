@@ -86,7 +86,9 @@ var Toolexec = &cli.Command{
 		}
 
 		log.Debug().Strs("command", proxyCmd.Args()).Msg("Toolexec original command")
-		weaver := aspect.Weaver{ImportPath: importPath}
+		// NB: the raw `$TOOLEXEC_IMPORTPATH` value was passed to [proxy.ParseCommand], as it uniquely
+		// identifies the compilation task; while the weaver is concerned with the package's identity.
+		weaver := aspect.NewWeaver(importPath)
 
 		if err := proxy.ProcessCommand(ctx, proxyCmd, weaver.OnCompile); errors.Is(err, proxy.ErrSkipCommand) {
 			log.Trace().Msg("OnCompile processor requested command skipping...")
