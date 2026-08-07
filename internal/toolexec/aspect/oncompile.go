@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
@@ -32,7 +31,7 @@ import (
 var OrchestrionDirPathElement = filepath.Join("orchestrion", "src")
 
 func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resErr error) {
-	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && strings.HasSuffix(w.ImportPath, ".test") {
+	if pkgs.ResolvingTestVariants() && cmd.Flags.Package == "main" && w.isTestMain() {
 		// The nested test main only exists to make cmd/go build affected variants.
 		// Its source may come from the build cache without the _testmain.go filename,
 		// so identify it from cmd/go's package metadata instead of its input path.
@@ -97,7 +96,7 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
-		TestMain:   cmd.TestMain() && strings.HasSuffix(w.ImportPath, ".test"),
+		TestMain:   cmd.TestMain() && w.isTestMain(),
 		ImportMap:  imports.PackageFile,
 		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {

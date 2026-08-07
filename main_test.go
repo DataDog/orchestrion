@@ -185,6 +185,148 @@ func Value() int { return subject.Value() }
 	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./subject")
 }
 
+func TestAspectsApplyToTestVariants(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+	writeFile := func(name, contents string) {
+		t.Helper()
+		path := filepath.Join(run.dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	writeFile("go.mod", `module example.com/testvariantaspect
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => `+rootDir+"\n")
+	writeFile("orchestrion.tool.go", `//go:build tools
+
+package tools
+
+import (
+	_ "example.com/testvariantaspect/instrumentation"
+	_ "github.com/DataDog/orchestrion"
+)
+`)
+	writeFile("instrumentation/instrumentation.go", "package instrumentation\n")
+	writeFile("instrumentation/orchestrion.yml", `meta:
+  name: Test variant aspects
+  description: Records that the packages a test binary is composed of were instrumented.
+aspects:
+  - id: instrument-subject
+    join-point:
+      all-of:
+        - import-path: example.com/testvariantaspect/subject
+        - function-body:
+            function:
+              - name: Value
+    advice:
+      - prepend-statements:
+          template: |-
+            Instrumented = true
+  - id: instrument-helper
+    join-point:
+      all-of:
+        - import-path: example.com/testvariantaspect/helper
+        - function-body:
+            function:
+              - name: Doubled
+    advice:
+      - prepend-statements:
+          template: |-
+            Instrumented = true
+  - id: instrument-external-test
+    join-point:
+      all-of:
+        - import-path: example.com/testvariantaspect/subject_test
+        - function-body:
+            function:
+              - name: value
+    advice:
+      - prepend-statements:
+          template: |-
+            instrumented = true
+`)
+	writeFile("subject/subject.go", `package subject
+
+// Instrumented is set by the instrumentation aspect when Value is called.
+var Instrumented bool
+
+func Value() int { return 42 }
+`)
+	// Go rebuilds the importers of the package under test against its test variant, and identifies those
+	// with an annotated $TOOLEXEC_IMPORTPATH value as well.
+	writeFile("helper/helper.go", `package helper
+
+import "example.com/testvariantaspect/subject"
+
+// Instrumented is set by the instrumentation aspect when Doubled is called.
+var Instrumented bool
+
+func Doubled() int { return 2 * subject.Value() }
+`)
+	// Go builds the package under test again together with its in-package test files, which it identifies
+	// with an annotated $TOOLEXEC_IMPORTPATH value. Aspects must apply to that variant, too.
+	writeFile("subject/subject_test.go", `package subject
+
+import "testing"
+
+func TestInPackage(t *testing.T) {
+	if got := Value(); got != 42 {
+		t.Fatalf("Value() = %d, want 42", got)
+	}
+	if !Instrumented {
+		t.Fatal("aspects were not applied to the in-package test variant of the package under test")
+	}
+}
+`)
+	writeFile("subject/external_test.go", `package subject_test
+
+import (
+	"testing"
+
+	"example.com/testvariantaspect/helper"
+	"example.com/testvariantaspect/subject"
+)
+
+// instrumented is set by the instrumentation aspect when value is called.
+var instrumented bool
+
+func value() int { return subject.Value() }
+
+func TestExternal(t *testing.T) {
+	if got := subject.Value(); got != 42 {
+		t.Fatalf("subject.Value() = %d, want 42", got)
+	}
+	if !subject.Instrumented {
+		t.Error("aspects were not applied to the test variant imported by the external test package")
+	}
+
+	if got := value(); got != 42 {
+		t.Fatalf("value() = %d, want 42", got)
+	}
+	if !instrumented {
+		t.Error("aspects were not applied to the external test package")
+	}
+
+	if got := helper.Doubled(); got != 84 {
+		t.Fatalf("helper.Doubled() = %d, want 84", got)
+	}
+	if !helper.Instrumented {
+		t.Error("aspects were not applied to the importer Go rebuilt for this test binary")
+	}
+}
+`)
+
+	orchestrion := buildOrchestrion(t)
+	run.exec(t, orchestrion, "go", "test", "-a", "./subject")
+	// Coverage-enabled builds hand the compiler sources rewritten by `go tool cover` instead of the
+	// package's own, which must not prevent aspects from applying either.
+	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./subject")
+}
+
 func TestBuildFromModuleSubdirectory(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 
