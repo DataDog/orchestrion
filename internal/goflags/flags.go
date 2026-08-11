@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go/build"
 	"go/version"
 	"io/fs"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -200,12 +202,53 @@ func (f CommandFlags) Except(remove ...string) CommandFlags {
 func (f CommandFlags) Slice() []string {
 	flags := make([]string, 0, len(f.Long)+len(f.Short))
 	for flag, val := range f.Long {
+		if flag == "-cover" {
+			continue
+		}
 		flags = append(flags, fmt.Sprintf("%s=%s", flag, val))
+	}
+	// Coverage options imply -cover when parsed, so an explicit false override
+	// must follow every assigned coverage option regardless of map iteration order.
+	if val, found := f.Long["-cover"]; found {
+		flags = append(flags, "-cover="+val)
 	}
 	for flag := range f.Short {
 		flags = append(flags, flag)
 	}
 	return flags
+}
+
+func (f *CommandFlags) setLong(flag string, value string) {
+	f.Long[flag] = value
+	delete(f.Short, flag)
+}
+
+func (f *CommandFlags) setShort(flag string) {
+	f.Short[flag] = struct{}{}
+	delete(f.Long, flag)
+}
+
+func (f *CommandFlags) setBoolean(flag string, value string) (bool, error) {
+	enabled, err := strconv.ParseBool(value)
+	if err != nil {
+		// Preserve the invalid value so cmd/go can report it canonically.
+		f.setLong(flag, value)
+		return false, err
+	}
+	if enabled {
+		f.setShort(flag)
+	} else {
+		f.setLong(flag, "false")
+	}
+	return enabled, nil
+}
+
+func (f *CommandFlags) enableCoverage() {
+	f.setShort("-cover")
+}
+
+func (f *CommandFlags) setAssignedCover(value string) {
+	_, _ = f.setBoolean("-cover", value)
 }
 
 // ParseCommandFlags parses a slice representing a go command invocation
@@ -293,6 +336,21 @@ func leadingChdirFlag(args []string) (dir string, remaining []string, found bool
 	return "", args, false
 }
 
+// runTarget returns the package portion of the arguments remaining after go
+// run's flag parser stops. A target is one package pattern or a contiguous list
+// of .go files; every subsequent argument is passed to the program.
+func runTarget(args []string) []string {
+	if len(args) == 0 || !strings.HasSuffix(args[0], ".go") {
+		return args[:min(len(args), 1)]
+	}
+	for i, arg := range args {
+		if !strings.HasSuffix(arg, ".go") {
+			return args[:i]
+		}
+	}
+	return args
+}
+
 func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion string) (CommandFlags, error) {
 	log := zerolog.Ctx(ctx)
 
@@ -342,7 +400,11 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 		// The `go test` command is special, as it never accepts package patterns after the "--" marker.
 		if arg == "--" {
 			if !isTestCommand && len(positional) == 0 {
-				positional = append(positional, args[i+1:]...)
+				rest := args[i+1:]
+				if command == "run" {
+					rest = runTarget(rest)
+				}
+				positional = append(positional, rest...)
 			}
 			break
 		}
@@ -359,8 +421,19 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 				// cmd/go consequently passes the entire remainder through without parsing more flags.
 				break
 			}
+			if command == "run" {
+				// `go run` accepts one package pattern or a contiguous list of .go files;
+				// everything after that package is passed to the program.
+				positional = append(positional, runTarget(args[i:])...)
+				break
+			}
 			positional = append(positional, arg)
 			continue
+		}
+		// Except for go test's custom parser, standard flag parsing stops at the
+		// first positional argument and leaves every subsequent token untouched.
+		if !isTestCommand && len(positional) > 0 {
+			break
 		}
 		// This argument is a flag, so any positional argument run has now ended.
 		if len(positional) > 0 {
@@ -377,12 +450,25 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 		key, val, isAssigned := strings.Cut(normArg, "=")
 		hasNextArg := i+1 < len(args)
 		fromGOFLAGS := i < goflagsCount
+		if fromGOFLAGS && isBuildCoverageFlag(key) && !commandSupportsCoverage(command) {
+			// cmd/go accepts coverage flags in GOFLAGS because some commands support them,
+			// but silently ignores them for commands without coverage build support.
+			flags.Unknown = append(flags.Unknown, arg)
+			continue
+		}
 		switch {
 		case isAssigned && isLong(key):
-			flags.Long[key] = val
-			// Optional-value flags can be represented in either map. The last occurrence wins,
-			// preserving command-line precedence over GOFLAGS.
-			delete(flags.Short, key)
+			flags.setLong(key, val)
+			if key == "-covermode" || key == "-coverpkg" {
+				flags.enableCoverage()
+			}
+
+		case isAssigned && isShort(key):
+			if key == "-cover" {
+				flags.setAssignedCover(val)
+			} else {
+				_, _ = flags.setBoolean(key, val)
+			}
 
 		case isAssigned:
 			if isTestCommand {
@@ -399,11 +485,13 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 
 		case isOptionalValue(normArg):
 			// The bare form of these flags does not consume the argument that follows it.
-			flags.Short[normArg] = struct{}{}
-			delete(flags.Long, normArg)
+			flags.setShort(normArg)
 
-		case isLong(normArg) && hasNextArg:
-			flags.Long[normArg] = args[i+1]
+		case isLong(normArg) && hasNextArg && !fromGOFLAGS:
+			flags.setLong(normArg, args[i+1])
+			if normArg == "-covermode" || normArg == "-coverpkg" {
+				flags.enableCoverage()
+			}
 			i++
 
 		case isLong(normArg):
@@ -412,7 +500,7 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 			flags.Unknown = append(flags.Unknown, arg)
 
 		case isShort(normArg):
-			flags.Short[normArg] = struct{}{}
+			flags.setShort(normArg)
 
 		default:
 			if isTestCommand {
@@ -439,7 +527,7 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 		}
 	}
 
-	if err := flags.inferCoverpkg(ctx, wd, positional); err != nil {
+	if err := flags.inferCoverpkg(ctx, wd, command, positional); err != nil {
 		return flags, err
 	}
 
@@ -455,8 +543,15 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 // If `-coverpkg` is present, it will expand any relative paths (recognized by a `./` prefix) into
 // absolute package names, so that child builds do not interpret these relative to a different
 // package root.
-func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalArgs []string) error {
+func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, command string, positionalArgs []string) error {
 	log := zerolog.Ctx(ctx)
+
+	if val, assigned := f.Long["-cover"]; assigned {
+		if enabled, err := strconv.ParseBool(val); err == nil && !enabled {
+			// A trailing explicit false overrides every earlier coverage-implying flag.
+			return nil
+		}
+	}
 
 	// Make sure we satisfy the same build constraints; but don't run -toolexec
 	childBuildFlags := append(f.Slice(), "-toolexec=")
@@ -532,6 +627,11 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 	if !isCover {
 		return nil
 	}
+	if command == "run" && usesOutsideModuleMode(positionalArgs) {
+		// cmd/go resolves path@version run targets outside the current module and
+		// leaves -coverpkg unset. packages.Load cannot resolve this syntax.
+		return nil
+	}
 
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -555,6 +655,17 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 	f.Long["-coverpkg"] = val
 
 	return nil
+}
+
+// usesOutsideModuleMode reports whether go run resolves its target outside the
+// current module, mirroring cmd/go/internal/run.shouldUseOutsideModuleMode.
+func usesOutsideModuleMode(args []string) bool {
+	return len(args) > 0 &&
+		!strings.HasSuffix(args[0], ".go") &&
+		!strings.HasPrefix(args[0], "-") &&
+		strings.Contains(args[0], "@") &&
+		!build.IsLocalImport(args[0]) &&
+		!filepath.IsAbs(args[0])
 }
 
 // Flags return the top level go command flags
@@ -600,6 +711,19 @@ func isShort(str string) bool {
 	return ok
 }
 
+func isBuildCoverageFlag(flag string) bool {
+	return flag == "-cover" || flag == "-covermode" || flag == "-coverpkg"
+}
+
+func commandSupportsCoverage(command string) bool {
+	switch command {
+	case "build", "install", "list", "run", "test":
+		return true
+	default:
+		return false
+	}
+}
+
 // impliesCover returns true if the provided flag name (including its leading
 // hyphen, e.g: "-coverprofile") implicitly enables coverage instrumentation.
 func impliesCover(str string) bool {
@@ -622,14 +746,31 @@ func isValueless(str string, goVersion string) bool {
 // in the current Go version. Unlike unknown test-binary flags, recognized flags
 // do not prevent a package list from following them.
 func isKnownTestFlag(str string, goVersion string) bool {
+	known, _ := testFlagTakesValue(str, goVersion)
+	return known
+}
+
+// testFlagTakesValue reports whether a flag is recognized by `go test` in the
+// designated Go version and, if so, whether its bare form consumes the next
+// argument regardless of whether that value begins with a hyphen.
+func testFlagTakesValue(str string, goVersion string) (known bool, takesValue bool) {
 	name := canonicalTestFlag(str)
 	if !testFlagSupported(name, goVersion) {
-		return false
+		return false, false
+	}
+	if isOptionalValue(name) || isShort(name) || isValueless(name, goVersion) {
+		return true, false
+	}
+	if isLong(name) {
+		return true, true
 	}
 	if _, ok := testValueFlags[name]; ok {
-		return true
+		return true, true
 	}
-	return isLong(name) || isShort(name) || isOptionalValue(name) || isValueless(name, goVersion) || impliesCover(name)
+	if impliesCover(name) {
+		return true, true
+	}
+	return false, false
 }
 
 // testFlagSupported returns whether a versioned test flag is available in the
@@ -647,7 +788,16 @@ func testFlagSupported(name string, goVersion string) bool {
 // otherwise process, consumes the first of the arguments that follow it as its
 // value.
 func consumesValue(flag string, rest []string, goVersion string) bool {
-	return !isValueless(flag, goVersion) && len(rest) > 0 && !strings.HasPrefix(rest[0], "-")
+	if len(rest) == 0 {
+		return false
+	}
+	if known, takesValue := testFlagTakesValue(flag, goVersion); known {
+		return takesValue
+	}
+	// cmd/go cannot know an unknown test-binary flag's arity. It optimistically
+	// treats the next non-flag argument as its value, but parses a hyphen-prefixed
+	// argument as another flag.
+	return !strings.HasPrefix(rest[0], "-")
 }
 
 // honorTestOnlyFlag records the side effects of `go test`-only flags that
@@ -658,7 +808,7 @@ func (f *CommandFlags) honorTestOnlyFlag(log *zerolog.Logger, flag string) {
 		return
 	}
 	log.Trace().Str("flag", flag).Msg("Flag implies coverage instrumentation is enabled")
-	f.Short["-cover"] = struct{}{}
+	f.enableCoverage()
 }
 
 // isOptionalValue returns true if the provided flag name (including its leading
