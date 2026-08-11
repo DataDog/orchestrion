@@ -99,6 +99,20 @@ func TestTestMainIdentitySurvivesSourceRewrite(t *testing.T) {
 	require.True(t, cmd.TestMain())
 }
 
+func TestCoverInstrumentedTestMainIsTestMain(t *testing.T) {
+	// Coverage-enabled builds run the generated `_testmain.go` through `go tool cover`, which renames
+	// it to `_testmain.cover.go` and adds a `covervars.go` file to the compiler inputs.
+	stage := t.TempDir()
+	cmd := &CompileCommand{
+		Files: []string{
+			filepath.Join(stage, "covervars.go"),
+			filepath.Join(stage, "_testmain.cover.go"),
+		},
+		Flags: compileFlagSet{Package: "main", ImportCfg: filepath.Join(stage, "importcfg")},
+	}
+	require.True(t, cmd.detectTestMain())
+}
+
 func TestCgoMainIsNotTestMain(t *testing.T) {
 	stage := t.TempDir()
 	cmd := &CompileCommand{

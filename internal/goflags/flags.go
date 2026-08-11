@@ -12,12 +12,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go/build"
+	"go/version"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -66,6 +69,98 @@ var (
 		"-tags":          {}, // Set build tags
 		"-toolexec":      {}, // Set the command to run around tool execution
 	}
+	// coverImplyingFlags are `go test`-only flags which are not build flags (and
+	// hence must not be forwarded to `go list` or child build commands, which do
+	// not accept them), but which implicitly enable coverage instrumentation,
+	// exactly as the `-cover` flag does. Child builds must apply the same coverage
+	// instrumentation as the parent command, as otherwise archives produced by
+	// child builds are not compatible with those produced by the parent command
+	// (the Go linker rejects them with a "fingerprint mismatch" error).
+	coverImplyingFlags = map[string]struct{}{
+		"-coverprofile": {}, // Write a coverage profile to the designated file
+	}
+	// optionalValueFlags are flags from [longFlags] which accept an optional value,
+	// meaning their bare form does not consume the argument that follows them (the
+	// value can only be provided using the `-flag=value` form).
+	optionalValueFlags = map[string]struct{}{
+		"-buildvcs": {}, // Whether to stamp binaries with version control information
+	}
+	// valuelessFlags are flags Orchestrion does not otherwise process (they are
+	// not build flags, and are consequently not forwarded to child commands), but
+	// which are known not to accept a value. Identifying those is necessary to
+	// correctly tell flags apart from positional arguments (package patterns), as
+	// a flag that accepts a value consumes the argument that follows it when it is
+	// provided in the `-flag value` form.
+	valuelessFlags = map[string]struct{}{
+		// `go test` flags
+		"-artifacts": {}, // Retain test artifacts (Go 1.26 and later)
+		"-benchmem":  {}, // Print memory allocation statistics for benchmarks
+		"-c":         {}, // Compile the test binary but do not run it
+		"-failfast":  {}, // Do not start new tests after the first test failure
+		"-fullpath":  {}, // Show full file names in the error messages
+		"-json":      {}, // Convert test output to JSON
+		"-short":     {}, // Tell long-running tests to shorten their run time
+		"-v":         {}, // Verbose output
+		// Build flags that are irrelevant to (and must not be forwarded to) child builds
+		"-n": {}, // Print the commands but do not run them
+		"-x": {}, // Print the commands
+	}
+	// testValueFlags are flags recognized by `go test` which require a value and
+	// which Orchestrion does not otherwise process. Knowing they are recognized is
+	// necessary because package patterns may follow them, unlike flags destined to
+	// the test binary. Both their bare and `-flag=value` forms are accepted.
+	testValueFlags = map[string]struct{}{
+		"-bench":                {},
+		"-benchtime":            {},
+		"-blockprofile":         {},
+		"-blockprofilerate":     {},
+		"-count":                {},
+		"-cpu":                  {},
+		"-cpuprofile":           {},
+		"-debug-actiongraph":    {},
+		"-debug-runtime-trace":  {},
+		"-debug-trace":          {},
+		"-exec":                 {},
+		"-fuzz":                 {},
+		"-fuzzminimizetime":     {},
+		"-fuzztime":             {},
+		"-list":                 {},
+		"-memprofile":           {},
+		"-memprofilerate":       {},
+		"-mutexprofile":         {},
+		"-mutexprofilefraction": {},
+		"-o":                    {},
+		"-outputdir":            {},
+		"-p":                    {},
+		"-parallel":             {},
+		"-run":                  {},
+		"-shuffle":              {},
+		"-skip":                 {},
+		"-timeout":              {},
+		"-trace":                {},
+		"-vet":                  {},
+	}
+	// versionedTestFlags records when test flags unavailable in the minimum
+	// supported Go version were introduced.
+	versionedTestFlags = map[string]string{
+		"-artifacts": "go1.26",
+	}
+	// nonForwardedTestFlags are test command and build flags included in the
+	// valueless and value-taking sets above for parsing purposes, but for which
+	// cmd/go does not accept a `-test.`-prefixed alias.
+	nonForwardedTestFlags = map[string]struct{}{
+		"-c":                   {},
+		"-debug-actiongraph":   {},
+		"-debug-runtime-trace": {},
+		"-debug-trace":         {},
+		"-exec":                {},
+		"-json":                {},
+		"-n":                   {},
+		"-o":                   {},
+		"-p":                   {},
+		"-vet":                 {},
+		"-x":                   {},
+	}
 )
 
 // Get returns the value of the specified long-form flag if present. The name is
@@ -107,7 +202,15 @@ func (f CommandFlags) Except(remove ...string) CommandFlags {
 func (f CommandFlags) Slice() []string {
 	flags := make([]string, 0, len(f.Long)+len(f.Short))
 	for flag, val := range f.Long {
+		if flag == "-cover" {
+			continue
+		}
 		flags = append(flags, fmt.Sprintf("%s=%s", flag, val))
+	}
+	// Coverage options imply -cover when parsed, so an explicit false override
+	// must follow every assigned coverage option regardless of map iteration order.
+	if val, found := f.Long["-cover"]; found {
+		flags = append(flags, "-cover="+val)
 	}
 	for flag := range f.Short {
 		flags = append(flags, flag)
@@ -115,10 +218,140 @@ func (f CommandFlags) Slice() []string {
 	return flags
 }
 
+func (f *CommandFlags) setLong(flag string, value string) {
+	f.Long[flag] = value
+	delete(f.Short, flag)
+}
+
+func (f *CommandFlags) setShort(flag string) {
+	f.Short[flag] = struct{}{}
+	delete(f.Long, flag)
+}
+
+func (f *CommandFlags) setBoolean(flag string, value string) (bool, error) {
+	enabled, err := strconv.ParseBool(value)
+	if err != nil {
+		// Preserve the invalid value so cmd/go can report it canonically.
+		f.setLong(flag, value)
+		return false, err
+	}
+	if enabled {
+		f.setShort(flag)
+	} else {
+		f.setLong(flag, "false")
+	}
+	return enabled, nil
+}
+
+func (f *CommandFlags) enableCoverage() {
+	f.setShort("-cover")
+}
+
+func (f *CommandFlags) setAssignedCover(value string) {
+	_, _ = f.setBoolean("-cover", value)
+}
+
 // ParseCommandFlags parses a slice representing a go command invocation
 // and returns its flags. Direct arguments to the command are ignored. The value
-// of $GOFLAGS is also included in the returned flags.
+// of $GOFLAGS is also included in the returned flags. A -C before or immediately
+// after the Go command path is applied relative to wd; a blank or relative wd is
+// resolved against the current process working directory.
 func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFlags, error) {
+	log := zerolog.Ctx(ctx)
+	effectiveWD, args, changed, err := resolveLeadingChdir(wd, args)
+	if err != nil {
+		return CommandFlags{}, fmt.Errorf("resolving leading -C flag: %w", err)
+	}
+	if changed {
+		log.Trace().Str("from", wd).Str("to", effectiveWD).Msg("Applying leading -C flag")
+	}
+
+	goVersion, err := goenv.GOVERSION(effectiveWD)
+	if err != nil {
+		return CommandFlags{}, fmt.Errorf("determining Go toolchain version: %w", err)
+	}
+	return parseCommandFlags(ctx, effectiveWD, args, goVersion)
+}
+
+// resolveLeadingChdir applies the leading -C flag handled specially by cmd/go
+// and removes it from args. The returned working directory is absolute when the
+// flag designates a relative directory.
+func resolveLeadingChdir(wd string, args []string) (effectiveWD string, remaining []string, changed bool, err error) {
+	dir, remaining, changed := leadingChdirFlag(args)
+	if !changed {
+		return wd, args, false, nil
+	}
+	if filepath.IsAbs(dir) {
+		return filepath.Clean(dir), remaining, true, nil
+	}
+	// Rooted and drive-relative paths on Windows are relative to process state,
+	// not to an arbitrary wd. filepath.Abs reproduces os.Chdir's resolution.
+	if filepath.VolumeName(dir) != "" || len(dir) > 0 && os.IsPathSeparator(dir[0]) {
+		effectiveWD, err = filepath.Abs(dir)
+	} else {
+		effectiveWD = filepath.Join(wd, dir)
+		if !filepath.IsAbs(effectiveWD) {
+			effectiveWD, err = filepath.Abs(effectiveWD)
+		}
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	return filepath.Clean(effectiveWD), remaining, true, nil
+}
+
+// leadingChdirFlag returns the directory and remaining arguments when args
+// contains one of the leading -C forms accepted by cmd/go. The flag may precede
+// the command or immediately follow the command (or command-group) token.
+func leadingChdirFlag(args []string) (dir string, remaining []string, found bool) {
+	indices := [...]int{0, 1, 2}
+	for _, index := range indices {
+		if index >= len(args) || index == 1 && strings.HasPrefix(args[0], "-") {
+			continue
+		}
+		if index == 2 && (args[0] != "mod" && args[0] != "work" || strings.HasPrefix(args[1], "-")) {
+			continue
+		}
+
+		consumed := 0
+		switch arg := args[index]; {
+		case arg == "-C" || arg == "--C":
+			if index+1 >= len(args) {
+				continue
+			}
+			dir = args[index+1]
+			consumed = 2
+		case strings.HasPrefix(arg, "-C=") || strings.HasPrefix(arg, "--C="):
+			_, dir, _ = strings.Cut(arg, "=")
+			consumed = 1
+		default:
+			continue
+		}
+
+		remaining = make([]string, 0, len(args)-consumed)
+		remaining = append(remaining, args[:index]...)
+		remaining = append(remaining, args[index+consumed:]...)
+		return dir, remaining, true
+	}
+	return "", args, false
+}
+
+// runTarget returns the package portion of the arguments remaining after go
+// run's flag parser stops. A target is one package pattern or a contiguous list
+// of .go files; every subsequent argument is passed to the program.
+func runTarget(args []string) []string {
+	if len(args) == 0 || !strings.HasSuffix(args[0], ".go") {
+		return args[:min(len(args), 1)]
+	}
+	for i, arg := range args {
+		if !strings.HasSuffix(arg, ".go") {
+			return args[:i]
+		}
+	}
+	return args
+}
+
+func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion string) (CommandFlags, error) {
 	log := zerolog.Ctx(ctx)
 
 	flags := CommandFlags{
@@ -134,47 +367,77 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 		log.Trace().Strs("GOFLAGS", goflagsArgs).Msg("GOFLAGS arguments")
 	}
 
-	// Remove any `-C` flag provided on the command line. This is required to immediately follow the `go` command, and
-	// can be present only once.
+	// The first argument is the go command name ("run", "test", "list", etc...).
+	var command string
 	if len(args) > 0 {
-		if arg := args[0]; strings.HasPrefix(arg, "-C") {
-			if arg == "-C" && len(args) > 1 {
-				// ["-C", "directory", ...]
-				log.Trace().Strs("flag", args[:2]).Msg("Skipping '-C <dir>' flag")
-				args = args[2:]
-			} else if arg[:3] == "-C=" {
-				// ["-C=directory", ...]
-				log.Trace().Str("flag", arg).Msg("Skipping '-C=<dir>' flag")
-				args = args[1:]
-			}
-		}
-	}
-
-	// The next argument after a `-C` (if present) would be the go command name ("run", "test", "list", etc...). This is
-	// not interesting for our purposes, so we skip it.
-	if len(args) > 0 {
-		log.Trace().Str("command", args[0]).Msg("Go command from arguments")
+		command = args[0]
+		log.Trace().Str("command", command).Msg("Go command from arguments")
 		args = args[1:]
 	}
+	// Some arguments are only meaningful to `go test`. The Go CLI silently ignores flags from $GOFLAGS
+	// that the command at hand does not accept, and fails on unaccepted flags from the command line; so
+	// we must not honor test-only flags when running another command.
+	isTestCommand := command == "test"
 
 	// Compose the complete list of arguments: those from GOFLAGS, and the rest of the command line so far; in this order
 	// as the CLI arguments have precedence over those from GOFLAGS.
+	goflagsCount := len(goflagsArgs)
 	args = append(append(make([]string, 0, len(goflagsArgs)+len(args)), goflagsArgs...), args...)
 
-	var positional []string
+	var (
+		positional []string
+		// The Go CLI accepts package patterns as a single contiguous run of non-flag arguments: any
+		// non-flag argument that follows a flag once that run has ended is a flag value or an argument
+		// destined to the built program (see `cmd/go/internal/test.testFlags`), and must consequently not
+		// be mistaken for a package pattern.
+		positionalRunEnded bool
+	)
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 
-		// Any argument after "--" is a positional argument, so we are done parsing.
+		// Any argument after "--" is a positional argument, so we are done parsing. If package patterns
+		// were already provided, the arguments that follow are destined to the built program instead.
+		// The `go test` command is special, as it never accepts package patterns after the "--" marker.
 		if arg == "--" {
-			positional = append(positional, args[i+1:]...)
+			if !isTestCommand && len(positional) == 0 {
+				rest := args[i+1:]
+				if command == "run" {
+					rest = runTarget(rest)
+				}
+				positional = append(positional, rest...)
+			}
+			break
+		}
+
+		// Every argument after "-args" is passed to the built test binary, so we are done parsing.
+		if isTestCommand && (arg == "-args" || arg == "--args") {
 			break
 		}
 
 		// Any argument without a leading "-" is a positional argument (until proven otherwise).
 		if !strings.HasPrefix(arg, "-") {
+			if positionalRunEnded {
+				// This cannot be a package pattern. It is a literal argument to the test binary, and
+				// cmd/go consequently passes the entire remainder through without parsing more flags.
+				break
+			}
+			if command == "run" {
+				// `go run` accepts one package pattern or a contiguous list of .go files;
+				// everything after that package is passed to the program.
+				positional = append(positional, runTarget(args[i:])...)
+				break
+			}
 			positional = append(positional, arg)
 			continue
+		}
+		// Except for go test's custom parser, standard flag parsing stops at the
+		// first positional argument and leaves every subsequent token untouched.
+		if !isTestCommand && len(positional) > 0 {
+			break
+		}
+		// This argument is a flag, so any positional argument run has now ended.
+		if len(positional) > 0 {
+			positionalRunEnded = true
 		}
 
 		normArg := arg
@@ -184,31 +447,87 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 			normArg = arg[1:]
 		}
 
-		if key, val, isAssigned := strings.Cut(normArg, "="); isAssigned {
-			if isLong(key) {
-				flags.Long[key] = val
-			} else {
-				// Intentionally the un-normalized variant in Unknown flags.
-				flags.Unknown = append(flags.Unknown, arg)
+		key, val, isAssigned := strings.Cut(normArg, "=")
+		hasNextArg := i+1 < len(args)
+		fromGOFLAGS := i < goflagsCount
+		if fromGOFLAGS && isBuildCoverageFlag(key) && !commandSupportsCoverage(command) {
+			// cmd/go accepts coverage flags in GOFLAGS because some commands support them,
+			// but silently ignores them for commands without coverage build support.
+			flags.Unknown = append(flags.Unknown, arg)
+			continue
+		}
+		switch {
+		case isAssigned && isLong(key):
+			flags.setLong(key, val)
+			if key == "-covermode" || key == "-coverpkg" {
+				flags.enableCoverage()
 			}
-		} else if isLong(normArg) {
-			flags.Long[normArg] = args[i+1]
-			i++
-		} else if isShort(normArg) {
-			flags.Short[normArg] = struct{}{}
-		} else {
+
+		case isAssigned && isShort(key):
+			if key == "-cover" {
+				flags.setAssignedCover(val)
+			} else {
+				_, _ = flags.setBoolean(key, val)
+			}
+
+		case isAssigned:
+			if isTestCommand {
+				flags.honorTestOnlyFlag(log, key)
+				if !fromGOFLAGS && !isKnownTestFlag(key, goVersion) {
+					// cmd/go treats an unknown command-line flag as the end of the package list,
+					// even when its value is assigned inline. Flags from GOFLAGS that are known
+					// to another go command are ignored instead.
+					positionalRunEnded = true
+				}
+			}
 			// Intentionally the un-normalized variant in Unknown flags.
 			flags.Unknown = append(flags.Unknown, arg)
-			// If there's more args, and the next one does not have a leading -, we'll assume this is the value of this
-			// unknown flag and consume it.
-			if len(args) > i+1 && !strings.HasPrefix(args[i+1], "-") {
+
+		case isOptionalValue(normArg):
+			// The bare form of these flags does not consume the argument that follows it.
+			flags.setShort(normArg)
+
+		case isLong(normArg) && hasNextArg && !fromGOFLAGS:
+			flags.setLong(normArg, args[i+1])
+			if normArg == "-covermode" || normArg == "-coverpkg" {
+				flags.enableCoverage()
+			}
+			i++
+
+		case isLong(normArg):
+			// The flag is missing its value; let the Go CLI report this error in its canonical way.
+			log.Trace().Str("flag", arg).Msg("Ignoring flag that is missing its value")
+			flags.Unknown = append(flags.Unknown, arg)
+
+		case isShort(normArg):
+			flags.setShort(normArg)
+
+		default:
+			if isTestCommand {
+				flags.honorTestOnlyFlag(log, normArg)
+				if !fromGOFLAGS && !isKnownTestFlag(normArg, goVersion) {
+					// Unknown test-binary flags end the package list. Their possible value is
+					// consumed below, after which recognized go test flags may still follow.
+					positionalRunEnded = true
+				}
+			}
+			// Intentionally the un-normalized variant in Unknown flags.
+			flags.Unknown = append(flags.Unknown, arg)
+			// If this flag consumes the argument that follows it, that argument is its value, and not a
+			// positional argument. A GOFLAGS entry must not consume the first command-line argument:
+			// cmd/go considers each GOFLAGS token independently and ignores flags from another command.
+			rest := args[i+1:]
+			if fromGOFLAGS && len(rest) > goflagsCount-i-1 {
+				rest = rest[:goflagsCount-i-1]
+			}
+			if consumesValue(normArg, rest, goVersion) {
 				flags.Unknown = append(flags.Unknown, args[i+1])
 				i++
 			}
 		}
 	}
 
-	if err := flags.inferCoverpkg(ctx, wd, positional); err != nil {
+	if err := flags.inferCoverpkg(ctx, wd, command, positional); err != nil {
 		return flags, err
 	}
 
@@ -219,11 +538,20 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 // inferCoverpkg will add the necessary `-coverpkg` argument if the `-cover` flags is present and
 // `-coverpkg` is not, as otherwise, sub-commands triggered with these flags will not apply coverage
 // to the intended packages.
+// Coverage may have been enabled by way of `-cover`, `-covermode`, or one of the [coverImplyingFlags]
+// (in which case `-cover` was added to the parsed flags during parsing).
 // If `-coverpkg` is present, it will expand any relative paths (recognized by a `./` prefix) into
 // absolute package names, so that child builds do not interpret these relative to a different
 // package root.
-func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalArgs []string) error {
+func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, command string, positionalArgs []string) error {
 	log := zerolog.Ctx(ctx)
+
+	if val, assigned := f.Long["-cover"]; assigned {
+		if enabled, err := strconv.ParseBool(val); err == nil && !enabled {
+			// A trailing explicit false overrides every earlier coverage-implying flag.
+			return nil
+		}
+	}
 
 	// Make sure we satisfy the same build constraints; but don't run -toolexec
 	childBuildFlags := append(f.Slice(), "-toolexec=")
@@ -299,6 +627,11 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 	if !isCover {
 		return nil
 	}
+	if command == "run" && usesOutsideModuleMode(positionalArgs) {
+		// cmd/go resolves path@version run targets outside the current module and
+		// leaves -coverpkg unset. packages.Load cannot resolve this syntax.
+		return nil
+	}
 
 	pkgs, err := packages.Load(
 		&packages.Config{
@@ -324,6 +657,17 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, positionalA
 	return nil
 }
 
+// usesOutsideModuleMode reports whether go run resolves its target outside the
+// current module, mirroring cmd/go/internal/run.shouldUseOutsideModuleMode.
+func usesOutsideModuleMode(args []string) bool {
+	return len(args) > 0 &&
+		!strings.HasSuffix(args[0], ".go") &&
+		!strings.HasPrefix(args[0], "-") &&
+		strings.Contains(args[0], "@") &&
+		!build.IsLocalImport(args[0]) &&
+		!filepath.IsAbs(args[0])
+}
+
 // Flags return the top level go command flags
 func Flags(ctx context.Context) (CommandFlags, error) {
 	once.Do(func() {
@@ -346,7 +690,9 @@ func SetFlagsFromPid(ctx context.Context, pid int) error {
 }
 
 // SetFlags sets the flags for this process to those parsed from the provided
-// slice. Does nothing if SetFlags or Flags has already been called once.
+// slice. wd is the working directory before any -C adjacent to the Go command
+// path; a blank or relative wd is resolved against the current process working
+// directory. Does nothing if SetFlags or Flags has already been called once.
 func SetFlags(ctx context.Context, wd string, args []string) {
 	once.Do(func() {
 		log := zerolog.Ctx(ctx)
@@ -363,6 +709,137 @@ func isLong(str string) bool {
 func isShort(str string) bool {
 	_, ok := shortFlags[str]
 	return ok
+}
+
+func isBuildCoverageFlag(flag string) bool {
+	return flag == "-cover" || flag == "-covermode" || flag == "-coverpkg"
+}
+
+func commandSupportsCoverage(command string) bool {
+	switch command {
+	case "build", "install", "list", "run", "test":
+		return true
+	default:
+		return false
+	}
+}
+
+// impliesCover returns true if the provided flag name (including its leading
+// hyphen, e.g: "-coverprofile") implicitly enables coverage instrumentation.
+func impliesCover(str string) bool {
+	_, ok := coverImplyingFlags[canonicalTestFlag(str)]
+	return ok
+}
+
+// isValueless returns true if the provided flag name (including its leading
+// hyphen, e.g: "-v") is known not to accept a value in the current Go version.
+func isValueless(str string, goVersion string) bool {
+	name := canonicalTestFlag(str)
+	if !testFlagSupported(name, goVersion) {
+		return false
+	}
+	_, ok := valuelessFlags[name]
+	return ok
+}
+
+// isKnownTestFlag returns true if the provided flag is recognized by `go test`
+// in the current Go version. Unlike unknown test-binary flags, recognized flags
+// do not prevent a package list from following them.
+func isKnownTestFlag(str string, goVersion string) bool {
+	known, _ := testFlagTakesValue(str, goVersion)
+	return known
+}
+
+// testFlagTakesValue reports whether a flag is recognized by `go test` in the
+// designated Go version and, if so, whether its bare form consumes the next
+// argument regardless of whether that value begins with a hyphen.
+func testFlagTakesValue(str string, goVersion string) (known bool, takesValue bool) {
+	name := canonicalTestFlag(str)
+	if !testFlagSupported(name, goVersion) {
+		return false, false
+	}
+	if isOptionalValue(name) || isShort(name) || isValueless(name, goVersion) {
+		return true, false
+	}
+	if isLong(name) {
+		return true, true
+	}
+	if _, ok := testValueFlags[name]; ok {
+		return true, true
+	}
+	if impliesCover(name) {
+		return true, true
+	}
+	return false, false
+}
+
+// testFlagSupported returns whether a versioned test flag is available in the
+// designated Go toolchain. Development toolchains are assumed to support the
+// latest known flags.
+func testFlagSupported(name string, goVersion string) bool {
+	minimum, versioned := versionedTestFlags[canonicalTestFlag(name)]
+	if !versioned {
+		return true
+	}
+	return !version.IsValid(goVersion) || version.Compare(goVersion, minimum) >= 0
+}
+
+// consumesValue returns true if the provided flag, which Orchestrion does not
+// otherwise process, consumes the first of the arguments that follow it as its
+// value.
+func consumesValue(flag string, rest []string, goVersion string) bool {
+	if len(rest) == 0 {
+		return false
+	}
+	if known, takesValue := testFlagTakesValue(flag, goVersion); known {
+		return takesValue
+	}
+	// cmd/go cannot know an unknown test-binary flag's arity. It optimistically
+	// treats the next non-flag argument as its value, but parses a hyphen-prefixed
+	// argument as another flag.
+	return !strings.HasPrefix(rest[0], "-")
+}
+
+// honorTestOnlyFlag records the side effects of `go test`-only flags that
+// Orchestrion does not otherwise process; meaning those that implicitly enable
+// coverage instrumentation.
+func (f *CommandFlags) honorTestOnlyFlag(log *zerolog.Logger, flag string) {
+	if !impliesCover(flag) {
+		return
+	}
+	log.Trace().Str("flag", flag).Msg("Flag implies coverage instrumentation is enabled")
+	f.enableCoverage()
+}
+
+// isOptionalValue returns true if the provided flag name (including its leading
+// hyphen, e.g: "-buildvcs") accepts an optional value, meaning its bare form
+// does not consume the argument that follows it.
+func isOptionalValue(str string) bool {
+	_, ok := optionalValueFlags[str]
+	return ok
+}
+
+// canonicalTestFlag removes the `test.` prefix from test flag names when cmd/go
+// accepts that alias for a flag it forwards to the test binary.
+func canonicalTestFlag(str string) string {
+	name, isPrefixed := strings.CutPrefix(str, "-test.")
+	if !isPrefixed {
+		return str
+	}
+	name = "-" + name
+	if _, nonForwarded := nonForwardedTestFlags[name]; nonForwarded {
+		return str
+	}
+	if _, forwarded := valuelessFlags[name]; forwarded {
+		return name
+	}
+	if _, forwarded := testValueFlags[name]; forwarded {
+		return name
+	}
+	if _, forwarded := coverImplyingFlags[name]; forwarded {
+		return name
+	}
+	return str
 }
 
 // parentGoCommandFlags backtracks through the process tree
@@ -433,7 +910,14 @@ func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	return ParseCommandFlags(ctx, wd, args[1:])
+	commandArgs := args[1:]
+	if _, remaining, found := leadingChdirFlag(commandArgs); found {
+		// cmd/go changes its process working directory before doing any other work.
+		// The parent process' cwd already reflects -C, so only remove the original
+		// argv entry here instead of applying it a second time.
+		commandArgs = remaining
+	}
+	return ParseCommandFlags(ctx, wd, commandArgs)
 }
 
 var (
