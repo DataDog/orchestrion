@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +51,9 @@ func TestTrim(t *testing.T) {
 func TestParse(t *testing.T) {
 	_, thisFile, _, _ := runtime.Caller(0)
 	thisDir := filepath.Dir(thisFile)
+
+	goVersion, err := goenv.GOVERSION(thisDir)
+	require.NoError(t, err)
 
 	for name, tc := range map[string]struct {
 		flags    []string
@@ -174,6 +178,37 @@ func TestParse(t *testing.T) {
 			},
 			useStdFlags: true,
 		},
+		"unknown-assigned-flag-ends-package-list": {
+			// cmd/go treats an unknown assigned flag as the start of test-binary arguments, so the
+			// package-like argument that follows is not a package pattern.
+			flags: []string{"test", "-coverprofile=coverage.out", "-custom=value", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-custom=value"},
+			},
+			useStdFlags: true,
+		},
+		"assigned-known-test-flag-keeps-positional": {
+			flags: []string{"test", "-coverprofile=coverage.out", "-run=TestFoo", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-run=TestFoo"},
+			},
+			useStdFlags: true,
+		},
+		"test-prefix-does-not-apply-to-command-flags": {
+			// cmd/go only accepts the `test.` prefix for flags forwarded to the test binary.
+			// `-test.tags` is therefore unknown and ends the package list.
+			flags: []string{"test", "-coverprofile=coverage.out", "-test.tags=value", "./quoted"},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-test.tags=value"},
+			},
+			useStdFlags: true,
+		},
 		"value-accepting-unknown-flag-consumes-value": {
 			// `-run` accepts a value, so `TestFoo` is not a positional argument.
 			flags: []string{"test", "-cover", "-run", "TestFoo", "./quoted"},
@@ -195,6 +230,15 @@ func TestParse(t *testing.T) {
 			},
 			useStdFlags: true,
 		},
+		"literal-test-argument-terminates-parsing": {
+			// A literal argument after the package list has ended causes cmd/go to pass the entire
+			// remainder to the test binary, including flags it would otherwise recognize.
+			flags: []string{"test", "./quoted", "-v", "custom", "-coverprofile=coverage.out"},
+			expected: CommandFlags{
+				Unknown: []string{"-v"},
+			},
+			useStdFlags: true,
+		},
 		"coverprofile-is-ignored-outside-go-test": {
 			// The Go CLI silently ignores flags from $GOFLAGS that the command at hand does not accept, so
 			// `go build` does not enable coverage here; and neither must child builds.
@@ -202,6 +246,18 @@ func TestParse(t *testing.T) {
 			goflags: "-coverprofile=coverage.out",
 			expected: CommandFlags{
 				Unknown: []string{"-coverprofile=coverage.out"},
+			},
+			useStdFlags: true,
+		},
+		"goflags-entry-does-not-consume-command-line-package": {
+			// `-run` is valid in GOFLAGS because another go command accepts it, but `go build` ignores it.
+			// Its missing value must therefore not consume the first command-line package pattern.
+			flags:   []string{"build", "./quoted"},
+			goflags: "-cover -run",
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-run"},
 			},
 			useStdFlags: true,
 		},
@@ -244,6 +300,27 @@ func TestParse(t *testing.T) {
 					"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted",
 				},
 				Short: map[string]struct{}{"-cover": {}},
+			},
+			useStdFlags: true,
+		},
+		"assigned-buildvcs-overrides-bare-goflags": {
+			flags:   []string{"test", "-cover", "-buildvcs=false", "./quoted"},
+			goflags: "-buildvcs",
+			expected: CommandFlags{
+				Long: map[string]string{
+					"-buildvcs": "false",
+					"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted",
+				},
+				Short: map[string]struct{}{"-cover": {}},
+			},
+			useStdFlags: true,
+		},
+		"bare-buildvcs-overrides-assigned-goflags": {
+			flags:   []string{"test", "-cover", "-buildvcs", "./quoted"},
+			goflags: "-buildvcs=false",
+			expected: CommandFlags{
+				Long:  map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short: map[string]struct{}{"-cover": {}, "-buildvcs": {}},
 			},
 			useStdFlags: true,
 		},
@@ -313,10 +390,111 @@ func TestParse(t *testing.T) {
 			for _, flag := range flags.Slice() {
 				name, _, _ := strings.Cut(flag, "=")
 				assert.False(t, impliesCover(name), "flag %q must not be forwarded to child commands", flag)
-				assert.False(t, isValueless(name), "flag %q must not be forwarded to child commands", flag)
+				assert.False(t, isValueless(name, goVersion), "flag %q must not be forwarded to child commands", flag)
 			}
 		})
 	}
+}
+
+func TestParseArtifactsByGoVersion(t *testing.T) {
+	_, thisFile, _, _ := runtime.Caller(0)
+	thisDir := filepath.Dir(thisFile)
+	t.Setenv("GOFLAGS", "")
+
+	for name, tc := range map[string]struct {
+		goVersion string
+		expected  CommandFlags
+	}{
+		"go1.25": {
+			goVersion: "go1.25.0",
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-artifacts", "./quoted"},
+			},
+		},
+		"go1.26": {
+			goVersion: "go1.26.0",
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out", "-artifacts"},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			flags, err := parseCommandFlags(
+				context.Background(),
+				thisDir,
+				[]string{"test", "-coverprofile=coverage.out", "-artifacts", "./quoted"},
+				tc.goVersion,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, flags)
+		})
+	}
+}
+
+func TestTestFlagSupported(t *testing.T) {
+	for name, tc := range map[string]struct {
+		goVersion string
+		expected  bool
+	}{
+		"go1.25":              {goVersion: "go1.25.0"},
+		"go1.25 experiment":   {goVersion: "go1.25.0-X:jsonv2"},
+		"go1.26 release":      {goVersion: "go1.26.0", expected: true},
+		"go1.26 candidate":    {goVersion: "go1.26rc1", expected: true},
+		"development version": {goVersion: "devel go1.27-abcdef", expected: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, testFlagSupported("-artifacts", tc.goVersion))
+		})
+	}
+}
+
+func TestCanonicalTestFlag(t *testing.T) {
+	expected := map[string]struct{}{
+		"-artifacts":            {},
+		"-bench":                {},
+		"-benchmem":             {},
+		"-benchtime":            {},
+		"-blockprofile":         {},
+		"-blockprofilerate":     {},
+		"-count":                {},
+		"-coverprofile":         {},
+		"-cpu":                  {},
+		"-cpuprofile":           {},
+		"-failfast":             {},
+		"-fullpath":             {},
+		"-fuzz":                 {},
+		"-fuzzminimizetime":     {},
+		"-fuzztime":             {},
+		"-list":                 {},
+		"-memprofile":           {},
+		"-memprofilerate":       {},
+		"-mutexprofile":         {},
+		"-mutexprofilefraction": {},
+		"-outputdir":            {},
+		"-parallel":             {},
+		"-run":                  {},
+		"-short":                {},
+		"-shuffle":              {},
+		"-skip":                 {},
+		"-timeout":              {},
+		"-trace":                {},
+		"-v":                    {},
+	}
+
+	actual := make(map[string]struct{}, len(expected))
+	for _, flags := range []map[string]struct{}{valuelessFlags, testValueFlags, coverImplyingFlags} {
+		for name := range flags {
+			prefixed := "-test." + strings.TrimPrefix(name, "-")
+			if canonicalTestFlag(prefixed) == name {
+				actual[name] = struct{}{}
+			}
+		}
+	}
+	assert.Equal(t, expected, actual)
 }
 
 func restore(short map[string]struct{}, long map[string]struct{}) {

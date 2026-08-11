@@ -6,6 +6,7 @@
 package goenv
 
 import (
+	"go/version"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,4 +16,10 @@ func Test(t *testing.T) {
 	path, err := GoBinPath()
 	require.NoError(t, err)
 	t.Logf("GOBIN: %s", path)
+}
+
+func TestGOVERSION(t *testing.T) {
+	goVersion, err := GOVERSION(".")
+	require.NoError(t, err)
+	require.True(t, version.IsValid(goVersion), "invalid Go version %q", goVersion)
 }

@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go/version"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -90,7 +91,7 @@ var (
 	// provided in the `-flag value` form.
 	valuelessFlags = map[string]struct{}{
 		// `go test` flags
-		"-artifacts": {}, // Retain test artifacts
+		"-artifacts": {}, // Retain test artifacts (Go 1.26 and later)
 		"-benchmem":  {}, // Print memory allocation statistics for benchmarks
 		"-c":         {}, // Compile the test binary but do not run it
 		"-failfast":  {}, // Do not start new tests after the first test failure
@@ -101,6 +102,62 @@ var (
 		// Build flags that are irrelevant to (and must not be forwarded to) child builds
 		"-n": {}, // Print the commands but do not run them
 		"-x": {}, // Print the commands
+	}
+	// testValueFlags are flags recognized by `go test` which require a value and
+	// which Orchestrion does not otherwise process. Knowing they are recognized is
+	// necessary because package patterns may follow them, unlike flags destined to
+	// the test binary. Both their bare and `-flag=value` forms are accepted.
+	testValueFlags = map[string]struct{}{
+		"-bench":                {},
+		"-benchtime":            {},
+		"-blockprofile":         {},
+		"-blockprofilerate":     {},
+		"-count":                {},
+		"-cpu":                  {},
+		"-cpuprofile":           {},
+		"-debug-actiongraph":    {},
+		"-debug-runtime-trace":  {},
+		"-debug-trace":          {},
+		"-exec":                 {},
+		"-fuzz":                 {},
+		"-fuzzminimizetime":     {},
+		"-fuzztime":             {},
+		"-list":                 {},
+		"-memprofile":           {},
+		"-memprofilerate":       {},
+		"-mutexprofile":         {},
+		"-mutexprofilefraction": {},
+		"-o":                    {},
+		"-outputdir":            {},
+		"-p":                    {},
+		"-parallel":             {},
+		"-run":                  {},
+		"-shuffle":              {},
+		"-skip":                 {},
+		"-timeout":              {},
+		"-trace":                {},
+		"-vet":                  {},
+	}
+	// versionedTestFlags records when test flags unavailable in the minimum
+	// supported Go version were introduced.
+	versionedTestFlags = map[string]string{
+		"-artifacts": "go1.26",
+	}
+	// nonForwardedTestFlags are test command and build flags included in the
+	// valueless and value-taking sets above for parsing purposes, but for which
+	// cmd/go does not accept a `-test.`-prefixed alias.
+	nonForwardedTestFlags = map[string]struct{}{
+		"-c":                   {},
+		"-debug-actiongraph":   {},
+		"-debug-runtime-trace": {},
+		"-debug-trace":         {},
+		"-exec":                {},
+		"-json":                {},
+		"-n":                   {},
+		"-o":                   {},
+		"-p":                   {},
+		"-vet":                 {},
+		"-x":                   {},
 	}
 )
 
@@ -155,6 +212,14 @@ func (f CommandFlags) Slice() []string {
 // and returns its flags. Direct arguments to the command are ignored. The value
 // of $GOFLAGS is also included in the returned flags.
 func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFlags, error) {
+	goVersion, err := goenv.GOVERSION(wd)
+	if err != nil {
+		return CommandFlags{}, fmt.Errorf("determining Go toolchain version: %w", err)
+	}
+	return parseCommandFlags(ctx, wd, args, goVersion)
+}
+
+func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion string) (CommandFlags, error) {
 	log := zerolog.Ctx(ctx)
 
 	flags := CommandFlags{
@@ -200,6 +265,7 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 
 	// Compose the complete list of arguments: those from GOFLAGS, and the rest of the command line so far; in this order
 	// as the CLI arguments have precedence over those from GOFLAGS.
+	goflagsCount := len(goflagsArgs)
 	args = append(append(make([]string, 0, len(goflagsArgs)+len(args)), goflagsArgs...), args...)
 
 	var (
@@ -230,13 +296,18 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 
 		// Any argument without a leading "-" is a positional argument (until proven otherwise).
 		if !strings.HasPrefix(arg, "-") {
-			if !positionalRunEnded {
-				positional = append(positional, arg)
+			if positionalRunEnded {
+				// This cannot be a package pattern. It is a literal argument to the test binary, and
+				// cmd/go consequently passes the entire remainder through without parsing more flags.
+				break
 			}
+			positional = append(positional, arg)
 			continue
 		}
 		// This argument is a flag, so any positional argument run has now ended.
-		positionalRunEnded = len(positional) > 0
+		if len(positional) > 0 {
+			positionalRunEnded = true
+		}
 
 		normArg := arg
 		if strings.HasPrefix(arg, "--") {
@@ -247,13 +318,23 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 
 		key, val, isAssigned := strings.Cut(normArg, "=")
 		hasNextArg := i+1 < len(args)
+		fromGOFLAGS := i < goflagsCount
 		switch {
 		case isAssigned && isLong(key):
 			flags.Long[key] = val
+			// Optional-value flags can be represented in either map. The last occurrence wins,
+			// preserving command-line precedence over GOFLAGS.
+			delete(flags.Short, key)
 
 		case isAssigned:
 			if isTestCommand {
 				flags.honorTestOnlyFlag(log, key)
+				if !fromGOFLAGS && !isKnownTestFlag(key, goVersion) {
+					// cmd/go treats an unknown command-line flag as the end of the package list,
+					// even when its value is assigned inline. Flags from GOFLAGS that are known
+					// to another go command are ignored instead.
+					positionalRunEnded = true
+				}
 			}
 			// Intentionally the un-normalized variant in Unknown flags.
 			flags.Unknown = append(flags.Unknown, arg)
@@ -261,6 +342,7 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 		case isOptionalValue(normArg):
 			// The bare form of these flags does not consume the argument that follows it.
 			flags.Short[normArg] = struct{}{}
+			delete(flags.Long, normArg)
 
 		case isLong(normArg) && hasNextArg:
 			flags.Long[normArg] = args[i+1]
@@ -277,12 +359,22 @@ func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFl
 		default:
 			if isTestCommand {
 				flags.honorTestOnlyFlag(log, normArg)
+				if !fromGOFLAGS && !isKnownTestFlag(normArg, goVersion) {
+					// Unknown test-binary flags end the package list. Their possible value is
+					// consumed below, after which recognized go test flags may still follow.
+					positionalRunEnded = true
+				}
 			}
 			// Intentionally the un-normalized variant in Unknown flags.
 			flags.Unknown = append(flags.Unknown, arg)
 			// If this flag consumes the argument that follows it, that argument is its value, and not a
-			// positional argument.
-			if consumesValue(normArg, args[i+1:]) {
+			// positional argument. A GOFLAGS entry must not consume the first command-line argument:
+			// cmd/go considers each GOFLAGS token independently and ignores flags from another command.
+			rest := args[i+1:]
+			if fromGOFLAGS && len(rest) > goflagsCount-i-1 {
+				rest = rest[:goflagsCount-i-1]
+			}
+			if consumesValue(normArg, rest, goVersion) {
 				flags.Unknown = append(flags.Unknown, args[i+1])
 				i++
 			}
@@ -456,17 +548,46 @@ func impliesCover(str string) bool {
 }
 
 // isValueless returns true if the provided flag name (including its leading
-// hyphen, e.g: "-v") is known not to accept a value.
-func isValueless(str string) bool {
-	_, ok := valuelessFlags[canonicalTestFlag(str)]
+// hyphen, e.g: "-v") is known not to accept a value in the current Go version.
+func isValueless(str string, goVersion string) bool {
+	name := canonicalTestFlag(str)
+	if !testFlagSupported(name, goVersion) {
+		return false
+	}
+	_, ok := valuelessFlags[name]
 	return ok
+}
+
+// isKnownTestFlag returns true if the provided flag is recognized by `go test`
+// in the current Go version. Unlike unknown test-binary flags, recognized flags
+// do not prevent a package list from following them.
+func isKnownTestFlag(str string, goVersion string) bool {
+	name := canonicalTestFlag(str)
+	if !testFlagSupported(name, goVersion) {
+		return false
+	}
+	if _, ok := testValueFlags[name]; ok {
+		return true
+	}
+	return isLong(name) || isShort(name) || isOptionalValue(name) || isValueless(name, goVersion) || impliesCover(name)
+}
+
+// testFlagSupported returns whether a versioned test flag is available in the
+// designated Go toolchain. Development toolchains are assumed to support the
+// latest known flags.
+func testFlagSupported(name string, goVersion string) bool {
+	minimum, versioned := versionedTestFlags[canonicalTestFlag(name)]
+	if !versioned {
+		return true
+	}
+	return !version.IsValid(goVersion) || version.Compare(goVersion, minimum) >= 0
 }
 
 // consumesValue returns true if the provided flag, which Orchestrion does not
 // otherwise process, consumes the first of the arguments that follow it as its
 // value.
-func consumesValue(flag string, rest []string) bool {
-	return !isValueless(flag) && len(rest) > 0 && !strings.HasPrefix(rest[0], "-")
+func consumesValue(flag string, rest []string, goVersion string) bool {
+	return !isValueless(flag, goVersion) && len(rest) > 0 && !strings.HasPrefix(rest[0], "-")
 }
 
 // honorTestOnlyFlag records the side effects of `go test`-only flags that
@@ -488,12 +609,25 @@ func isOptionalValue(str string) bool {
 	return ok
 }
 
-// canonicalTestFlag removes the `test.` prefix from test flag names, as the Go
-// CLI accepts both the bare (e.g, `-v`) and prefixed (e.g, `-test.v`) forms of
-// all flags it forwards to the test binary.
+// canonicalTestFlag removes the `test.` prefix from test flag names when cmd/go
+// accepts that alias for a flag it forwards to the test binary.
 func canonicalTestFlag(str string) string {
-	if name, isPrefixed := strings.CutPrefix(str, "-test."); isPrefixed {
-		return "-" + name
+	name, isPrefixed := strings.CutPrefix(str, "-test.")
+	if !isPrefixed {
+		return str
+	}
+	name = "-" + name
+	if _, nonForwarded := nonForwardedTestFlags[name]; nonForwarded {
+		return str
+	}
+	if _, forwarded := valuelessFlags[name]; forwarded {
+		return name
+	}
+	if _, forwarded := testValueFlags[name]; forwarded {
+		return name
+	}
+	if _, forwarded := coverImplyingFlags[name]; forwarded {
+		return name
 	}
 	return str
 }
