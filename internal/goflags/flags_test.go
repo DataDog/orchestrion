@@ -120,21 +120,32 @@ func TestParse(t *testing.T) {
 				Short: map[string]struct{}{"-cover": {}},
 			},
 		},
-		"cover-dash-c": {
-			flags: []string{"-C", "..", "run", "-cover", "-covermode=atomic"},
+		"cover-dash-c-after-command": {
+			flags: []string{"test", "-C", "quoted", "-coverprofile=coverage.out", "."},
 			expected: CommandFlags{
-				// Note - the "-C" flags has no effect at this stage, so it's expected coverpkg is this package.
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
-				Short: map[string]struct{}{"-cover": {}},
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out"},
 			},
+			useStdFlags: true,
 		},
-		"cover-dash-c-alt": {
-			flags: []string{"-C=..", "run", "-cover", "-covermode=atomic", "."},
+		"cover-dash-c-assigned": {
+			flags: []string{"-C=quoted", "test", "-coverprofile=coverage.out", "."},
 			expected: CommandFlags{
-				// Note - the "-C" flags has no effect at this stage, so it's expected coverpkg is this package.
-				Long:  map[string]string{"-covermode": "atomic", "-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
-				Short: map[string]struct{}{"-cover": {}},
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out"},
 			},
+			useStdFlags: true,
+		},
+		"cover-double-dash-c-assigned": {
+			flags: []string{"--C=quoted", "test", "-coverprofile=coverage.out", "."},
+			expected: CommandFlags{
+				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:   map[string]struct{}{"-cover": {}},
+				Unknown: []string{"-coverprofile=coverage.out"},
+			},
+			useStdFlags: true,
 		},
 		"goflags": {
 			flags:   []string{"run", "."},
@@ -392,6 +403,97 @@ func TestParse(t *testing.T) {
 				assert.False(t, impliesCover(name), "flag %q must not be forwarded to child commands", flag)
 				assert.False(t, isValueless(name, goVersion), "flag %q must not be forwarded to child commands", flag)
 			}
+		})
+	}
+}
+
+func TestResolveLeadingChdir(t *testing.T) {
+	_, thisFile, _, _ := runtime.Caller(0)
+	thisDir := filepath.Dir(thisFile)
+	t.Chdir(thisDir)
+	quotedDir := filepath.Join(thisDir, "quoted")
+
+	for name, tc := range map[string]struct {
+		wd               string
+		args             []string
+		expectedDir      string
+		expectedArgs     []string
+		expectedToChange bool
+	}{
+		"before command": {
+			wd:               thisDir,
+			args:             []string{"-C", "quoted", "test", "./..."},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"test", "./..."},
+			expectedToChange: true,
+		},
+		"after command": {
+			wd:               thisDir,
+			args:             []string{"test", "--C", "quoted", "./..."},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"test", "./..."},
+			expectedToChange: true,
+		},
+		"single-dash assigned": {
+			wd:               thisDir,
+			args:             []string{"-C=quoted", "test"},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"test"},
+			expectedToChange: true,
+		},
+		"double-dash assigned": {
+			wd:               thisDir,
+			args:             []string{"--C=quoted", "test"},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"test"},
+			expectedToChange: true,
+		},
+		"after command group": {
+			wd:               thisDir,
+			args:             []string{"mod", "-C", "quoted", "tidy"},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"mod", "tidy"},
+			expectedToChange: true,
+		},
+		"after grouped subcommand": {
+			wd:               thisDir,
+			args:             []string{"mod", "tidy", "-C=quoted"},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"mod", "tidy"},
+			expectedToChange: true,
+		},
+		"blank working directory": {
+			args:             []string{"-C", "quoted", "test"},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"test"},
+			expectedToChange: true,
+		},
+		"absolute directory": {
+			wd:               filepath.Dir(thisDir),
+			args:             []string{"test", "-C=" + quotedDir},
+			expectedDir:      quotedDir,
+			expectedArgs:     []string{"test"},
+			expectedToChange: true,
+		},
+		"missing value": {
+			wd:           thisDir,
+			args:         []string{"test", "-C"},
+			expectedDir:  thisDir,
+			expectedArgs: []string{"test", "-C"},
+		},
+		"after positional argument": {
+			wd:           thisDir,
+			args:         []string{"test", "./...", "-C", "quoted"},
+			expectedDir:  thisDir,
+			expectedArgs: []string{"test", "./...", "-C", "quoted"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir, args, changed, err := resolveLeadingChdir(tc.wd, tc.args)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedDir, dir)
+			assert.Equal(t, tc.expectedArgs, args)
+			assert.Equal(t, tc.expectedToChange, changed)
 		})
 	}
 }

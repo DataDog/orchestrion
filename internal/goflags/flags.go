@@ -210,13 +210,87 @@ func (f CommandFlags) Slice() []string {
 
 // ParseCommandFlags parses a slice representing a go command invocation
 // and returns its flags. Direct arguments to the command are ignored. The value
-// of $GOFLAGS is also included in the returned flags.
+// of $GOFLAGS is also included in the returned flags. A -C before or immediately
+// after the Go command path is applied relative to wd; a blank or relative wd is
+// resolved against the current process working directory.
 func ParseCommandFlags(ctx context.Context, wd string, args []string) (CommandFlags, error) {
-	goVersion, err := goenv.GOVERSION(wd)
+	log := zerolog.Ctx(ctx)
+	effectiveWD, args, changed, err := resolveLeadingChdir(wd, args)
+	if err != nil {
+		return CommandFlags{}, fmt.Errorf("resolving leading -C flag: %w", err)
+	}
+	if changed {
+		log.Trace().Str("from", wd).Str("to", effectiveWD).Msg("Applying leading -C flag")
+	}
+
+	goVersion, err := goenv.GOVERSION(effectiveWD)
 	if err != nil {
 		return CommandFlags{}, fmt.Errorf("determining Go toolchain version: %w", err)
 	}
-	return parseCommandFlags(ctx, wd, args, goVersion)
+	return parseCommandFlags(ctx, effectiveWD, args, goVersion)
+}
+
+// resolveLeadingChdir applies the leading -C flag handled specially by cmd/go
+// and removes it from args. The returned working directory is absolute when the
+// flag designates a relative directory.
+func resolveLeadingChdir(wd string, args []string) (effectiveWD string, remaining []string, changed bool, err error) {
+	dir, remaining, changed := leadingChdirFlag(args)
+	if !changed {
+		return wd, args, false, nil
+	}
+	if filepath.IsAbs(dir) {
+		return filepath.Clean(dir), remaining, true, nil
+	}
+	// Rooted and drive-relative paths on Windows are relative to process state,
+	// not to an arbitrary wd. filepath.Abs reproduces os.Chdir's resolution.
+	if filepath.VolumeName(dir) != "" || len(dir) > 0 && os.IsPathSeparator(dir[0]) {
+		effectiveWD, err = filepath.Abs(dir)
+	} else {
+		effectiveWD = filepath.Join(wd, dir)
+		if !filepath.IsAbs(effectiveWD) {
+			effectiveWD, err = filepath.Abs(effectiveWD)
+		}
+	}
+	if err != nil {
+		return "", nil, false, err
+	}
+	return filepath.Clean(effectiveWD), remaining, true, nil
+}
+
+// leadingChdirFlag returns the directory and remaining arguments when args
+// contains one of the leading -C forms accepted by cmd/go. The flag may precede
+// the command or immediately follow the command (or command-group) token.
+func leadingChdirFlag(args []string) (dir string, remaining []string, found bool) {
+	indices := [...]int{0, 1, 2}
+	for _, index := range indices {
+		if index >= len(args) || index == 1 && strings.HasPrefix(args[0], "-") {
+			continue
+		}
+		if index == 2 && (args[0] != "mod" && args[0] != "work" || strings.HasPrefix(args[1], "-")) {
+			continue
+		}
+
+		consumed := 0
+		switch arg := args[index]; {
+		case arg == "-C" || arg == "--C":
+			if index+1 >= len(args) {
+				continue
+			}
+			dir = args[index+1]
+			consumed = 2
+		case strings.HasPrefix(arg, "-C=") || strings.HasPrefix(arg, "--C="):
+			_, dir, _ = strings.Cut(arg, "=")
+			consumed = 1
+		default:
+			continue
+		}
+
+		remaining = make([]string, 0, len(args)-consumed)
+		remaining = append(remaining, args[:index]...)
+		remaining = append(remaining, args[index+consumed:]...)
+		return dir, remaining, true
+	}
+	return "", args, false
 }
 
 func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion string) (CommandFlags, error) {
@@ -235,23 +309,7 @@ func parseCommandFlags(ctx context.Context, wd string, args []string, goVersion 
 		log.Trace().Strs("GOFLAGS", goflagsArgs).Msg("GOFLAGS arguments")
 	}
 
-	// Remove any `-C` flag provided on the command line. This is required to immediately follow the `go` command, and
-	// can be present only once.
-	if len(args) > 0 {
-		if arg := args[0]; strings.HasPrefix(arg, "-C") {
-			if arg == "-C" && len(args) > 1 {
-				// ["-C", "directory", ...]
-				log.Trace().Strs("flag", args[:2]).Msg("Skipping '-C <dir>' flag")
-				args = args[2:]
-			} else if arg[:3] == "-C=" {
-				// ["-C=directory", ...]
-				log.Trace().Str("flag", arg).Msg("Skipping '-C=<dir>' flag")
-				args = args[1:]
-			}
-		}
-	}
-
-	// The next argument after a `-C` (if present) is the go command name ("run", "test", "list", etc...).
+	// The first argument is the go command name ("run", "test", "list", etc...).
 	var command string
 	if len(args) > 0 {
 		command = args[0]
@@ -521,7 +579,9 @@ func SetFlagsFromPid(ctx context.Context, pid int) error {
 }
 
 // SetFlags sets the flags for this process to those parsed from the provided
-// slice. Does nothing if SetFlags or Flags has already been called once.
+// slice. wd is the working directory before any -C adjacent to the Go command
+// path; a blank or relative wd is resolved against the current process working
+// directory. Does nothing if SetFlags or Flags has already been called once.
 func SetFlags(ctx context.Context, wd string, args []string) {
 	once.Do(func() {
 		log := zerolog.Ctx(ctx)
@@ -700,7 +760,14 @@ func parentGoCommandFlags(ctx context.Context, pid int) (flags CommandFlags, err
 		return flags, fmt.Errorf("failed to get working directory of %d: %w", p.Pid, err)
 	}
 
-	return ParseCommandFlags(ctx, wd, args[1:])
+	commandArgs := args[1:]
+	if _, remaining, found := leadingChdirFlag(commandArgs); found {
+		// cmd/go changes its process working directory before doing any other work.
+		// The parent process' cwd already reflects -C, so only remove the original
+		// argv entry here instead of applying it a second time.
+		commandArgs = remaining
+	}
+	return ParseCommandFlags(ctx, wd, commandArgs)
 }
 
 var (
