@@ -73,7 +73,15 @@ aspects:
             //go:linkname __orchestrionInternalRootValue example.com/testvariant/dep/internal/root.Value
             func __orchestrionInternalRootValue() int
 `)
-	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
+	writeFile("subject/subject.go", `package subject
+
+import (
+	"example.com/testvariant/leaf"
+	"example.com/testvariant/notests"
+)
+
+func Value() int { return 40 + leaf.Value() + notests.Value() }
+`)
 	writeFile("subject/subject_test.go", `package subject
 
 import "testing"
@@ -84,11 +92,26 @@ func TestValue(t *testing.T) {
 	}
 }
 `)
+	writeFile("leaf/leaf.go", "package leaf\n\nfunc Value() int { return 1 }\n")
+	writeFile("notests/notests.go", "package notests\n\nfunc Value() int { return 1 }\n")
+	writeFile("leaf/leaf_test.go", `package leaf
+
+import "testing"
+
+func TestValue(t *testing.T) {
+	if got := Value(); got != 1 {
+		t.Fatalf("Value() = %d, want 1", got)
+	}
+}
+`)
 	writeFile("root/root.go", `package root
 
-import "example.com/testvariant/subject"
+import (
+	"example.com/testvariant/leaf"
+	"example.com/testvariant/subject"
+)
 
-func Value() int { return subject.Value() }
+func Value() int { return subject.Value() + leaf.Value() - 1 }
 `)
 	writeFile("dep/internal/root/root.go", `package root
 
@@ -105,13 +128,27 @@ func Value() int { return subject.Value() }
 	// Orchestrion injects it into the subject test binary, whose subject archive has coverage.
 	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./root", "./subject")
 
+	// Without an explicit -coverpkg, Go covers each package that has tests only in its own test
+	// binary, while covering command-line packages without tests in their ordinary form. The nested
+	// load for the subject test binary must therefore leave leaf uninstrumented but instrument
+	// notests, matching the archives against which subject was compiled.
+	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage-all.out"), "./...")
+
 	// Value-less test flags must not consume the package patterns that follow them, as coverage is
 	// otherwise applied to the wrong packages in nested loads.
 	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage-v.out"), "-v", "./subject", "./root")
 
 	// The nested test-variant load must preserve an overlay supplied to the outer Go command.
 	writeFile("subject/subject.go", "package subject\n\nfunc Value() int { return missing }\n")
-	writeFile("overlay/subject.go", "package subject\n\nfunc Value() int { return 42 }\n")
+	writeFile("overlay/subject.go", `package subject
+
+import (
+	"example.com/testvariant/leaf"
+	"example.com/testvariant/notests"
+)
+
+func Value() int { return 40 + leaf.Value() + notests.Value() }
+`)
 	writeFile("overlay.json", `{"Replace":{"subject/subject.go":"overlay/subject.go"}}`)
 	run.exec(t, orchestrion, "go", "test", "-a", "-overlay=overlay.json", "./subject")
 }

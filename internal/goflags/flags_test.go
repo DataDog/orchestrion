@@ -7,6 +7,7 @@ package goflags
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -47,6 +48,41 @@ func TestTrim(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInferredTestCoverageScope(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/coverage\n\ngo 1.25\n"), 0o644))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "tested"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "tested", "tested.go"), []byte("package tested\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "tested", "tested_test.go"), []byte("package tested\n"), 0o644))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "external"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "external", "external.go"), []byte("package external\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "external", "external_test.go"), []byte("package external_test\n"), 0o644))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "withouttests"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "withouttests", "withouttests.go"), []byte("package withouttests\n"), 0o644))
+	t.Setenv("GOFLAGS", "")
+
+	flags, err := ParseCommandFlags(context.Background(), dir, []string{"test", "-coverprofile=coverage.out", "./..."})
+	require.NoError(t, err)
+	assert.True(t, flags.TestCoverpkgInferred)
+	assert.Equal(t, []string{"example.com/coverage/withouttests"}, flags.TestPackagesWithoutTests)
+
+	copy := flags.Except("-cover")
+	assert.True(t, copy.TestCoverpkgInferred)
+	assert.Equal(t, flags.TestPackagesWithoutTests, copy.TestPackagesWithoutTests)
+	copy.TestPackagesWithoutTests[0] = "changed"
+	assert.Equal(t, "example.com/coverage/withouttests", flags.TestPackagesWithoutTests[0])
+
+	explicit, err := ParseCommandFlags(context.Background(), dir, []string{"test", "-coverpkg=./...", "./..."})
+	require.NoError(t, err)
+	assert.False(t, explicit.TestCoverpkgInferred)
+	assert.Empty(t, explicit.TestPackagesWithoutTests)
+
+	run, err := ParseCommandFlags(context.Background(), dir, []string{"run", "-cover", "./tested"})
+	require.NoError(t, err)
+	assert.False(t, run.TestCoverpkgInferred)
+	assert.Empty(t, run.TestPackagesWithoutTests)
 }
 
 func TestSlicePlacesCoverFalseAfterOptions(t *testing.T) {
@@ -719,17 +755,19 @@ func TestParseArtifactsByGoVersion(t *testing.T) {
 		"go1.25": {
 			goVersion: "go1.25.0",
 			expected: CommandFlags{
-				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
-				Short:   map[string]struct{}{"-cover": {}},
-				Unknown: []string{"-coverprofile=coverage.out", "-artifacts", "./quoted"},
+				Long:                 map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags"},
+				Short:                map[string]struct{}{"-cover": {}},
+				Unknown:              []string{"-coverprofile=coverage.out", "-artifacts", "./quoted"},
+				TestCoverpkgInferred: true,
 			},
 		},
 		"go1.26": {
 			goVersion: "go1.26.0",
 			expected: CommandFlags{
-				Long:    map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
-				Short:   map[string]struct{}{"-cover": {}},
-				Unknown: []string{"-coverprofile=coverage.out", "-artifacts"},
+				Long:                 map[string]string{"-coverpkg": "github.com/DataDog/orchestrion/internal/goflags/quoted"},
+				Short:                map[string]struct{}{"-cover": {}},
+				Unknown:              []string{"-coverprofile=coverage.out", "-artifacts"},
+				TestCoverpkgInferred: true,
 			},
 		},
 	} {

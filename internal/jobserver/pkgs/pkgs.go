@@ -23,10 +23,13 @@ const (
 )
 
 type resolvedPackageSet struct {
-	response      ResolveResponse
-	packages      []*packages.Package
-	config        packages.Config
-	buildFlagsErr string
+	response                 ResolveResponse
+	packages                 []*packages.Package
+	config                   packages.Config
+	buildFlagsErr            string
+	testCoverpkgInferred     bool
+	testCoverageMode         string
+	testPackagesWithoutTests []string
 }
 
 type service struct {
