@@ -89,6 +89,33 @@ func TestInternalImportBridgeRejectsNestedInternalRoot(t *testing.T) {
 	assert.Contains(t, err.Error(), "nested internal")
 }
 
+func TestCollectCoverageVariantClosure(t *testing.T) {
+	const target = "example.com/subject"
+	subject := &packages.Package{ID: target, PkgPath: target, ExportFile: "/subject.a"}
+	unrelated := &packages.Package{ID: "example.com/unrelated", PkgPath: "example.com/unrelated", ExportFile: "/unrelated.a"}
+	middle := &packages.Package{
+		ID:         "example.com/middle",
+		PkgPath:    "example.com/middle",
+		ExportFile: "/middle.a",
+		Imports:    map[string]*packages.Package{target: subject},
+	}
+	root := &packages.Package{
+		ID:         "example.com/root",
+		PkgPath:    "example.com/root",
+		ExportFile: "/root.a",
+		Imports: map[string]*packages.Package{
+			middle.PkgPath:    middle,
+			unrelated.PkgPath: unrelated,
+		},
+	}
+	resp := make(ResolveResponse)
+	require.NoError(t, collectCoverageVariantClosure(resp, root, target, make(map[string]bool)))
+	assert.Equal(t, ResolvedArchive{ExportFile: "/root.a", ForTest: target}, resp[root.PkgPath])
+	assert.Equal(t, ResolvedArchive{ExportFile: "/middle.a", ForTest: target}, resp[middle.PkgPath])
+	assert.NotContains(t, resp, target)
+	assert.NotContains(t, resp, unrelated.PkgPath)
+}
+
 func TestCollectTestVariantClosureRequiresExports(t *testing.T) {
 	const forTest = "example.com/subject"
 	root := &packages.Package{

@@ -109,8 +109,19 @@ func mergeTestVariant(
 
 	all := collectPackages(loaded)
 	if findTestVariant(all, req.TestVariantFor, req.TestVariantFor) == nil {
-		// With external tests only, cmd/go does not augment the package under test and
-		// therefore has no fingerprints that synthetic dependencies must be rebuilt against.
+		// With external tests only, cmd/go does not augment the package under test.
+		// Coverage can nevertheless change its ordinary archive. In that case the
+		// synthetic dependency produced by this load was rebuilt against the covered
+		// archive and must replace the ordinary resolution.
+		if buildFlagsHaveCoverage(config.BuildFlags) {
+			variant := findCoverageVariant(all, req.Pattern, req.TestVariantFor)
+			if variant == nil {
+				return nil, fmt.Errorf("Go did not produce a coverage variant for synthetic dependency %q of %q", req.Pattern, req.TestVariantFor)
+			}
+			if err := collectCoverageVariantClosure(resp, variant, req.TestVariantFor, make(map[string]bool)); err != nil {
+				return nil, err
+			}
+		}
 		delete(resp, req.TestVariantFor)
 		return resp, nil
 	}
@@ -279,6 +290,37 @@ func findTestVariant(pkgs []*packages.Package, pkgPath string, forTest string) *
 	for _, pkg := range pkgs {
 		if pkg.PkgPath == pkgPath && pkg.ForTest == forTest {
 			return pkg
+		}
+	}
+	return nil
+}
+
+func findCoverageVariant(pkgs []*packages.Package, pkgPath string, target string) *packages.Package {
+	for _, pkg := range pkgs {
+		if pkg.PkgPath == pkgPath && importsPackage(pkg, target, make(map[string]bool)) {
+			return pkg
+		}
+	}
+	return nil
+}
+
+func collectCoverageVariantClosure(resp ResolveResponse, pkg *packages.Package, target string, visited map[string]bool) error {
+	if pkg == nil || visited[pkg.ID] || pkg.PkgPath == target {
+		return nil
+	}
+	visited[pkg.ID] = true
+	if !importsPackage(pkg, target, make(map[string]bool)) {
+		return nil
+	}
+	if pkg.PkgPath != "" && pkg.PkgPath != "unsafe" {
+		if pkg.ExportFile == "" {
+			return fmt.Errorf("Go did not produce an export archive for coverage variant %q (%s) of %q", pkg.PkgPath, pkg.ID, target)
+		}
+		resp[pkg.PkgPath] = ResolvedArchive{ExportFile: pkg.ExportFile, ForTest: target}
+	}
+	for _, imported := range pkg.Imports {
+		if err := collectCoverageVariantClosure(resp, imported, target, visited); err != nil {
+			return err
 		}
 	}
 	return nil

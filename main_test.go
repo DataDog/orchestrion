@@ -212,14 +212,23 @@ func TestValue(t *testing.T) {
 	}
 }
 `)
-	writeFile("root/root.go", `package root
+	writeFile("middle/middle.go", `package middle
 
 import "example.com/externaltestvariant/subject"
 
 func Value() int { return subject.Value() }
 `)
+	writeFile("root/root.go", `package root
 
-	run.exec(t, buildOrchestrion(t), "go", "test", "-a", "./subject")
+import "example.com/externaltestvariant/middle"
+
+func Value() int { return middle.Value() }
+`)
+
+	orchestrion := buildOrchestrion(t)
+	run.exec(t, orchestrion, "go", "test", "-a", "./subject")
+	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./subject")
+	run.exec(t, orchestrion, "go", "test", "-a", "-cover", "-coverpkg=./...", "./subject")
 }
 
 func TestAspectsApplyToTestVariants(t *testing.T) {

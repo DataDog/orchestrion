@@ -11,6 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBuildFlagsHaveCoverage(t *testing.T) {
+	assert.False(t, buildFlagsHaveCoverage(nil))
+	assert.True(t, buildFlagsHaveCoverage([]string{"-cover"}))
+	assert.True(t, buildFlagsHaveCoverage([]string{"-coverpkg=example.com/subject"}))
+	assert.False(t, buildFlagsHaveCoverage([]string{"-covermode=atomic", "-cover=false"}))
+	assert.False(t, buildFlagsHaveCoverage([]string{"-cover=invalid"}))
+}
+
 func TestScopeInferredTestCoverage(t *testing.T) {
 	buildFlags := []string{
 		"-race",

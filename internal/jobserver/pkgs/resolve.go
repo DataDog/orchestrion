@@ -15,6 +15,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
@@ -257,6 +258,36 @@ func loadResolvedPackages(ctx context.Context, req *ResolveRequest, log zerolog.
 }
 
 func scopeInferredTestCoverage(buildFlags []string, mode string, packages []string) []string {
+	result := withoutCoverageBuildFlags(buildFlags)
+	if len(packages) == 0 {
+		return result
+	}
+	result = append(result, "-cover", "-coverpkg="+strings.Join(packages, ","))
+	if mode != "" {
+		result = append(result, "-covermode="+mode)
+	}
+	return result
+}
+
+func buildFlagsHaveCoverage(buildFlags []string) bool {
+	enabled := false
+	for _, flag := range buildFlags {
+		name, value, assigned := strings.Cut(flag, "=")
+		switch name {
+		case "-covermode", "-coverpkg":
+			enabled = true
+		case "-cover":
+			if !assigned {
+				enabled = true
+			} else if parsed, err := strconv.ParseBool(value); err == nil {
+				enabled = parsed
+			}
+		}
+	}
+	return enabled
+}
+
+func withoutCoverageBuildFlags(buildFlags []string) []string {
 	result := make([]string, 0, len(buildFlags)+3)
 	for _, flag := range buildFlags {
 		name, _, _ := strings.Cut(flag, "=")
@@ -264,13 +295,6 @@ func scopeInferredTestCoverage(buildFlags []string, mode string, packages []stri
 			continue
 		}
 		result = append(result, flag)
-	}
-	if len(packages) == 0 {
-		return result
-	}
-	result = append(result, "-cover", "-coverpkg="+strings.Join(packages, ","))
-	if mode != "" {
-		result = append(result, "-covermode="+mode)
 	}
 	return result
 }
