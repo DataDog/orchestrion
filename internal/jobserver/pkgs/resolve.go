@@ -257,12 +257,12 @@ func loadResolvedPackages(ctx context.Context, req *ResolveRequest, log zerolog.
 	}, nil
 }
 
-func scopeInferredTestCoverage(buildFlags []string, mode string, packages []string) []string {
+func scopeInferredTestCoverage(buildFlags []string, mode string, pkgs []string) []string {
 	result := withoutCoverageBuildFlags(buildFlags)
-	if len(packages) == 0 {
+	if len(pkgs) == 0 {
 		return result
 	}
-	result = append(result, "-cover", "-coverpkg="+strings.Join(packages, ","))
+	result = append(result, "-cover", "-coverpkg="+strings.Join(pkgs, ","))
 	if mode != "" {
 		result = append(result, "-covermode="+mode)
 	}
