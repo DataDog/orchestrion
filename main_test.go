@@ -611,7 +611,7 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 	return payload.TagName
 }
 
-func requireCoverageCountAtLeast(t *testing.T, profilePath, fileName, mode string, minimum int) {
+func requireCoverageCountAtLeast(t *testing.T, profilePath string, fileName string, mode string, minimum int) {
 	t.Helper()
 
 	profiles, err := cover.ParseProfiles(profilePath)
