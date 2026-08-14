@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/modfile"
+	"golang.org/x/tools/cover"
 )
 
 func TestSyntheticLinkDependencyUsesTestVariant(t *testing.T) {
@@ -87,8 +88,10 @@ func Value() int { return 40 + leaf.Value() + notests.Value() }
 import "testing"
 
 func TestValue(t *testing.T) {
-	if got := Value(); got != 42 {
-		t.Fatalf("Value() = %d, want 42", got)
+	for range 3 {
+		if got := Value(); got != 42 {
+			t.Fatalf("Value() = %d, want 42", got)
+		}
 	}
 }
 `)
@@ -133,6 +136,25 @@ func Value() int { return subject.Value() }
 	// load for the subject test binary must therefore leave leaf uninstrumented but instrument
 	// notests, matching the archives against which subject was compiled.
 	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage-all.out"), "./...")
+
+	// Coverage mode implied by -race (rather than an explicit -covermode) must remain consistent
+	// between the ordinary archive and each per-binary-scoped test-variant archive. Repeated calls
+	// to subject.Value distinguish atomic counters from set counters instead of only checking that
+	// the build succeeds.
+	t.Run("RaceCoverMode", func(t *testing.T) {
+		t.Setenv("GOFLAGS", "")
+		profile := filepath.Join(run.dir, "coverage-race.out")
+		run.exec(t, orchestrion, "go", "test", "-a", "-race", "-coverprofile="+profile, "./...")
+		requireCoverageCountAtLeast(t, profile, "example.com/testvariant/subject/subject.go", "atomic", 3)
+	})
+
+	// Implied build modes supplied through GOFLAGS must reach the nested scoped rebuilds too.
+	t.Run("RaceCoverModeFromGOFLAGS", func(t *testing.T) {
+		t.Setenv("GOFLAGS", "-race")
+		profile := filepath.Join(run.dir, "coverage-goflags-race.out")
+		run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+profile, "./...")
+		requireCoverageCountAtLeast(t, profile, "example.com/testvariant/subject/subject.go", "atomic", 3)
+	})
 
 	// Value-less test flags must not consume the package patterns that follow them, as coverage is
 	// otherwise applied to the wrong packages in nested loads.
@@ -587,6 +609,26 @@ func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo stri
 	require.NotEmpty(b, payload)
 
 	return payload.TagName
+}
+
+func requireCoverageCountAtLeast(t *testing.T, profilePath, fileName, mode string, minimum int) {
+	t.Helper()
+
+	profiles, err := cover.ParseProfiles(profilePath)
+	require.NoError(t, err)
+	for _, profile := range profiles {
+		if filepath.ToSlash(profile.FileName) != fileName {
+			continue
+		}
+		require.Equal(t, mode, profile.Mode)
+		for _, block := range profile.Blocks {
+			if block.Count >= minimum {
+				return
+			}
+		}
+		require.Failf(t, "coverage count is too low", "%s has no block with a count of at least %d: %#v", fileName, minimum, profile.Blocks)
+	}
+	require.Failf(t, "coverage profile is missing a file", "%s does not contain %s", profilePath, fileName)
 }
 
 func getGithubToken() (string, bool) {

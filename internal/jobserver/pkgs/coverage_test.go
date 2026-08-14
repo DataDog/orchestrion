@@ -43,4 +43,21 @@ func TestScopeInferredTestCoverage(t *testing.T) {
 		"example.com/no-tests",
 		"example.com/subject",
 	}))
+
+	for _, preservedBuildFlag := range []string{"-race", "-msan", "-asan"} {
+		t.Run(preservedBuildFlag, func(t *testing.T) {
+			buildFlags := []string{
+				preservedBuildFlag,
+				"-cover",
+				"-coverpkg=example.com/all/...",
+				"-toolexec=orchestrion toolexec",
+			}
+			assert.Equal(t, []string{
+				preservedBuildFlag,
+				"-toolexec=orchestrion toolexec",
+				"-cover",
+				"-coverpkg=example.com/subject",
+			}, scopeInferredTestCoverage(buildFlags, "", []string{"example.com/subject"}))
+		})
+	}
 }
