@@ -241,7 +241,7 @@ jobs:
           mkdir -p coverage
           # The root package's tests each run several complete instrumented builds of a synthetic module,
           # which takes them well past Go's default 10 minute per-package timeout on CI runners.
-          test_args=("-shuffle=on" "-race" "-timeout=30m")
+          test_args=("-shuffle=on" "-race" "-timeout=60m")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
           fi

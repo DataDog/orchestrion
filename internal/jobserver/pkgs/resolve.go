@@ -15,6 +15,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
@@ -157,6 +158,14 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 		resp := maps.Clone(ordinary.response)
 		config := ordinary.config
 		config.Env = resolveEnvironment(ctx, req)
+		config.BuildFlags = slices.Clone(config.BuildFlags)
+		if ordinary.testCoverpkgInferred {
+			coveragePackages := slices.Clone(ordinary.testPackagesWithoutTests)
+			if !slices.Contains(coveragePackages, req.TestVariantFor) {
+				coveragePackages = append(coveragePackages, req.TestVariantFor)
+			}
+			config.BuildFlags = scopeInferredTestCoverage(config.BuildFlags, ordinary.testCoverageMode, coveragePackages)
+		}
 		resp, err = mergeTestVariant(ctx, req, ordinary.packages, resp, config)
 		if err != nil {
 			return resolvedPackageSet{}, err
@@ -195,7 +204,16 @@ func loadResolvedPackages(ctx context.Context, req *ResolveRequest, log zerolog.
 		"-a",
 		"-toolexec",
 	)
+	testCoverpkgInferred := goFlags.TestCoverpkgInferred
+	testCoverageMode, _ := goFlags.Get("-covermode")
+	testPackagesWithoutTests := slices.Clone(goFlags.TestPackagesWithoutTests)
 	buildFlags := append(goFlags.Slice(), fmt.Sprintf("-toolexec=%q toolexec", binpath.Orchestrion))
+	if testCoverpkgInferred {
+		// With implicit test coverage, packages that have tests are covered only in
+		// their own test binaries. Command-line packages without tests are instead
+		// covered in their ordinary form and shared by all of those binaries.
+		buildFlags = scopeInferredTestCoverage(buildFlags, testCoverageMode, testPackagesWithoutTests)
+	}
 	loadConfig := &packages.Config{
 		Context: ctx,
 		Mode: packages.NeedExportFile | packages.NeedFiles |
@@ -229,11 +247,56 @@ func loadResolvedPackages(ctx context.Context, req *ResolveRequest, log zerolog.
 
 	log.Trace().Any("result", resp).Msg("pkgs.Resolve finished")
 	return resolvedPackageSet{
-		response:      resp,
-		packages:      pkgs,
-		config:        *loadConfig,
-		buildFlagsErr: flagsErrText,
+		response:                 resp,
+		packages:                 pkgs,
+		config:                   *loadConfig,
+		buildFlagsErr:            flagsErrText,
+		testCoverpkgInferred:     testCoverpkgInferred,
+		testCoverageMode:         testCoverageMode,
+		testPackagesWithoutTests: testPackagesWithoutTests,
 	}, nil
+}
+
+func scopeInferredTestCoverage(buildFlags []string, mode string, pkgs []string) []string {
+	result := withoutCoverageBuildFlags(buildFlags)
+	if len(pkgs) == 0 {
+		return result
+	}
+	result = append(result, "-cover", "-coverpkg="+strings.Join(pkgs, ","))
+	if mode != "" {
+		result = append(result, "-covermode="+mode)
+	}
+	return result
+}
+
+func buildFlagsHaveCoverage(buildFlags []string) bool {
+	enabled := false
+	for _, flag := range buildFlags {
+		name, value, assigned := strings.Cut(flag, "=")
+		switch name {
+		case "-covermode", "-coverpkg":
+			enabled = true
+		case "-cover":
+			if !assigned {
+				enabled = true
+			} else if parsed, err := strconv.ParseBool(value); err == nil {
+				enabled = parsed
+			}
+		}
+	}
+	return enabled
+}
+
+func withoutCoverageBuildFlags(buildFlags []string) []string {
+	result := make([]string, 0, len(buildFlags)+3)
+	for _, flag := range buildFlags {
+		name, _, _ := strings.Cut(flag, "=")
+		if name == "-cover" || name == "-covermode" || name == "-coverpkg" {
+			continue
+		}
+		result = append(result, flag)
+	}
+	return result
 }
 
 func resolveEnvironment(ctx context.Context, req *ResolveRequest) []string {

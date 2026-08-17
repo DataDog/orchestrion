@@ -36,6 +36,13 @@ type CommandFlags struct {
 	Long    map[string]string
 	Short   map[string]struct{}
 	Unknown []string // flags we don't process but store anyway
+
+	// TestCoverpkgInferred reports whether -coverpkg was inferred from a go test
+	// command's package arguments, rather than provided explicitly by the user.
+	TestCoverpkgInferred bool
+	// TestPackagesWithoutTests lists command-line packages that go test covers in
+	// their ordinary form because they contain no test files.
+	TestPackagesWithoutTests []string
 }
 
 var (
@@ -174,7 +181,11 @@ func (f CommandFlags) Get(flag string) (val string, found bool) {
 // The [CommandFlags.Unknown] field is not modified, even if it is in the list
 // of flags to be removed.
 func (f CommandFlags) Except(remove ...string) CommandFlags {
-	res := CommandFlags{Unknown: f.Unknown}
+	res := CommandFlags{
+		Unknown:                  f.Unknown,
+		TestCoverpkgInferred:     f.TestCoverpkgInferred,
+		TestPackagesWithoutTests: slices.Clone(f.TestPackagesWithoutTests),
+	}
 
 	res.Short = make(map[string]struct{}, len(f.Short))
 	for k, v := range f.Short {
@@ -653,8 +664,64 @@ func (f *CommandFlags) inferCoverpkg(ctx context.Context, wd string, command str
 	val := strings.Join(coverpkg, ",")
 	log.Trace().Str("-coverpkg", val).Strs("positional", positionalArgs).Msg("Inferred -coverpkg flag from positional arguments")
 	f.Long["-coverpkg"] = val
+	if command == "test" {
+		f.TestCoverpkgInferred = true
+		f.TestPackagesWithoutTests, err = packagesWithoutTests(&packages.Config{
+			Context:    ctx,
+			Mode:       packages.NeedName | packages.NeedForTest,
+			Dir:        wd,
+			BuildFlags: childBuildFlags,
+			Tests:      true,
+			Logf:       childBuildLogf,
+		}, positionalArgs, pkgs)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
+}
+
+func packagesWithoutTests(config *packages.Config, patterns []string, targets []*packages.Package) ([]string, error) {
+	loaded, err := packages.Load(config, patterns...)
+	if err != nil {
+		return nil, fmt.Errorf("determining which covered packages have tests: %w", err)
+	}
+
+	withTests := make(map[string]struct{})
+	for _, pkg := range loaded {
+		if pkg.ForTest != "" {
+			withTests[pkg.ForTest] = struct{}{}
+		}
+		if len(pkg.Errors) == 0 {
+			continue
+		}
+
+		var pkgErr error
+		for _, err := range pkg.Errors {
+			pkgErr = errors.Join(pkgErr, err)
+		}
+		zerolog.Ctx(config.Context).Warn().Err(pkgErr).Str("pkg.ID", pkg.ID).Msg("Error while determining whether package has tests")
+		// Preserve the outer go command's canonical failure instead of risking a
+		// fingerprint mismatch caused by treating incomplete test metadata as proof
+		// that a package has no tests.
+		path := pkg.ForTest
+		if path == "" {
+			path = pkg.PkgPath
+		}
+		withTests[path] = struct{}{}
+	}
+
+	withoutTests := make([]string, 0, len(targets))
+	for _, pkg := range targets {
+		if _, found := withTests[pkg.PkgPath]; !found {
+			withoutTests = append(withoutTests, pkg.PkgPath)
+		}
+	}
+	if len(withoutTests) == 0 {
+		return nil, nil
+	}
+	return withoutTests, nil
 }
 
 // usesOutsideModuleMode reports whether go run resolves its target outside the
