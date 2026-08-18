@@ -50,6 +50,32 @@ func TestResolveRequestTestVariantHash(t *testing.T) {
 	assert.NotEqual(t, variantHash, changedHash)
 }
 
+func TestResolveRequestReverseVariantHash(t *testing.T) {
+	first := ResolveRequest{
+		Dir:     "/module",
+		Env:     []string{envVarReverseVariant + "=/tmp/first.json", envVarReverseVariantFlavor + "=flavor"},
+		Pattern: "example.com/dependency",
+	}
+	second := ResolveRequest{
+		Dir:     "/module",
+		Env:     []string{envVarReverseVariant + "=/tmp/second.json", envVarReverseVariantFlavor + "=flavor"},
+		Pattern: "example.com/dependency",
+	}
+	firstHash, err := first.hash()
+	require.NoError(t, err)
+	secondHash, err := second.hash()
+	require.NoError(t, err)
+	assert.Equal(t, firstHash, secondHash)
+	assert.Equal(t, "/tmp/first.json", first.reverseVariantPath)
+	assert.Equal(t, "flavor", first.ReverseVariantFlavor)
+
+	second.Env = []string{envVarReverseVariant + "=/tmp/second.json", envVarReverseVariantFlavor + "=other"}
+	second.canonical = false
+	secondHash, err = second.hash()
+	require.NoError(t, err)
+	assert.NotEqual(t, firstHash, secondHash)
+}
+
 func TestPackageSourceDirUsesOtherFiles(t *testing.T) {
 	pkg := &packages.Package{OtherFiles: []string{filepath.Join("module", "subject", "subject.swig")}}
 	assert.Equal(t, filepath.Join("module", "subject"), packageSourceDir(pkg))

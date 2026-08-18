@@ -15,6 +15,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/buildid"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/proxy"
 	"github.com/rs/zerolog"
 )
@@ -57,6 +58,18 @@ func ComputeVersion(ctx context.Context, cmd proxy.Command) (string, error) {
 		return "", err
 	}
 
+	// Flavor reverse test-variant builds at the tool identity level. cmd/go
+	// includes this complete version in every action ID, which keeps these
+	// archives separate from ordinary build-cache entries.
+	flavor, _, active, err := pkgs.ReverseVariantEnvironment()
+	if err != nil {
+		return "", err
+	}
+	suffix := string(res)
+	if active {
+		suffix = fmt.Sprintf("%s:reverse-test-variant=%s", suffix, flavor)
+	}
+
 	// Produce the complete version string
-	return fmt.Sprintf("%s:%s", strings.TrimSpace(stdout.String()), res), nil
+	return fmt.Sprintf("%s:%s", strings.TrimSpace(stdout.String()), suffix), nil
 }

@@ -42,6 +42,12 @@ var envIgnoreList = map[string]func(*ResolveRequest, string){
 		}
 		r.TempDir = dir
 	},
+	envVarReverseVariant: func(r *ResolveRequest, path string) {
+		r.reverseVariantPath = path
+	},
+	envVarReverseVariantFlavor: func(r *ResolveRequest, flavor string) {
+		r.ReverseVariantFlavor = flavor
+	},
 	// Known to change between invocations & irrelevant to the resolution, but can be used to detect cycles.
 	"TOOLEXEC_IMPORTPATH":       func(r *ResolveRequest, path string) { r.toolexecImportpath = path },
 	envVarParentID:              func(r *ResolveRequest, id string) { r.resolveParentID = id },
@@ -50,15 +56,21 @@ var envIgnoreList = map[string]func(*ResolveRequest, string){
 
 type (
 	ResolveRequest struct {
-		Dir            string   `json:"dir"`                      // The directory to resolve from (usually where `go.mod` is)
-		Env            []string `json:"env"`                      // Environment variables to use during resolution
-		Pattern        string   `json:"pattern"`                  // Package pattern to resolve
-		TempDir        string   `json:"tmpdir,omitempty"`         // A temporary directory to use for Go build artifacts
-		TestVariantFor string   `json:"testVariantFor,omitempty"` // Resolve the literal Pattern as built for this package's tests
+		Dir                string   `json:"dir"`                          // The directory to resolve from (usually where `go.mod` is)
+		Env                []string `json:"env"`                          // Environment variables to use during resolution
+		Pattern            string   `json:"pattern"`                      // Package pattern to resolve
+		TempDir            string   `json:"tmpdir,omitempty"`             // A temporary directory to use for Go build artifacts
+		TestVariantFor     string   `json:"testVariantFor,omitempty"`     // Resolve the literal Pattern as built for this package's tests
+		ReverseTestVariant bool     `json:"reverseTestVariant,omitempty"` // Rebuild Pattern's test-binary import closure against the authoritative test target
+		// AuthoritativeTarget is the package-under-test archive selected by the outer test-main compilation.
+		AuthoritativeTarget string `json:"authoritativeTarget,omitempty"`
+		// ReverseVariantFlavor preserves the stable reverse-universe identity while its temporary environment path is canonicalized out.
+		ReverseVariantFlavor string `json:"reverseVariantFlavor,omitempty"`
 
 		// Fields set by canonicalization
 		resolveParentID    string // The value of the [envVarParentID] environment variable
 		toolexecImportpath string // The value of the TOOLEXEC_IMPORTPATH environment variable
+		reverseVariantPath string // The value of the [envVarReverseVariant] environment variable
 		canonical          bool   // Whether this request was canonicalized yet
 	}
 	// ResolvedArchive identifies an export archive and, when non-empty, the test target for which
@@ -86,6 +98,9 @@ func (r ResolveRequest) ForeachSpanTag(set func(key string, value any)) {
 	set("request.pattern", r.Pattern)
 	if r.TestVariantFor != "" {
 		set("request.test-variant-for", r.TestVariantFor)
+	}
+	if r.ReverseTestVariant {
+		set("request.reverse-test-variant", true)
 	}
 }
 
@@ -137,6 +152,9 @@ func (s *service) resolve(ctx context.Context, req *ResolveRequest) (ResolveResp
 	resolved, err := s.resolved.Load(reqHash, func() (_ resolvedPackageSet, err error) {
 		if req.TestVariantFor == "" {
 			return loadResolvedPackages(ctx, req, *log)
+		}
+		if req.ReverseTestVariant {
+			return s.resolveReverseTestVariant(ctx, req, *log)
 		}
 
 		ordinaryReq := *req
@@ -309,6 +327,12 @@ func resolveEnvironment(ctx context.Context, req *ResolveRequest) []string {
 	}
 	if req.TempDir != "" {
 		env = append(env, fmt.Sprintf("%s=%s", envVarGotmpdir, req.TempDir))
+	}
+	if req.reverseVariantPath != "" {
+		env = append(env,
+			envVarReverseVariant+"="+req.reverseVariantPath,
+			envVarReverseVariantFlavor+"="+req.ReverseVariantFlavor,
+		)
 	}
 	return env
 }

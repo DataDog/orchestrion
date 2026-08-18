@@ -139,6 +139,11 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		return nil
 	}
 
+	_, reversePackageFiles, reverseVariant, err := pkgs.ReverseVariantEnvironment()
+	if err != nil {
+		return err
+	}
+
 	var regUpdated bool
 	for depImportPath, kind := range references.Map() {
 		if depImportPath == "unsafe" {
@@ -168,10 +173,22 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 			continue
 		}
 
-		// Imported packages need to be provided in the compilation's importcfg file
-		deps, err := resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
-		if err != nil {
-			return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
+		// Imported packages need to be provided in the compilation's importcfg file.
+		// Reverse test-variant builds receive the authoritative package-under-test
+		// closure from their outer test-main compilation. Using it directly avoids
+		// recursively resolving the same synthetic edge and ensures this archive is
+		// compiled against the exact fingerprint the outer test binary will link.
+		var deps pkgs.ResolveResponse
+		if _, found := reversePackageFiles[depImportPath]; reverseVariant && found {
+			deps = make(pkgs.ResolveResponse, len(reversePackageFiles))
+			for path, archive := range reversePackageFiles {
+				deps[path] = pkgs.ResolvedArchive{ExportFile: archive}
+			}
+		} else {
+			deps, err = resolvePackageFiles(ctx, depImportPath, cmd.WorkDir)
+			if err != nil {
+				return fmt.Errorf("resolving woven dependency on %s: %w", depImportPath, err)
+			}
 		}
 		for dep, resolved := range deps {
 			archive := resolved.ExportFile

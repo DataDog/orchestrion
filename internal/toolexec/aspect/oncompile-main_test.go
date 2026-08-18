@@ -27,7 +27,7 @@ func TestInitialLinkDependenciesRetainParent(t *testing.T) {
 	deps, err := initialLinkDependencies(context.Background(), &reg, "example.com/subject", func() (pkgs.ResolvedArchive, error) {
 		t.Fatal("unexpected target provenance resolution")
 		return pkgs.ResolvedArchive{}, nil
-	})
+	}, nil)
 	require.NoError(t, err)
 	require.Len(t, deps, 1)
 	assert.Equal(t, "example.com/dependency", deps[0].path)
@@ -42,7 +42,7 @@ func TestInitialLinkDependenciesPreserveTestTargetImportParent(t *testing.T) {
 	deps, err := initialLinkDependencies(context.Background(), &reg, "example.com/subject", func() (pkgs.ResolvedArchive, error) {
 		t.Fatal("unexpected target provenance resolution")
 		return pkgs.ResolvedArchive{}, nil
-	})
+	}, nil)
 	require.NoError(t, err)
 	require.Len(t, deps, 1)
 	assert.Equal(t, "example.com/subject", deps[0].parent)
@@ -60,7 +60,7 @@ func TestInitialLinkDependenciesValidateSatisfiedTargetImport(t *testing.T) {
 	t.Run("same-package tests", func(t *testing.T) {
 		_, err := initialLinkDependencies(context.Background(), &reg, target, func() (pkgs.ResolvedArchive, error) {
 			return pkgs.ResolvedArchive{ForTest: target}, nil
-		})
+		}, nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "an archive in that synthetic dependency closure was compiled without this edge")
 	})
@@ -68,7 +68,7 @@ func TestInitialLinkDependenciesValidateSatisfiedTargetImport(t *testing.T) {
 	t.Run("external tests only", func(t *testing.T) {
 		deps, err := initialLinkDependencies(context.Background(), &reg, target, func() (pkgs.ResolvedArchive, error) {
 			return pkgs.ResolvedArchive{}, nil
-		})
+		}, nil)
 		require.NoError(t, err)
 		assert.Empty(t, deps)
 	})
@@ -82,7 +82,7 @@ func TestInitialLinkDependenciesValidateSatisfiedTargetImport(t *testing.T) {
 		deps, err := initialLinkDependencies(context.Background(), &relocationReg, target, func() (pkgs.ResolvedArchive, error) {
 			t.Fatal("unexpected target provenance resolution")
 			return pkgs.ResolvedArchive{}, nil
-		})
+		}, nil)
 		require.NoError(t, err)
 		assert.Empty(t, deps)
 	})

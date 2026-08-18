@@ -56,6 +56,12 @@ type CompileCommand struct {
 	testMain bool
 	// testVariantFor is set when this command produces Go's generated test-main archive.
 	testVariantFor string
+	// testMainPackageFiles records reverse test variants selected before the
+	// generated test main is compiled so the linker can replay the same closure.
+	testMainPackageFiles map[string]string
+	// testMainReverseRoots identifies the package roots needed to reconstruct the
+	// reverse closure if cached metadata outlives one of its referenced archives.
+	testMainReverseRoots map[string]struct{}
 	// finishToken is the token returned by the job server in response to the
 	// [nbt.StartRequest] when the operation needs to continue, and that is then
 	// forwarded to the [nbt.FinishRequest].

@@ -141,7 +141,8 @@ func mergeTestVariant(
 // into the outer importcfg, whose package-under-test archive remains authoritative.
 func resolveTestTargetProvenance(ctx context.Context, req *ResolveRequest, resp ResolveResponse, config packages.Config) (ResolveResponse, error) {
 	config.Context = ctx
-	config.Mode = packages.NeedName | packages.NeedImports | packages.NeedDeps | packages.NeedForTest
+	config.Mode = packages.NeedName | packages.NeedImports | packages.NeedDeps |
+		packages.NeedExportFile | packages.NeedForTest
 	config.Env = append(slices.Clone(config.Env), envVarResolvingTestVariants+"=1")
 	config.Tests = true
 	loaded, err := packages.Load(&config, req.TestVariantFor)
@@ -151,7 +152,22 @@ func resolveTestTargetProvenance(ctx context.Context, req *ResolveRequest, resp 
 	if err := packageErrors(loaded); err != nil {
 		return nil, fmt.Errorf("loading test target provenance for %q: %w", req.TestVariantFor, err)
 	}
-	variant := findTestVariant(collectPackages(loaded), req.TestVariantFor, req.TestVariantFor)
+	all := collectPackages(loaded)
+	variant := findTestVariant(all, req.TestVariantFor, req.TestVariantFor)
+	if variant == nil && buildFlagsHaveCoverage(config.BuildFlags) {
+		// External-only tests do not create a same-package test variant in a
+		// packages.Load test graph. Implicit coverage can nevertheless make the
+		// archive selected by this test binary differ from the ordinary archive.
+		// Compare the scoped load with the ordinary resolution so callers reject
+		// or reconstruct fingerprint-bearing synthetic importers as appropriate.
+		variant = findPackage(all, req.TestVariantFor)
+		if variant == nil || variant.ExportFile == "" {
+			return nil, fmt.Errorf("Go did not produce an export archive for covered test target %q", req.TestVariantFor)
+		}
+		if variant.ExportFile == resp[req.TestVariantFor].ExportFile {
+			return resp, nil
+		}
+	}
 	if variant == nil {
 		return resp, nil
 	}
@@ -284,6 +300,15 @@ func collectPackages(roots []*packages.Package) []*packages.Package {
 		visit(root)
 	}
 	return result
+}
+
+func findPackage(pkgs []*packages.Package, pkgPath string) *packages.Package {
+	for _, pkg := range pkgs {
+		if pkg.PkgPath == pkgPath && pkg.ForTest == "" {
+			return pkg
+		}
+	}
+	return nil
 }
 
 func findTestVariant(pkgs []*packages.Package, pkgPath string, forTest string) *packages.Package {

@@ -26,6 +26,26 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 }
 
 func resolvePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, workDir string) (_ pkgs.ResolveResponse, err error) {
+	return resolvePackageFilesRequest(ctx, importPath, packageResolveOptions{testVariantFor: testVariantFor, workDir: workDir})
+}
+
+func resolveReversePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, authoritativeTarget string, workDir string) (_ pkgs.ResolveResponse, err error) {
+	return resolvePackageFilesRequest(ctx, importPath, packageResolveOptions{
+		testVariantFor:      testVariantFor,
+		authoritativeTarget: authoritativeTarget,
+		reverse:             true,
+		workDir:             workDir,
+	})
+}
+
+type packageResolveOptions struct {
+	testVariantFor      string
+	authoritativeTarget string
+	reverse             bool
+	workDir             string
+}
+
+func resolvePackageFilesRequest(ctx context.Context, importPath string, options packageResolveOptions) (_ pkgs.ResolveResponse, err error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "aspect.resolvePackageFiles",
 		tracer.ResourceName(importPath),
 	)
@@ -36,17 +56,19 @@ func resolvePackageFilesForTest(ctx context.Context, importPath string, testVari
 		return nil, err
 	}
 
-	conn, err := client.FromEnvironment(ctx, workDir)
+	conn, err := client.FromEnvironment(ctx, options.workDir)
 	if err != nil {
 		return nil, err
 	}
 
 	req := pkgs.NewResolveRequest(cwd, importPath)
-	req.TestVariantFor = testVariantFor
-	if workDir != "" {
+	req.TestVariantFor = options.testVariantFor
+	req.ReverseTestVariant = options.reverse
+	req.AuthoritativeTarget = options.authoritativeTarget
+	if options.workDir != "" {
 		// Nest the future GOTMPDIR under this $WORK directory, so that builds with `-work` are nested,
 		// and the root work tree contains all child work trees involved in resolutions.
-		req.TempDir = filepath.Join(workDir, "__tmp__")
+		req.TempDir = filepath.Join(options.workDir, "__tmp__")
 	}
 	archives, err := client.Request(
 		ctx,
