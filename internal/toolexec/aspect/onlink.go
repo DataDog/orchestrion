@@ -45,7 +45,7 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 		return fmt.Errorf("reading test-main metadata: %w", err)
 	}
 	testVariantFor := testMain.Target
-	if err := refreshTestMainPackageFiles(ctx, &testMain, &reg, cmd.WorkDir); err != nil {
+	if err := refreshTestMainPackageFiles(ctx, &testMain, &reg, cmd.WorkDir, resolveReversePackageFilesForTest); err != nil {
 		return err
 	}
 	variantArchives := make(map[string]string, len(testMain.PackageFiles))
@@ -160,7 +160,21 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 	return nil
 }
 
-func refreshTestMainPackageFiles(ctx context.Context, info *proxy.TestMainInfo, reg *importcfg.ImportConfig, workDir string) error {
+type reversePackageFilesResolver func(
+	ctx context.Context,
+	importPath string,
+	testVariantFor string,
+	authoritativeTarget string,
+	workDir string,
+) (pkgs.ResolveResponse, error)
+
+func refreshTestMainPackageFiles(
+	ctx context.Context,
+	info *proxy.TestMainInfo,
+	reg *importcfg.ImportConfig,
+	workDir string,
+	resolve reversePackageFilesResolver,
+) error {
 	if len(info.PackageFiles) == 0 {
 		return nil
 	}
@@ -184,7 +198,7 @@ func refreshTestMainPackageFiles(ctx context.Context, info *proxy.TestMainInfo, 
 	}
 	refreshed := make(map[string]string)
 	for _, root := range info.ReverseRoots {
-		variants, err := resolveReversePackageFilesForTest(ctx, root, info.Target, authoritative, workDir)
+		variants, err := resolve(ctx, root, info.Target, authoritative, workDir)
 		if err != nil {
 			return fmt.Errorf("reconstructing cached reverse test variant %q for %q: %w", root, info.Target, err)
 		}
