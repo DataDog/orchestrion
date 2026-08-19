@@ -22,7 +22,7 @@ func TestTestMainMetadata(t *testing.T) {
 	require.NoError(t, os.WriteFile(archive, []byte("!<arch>\n"), 0o644))
 	file, err := os.OpenFile(archive, os.O_APPEND|os.O_WRONLY, 0o644)
 	require.NoError(t, err)
-	contents := []byte("\x00go120ld\x01\x23\x45\x67\x89\xab\xcd\xef")
+	contents := []byte("go object header\n!\n\x00go120ld\x01\x23\x45\x67\x89\xab\xcd\xef")
 	writer := ar.NewWriter(file)
 	require.NoError(t, writer.WriteHeader(&ar.Header{Name: "_go_.o", Mode: 0o644, Size: int64(len(contents))}))
 	_, err = writer.Write(contents)
