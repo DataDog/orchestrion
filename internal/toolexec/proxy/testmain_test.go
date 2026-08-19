@@ -23,7 +23,7 @@ func TestTestMainMetadata(t *testing.T) {
 	require.NoError(t, err)
 	contents := []byte("\x00go120ld\x01\x23\x45\x67\x89\xab\xcd\xef")
 	writer := ar.NewWriter(file)
-	require.NoError(t, writer.WriteHeader(&ar.Header{Name: "__.PKGDEF", Mode: 0o644, Size: int64(len(contents))}))
+	require.NoError(t, writer.WriteHeader(&ar.Header{Name: "_go_.o", Mode: 0o644, Size: int64(len(contents))}))
 	_, err = writer.Write(contents)
 	require.NoError(t, err)
 	require.NoError(t, file.Close())

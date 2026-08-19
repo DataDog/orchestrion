@@ -56,7 +56,7 @@ func Fingerprint(filename string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("reading Go archive %q: %w", filename, err)
 		}
-		if hdr.Name != "__.PKGDEF" && hdr.Name != "_go_.o" {
+		if hdr.Name != "_go_.o" {
 			continue
 		}
 		data, err := io.ReadAll(io.LimitReader(rd, objectHeaderPrefix))

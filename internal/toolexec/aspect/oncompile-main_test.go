@@ -20,6 +20,40 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestResolveReverseTestVariantsSkipsProvenanceWithoutTargetImporter(t *testing.T) {
+	const target = "example.com/subject"
+	for _, tt := range []struct {
+		name              string
+		withTargetPackage bool
+	}{
+		{name: "package under test", withTargetPackage: true},
+		{name: "external tests only"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := importcfg.ImportConfig{PackageFile: map[string]string{
+				"example.com/parent": writeLinkDepsArchive(t, "parent.a", "example.com/other", linkdeps.ImportDependency),
+			}}
+			if tt.withTargetPackage {
+				reg.PackageFile[target] = writeLinkDepsArchive(t, "subject.a", "", linkdeps.RelocationDependency)
+			}
+
+			packageFiles, roots, err := resolveReverseTestVariants(
+				context.Background(),
+				&reg,
+				target,
+				t.TempDir(),
+				func() (pkgs.ResolvedArchive, error) {
+					t.Fatal("unexpected target provenance resolution")
+					return pkgs.ResolvedArchive{}, nil
+				},
+			)
+			require.NoError(t, err)
+			assert.Empty(t, packageFiles)
+			assert.Empty(t, roots)
+		})
+	}
+}
+
 func TestInitialLinkDependenciesRetainParent(t *testing.T) {
 	archive := writeLinkDepsArchive(t, "parent.a", "example.com/dependency", linkdeps.ImportDependency)
 	reg := importcfg.ImportConfig{PackageFile: map[string]string{"example.com/parent": archive}}

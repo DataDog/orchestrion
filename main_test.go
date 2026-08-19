@@ -234,6 +234,18 @@ func TestValue(t *testing.T) {
 	}
 }
 `)
+	writeFile("testonly/testonly_test.go", `package testonly
+
+import "testing"
+
+func TestOnly(t *testing.T) {}
+`)
+	writeFile("externaltestonly/external_test.go", `package externaltestonly_test
+
+import "testing"
+
+func TestOnly(t *testing.T) {}
+`)
 	writeFile("middle/middle.go", `package middle
 
 import "example.com/externaltestvariant/subject"
@@ -249,6 +261,10 @@ func Value() int { return middle.Value() }
 
 	orchestrion := buildOrchestrion(t)
 	run.exec(t, orchestrion, "go", "test", "-a", "./subject")
+	// Packages with only test files have no ordinary export archive. An
+	// external-test-only package also has no package-under-test importcfg entry.
+	// Do not resolve provenance or require that entry without a synthetic importer.
+	run.exec(t, orchestrion, "go", "test", "-a", "./testonly", "./externaltestonly")
 	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./subject")
 	run.exec(t, orchestrion, "go", "test", "-a", "-cover", "-coverpkg=./...", "./subject")
 }

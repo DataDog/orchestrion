@@ -298,18 +298,6 @@ func resolveReverseTestVariants(
 	if testVariantFor == "" {
 		return nil, nil, nil
 	}
-	selected, err := resolveTestTargetProvenance()
-	if err != nil {
-		return nil, nil, fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
-	}
-	if selected.ForTest != testVariantFor {
-		return nil, nil, nil
-	}
-	authoritative := reg.PackageFile[testVariantFor]
-	if authoritative == "" {
-		return nil, nil, fmt.Errorf("test-main import configuration is missing the authoritative package-under-test archive %q", testVariantFor)
-	}
-
 	parents := make([]string, 0, len(reg.PackageFile))
 	for parent := range reg.PackageFile {
 		parents = append(parents, parent)
@@ -317,6 +305,7 @@ func resolveReverseTestVariants(
 	sort.Strings(parents)
 	result := make(map[string]string)
 	var roots []string
+	var selected *pkgs.ResolvedArchive
 	for _, parent := range parents {
 		if parent == testVariantFor {
 			continue
@@ -328,6 +317,20 @@ func resolveReverseTestVariants(
 		}
 		if !deps.Contains(testVariantFor) || deps.Kind(testVariantFor) != linkdeps.ImportDependency {
 			continue
+		}
+		if selected == nil {
+			resolved, err := resolveTestTargetProvenance()
+			if err != nil {
+				return nil, nil, fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+			}
+			selected = &resolved
+		}
+		if selected.ForTest != testVariantFor {
+			return nil, nil, nil
+		}
+		authoritative := reg.PackageFile[testVariantFor]
+		if authoritative == "" {
+			return nil, nil, fmt.Errorf("test-main import configuration is missing the authoritative package-under-test archive %q", testVariantFor)
 		}
 		variants, err := resolveReversePackageFilesForTest(ctx, parent, testVariantFor, authoritative, workDir)
 		if err != nil {

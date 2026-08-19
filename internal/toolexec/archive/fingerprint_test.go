@@ -22,9 +22,14 @@ func TestFingerprint(t *testing.T) {
 	_, err = file.WriteString("!<arch>\n")
 	require.NoError(t, err)
 	writer := ar.NewWriter(file)
-	contents := []byte("go object header\n\x00go120ld\x01\x23\x45\x67\x89\xab\xcd\xeftrailing data")
-	require.NoError(t, writer.WriteHeader(&ar.Header{Name: "__.PKGDEF", Mode: 0o644, Size: int64(len(contents))}))
-	_, err = writer.Write(contents)
+	packageDefinition := []byte("exported string constant: \x00go120ldpoisoned")
+	require.NoError(t, writer.WriteHeader(&ar.Header{Name: "__.PKGDEF", Mode: 0o644, Size: int64(len(packageDefinition))}))
+	_, err = writer.Write(packageDefinition)
+	require.NoError(t, err)
+
+	object := []byte("go object header\n\x00go120ld\x01\x23\x45\x67\x89\xab\xcd\xeftrailing data")
+	require.NoError(t, writer.WriteHeader(&ar.Header{Name: "_go_.o", Mode: 0o644, Size: int64(len(object))}))
+	_, err = writer.Write(object)
 	require.NoError(t, err)
 	require.NoError(t, file.Close())
 
