@@ -128,7 +128,7 @@ func rejectSyntheticVariantDependency(parent string, dependency string, testVari
 	if parent == "" || !requiresRebuild || testVariantFor == "" || selected.ForTest != testVariantFor {
 		return nil
 	}
-	return fmt.Errorf("synthetic dependency %q discovered through archive %q requires a test variant for %q; an archive in that synthetic dependency closure was compiled without this edge in Go's package graph and cannot safely use the variant", dependency, parent, testVariantFor)
+	return fmt.Errorf("synthetic dependency %q discovered through archive %q requires a test variant for %q; an archive in that synthetic dependency closure was compiled without this edge in Go's package graph and cannot safely use the variant. This can be fixed by moving the tests into a separate '*_test' package", dependency, parent, testVariantFor)
 }
 
 func mergeResolvedArchives(reg *importcfg.ImportConfig, archives pkgs.ResolveResponse, testVariantFor string) (map[string]string, error) {
