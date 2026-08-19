@@ -83,11 +83,24 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	}
 
 	resolveTestTargetProvenance := newTestTargetProvenanceResolver(ctx, testVariantFor, cmd.WorkDir)
-	stack, err := initialLinkDependencies(ctx, &reg, testVariantFor, resolveTestTargetProvenance)
+	reversePackageFiles, reverseRoots, err := resolveReverseTestVariants(ctx, &reg, testVariantFor, cmd.WorkDir, resolveTestTargetProvenance)
+	if err != nil {
+		return err
+	}
+	if len(reversePackageFiles) > 0 {
+		cmd.SetTestMainPackageFiles(reversePackageFiles)
+	}
+	for _, root := range reverseRoots {
+		cmd.AddTestMainReverseRoot(root)
+	}
+	stack, err := initialLinkDependencies(ctx, &reg, testVariantFor, resolveTestTargetProvenance, reversePackageFiles)
 	if err != nil {
 		return fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
 	}
 	if len(stack) == 0 {
+		if len(reversePackageFiles) > 0 {
+			return writeMainImportConfig(log, &reg, cmd.Flags.ImportCfg)
+		}
 		return nil
 	}
 
@@ -112,13 +125,35 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		if err != nil {
 			return fmt.Errorf("resolving %q: %w", item.path, err)
 		}
+		requiresReverse, err := resolvedClosureImportsTarget(ctx, deps, testVariantFor)
+		if err != nil {
+			return fmt.Errorf("checking resolved closure for %q: %w", item.path, err)
+		}
+		if testVariantFor != "" && requiresReverse {
+			variants, err := resolveReversePackageFilesForTest(ctx, item.path, testVariantFor, reg.PackageFile[testVariantFor], cmd.WorkDir)
+			if err != nil {
+				return fmt.Errorf("rebuilding synthetic importer %q for tests of %q: %w", item.path, testVariantFor, err)
+			}
+			deps = variants
+			if reversePackageFiles == nil {
+				reversePackageFiles = make(map[string]string)
+				cmd.SetTestMainPackageFiles(reversePackageFiles)
+			}
+			for path, archive := range variants {
+				reversePackageFiles[path] = archive.ExportFile
+			}
+			cmd.AddTestMainReverseRoot(item.path)
+		}
 		for path, archive := range deps {
 			if current, found := processed[path]; !found || current.ForTest == "" || archive.ForTest != "" {
 				processed[path] = archive
 			}
 		}
-		if err := rejectResolvedSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
-			return err
+		parentRebuilt := reversePackageFiles[item.parent] != "" || processed[item.parent].ForTest == testVariantFor
+		if !parentRebuilt {
+			if err := rejectResolvedSyntheticVariantDependency(item.parent, item.path, testVariantFor, item.kind == linkdeps.ImportDependency, deps); err != nil {
+				return err
+			}
 		}
 		changed, err := mergeResolvedArchives(&reg, deps, testVariantFor)
 		if err != nil {
@@ -137,6 +172,9 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 			}
 			for _, tDep := range tDeps.Dependencies() {
 				kind := tDeps.Kind(tDep)
+				if tDep == testVariantFor && kind == linkdeps.ImportDependency && resolved.ForTest == testVariantFor {
+					continue
+				}
 				candidate := pendingLinkDep{path: tDep, parent: p, kind: kind}
 				if current, found := pending[tDep]; found {
 					cmd.LinkDeps.Add(tDep, candidate.kind)
@@ -144,12 +182,18 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 					continue
 				}
 				if previous, found := processed[tDep]; found {
+					if resolved.ForTest == testVariantFor {
+						continue
+					}
 					if err := rejectSyntheticVariantDependency(candidate.parent, candidate.path, testVariantFor, candidate.kind == linkdeps.ImportDependency, previous); err != nil {
 						return err
 					}
 					continue
 				}
 				if reg.PackageFile[tDep] != "" {
+					if resolved.ForTest == testVariantFor {
+						continue
+					}
 					if tDep == testVariantFor && kind == linkdeps.ImportDependency {
 						selected, err := resolveTestTargetProvenance()
 						if err != nil {
@@ -169,17 +213,8 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 		}
 	}
 
-	// We back up the original ImportCfg file only if there's not already such a file (could have been created by OnCompile)
-	backupFile := cmd.Flags.ImportCfg + ".original"
-	if _, err := os.Stat(backupFile); errors.Is(err, os.ErrNotExist) {
-		log.Trace().Str("path", cmd.Flags.ImportCfg).Msg("Backing up original file")
-		if err := os.Rename(cmd.Flags.ImportCfg, backupFile); err != nil {
-			return fmt.Errorf("renaming %q: %w", cmd.Flags.ImportCfg, err)
-		}
-	}
-	log.Trace().Str("path", cmd.Flags.ImportCfg).Msg("Writing updated file")
-	if err := reg.WriteFile(cmd.Flags.ImportCfg); err != nil {
-		return fmt.Errorf("writing updated %q: %w", cmd.Flags.ImportCfg, err)
+	if err := writeMainImportConfig(log, &reg, cmd.Flags.ImportCfg); err != nil {
+		return err
 	}
 
 	// Generate a synthetic source file with blank imports to link-time
@@ -215,11 +250,116 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	return nil
 }
 
+func writeMainImportConfig(log zerolog.Logger, reg *importcfg.ImportConfig, filename string) error {
+	// We back up the original ImportCfg file only if there is not already such a
+	// file; OnCompile may have created it before main-specific processing.
+	backupFile := filename + ".original"
+	if _, err := os.Stat(backupFile); errors.Is(err, os.ErrNotExist) {
+		log.Trace().Str("path", filename).Msg("Backing up original file")
+		if err := os.Rename(filename, backupFile); err != nil {
+			return fmt.Errorf("renaming %q: %w", filename, err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("checking import configuration backup %q: %w", backupFile, err)
+	}
+	log.Trace().Str("path", filename).Msg("Writing updated file")
+	if err := reg.WriteFile(filename); err != nil {
+		return fmt.Errorf("writing updated %q: %w", filename, err)
+	}
+	return nil
+}
+
+func resolvedClosureImportsTarget(ctx context.Context, archives pkgs.ResolveResponse, target string) (bool, error) {
+	if target == "" {
+		return false, nil
+	}
+	for path, resolved := range archives {
+		if resolved.ForTest == target {
+			continue
+		}
+		deps, err := linkdeps.FromArchive(ctx, resolved.ExportFile)
+		if err != nil {
+			return false, fmt.Errorf("reading %s from %s[%s]: %w", linkdeps.Filename, path, resolved.ExportFile, err)
+		}
+		if deps.Contains(target) && deps.Kind(target) == linkdeps.ImportDependency {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func resolveReverseTestVariants(
+	ctx context.Context,
+	reg *importcfg.ImportConfig,
+	testVariantFor string,
+	workDir string,
+	resolveTestTargetProvenance func() (pkgs.ResolvedArchive, error),
+) (map[string]string, []string, error) {
+	if testVariantFor == "" {
+		return nil, nil, nil
+	}
+	parents := make([]string, 0, len(reg.PackageFile))
+	for parent := range reg.PackageFile {
+		parents = append(parents, parent)
+	}
+	sort.Strings(parents)
+	result := make(map[string]string)
+	var roots []string
+	var selected *pkgs.ResolvedArchive
+	for _, parent := range parents {
+		if parent == testVariantFor {
+			continue
+		}
+		archive := reg.PackageFile[parent]
+		deps, err := linkdeps.FromArchive(ctx, archive)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading %s from %s=%s: %w", linkdeps.Filename, parent, archive, err)
+		}
+		if !deps.Contains(testVariantFor) || deps.Kind(testVariantFor) != linkdeps.ImportDependency {
+			continue
+		}
+		if selected == nil {
+			resolved, err := resolveTestTargetProvenance()
+			if err != nil {
+				return nil, nil, fmt.Errorf("resolving test target provenance for %q: %w", testVariantFor, err)
+			}
+			selected = &resolved
+		}
+		if selected.ForTest != testVariantFor {
+			return nil, nil, nil
+		}
+		authoritative := reg.PackageFile[testVariantFor]
+		if authoritative == "" {
+			return nil, nil, fmt.Errorf("test-main import configuration is missing the authoritative package-under-test archive %q", testVariantFor)
+		}
+		variants, err := resolveReversePackageFilesForTest(ctx, parent, testVariantFor, authoritative, workDir)
+		if err != nil {
+			return nil, nil, fmt.Errorf("rebuilding synthetic importer %q for tests of %q: %w", parent, testVariantFor, err)
+		}
+		if variants[parent].ForTest != testVariantFor {
+			return nil, nil, fmt.Errorf("reverse test variant resolution did not rebuild synthetic importer %q for %q", parent, testVariantFor)
+		}
+		changed, err := mergeResolvedArchives(reg, variants, testVariantFor)
+		if err != nil {
+			return nil, nil, err
+		}
+		roots = append(roots, parent)
+		for path, archive := range changed {
+			result[path] = archive
+		}
+	}
+	if len(result) == 0 {
+		return nil, nil, nil
+	}
+	return result, roots, nil
+}
+
 func initialLinkDependencies(
 	ctx context.Context,
 	reg *importcfg.ImportConfig,
 	testVariantFor string,
 	resolveTestTargetProvenance func() (pkgs.ResolvedArchive, error),
+	reversePackageFiles map[string]string,
 ) ([]pendingLinkDep, error) {
 	byPath := make(map[string]pendingLinkDep)
 	parents := make([]string, 0, len(reg.PackageFile))
@@ -240,6 +380,9 @@ func initialLinkDependencies(
 				return nil, fmt.Errorf("test-main import configuration is missing the authoritative package-under-test archive %q", testVariantFor)
 			}
 			if satisfied {
+				if path == testVariantFor && kind == linkdeps.ImportDependency && reversePackageFiles[parent] == archive {
+					continue
+				}
 				if path == testVariantFor && kind == linkdeps.ImportDependency {
 					selected, err := resolveTestTargetProvenance()
 					if err != nil {

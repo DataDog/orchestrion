@@ -26,6 +26,26 @@ func resolvePackageFiles(ctx context.Context, importPath string, workDir string)
 }
 
 func resolvePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, workDir string) (_ pkgs.ResolveResponse, err error) {
+	return resolvePackageFilesRequest(ctx, importPath, packageResolveOptions{testVariantFor: testVariantFor, workDir: workDir})
+}
+
+func resolveReversePackageFilesForTest(ctx context.Context, importPath string, testVariantFor string, authoritativeTarget string, workDir string) (_ pkgs.ResolveResponse, err error) {
+	return resolvePackageFilesRequest(ctx, importPath, packageResolveOptions{
+		testVariantFor:      testVariantFor,
+		authoritativeTarget: authoritativeTarget,
+		reverse:             true,
+		workDir:             workDir,
+	})
+}
+
+type packageResolveOptions struct {
+	testVariantFor      string
+	authoritativeTarget string
+	reverse             bool
+	workDir             string
+}
+
+func resolvePackageFilesRequest(ctx context.Context, importPath string, options packageResolveOptions) (_ pkgs.ResolveResponse, err error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "aspect.resolvePackageFiles",
 		tracer.ResourceName(importPath),
 	)
@@ -36,17 +56,19 @@ func resolvePackageFilesForTest(ctx context.Context, importPath string, testVari
 		return nil, err
 	}
 
-	conn, err := client.FromEnvironment(ctx, workDir)
+	conn, err := client.FromEnvironment(ctx, options.workDir)
 	if err != nil {
 		return nil, err
 	}
 
 	req := pkgs.NewResolveRequest(cwd, importPath)
-	req.TestVariantFor = testVariantFor
-	if workDir != "" {
+	req.TestVariantFor = options.testVariantFor
+	req.ReverseTestVariant = options.reverse
+	req.AuthoritativeTarget = options.authoritativeTarget
+	if options.workDir != "" {
 		// Nest the future GOTMPDIR under this $WORK directory, so that builds with `-work` are nested,
 		// and the root work tree contains all child work trees involved in resolutions.
-		req.TempDir = filepath.Join(workDir, "__tmp__")
+		req.TempDir = filepath.Join(options.workDir, "__tmp__")
 	}
 	archives, err := client.Request(
 		ctx,
@@ -106,7 +128,7 @@ func rejectSyntheticVariantDependency(parent string, dependency string, testVari
 	if parent == "" || !requiresRebuild || testVariantFor == "" || selected.ForTest != testVariantFor {
 		return nil
 	}
-	return fmt.Errorf("synthetic dependency %q discovered through archive %q requires a test variant for %q; an archive in that synthetic dependency closure was compiled without this edge in Go's package graph and cannot safely use the variant", dependency, parent, testVariantFor)
+	return fmt.Errorf("synthetic dependency %q discovered through archive %q requires a test variant for %q; an archive in that synthetic dependency closure was compiled without this edge in Go's package graph and cannot safely use the variant. This can be fixed by moving the tests into a separate '*_test' package", dependency, parent, testVariantFor)
 }
 
 func mergeResolvedArchives(reg *importcfg.ImportConfig, archives pkgs.ResolveResponse, testVariantFor string) (map[string]string, error) {

@@ -234,6 +234,18 @@ func TestValue(t *testing.T) {
 	}
 }
 `)
+	writeFile("testonly/testonly_test.go", `package testonly
+
+import "testing"
+
+func TestOnly(t *testing.T) {}
+`)
+	writeFile("externaltestonly/external_test.go", `package externaltestonly_test
+
+import "testing"
+
+func TestOnly(t *testing.T) {}
+`)
 	writeFile("middle/middle.go", `package middle
 
 import "example.com/externaltestvariant/subject"
@@ -249,8 +261,134 @@ func Value() int { return middle.Value() }
 
 	orchestrion := buildOrchestrion(t)
 	run.exec(t, orchestrion, "go", "test", "-a", "./subject")
+	// Packages with only test files have no ordinary export archive. An
+	// external-test-only package also has no package-under-test importcfg entry.
+	// Do not resolve provenance or require that entry without a synthetic importer.
+	run.exec(t, orchestrion, "go", "test", "-a", "./testonly", "./externaltestonly")
 	run.exec(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./subject")
 	run.exec(t, orchestrion, "go", "test", "-a", "-cover", "-coverpkg=./...", "./subject")
+}
+
+func TestSyntheticImportDependencyWithExternalTests(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+	writeFile := func(name, contents string) {
+		t.Helper()
+		path := filepath.Join(run.dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	writeFile("go.mod", `module example.com/reversetestvariant
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => `+rootDir+"\n")
+	writeFile("orchestrion.tool.go", `//go:build tools
+
+package tools
+
+import (
+	_ "example.com/reversetestvariant/instrumentation"
+	_ "github.com/DataDog/orchestrion"
+)
+`)
+	writeFile("instrumentation/instrumentation.go", "package instrumentation\n")
+	writeFile("instrumentation/orchestrion.yml", `meta:
+  name: Reversed external test variant import
+  description: Injects an import of the covered package under test.
+aspects:
+  - id: reversed-external-test-variant
+    join-point:
+      all-of:
+        - import-path: example.com/reversetestvariant/importer
+        - function-body:
+            function:
+              - name: Value
+    advice:
+      - inject-declarations:
+          imports:
+            subject: example.com/reversetestvariant/subject
+          template: |-
+            func init() {
+              subject.Instrumented++
+            }
+`)
+	writeFile("subject/subject.go", `package subject
+
+var Instrumented int
+
+func Value() int { return 42 }
+`)
+	writeFile("subject/subject_test.go", `package subject_test
+
+import (
+	"testing"
+
+	"example.com/reversetestvariant/helper"
+	"example.com/reversetestvariant/subject"
+)
+
+func TestValue(t *testing.T) {
+	if got := helper.Value(); got != 42 {
+		t.Fatalf("helper.Value() = %d, want 42", got)
+	}
+	if got := subject.Instrumented; got != 1 {
+		t.Fatalf("subject.Instrumented = %d, want 1", got)
+	}
+}
+`)
+	writeFile("helper/helper.go", `package helper
+
+import "example.com/reversetestvariant/importer"
+
+func Value() int { return importer.Value() }
+`)
+	writeFile("importer/importer.go", `package importer
+
+import "fmt"
+
+func Value() int {
+	if fmt.Sprint(42) == "42" {
+		return 42
+	}
+	return 0
+}
+`)
+	orchestrion := buildOrchestrion(t)
+	sharedCache := t.TempDir()
+	run.execWithCache(t, sharedCache, orchestrion, "go", "test", "./subject")
+	run.execWithCache(t, sharedCache, orchestrion, "go", "test", "-coverprofile="+filepath.Join(run.dir, "coverage.out"), "./...")
+	// Reverse variants must not poison ordinary action IDs, and their flavored
+	// action IDs must remain reusable by subsequent covered builds.
+	run.execWithCache(t, sharedCache, orchestrion, "go", "test", "./subject")
+	run.execWithCache(t, sharedCache, orchestrion, "go", "test", "-coverprofile="+filepath.Join(run.dir, "coverage-cached.out"), "./...")
+	run.exec(t, orchestrion, "go", "test", "-cover", "-coverpkg=./...", "./subject")
+
+	// In-package tests make the package under test part of the importer up-set.
+	// Rebuilding that cycle is unsafe, so preserve the existing explicit failure
+	// instead of allowing a linker fingerprint mismatch.
+	writeFile("subject/subject_test.go", `package subject
+
+import (
+	"testing"
+
+	"example.com/reversetestvariant/helper"
+)
+
+func TestValue(t *testing.T) {
+	if got := helper.Value(); got != 42 {
+		t.Fatalf("helper.Value() = %d, want 42", got)
+	}
+	if got := Instrumented; got != 1 {
+		t.Fatalf("Instrumented = %d, want 1", got)
+	}
+}
+`)
+	output := run.execError(t, orchestrion, "go", "test", "-a", "-coverprofile="+filepath.Join(run.dir, "same-package-coverage.out"), "./...")
+	require.Contains(t, output, "cannot safely use the variant")
+	require.NotContains(t, output, "fingerprint mismatch")
 }
 
 func TestAspectsApplyToTestVariants(t *testing.T) {
@@ -574,6 +712,21 @@ func (h *harness) instrumented(b *testing.B) {
 }
 
 func (r *runner) exec(tb testing.TB, name string, args ...string) {
+	r.execWithCache(tb, tb.TempDir(), name, args...)
+}
+
+func (r *runner) execWithCache(tb testing.TB, cache string, name string, args ...string) {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = r.dir
+	cmd.Env = append(os.Environ(), "GOCACHE="+cache)
+	output := bytes.NewBuffer(make([]byte, 0, 4_096))
+	cmd.Stdout = output
+	cmd.Stderr = output
+
+	require.NoError(tb, cmd.Run(), "command failed: %s\n%s", cmd, output)
+}
+
+func (r *runner) execError(tb testing.TB, name string, args ...string) string {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = r.dir
 	cmd.Env = append(os.Environ(), "GOCACHE="+tb.TempDir())
@@ -581,7 +734,8 @@ func (r *runner) exec(tb testing.TB, name string, args ...string) {
 	cmd.Stdout = output
 	cmd.Stderr = output
 
-	require.NoError(tb, cmd.Run(), "command failed: %s\n%s", cmd, output)
+	require.Error(tb, cmd.Run(), "command succeeded unexpectedly: %s\n%s", cmd, output)
+	return output.String()
 }
 
 func (*harness) findLatestGithubReleaseTag(b *testing.B, owner string, repo string) string {

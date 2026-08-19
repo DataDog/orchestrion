@@ -65,11 +65,14 @@ func FromImportConfig(ctx context.Context, importcfg *importcfg.ImportConfig) (L
 		}
 
 		for dep, kind := range ld.deps {
-			if _, satisfied := importcfg.PackageFile[dep]; satisfied {
-				// This transitive link-time dependency is already satisfied at
-				// compile-time, so we don't need to carry it over.
+			if _, satisfied := importcfg.PackageFile[dep]; satisfied && kind == RelocationDependency {
+				// Satisfied relocation dependencies need no further link-time work.
 				continue
 			}
+			// Preserve compiler-import dependencies even when this package already
+			// satisfies them naturally. Test-main compilation needs this provenance
+			// to detect when a transitive synthetic importer was built against the
+			// ordinary package but the test binary selects a different variant.
 			res.Add(dep, kind)
 		}
 	}

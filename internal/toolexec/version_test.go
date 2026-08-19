@@ -110,6 +110,18 @@ func Test(t *testing.T) {
 		require.NotEmpty(t, final)
 		require.NotEqual(t, initial, final)
 		require.NotEqual(t, updated, final)
+
+		reverseEnvironment := filepath.Join(tmp, "reverse-environment.json")
+		require.NoError(t, os.WriteFile(reverseEnvironment, []byte(`{"flavor":"coverage-test","packageFiles":{"example.com/root":"/root.a"}}`), 0o644))
+		t.Setenv("ORCHESTRION_REVERSE_VARIANT", reverseEnvironment)
+		t.Setenv("ORCHESTRION_REVERSE_VARIANT_FLAVOR", "coverage-test")
+		reverseVariant := inDir(t, tmp, func() string {
+			v, err := ComputeVersion(ctx, cmd)
+			require.NoError(t, err)
+			return v
+		})
+		require.NotEqual(t, final, reverseVariant)
+		require.Contains(t, reverseVariant, ":reverse-test-variant=coverage-test")
 	})
 
 	t.Run("workspace", func(t *testing.T) {
