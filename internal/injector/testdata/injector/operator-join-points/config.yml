@@ -60,6 +60,7 @@ code: |-
     _ = a + ("x" + "y")
     _ = "x" + "y"
     _ = s[low:high]
+    _ = s[1.0:]
     _ = data[low:high]
     _ = data[low:high:cap(data)]
     convertedString := string(data)

@@ -9,6 +9,7 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"go/types"
 
 	"github.com/dave/dst"
 	"github.com/goccy/go-yaml/ast"
@@ -65,6 +66,15 @@ func (s *sliceExpression) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
+	for _, bound := range []dst.Expr{expr.Low, expr.High, expr.Max} {
+		if bound == nil {
+			continue
+		}
+		basic, ok := ctx.ResolveType(bound).(*types.Basic)
+		if ok && (basic.Kind() == types.UntypedFloat || basic.Kind() == types.UntypedComplex) {
+			return false
+		}
+	}
 	operandType := ctx.ResolveType(expr.X)
 	switch s.Operand {
 	case SliceExpressionOperandString:

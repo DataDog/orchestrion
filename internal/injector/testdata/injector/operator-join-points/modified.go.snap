@@ -27,18 +27,23 @@ func operators(a, b, c string, s namedString, data namedBytes, low, high int) {
       s[low:high])
   _ =
 //line <generated>:1
-    markBytes(
+    markString(
 //line input.go:15
-      data[low:high])
+      s[1.0:])
   _ =
 //line <generated>:1
     markBytes(
 //line input.go:16
+      data[low:high])
+  _ =
+//line <generated>:1
+    markBytes(
+//line input.go:17
       data[low:high:cap(data)])
   convertedString :=
 //line <generated>:1
     markString(
-//line input.go:17
+//line input.go:18
       string(data))
   convertedBytes := []byte(s)
   _, _ = convertedString, convertedBytes
@@ -48,13 +53,13 @@ func operators(a, b, c string, s namedString, data namedBytes, low, high int) {
 func returned(data []byte) string {
   return markString(//line <generated>:1
 
-//line input.go:24
+//line input.go:25
     string(data))
 }
 
 func returnedBytes(value string) []byte {
   return markBytes(//line <generated>:1
 
-//line input.go:28
+//line input.go:29
     []byte(value))
 }
