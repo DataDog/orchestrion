@@ -35,4 +35,26 @@ func operators(a, b, c string, s namedString, data namedBytes, low, high int) {
     markBytes(
 //line input.go:16
       data[low:high:cap(data)])
+  convertedString :=
+//line <generated>:1
+    markString(
+//line input.go:17
+      string(data))
+  convertedBytes := []byte(s)
+  _, _ = convertedString, convertedBytes
+  _ = len(string(data))
+}
+
+func returned(data []byte) string {
+  return markString(//line <generated>:1
+
+//line input.go:24
+    string(data))
+}
+
+func returnedBytes(value string) []byte {
+  return markBytes(//line <generated>:1
+
+//line input.go:28
+    []byte(value))
 }

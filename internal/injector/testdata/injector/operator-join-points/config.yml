@@ -21,6 +21,22 @@ aspects:
     advice:
       - wrap-expression:
           template: markString({{ .AST }})
+  - id: bytes-to-string
+    join-point:
+      type-conversion:
+        from: bytes
+        to: string
+    advice:
+      - wrap-expression:
+          template: markString({{ .AST }})
+  - id: string-to-bytes
+    join-point:
+      type-conversion:
+        from: string
+        to: bytes
+    advice:
+      - wrap-expression:
+          template: markBytes({{ .AST }})
   - id: byte-slice
     join-point:
       slice-expression:
@@ -46,4 +62,16 @@ code: |-
     _ = s[low:high]
     _ = data[low:high]
     _ = data[low:high:cap(data)]
+    convertedString := string(data)
+    convertedBytes := []byte(s)
+    _, _ = convertedString, convertedBytes
+    _ = len(string(data))
+  }
+
+  func returned(data []byte) string {
+    return string(data)
+  }
+
+  func returnedBytes(value string) []byte {
+    return []byte(value)
   }

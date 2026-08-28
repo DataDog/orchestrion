@@ -382,6 +382,7 @@
         { "$ref": "#/$defs/join-point/struct-definition" },
         { "$ref": "#/$defs/join-point/struct-literal" },
         { "$ref": "#/$defs/join-point/test-main" },
+        { "$ref": "#/$defs/join-point/type-conversion" },
         { "$ref": "#/$defs/join-point/value-declaration" }
       ]
     },
@@ -920,6 +921,27 @@
             "type": "boolean"
           }
         }
+      },
+      "type-conversion": {
+        "required": ["type-conversion"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "type-conversion": {
+            "title": "Target string and byte conversions",
+            "markdownDescription": "Matches explicit byte-to-string conversions in non-discarded assignment, value declaration, and return contexts. String-to-byte conversions match only direct return contexts, where the result necessarily escapes. Optimized calls, comparisons, ranges, map keys, concatenations, and other parent contexts are excluded.",
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string", "enum": ["string", "bytes"] },
+              "to": { "type": "string", "enum": ["string", "bytes"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          { "type-conversion": { "from": "bytes", "to": "string" } },
+          { "type-conversion": { "from": "string", "to": "bytes" } }
+        ]
       },
       "value-declaration": {
         "required": ["value-declaration"],

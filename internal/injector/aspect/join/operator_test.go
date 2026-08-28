@@ -57,6 +57,28 @@ func TestStringConcatYAML(t *testing.T) {
 	}
 }
 
+func TestTypeConversionValidationYAMLAndHash(t *testing.T) {
+	_, err := TypeConversion(ConversionString, ConversionString)
+	require.Error(t, err)
+	unmarshal := unmarshalers["type-conversion"]
+	require.NotNil(t, unmarshal)
+	var value any
+	require.NoError(t, yaml.Unmarshal([]byte(`{from: bytes, to: string}`), &value))
+	node, err := yaml.ValueToNode(value)
+	require.NoError(t, err)
+	point, err := unmarshal(gocontext.Background(), node)
+	require.NoError(t, err)
+	conversion := point.(*typeConversion)
+	require.Equal(t, ConversionBytes, conversion.From)
+	require.Equal(t, ConversionString, conversion.To)
+	first, second := fingerprint.New(), fingerprint.New()
+	require.NoError(t, conversion.Hash(first))
+	reverse, err := TypeConversion(ConversionString, ConversionBytes)
+	require.NoError(t, err)
+	require.NoError(t, reverse.Hash(second))
+	require.NotEqual(t, first.Finish(), second.Finish())
+}
+
 func TestSliceExpressionYAMLAndHash(t *testing.T) {
 	unmarshal := unmarshalers["slice-expression"]
 	require.NotNil(t, unmarshal)
