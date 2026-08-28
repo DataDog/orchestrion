@@ -1,0 +1,49 @@
+%YAML 1.1
+---
+aspects:
+  - id: maximal-string-concat
+    join-point:
+      string-concat:
+        min-operands: 2
+        max-operands: 4
+    advice:
+      - wrap-expression:
+          template: |-
+            markConcat(
+              {{- range .StringConcatOperands }}
+              {{ . }},
+              {{- end }}
+            )
+  - id: string-slice
+    join-point:
+      slice-expression:
+        operand: string
+    advice:
+      - wrap-expression:
+          template: markString({{ .AST }})
+  - id: byte-slice
+    join-point:
+      slice-expression:
+        operand: bytes
+    advice:
+      - wrap-expression:
+          template: markBytes({{ .AST }})
+
+code: |-
+  package test
+
+  type namedString string
+  type namedBytes []byte
+
+  func markConcat(values ...string) string { return "" }
+  func markString[T ~string](value T) T { return value }
+  func markBytes[T ~[]byte](value T) T { return value }
+
+  func operators(a, b, c string, s namedString, data namedBytes, low, high int) {
+    _ = a + b + c
+    _ = a + ("x" + "y")
+    _ = "x" + "y"
+    _ = s[low:high]
+    _ = data[low:high]
+    _ = data[low:high:cap(data)]
+  }

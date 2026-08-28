@@ -1,0 +1,38 @@
+//line input.go:1:1
+package test
+
+type namedString string
+type namedBytes []byte
+
+func markConcat(values ...string) string { return "" }
+func markString[T ~string](value T) T    { return value }
+func markBytes[T ~[]byte](value T) T     { return value }
+
+func operators(a, b, c string, s namedString, data namedBytes, low, high int) {
+  _ =
+//line <generated>:1
+    markConcat(
+//line input.go:11
+      a, b, c)
+  _ =
+//line <generated>:1
+    markConcat(
+//line input.go:12
+      a, ("x" + "y"))
+  _ = "x" + "y"
+  _ =
+//line <generated>:1
+    markString(
+//line input.go:14
+      s[low:high])
+  _ =
+//line <generated>:1
+    markBytes(
+//line input.go:15
+      data[low:high])
+  _ =
+//line <generated>:1
+    markBytes(
+//line input.go:16
+      data[low:high:cap(data)])
+}

@@ -373,6 +373,8 @@
         { "$ref": "#/$defs/join-point/function-call" },
         { "$ref": "#/$defs/join-point/import-path" },
         { "$ref": "#/$defs/join-point/method-call" },
+        { "$ref": "#/$defs/join-point/slice-expression" },
+        { "$ref": "#/$defs/join-point/string-concat" },
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
@@ -632,6 +634,60 @@
         "examples": [
           { "import-path": "net/http" },
           { "import-path": "github.com/gorilla/mux" }
+        ]
+      },
+      "slice-expression": {
+        "required": ["slice-expression"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "slice-expression": {
+            "title": "Target typed slice expressions",
+            "markdownDescription": "The `slice-expression` join point matches slice expressions whose operand has the selected core type.",
+            "type": "object",
+            "required": ["operand"],
+            "properties": {
+              "operand": {
+                "description": "The operand core type to match.",
+                "type": "string",
+                "enum": ["string", "bytes"]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          { "slice-expression": { "operand": "string" } },
+          { "slice-expression": { "operand": "bytes" } }
+        ]
+      },
+      "string-concat": {
+        "required": ["string-concat"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "string-concat": {
+            "title": "Target maximal string concatenations",
+            "markdownDescription": "The `string-concat` join point matches one maximal non-constant string addition chain within the configured operand bounds.",
+            "type": "object",
+            "properties": {
+              "min-operands": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 16,
+                "default": 2
+              },
+              "max-operands": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 16,
+                "default": 16
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          { "string-concat": {} },
+          { "string-concat": { "min-operands": 2, "max-operands": 8 } }
         ]
       },
       "method-call": {
