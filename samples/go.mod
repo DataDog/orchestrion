@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/99designs/gqlgen v0.17.94
-	github.com/DataDog/orchestrion v1.12.0
+	github.com/DataDog/orchestrion v1.13.0
 	github.com/DataDog/orchestrion/instrument v1.12.0
 	github.com/IBM/sarama v1.60.1
 	github.com/Shopify/sarama v1.38.1
