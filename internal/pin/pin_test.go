@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -204,6 +205,64 @@ func main() { fmt.Println(uuid.NewString()) }
 		cmd.Dir = tmp
 		out, err := cmd.CombinedOutput()
 		require.NoError(t, err, string(out))
+	})
+
+	t.Run("prune-persists-to-tool-file", func(t *testing.T) {
+		// Regression test: pruneImports only mutated the in-memory AST; nothing
+		// ever wrote it back to `orchestrion.tool.go`, so a manually-added import
+		// to a package with no `orchestrion.yml` was silently kept on disk even
+		// though `go.mod` correctly dropped the now-unused requirement.
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/digitalocean/sample-golang" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		assert.NotContains(t, string(content), "github.com/digitalocean/sample-golang")
+
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
+	})
+
+	t.Run("no-prune-clears-marker-comment", func(t *testing.T) {
+		// Regression test: on the `-prune=false` path, `pruneImport` clears the
+		// `// integration` trailing comment on flagged imports (without removing
+		// them), but that mutation was never persisted either.
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/digitalocean/sample-golang" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true, NoPrune: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "github.com/digitalocean/sample-golang") {
+				continue
+			}
+			found = true
+			assert.NotContains(t, line, "integration", "the `// integration` marker should have been cleared, not just the in-memory copy")
+		}
+		assert.True(t, found, "the unnecessary import should still be present, since -prune=false only warns")
 	})
 
 	t.Run("empty-tool-dot-go", func(t *testing.T) {

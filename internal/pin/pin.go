@@ -147,6 +147,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
 	}
 
+	// pruneImports (and the NoPrune warning path) only mutate the in-memory AST;
+	// persist those changes now, regardless of whether anything was pruned, since
+	// the "keep" and NoPrune paths also update the `// integration` marker comments.
+	if err := writeUpdated(toolFile, dstFile); err != nil {
+		return fmt.Errorf("updating %q: %w", toolFile, err)
+	}
+
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
 		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
@@ -323,7 +330,15 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	for _, pkg := range pkgs {
 		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
-			pruned = pruneImport(importSet, pkg.PkgPath, err.Error(), opts) || pruned
+			// We failed to determine whether this package carries integration
+			// config, e.g. because a transitively-imported module fails to
+			// resolve for reasons unrelated to whether it has an
+			// orchestrion.yml/tool file (such as a monorepo-relative `replace`
+			// directive that only resolves inside its own source repository).
+			// "we don't know" is not the same as "there is no config": treating
+			// it as such would silently strip working integrations, so we leave
+			// the import untouched and only warn.
+			_, _ = fmt.Fprintf(opts.Writer, "unable to determine whether %q has a %s: %v\n", pkg.PkgPath, config.FilenameOrchestrionYML, err)
 			continue
 		}
 		if !hasConfig {
