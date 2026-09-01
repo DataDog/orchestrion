@@ -9,6 +9,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -144,6 +145,50 @@ func main() {}
 
 		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
 		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/skyrocknroll/go-mod-example", Version: "v0.0.0-20190130140558-29b3c92445e5"})
+	})
+
+	t.Run("vendor-inconsistent-after-integration-install", func(t *testing.T) {
+		// Regression test for https://github.com/DataDog/orchestrion/issues/687:
+		// `orchestrion pin` must not fail with "inconsistent vendoring" when
+		// `github.com/DataDog/orchestrion` is already required in `go.mod` (e.g.
+		// via a prior `go get`) but `vendor/` has not been re-synced yet, and
+		// installing the dd-trace-go integration mutates `go.mod` directly.
+		tmp := scaffold(t, map[string]string{"github.com/google/uuid": "v1.6.0"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "main.go"), []byte(`package main
+
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
+
+func main() { fmt.Println(uuid.NewString()) }
+`), 0o644))
+
+		// `go mod vendor` writes `vendor/` relative to the process's working
+		// directory (unlike `go mod edit`/`go mod tidy`, which only touch the
+		// designated `-modfile`), so we must chdir before invoking it.
+		chdir(t, tmp)
+
+		modfile := filepath.Join(tmp, "go.mod")
+		require.NoError(t, gomod.Run(ctx, "tidy", modfile, io.Discard))
+		require.NoError(t, gomod.Run(ctx, "vendor", modfile, io.Discard))
+
+		// Simulate `github.com/DataDog/orchestrion` already being required (e.g.
+		// by a prior `go get`) without `vendor/` having been re-synced yet.
+		rawTag, _ := version.TagInfo()
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard, "-require=github.com/DataDog/orchestrion@"+rawTag))
+
+		// WHEN
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
+
+		// THEN: `vendor/` must be left consistent with `go.mod`, or the `go
+		// build -mod vendor` that normally follows `orchestrion pin` would fail
+		// with the exact "inconsistent vendoring" error reported in #687.
+		cmd := exec.CommandContext(ctx, "go", "list", "-mod=vendor", "./...")
+		cmd.Dir = tmp
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
 	})
 
 	t.Run("empty-tool-dot-go", func(t *testing.T) {

@@ -296,7 +296,15 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	log := zerolog.Ctx(ctx)
 	pkgs, err := packages.Load(
 		&packages.Config{
-			BuildFlags: []string{"-toolexec="},
+			// This is a pure introspection step (determining which imports still
+			// have a matching orchestrion.yml/tool file), not a build of the final
+			// vendored artifact, so we resolve packages via the module cache
+			// (`-mod=mod`) instead of inheriting Go's vendor auto-detection.
+			// Otherwise, this call can fail with "inconsistent vendoring" if an
+			// earlier step (e.g. `ensure.RequiredIntegrations`) already mutated
+			// go.mod without re-vendoring; the module cache always has the
+			// orchestrion.yml files needed here, whereas `vendor/` never does.
+			BuildFlags: []string{"-toolexec=", "-mod=mod"},
 			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			Mode:       packages.NeedName | packages.NeedFiles,
 		},
