@@ -147,6 +147,21 @@ func main() {}
 		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/skyrocknroll/go-mod-example", Version: "v0.0.0-20190130140558-29b3c92445e5"})
 	})
 
+	t.Run("workspace-mode", func(t *testing.T) {
+		// Regression test: `-mod` may only be `readonly` or `vendor` while in
+		// workspace mode, so pruneImports's package resolution must disable
+		// workspace mode (GOWORK=off) rather than unconditionally forcing
+		// `-mod=mod`, or this fails for any project governed by a `go.work`
+		// file (e.g. etcd-style monorepos).
+		tmp := scaffold(t, make(map[string]string))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.work"), []byte("go "+runtime.Version()[2:6]+".0\n\nuse .\n"), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
+
+		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+	})
+
 	t.Run("vendor-inconsistent-after-integration-install", func(t *testing.T) {
 		// Regression test for https://github.com/DataDog/orchestrion/issues/687:
 		// `orchestrion pin` must not fail with "inconsistent vendoring" when

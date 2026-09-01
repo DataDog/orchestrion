@@ -305,8 +305,13 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 			// go.mod without re-vendoring; the module cache always has the
 			// orchestrion.yml files needed here, whereas `vendor/` never does.
 			BuildFlags: []string{"-toolexec=", "-mod=mod"},
-			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
-			Mode:       packages.NeedName | packages.NeedFiles,
+			// `-mod` may only be `readonly` or `vendor` while in workspace mode, so
+			// disable it here too (see [gomod.commandEnv] for why an ambient
+			// `go.work` file, e.g. in etcd-style monorepos, can otherwise put the
+			// target module in workspace mode).
+			Env:  append(os.Environ(), "GOWORK=off"),
+			Logf: func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
+			Mode: packages.NeedName | packages.NeedFiles,
 		},
 		importPaths...,
 	)
