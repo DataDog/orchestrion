@@ -265,6 +265,88 @@ import (
 		assert.True(t, found, "the unnecessary import should still be present, since -prune=false only warns")
 	})
 
+	t.Run("hasconfig-error-warns-and-keeps-import", func(t *testing.T) {
+		// Regression test: pruneImports must not treat a [config.HasConfig] error
+		// (e.g. because a transitively-imported module fails to resolve for
+		// reasons unrelated to whether it carries orchestrion config) the same as
+		// "there is no config". Doing so would silently strip a working
+		// integration; the fix is to warn and leave the import untouched instead.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeBrokenConfigFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/brokenpkg@v0.0.0",
+			"-replace=example.com/brokenpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/brokenpkg" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		var buf strings.Builder
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: &buf, ErrWriter: io.Discard, NoGenerate: true}))
+
+		assert.Contains(t, buf.String(), `unable to determine whether "example.com/brokenpkg" has a `+config.FilenameOrchestrionYML)
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "example.com/brokenpkg") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "// integration", "the import must be left completely untouched when its config status can't be determined")
+		}
+		assert.True(t, found, "the import whose config status couldn't be determined must not be pruned")
+	})
+
+	t.Run("hasconfig-error-warns-and-keeps-import-no-prune", func(t *testing.T) {
+		// Same as above, but with -prune=false: the import must be equally
+		// untouched (unlike the plain "no config" case, which clears the `//
+		// integration` marker under NoPrune).
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeBrokenConfigFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/brokenpkg@v0.0.0",
+			"-replace=example.com/brokenpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/brokenpkg" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		var buf strings.Builder
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: &buf, ErrWriter: io.Discard, NoGenerate: true, NoPrune: true}))
+
+		assert.Contains(t, buf.String(), `unable to determine whether "example.com/brokenpkg" has a `+config.FilenameOrchestrionYML)
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "example.com/brokenpkg") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "// integration", "the import must be left completely untouched when its config status can't be determined, even with -prune=false")
+		}
+		assert.True(t, found, "the import whose config status couldn't be determined must not be pruned")
+	})
+
 	t.Run("empty-tool-dot-go", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
 		chdir(t, tmp)
@@ -299,6 +381,35 @@ func chdir(t *testing.T, dir string) {
 
 	require.NoError(t, os.Chdir(dir))
 	t.Cleanup(func() { require.NoError(t, os.Chdir(oldwd)) })
+}
+
+// writeBrokenConfigFixture creates a standalone Go module in a fresh temp
+// directory containing a valid `.go` file (so [config.HasConfig]'s
+// `packageRoot` resolves to a non-empty directory) alongside a syntactically
+// invalid `orchestrion.tool.go` file. Parsing the latter returns a hard error
+// out of `go/parser`, which is distinct from `fs.ErrNotExist`, and is thus the
+// deterministic way to force `config.HasConfig` to return an error rather than
+// `(false, nil)` -- simulating e.g. a module that fails to resolve for reasons
+// unrelated to whether it carries orchestrion config.
+func writeBrokenConfigFixture(t *testing.T) string {
+	t.Helper()
+	fixtureDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+		"module example.com/brokenpkg\n\ngo "+runtime.Version()[2:6]+"\n",
+	), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package brokenpkg\n"), 0o644))
+	// Deliberately unterminated import block: this fails `parser.ParseFile`
+	// (used by [config.Loader.loadGoFile]) rather than merely `go build`.
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+
+package tools
+
+import (
+	"unterminated
+`), 0o644))
+
+	return fixtureDir
 }
 
 func scaffold(t *testing.T, requires map[string]string) string {
