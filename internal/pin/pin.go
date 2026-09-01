@@ -294,24 +294,37 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	}
 
 	log := zerolog.Ctx(ctx)
+
+	buildFlags := []string{"-toolexec="}
+	if inWorkspace, err := goenv.GOWORK(""); err != nil {
+		return false, fmt.Errorf("pruneImports: checking for workspace mode: %w", err)
+	} else if inWorkspace == "" {
+		// This is a pure introspection step (determining which imports still
+		// have a matching orchestrion.yml/tool file), not a build of the final
+		// vendored artifact, so we resolve packages via the module cache
+		// (`-mod=mod`) instead of inheriting Go's vendor auto-detection.
+		// Otherwise, this call can fail with "inconsistent vendoring" if an
+		// earlier step (e.g. `ensure.RequiredIntegrations`) already mutated
+		// go.mod without re-vendoring; the module cache always has the
+		// orchestrion.yml files needed here, whereas `vendor/` never does.
+		//
+		// `-mod` may only be `readonly` or `vendor` while in workspace mode
+		// (and workspace builds don't consult a member module's own `vendor/`
+		// directory the way a plain module does, so the "inconsistent
+		// vendoring" failure this routes around cannot occur there anyway),
+		// so this is skipped entirely under workspace mode: forcing it would
+		// also require disabling workspace resolution, which would make this
+		// call resolve replaced/`use`d modules from their published copy
+		// instead of the workspace's own version, and wrongly prune real
+		// integrations that only carry configuration in the workspace copy.
+		buildFlags = append(buildFlags, "-mod=mod")
+	}
+
 	pkgs, err := packages.Load(
 		&packages.Config{
-			// This is a pure introspection step (determining which imports still
-			// have a matching orchestrion.yml/tool file), not a build of the final
-			// vendored artifact, so we resolve packages via the module cache
-			// (`-mod=mod`) instead of inheriting Go's vendor auto-detection.
-			// Otherwise, this call can fail with "inconsistent vendoring" if an
-			// earlier step (e.g. `ensure.RequiredIntegrations`) already mutated
-			// go.mod without re-vendoring; the module cache always has the
-			// orchestrion.yml files needed here, whereas `vendor/` never does.
-			BuildFlags: []string{"-toolexec=", "-mod=mod"},
-			// `-mod` may only be `readonly` or `vendor` while in workspace mode, so
-			// disable it here too (see [gomod.commandEnv] for why an ambient
-			// `go.work` file, e.g. in etcd-style monorepos, can otherwise put the
-			// target module in workspace mode).
-			Env:  append(os.Environ(), "GOWORK=off"),
-			Logf: func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
-			Mode: packages.NeedName | packages.NeedFiles,
+			BuildFlags: buildFlags,
+			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
+			Mode:       packages.NeedName | packages.NeedFiles,
 		},
 		importPaths...,
 	)

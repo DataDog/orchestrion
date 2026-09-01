@@ -55,6 +55,20 @@ func GOMOD(dir string) (string, error) {
 	return "", fmt.Errorf("in %q: %w", wd, ErrNoGoMod)
 }
 
+// GOWORK returns the current GOWORK environment variable (from running `go env
+// GOWORK`) for the designated working directory. It is empty when the
+// directory is not governed by a `go.work` file (i.e. not in workspace mode).
+func GOWORK(dir string) (string, error) {
+	cmd := exec.Command("go", "env", "GOWORK")
+	cmd.Dir = dir
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("running %q: %w", cmd.Args, err)
+	}
+	return strings.TrimSpace(stdout.String()), nil
+}
+
 // modulePath returns the module path of the current module using go/packages API.
 // Results are cached to avoid repeated package loading calls.
 func modulePath(ctx context.Context, dir string) (string, error) {

@@ -6,7 +6,9 @@
 package pin
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -149,10 +151,9 @@ func main() {}
 
 	t.Run("workspace-mode", func(t *testing.T) {
 		// Regression test: `-mod` may only be `readonly` or `vendor` while in
-		// workspace mode, so pruneImports's package resolution must disable
-		// workspace mode (GOWORK=off) rather than unconditionally forcing
-		// `-mod=mod`, or this fails for any project governed by a `go.work`
-		// file (e.g. etcd-style monorepos).
+		// workspace mode, so pruneImports's package resolution must not
+		// unconditionally force `-mod=mod`, or this fails for any project
+		// governed by a `go.work` file (e.g. etcd-style monorepos).
 		tmp := scaffold(t, make(map[string]string))
 		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.work"), []byte("go "+runtime.Version()[2:6]+".0\n\nuse .\n"), 0o644))
 		chdir(t, tmp)
@@ -160,6 +161,82 @@ func main() {}
 		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
 
 		assert.FileExists(t, filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+	})
+
+	t.Run("workspace-mode-honors-replace", func(t *testing.T) {
+		// Regression test: pruneImports's package resolution must not disable
+		// workspace mode (e.g. via GOWORK=off) to work around the `-mod`
+		// restriction above, or it would resolve a `go.work`-replaced module
+		// from its plain `go.mod`-replaced (or published) copy instead of the
+		// workspace's own version — silently pruning a real integration whose
+		// configuration only exists in the workspace copy. Per `go help work`,
+		// workspace replacements take precedence over `go.mod` replacements.
+		tmp := t.TempDir()
+		mainDir := filepath.Join(tmp, "main")
+		fakeA := filepath.Join(tmp, "fakeA") // plain go.mod replace target: no config
+		fakeB := filepath.Join(tmp, "fakeB") // go.work replace target: has config
+		for _, dir := range []string{mainDir, fakeA, fakeB} {
+			require.NoError(t, os.MkdirAll(dir, 0o755))
+		}
+
+		goVersion := runtime.Version()[2:6]
+		const fakeModule = "example.com/fakeintegration"
+
+		require.NoError(t, os.WriteFile(filepath.Join(fakeA, "go.mod"), []byte("module "+fakeModule+"\n\ngo "+goVersion+".0\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fakeA, "pkg.go"), []byte("package fakeintegration\n"), 0o644))
+
+		require.NoError(t, os.WriteFile(filepath.Join(fakeB, "go.mod"), []byte("module "+fakeModule+"\n\ngo "+goVersion+".0\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fakeB, "pkg.go"), []byte("package fakeintegration\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fakeB, config.FilenameOrchestrionYML), []byte(
+			"meta: {name: name, description: description}\n"+
+				"aspects: [{ id: ID, join-point: { package-name: fakeintegration }, advice: [add-blank-import: unsafe] }]",
+		), 0o644))
+
+		_, thisFile, _, _ := runtime.Caller(0)
+		rootDir := filepath.Join(thisFile, "..", "..", "..")
+		rawTag, _ := version.TagInfo()
+		require.NoError(t, os.WriteFile(filepath.Join(mainDir, "go.mod"), []byte(fmt.Sprintf(`module example.com/wsmain
+
+go %s.0
+
+replace (
+	github.com/DataDog/orchestrion %s => %s
+	%s => ../fakeA
+)
+
+require (
+	github.com/DataDog/orchestrion %[2]s
+	%[4]s v0.0.0-00010101000000-000000000000
+)
+`, goVersion, rawTag, rootDir, fakeModule)), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(mainDir, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "`+fakeModule+`"
+)
+`), 0o644))
+
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.work"), []byte(fmt.Sprintf(`go %s.0
+
+use ./main
+
+replace %s => ./fakeB
+`, goVersion, fakeModule)), 0o644))
+
+		chdir(t, mainDir)
+
+		// The prune decision is what we're testing, not the resulting file: a
+		// separate, pre-existing bug means a pruned import's removal is never
+		// persisted back to `orchestrion.tool.go` (it's already been written to
+		// disk before pruning runs), so we must observe the prune decision via
+		// the message `pruneImport` prints, not by re-reading the tool file.
+		var out bytes.Buffer
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: &out, ErrWriter: io.Discard}))
+
+		assert.NotContains(t, out.String(), fakeModule, "the workspace-replaced (configured) copy must win, so this import must not be pruned")
 	})
 
 	t.Run("vendor-inconsistent-after-integration-install", func(t *testing.T) {
