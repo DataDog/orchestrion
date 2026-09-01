@@ -160,6 +160,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("checking imports of %q: %w", toolFile, err)
 	}
 
+	// pruneImports (and the NoPrune warning path) only mutate the in-memory AST;
+	// persist those changes now, regardless of whether anything was pruned, since
+	// the "keep" and NoPrune paths also update the `// integration` marker comments.
+	if err := writeUpdated(toolFile, dstFile); err != nil {
+		return fmt.Errorf("updating %q: %w", toolFile, err)
+	}
+
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
 		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
