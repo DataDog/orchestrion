@@ -54,7 +54,7 @@ jobs:
         if: github.event_name != 'push'
         run: |-
           currentTag=$(go run . version -static | cut -d' ' -f 2)
-          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
+          find . -iname go.mod -not -path './_docs/themes/**' -not -path '*/testdata/*' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             if [[ -n $(go -C="${dir}" mod edit --json | jq '(.Replace // []).[] | select(.Old.Path == "github.com/DataDog/orchestrion")') ]]; then
               echo "Aligning orchestrion version in ${dir} to ${currentTag} if necessary..."
