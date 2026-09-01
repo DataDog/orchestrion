@@ -83,9 +83,17 @@ func goModVersion(ctx context.Context, dir string) (moduleVersion string, module
 
 	log := zerolog.Ctx(ctx)
 	cfg := &packages.Config{
-		Dir:  filepath.Dir(gomod),
-		Mode: packages.NeedModule,
-		Logf: func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
+		Dir: filepath.Dir(gomod),
+		// This is a pure introspection step (checking which orchestrion version
+		// is required, not building anything), so explicitly pin `-mod=readonly`
+		// to opt out of Go's vendor auto-detection: otherwise this call can fail
+		// with "inconsistent vendoring" if `vendor/` happens to be out of sync
+		// with `go.mod` right as a build starts. `-mod=readonly` (rather than
+		// `-mod=mod`) also keeps this read-only: it must not silently add a
+		// requirement (and touch `go.mod`) if orchestrion isn't required yet.
+		BuildFlags: []string{"-mod=readonly"},
+		Mode:       packages.NeedModule,
+		Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 	}
 
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
