@@ -318,6 +318,13 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 			continue
 		}
 		decl := importSet.Find(pkg.PkgPath)
+		if decl == nil {
+			// This should not happen: pkg.PkgPath is expected to match one of the
+			// paths we requested via packages.Load. Guard against a nil-deref in
+			// case go/packages ever returns a differently-canonicalized PkgPath.
+			log.Warn().Str("pkgPath", pkg.PkgPath).Msg("pruneImports: could not find import spec for loaded package")
+			continue
+		}
 		decl.Decs.End.Replace("// integration")
 	}
 
