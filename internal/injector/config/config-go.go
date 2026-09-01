@@ -24,13 +24,33 @@ import (
 
 const FilenameOrchestrionToolGo = "orchestrion.tool.go"
 
+// builtInSentinel is a marker key (not a real file path, so it cannot
+// collide with one) used to dedupe loading of the builtIn special-cased
+// package across the loaded-files tracked by [Loader.markLoaded].
+const builtInSentinel = "<builtin:github.com/DataDog/orchestrion>"
+
 var ErrInvalidGoPackage = errors.New("no .go files in package")
 
 // loadGoPackage loads configuration from the specified go package.
 func (l *Loader) loadGoPackage(ctx context.Context, pkg *packages.Package) (_ *configGo, err error) {
 	// Special-case the `github.com/DataDog/orchestrion` package, we need not
 	// parse this one, and should always use the built-in object.
+	//
+	// This package is commonly imported (blank) from more than one distinct
+	// file across a dependency graph (e.g. both the root module's
+	// orchestrion.tool.go and github.com/DataDog/orchestrion/instrument's own
+	// orchestrion.tool.go). Since markLoaded (used elsewhere in this file)
+	// dedupes by the *referencing* file's path, not by the *referenced*
+	// package's import path, returning &builtIn on every such reference would
+	// silently multiply its aspect count once per distinct referencing file.
+	// That went unnoticed so far because the only built-in aspects use
+	// assign-value, which happens to be idempotent under repeated
+	// application; it stops being harmless for aspects that add
+	// declarations/fields, so dedupe explicitly here instead.
 	if pkg.PkgPath == builtIn.pkgPath {
+		if !l.markLoaded(builtInSentinel) {
+			return nil, nil
+		}
 		return &builtIn, nil
 	}
 
