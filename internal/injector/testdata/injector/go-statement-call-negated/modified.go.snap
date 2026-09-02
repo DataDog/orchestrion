@@ -1,0 +1,12 @@
+//line input.go:1:1
+package main
+
+func work() {}
+
+func main() {
+//line <generated>:1
+  (
+//line input.go:6
+  work())
+  go work()
+}

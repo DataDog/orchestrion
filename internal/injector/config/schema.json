@@ -371,6 +371,7 @@
         { "$ref": "#/$defs/join-point/function-body" },
         { "$ref": "#/$defs/join-point/function" },
         { "$ref": "#/$defs/join-point/function-call" },
+        { "$ref": "#/$defs/join-point/go-statement-call" },
         { "$ref": "#/$defs/join-point/import-path" },
         { "$ref": "#/$defs/join-point/method-call" },
         { "$ref": "#/$defs/join-point/not" },
@@ -617,6 +618,18 @@
           { "function-call": "net/http.Get" },
           { "function-call": "net/http.Post" }
         ]
+      },
+      "go-statement-call": {
+        "required": ["go-statement-call"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "go-statement-call": {
+            "title": "Target the call expression of a `go` statement",
+            "markdownDescription": "The `go-statement-call` join point matches the call expression of a `go` statement (i.e. the `f(args...)` in `go f(args...)`). It only matches `Call` nodes.",
+            "type": "boolean"
+          }
+        },
+        "examples": [{ "go-statement-call": true }]
       },
       "import-path": {
         "required": ["import-path"],

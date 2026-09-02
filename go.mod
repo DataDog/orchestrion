@@ -15,6 +15,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.14.5
 	github.com/nats-io/nats.go v1.53.1
 	github.com/otiai10/copy v1.14.1
+	github.com/petermattis/goid v0.0.0-20260820044319-269ab09b5261
 	github.com/polyfloyd/go-errorlint v1.8.1-0.20250906200200-9b25878c4dea
 	github.com/rs/zerolog v1.35.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -84,7 +85,6 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/outcaste-io/ristretto v0.2.3 // indirect
-	github.com/petermattis/goid v0.0.0-20260820044319-269ab09b5261 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect

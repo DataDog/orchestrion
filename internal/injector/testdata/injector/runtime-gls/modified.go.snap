@@ -1,0 +1,36 @@
+//line input.go:1:1
+package runtime
+
+//line <generated>:1
+import _ "unsafe"
+
+//line input.go:3
+type m struct {
+  curg *g
+}
+
+type g struct {
+  m *m
+//line <generated>:1
+  __dd_orchestrion_ctx any
+}
+
+//line input.go:11
+func getg() *g { return nil }
+
+func goexit1() {
+//line <generated>:1
+  {
+    getg().__dd_orchestrion_ctx = nil
+  }
+}
+
+//go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get
+var __dd_orchestrion_ctx_get = func() any {
+  return getg().m.curg.__dd_orchestrion_ctx
+}
+
+//go:linkname __dd_orchestrion_ctx_set __dd_orchestrion_ctx_set
+var __dd_orchestrion_ctx_set = func(val any) {
+  getg().m.curg.__dd_orchestrion_ctx = val
+}
