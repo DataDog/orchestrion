@@ -26,19 +26,32 @@ type Config interface {
 	visit(Visitor, string) error
 }
 
+// PackageLoader resolves package patterns. The string argument is the
+// directory the patterns are resolved from: it selects which module is
+// "main" for the resolution, and therefore which `replace` directives and
+// which `go.sum` apply. It must always be the consuming module's directory,
+// never the directory of the package the patterns were found in.
 type PackageLoader = func(context.Context, string, ...string) ([]*packages.Package, error)
 
 // HasConfig determines whether the specified package contains injector
-// configuration, and optionally validates it. If the [PackageLoader] is nil,
-// a default implementation is used.
-func HasConfig(ctx context.Context, pkgLoader PackageLoader, pkg *packages.Package, validate bool) (bool, error) {
-	root := packageRoot(pkg)
-	if root == "" {
-		// It contains no .go file, so it can't contain configuration.
+// configuration, and optionally validates it. Configuration files are read
+// from pkg's own directory, but import paths found in them are resolved from
+// dir, which must be the directory of the module consuming pkg (the main
+// module) -- never pkg's own directory, which for a module-cache dependency
+// would apply that dependency's `replace` directives. If the [PackageLoader]
+// is nil, a default implementation is used.
+func HasConfig(ctx context.Context, pkgLoader PackageLoader, dir string, pkg *packages.Package, validate bool) (bool, error) {
+	if packageRoot(pkg) == "" {
+		if err := unresolvedError(pkg); err != nil {
+			// The package failed to resolve entirely; we cannot tell whether it
+			// provides configuration, so this must not be reported as "no config".
+			return false, err
+		}
+		// Directory resolved and provably holds no Go source: no configuration.
 		return false, nil
 	}
 
-	l := NewLoader(pkgLoader, root, validate)
+	l := NewLoader(pkgLoader, dir, validate)
 	cfg, err := l.loadGoPackage(ctx, pkg)
 	if err != nil {
 		return false, err
@@ -66,6 +79,9 @@ func defaultPackageLoader(ctx context.Context, dir string, patterns ...string) (
 		Context: ctx,
 		Dir:     dir,
 		Mode:    packages.NeedName | packages.NeedFiles,
+		// Neutralize any `-toolexec` inherited from GOFLAGS: resolving
+		// configuration must never recurse into orchestrion itself.
+		BuildFlags: []string{"-toolexec="},
 	}
 	return packages.Load(cfg, patterns...)
 }
