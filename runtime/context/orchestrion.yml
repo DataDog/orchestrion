@@ -64,6 +64,7 @@ aspects:
         - function-body:
             function:
               - name: main
+              - receiver: false
     advice:
       - prepend-statements:
           template: orchestrionctx.Bootstrap()
