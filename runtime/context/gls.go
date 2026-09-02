@@ -52,6 +52,15 @@ func SetGLSForTesting(get func() any, set func(any)) (restore func()) {
 // matching accessor closures exposed under these link names. They remain
 // nil when the program was not built with orchestrion.
 //
+// These accessors reach storage via getg().m.curg.<field>, resolving to the
+// currently *running* g. A separate aspect (context.gls.scrub, woven into
+// runtime.goexit1; see runtime/context/orchestrion.yml) instead writes via
+// getg().<field> directly, with no .m.curg. The two forms are equivalent
+// only inside goexit1, where getg() already is curg; they are not
+// interchangeable in general. Any accessor added elsewhere must pick the
+// form that matches whether it acts on an arbitrary g's behalf or on the
+// currently-running g.
+//
 //go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get
 var __dd_orchestrion_ctx_get func() any
 
@@ -93,9 +102,7 @@ func getBlobEntry(index int) any {
 func setBlobEntry(index int, val any) {
 	blob := getBlob()
 	if index >= len(blob) {
-		grown := make([]any, index+1)
-		copy(grown, blob)
-		blob = grown
+		blob = append(blob, make([]any, index+1-len(blob))...)
 	}
 	blob[index] = val
 	setBlob(blob)
