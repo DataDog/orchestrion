@@ -52,6 +52,12 @@ func (c *Controller[T]) Push(val T) {
 
 // Pop removes and returns the value at the top of the current goroutine's
 // stack for T. It returns the zero value of T if the stack is empty.
+//
+// Unlike [Controller.Peek], Pop does not return a found flag: it is meant
+// for the balanced Push/Pop pattern where the caller already knows a value
+// is present (it pushed one itself) and does not need to distinguish a
+// genuine zero value from an empty stack. Use [Controller.Peek] instead
+// when that distinction matters, e.g. to decide whether to push at all.
 func (c *Controller[T]) Pop() T {
 	var zero T
 	if c == nil || !enabled() {
