@@ -18,17 +18,18 @@ func registerSomeHooks() {
 
 type float64Hooks struct{}
 
-func (float64Hooks) Main() *Stack[float64]                            { return new(Stack[float64]) }
-func (float64Hooks) Go(parent *Stack[float64]) *Stack[float64]        { return parent }
-func (float64Hooks) ChanSend(parent *Stack[float64]) *Stack[float64]  { return parent }
-func (float64Hooks) ChanRecv(_, sent *Stack[float64]) *Stack[float64] { return sent }
+func (float64Hooks) Main() *Stack[float64]                                            { return new(Stack[float64]) }
+func (float64Hooks) Go(parent *Stack[float64]) *Stack[float64]                        { return parent }
+func (float64Hooks) ChanSend(parent *Stack[float64]) *Stack[float64]                  { return parent }
+func (float64Hooks) ChanRecv(_ *Stack[float64], sent *Stack[float64]) *Stack[float64] { return sent }
 
 // BenchmarkRegistrySnapshot measures the cost of [registrySnapshot] itself,
 // which is the hot-path read this change touches: it's called from
 // WrapGoroutine (woven into every `go` statement), Bootstrap, and every
 // [Chan] Send/Recv.
 func BenchmarkRegistrySnapshot(b *testing.B) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 	registerSomeHooks()
 
 	b.ReportAllocs()
@@ -42,7 +43,8 @@ func BenchmarkRegistrySnapshot(b *testing.B) {
 // [WrapGoroutine] is what actually gets woven in place of a `go` statement
 // and it calls registrySnapshot() internally.
 func BenchmarkWrapGoroutine(b *testing.B) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 	registerSomeHooks()
 
 	noop := func() {}

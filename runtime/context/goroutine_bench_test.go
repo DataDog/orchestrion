@@ -76,7 +76,8 @@ func BenchmarkGoWrappedDisabled(b *testing.B) {
 // registered hook set and GLS mocking match the rest of this package's
 // tests instead of duplicating that setup here.
 func BenchmarkGoWrappedEnabled(b *testing.B) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 	ensureHooksRegistered()
 
 	var wg sync.WaitGroup

@@ -34,7 +34,8 @@ func recoverPanic(f func()) (recovered any) {
 // fmt.Errorf's "%w", hand-rolled by [goroutinePanic] since this package
 // cannot import "fmt" -- see [goroutinePanic]'s doc comment).
 func TestWrapGoroutineWrapsErrorPanic(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	original := errors.New("boom")
 	wrapped := WrapGoroutine(func() { panic(original) })
@@ -46,7 +47,7 @@ func TestWrapGoroutineWrapsErrorPanic(t *testing.T) {
 	require.True(t, ok, "recovered panic value must be an error, got %T", recovered)
 
 	assert.Contains(t, recoveredErr.Error(), "boom", "wrapped message must still contain the original message")
-	assert.True(t, errors.Is(recoveredErr, original), "errors.Is must be able to reach the original error")
+	require.ErrorIs(t, recoveredErr, original, "errors.Is must be able to reach the original error")
 	assert.Same(t, original, errors.Unwrap(recoveredErr), "errors.Unwrap must yield the exact original error value")
 }
 
@@ -57,7 +58,8 @@ func TestWrapGoroutineWrapsErrorPanic(t *testing.T) {
 // Unwrap path back to it (there is nothing to wrap: fmt.Errorf's "%v" verb
 // has no equivalent unwrap mechanism either).
 func TestWrapGoroutineWrapsNonErrorPanic(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	wrapped := WrapGoroutine(func() { panic("boom") })
 
@@ -68,7 +70,7 @@ func TestWrapGoroutineWrapsNonErrorPanic(t *testing.T) {
 	require.True(t, ok, "recovered panic value must be an error, got %T", recovered)
 
 	assert.Contains(t, recoveredErr.Error(), "boom", "wrapped message must still contain the original panic text")
-	assert.Nil(t, errors.Unwrap(recoveredErr), "a non-error panic value has nothing to unwrap")
+	assert.NoError(t, errors.Unwrap(recoveredErr), "a non-error panic value has nothing to unwrap")
 }
 
 // TestWrapGoroutineDisabledPropagatesOriginalPanicUnwrapped verifies that,
@@ -116,7 +118,8 @@ func TestWrapGoroutineDisabledPropagatesOriginalPanicUnwrapped(t *testing.T) {
 // Controller.Peek on that same goroutine, this deterministically observes
 // whether Hooks.Go actually ran before or after the Pop.
 func TestWrapGoroutineCapturesParentStackSynchronously(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	ctrl := Register[string](stringHooks{})
 	ctrl.Push("span")

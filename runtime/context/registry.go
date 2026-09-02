@@ -50,7 +50,7 @@ func (e typedEntry[T]) chanSend(parent any) any {
 	return e.hooks.ChanSend(p)
 }
 
-func (e typedEntry[T]) chanRecv(parent, sent any) any {
+func (e typedEntry[T]) chanRecv(parent any, sent any) any {
 	p, _ := parent.(*Stack[T])
 	s, _ := sent.(*Stack[T])
 	return e.hooks.ChanRecv(p, s)

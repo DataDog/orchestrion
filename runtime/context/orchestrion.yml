@@ -1,5 +1,3 @@
-%YAML 1.1
----
 meta:
   name: github.com/DataDog/orchestrion/runtime/context
   description: Propagates values pushed on one goroutine to goroutines it spawns, without threading them through every intervening function signature.

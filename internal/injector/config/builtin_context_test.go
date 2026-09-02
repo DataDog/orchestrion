@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestContextGLSScrubJoinPointTargetExists(t *testing.T) {
 	fset := token.NewFileSet()
 	found := false
 
-	files := append(append([]string{}, pkg.GoFiles...), pkg.CgoFiles...)
+	files := slices.Concat(pkg.GoFiles, pkg.CgoFiles)
 	for _, name := range files {
 		path := filepath.Join(pkg.Dir, name)
 

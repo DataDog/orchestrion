@@ -70,12 +70,13 @@ func TestControllerPushPopWithoutOrchestrion(t *testing.T) {
 	ctrl.Push("a")
 	v, ok := ctrl.Peek()
 	assert.False(t, ok)
-	assert.Equal(t, "", v)
-	assert.Equal(t, "", ctrl.Pop())
+	assert.Empty(t, v)
+	assert.Empty(t, ctrl.Pop())
 }
 
 func TestControllerPushPop(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	ctrl := Register[string](stringHooks{})
 
@@ -91,18 +92,19 @@ func TestControllerPushPop(t *testing.T) {
 
 	assert.Equal(t, "b", ctrl.Pop())
 	assert.Equal(t, "a", ctrl.Pop())
-	assert.Equal(t, "", ctrl.Pop()) // empty stack returns zero value
+	assert.Empty(t, ctrl.Pop()) // empty stack returns zero value
 }
 
 type intHooks struct{}
 
-func (intHooks) Main() *Stack[int]                        { return new(Stack[int]) }
-func (intHooks) Go(parent *Stack[int]) *Stack[int]        { return parent }
-func (intHooks) ChanSend(parent *Stack[int]) *Stack[int]  { return parent }
-func (intHooks) ChanRecv(_, sent *Stack[int]) *Stack[int] { return sent }
+func (intHooks) Main() *Stack[int]                                    { return new(Stack[int]) }
+func (intHooks) Go(parent *Stack[int]) *Stack[int]                    { return parent }
+func (intHooks) ChanSend(parent *Stack[int]) *Stack[int]              { return parent }
+func (intHooks) ChanRecv(_ *Stack[int], sent *Stack[int]) *Stack[int] { return sent }
 
 func TestMultipleRegistrationsAreIndependent(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	strCtrl := Register[string](stringHooks{})
 	intCtrl := Register[int](intHooks{})
@@ -117,7 +119,8 @@ func TestMultipleRegistrationsAreIndependent(t *testing.T) {
 }
 
 func TestWrapGoroutinePropagatesToChild(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	ctrl := Register[string](stringHooks{})
 	ctrl.Push("root")
@@ -159,7 +162,8 @@ func TestWrapGoroutineDisabledIsPlainGo(t *testing.T) {
 }
 
 func TestBootstrapSeedsMainStack(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	ctrl := Register[string](stringHooks{})
 	Bootstrap()
@@ -168,7 +172,8 @@ func TestBootstrapSeedsMainStack(t *testing.T) {
 }
 
 func TestChanSendRecvPropagates(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	ctrl := Register[string](stringHooks{})
 	raw := make(chan int)
@@ -181,7 +186,7 @@ func TestChanSendRecvPropagates(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		v, ok := ch.Recv()
-		require.True(t, ok)
+		assert.True(t, ok)
 		assert.Equal(t, 42, v)
 		got, _ := ctrl.Peek()
 		results <- got
@@ -195,7 +200,8 @@ func TestChanSendRecvPropagates(t *testing.T) {
 }
 
 func TestChanCloseStopsRecv(t *testing.T) {
-	defer mockGLS()()
+	restore := mockGLS()
+	defer restore()
 
 	raw := make(chan int)
 	ch := NewChan(raw)
