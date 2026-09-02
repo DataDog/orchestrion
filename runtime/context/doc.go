@@ -10,11 +10,32 @@
 //
 // # Usage
 //
-// A consumer (typically a tracer) calls [Register] once, at init time, with
-// a [Hooks] implementation for the value type T it wants to propagate. The
-// returned [Controller] is then used to [Controller.Push] a value before
-// entering a section of code that may spawn goroutines, and [Controller.Pop]
-// it when that section ends.
+// Importing this package and calling [Register] is not by itself enough to
+// enable propagation: the aspects that weave [Hooks.Go]/[Bootstrap] calls
+// into a program (see runtime/context/orchestrion.yml) are opt-in, and only
+// get loaded when the consuming project's own `orchestrion.tool.go` blank-
+// imports this package (in addition to whatever regular, non-blank import a
+// consumer uses to call [Register] and the [Controller] methods):
+//
+//	//go:build tools
+//	package tools
+//
+//	import (
+//		_ "github.com/DataDog/orchestrion"
+//		_ "github.com/DataDog/orchestrion/runtime/context"
+//	)
+//
+// Without that additional blank import, [Register] still returns a working
+// [Controller], but propagation stays disabled program-wide: every
+// [Controller] method call and [WrapGoroutine] invocation becomes a silent
+// no-op, because nothing wove the storage this package relies on into the
+// program's `runtime.g` or `go` statements in the first place.
+//
+// Once that import is in place, a consumer (typically a tracer) calls
+// [Register] once, at init time, with a [Hooks] implementation for the
+// value type T it wants to propagate. The returned [Controller] is then
+// used to [Controller.Push] a value before entering a section of code that
+// may spawn goroutines, and [Controller.Pop] it when that section ends.
 //
 // Once registered, every `go` statement compiled into the program by
 // orchestrion is woven to call [Hooks.Go] with the calling goroutine's
