@@ -70,8 +70,8 @@ func BenchmarkGoWrappedDisabled(b *testing.B) {
 
 // BenchmarkGoWrappedEnabled measures the full real-world tax orchestrion's
 // `go` statement rewrite imposes once context propagation is actually
-// enabled: a synchronous registry snapshot in the parent goroutine, plus
-// per-entry hook dispatch and blob installation in the child. It reuses
+// enabled: a synchronous registry snapshot and per-entry hook dispatch in
+// the parent goroutine, plus blob installation in the child. It reuses
 // mockGLS (api_test.go) and registerSomeHooks (registry_test.go) so the
 // registered hook set and GLS mocking match the rest of this package's
 // tests instead of duplicating that setup here.

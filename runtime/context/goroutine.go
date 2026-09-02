@@ -60,18 +60,19 @@ func WrapGoroutine(body func()) func() {
 	parent := getBlob()
 	entries := registrySnapshot()
 
-	return func() {
-		child := make([]any, len(entries))
-		for i, e := range entries {
-			if e == nil {
-				continue
-			}
-			var p any
-			if i < len(parent) {
-				p = parent[i]
-			}
-			child[i] = e.goHook(p)
+	child := make([]any, len(entries))
+	for i, e := range entries {
+		if e == nil {
+			continue
 		}
+		var p any
+		if i < len(parent) {
+			p = parent[i]
+		}
+		child[i] = e.goHook(p)
+	}
+
+	return func() {
 		setBlob(child)
 
 		defer func() {
