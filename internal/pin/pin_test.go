@@ -265,6 +265,77 @@ import (
 		assert.True(t, found, "the unnecessary import should still be present, since -prune=false only warns")
 	})
 
+	t.Run("no-prune-preserves-foreign-comment", func(t *testing.T) {
+		// Regression test: `pruneImport`'s `-prune=false` path must only clear the
+		// `// integration` marker it owns, not any other (e.g. user-authored)
+		// trailing comment that happens to be on the same import line.
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/digitalocean/sample-golang" // pinned manually, do not remove
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true, NoPrune: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "github.com/digitalocean/sample-golang") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "pinned manually, do not remove", "a foreign trailing comment must survive -prune=false")
+		}
+		assert.True(t, found, "the unnecessary import should still be present, since -prune=false only warns")
+	})
+
+	t.Run("keep-preserves-foreign-comment", func(t *testing.T) {
+		// Regression test: when an import resolves to a package that does carry
+		// orchestrion config, `pruneImports` must not clobber a pre-existing
+		// (e.g. user-authored) trailing comment on that import line by
+		// overwriting it with the `// integration` marker.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeConfigFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/configuredpkg@v0.0.0",
+			"-replace=example.com/configuredpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/configuredpkg" // pinned manually, do not remove
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "example.com/configuredpkg") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "pinned manually, do not remove", "a foreign trailing comment must not be overwritten by the `// integration` marker")
+			assert.NotContains(t, line, "// integration")
+		}
+		assert.True(t, found, "the import carrying orchestrion config must be kept")
+	})
+
 	t.Run("hasconfig-error-warns-and-keeps-import", func(t *testing.T) {
 		// Regression test: pruneImports must not treat a [config.HasConfig] error
 		// (e.g. because a transitively-imported module fails to resolve for
@@ -381,6 +452,24 @@ func chdir(t *testing.T, dir string) {
 
 	require.NoError(t, os.Chdir(dir))
 	t.Cleanup(func() { require.NoError(t, os.Chdir(oldwd)) })
+}
+
+// writeConfigFixture creates a standalone Go module in a fresh temp directory
+// containing a valid `orchestrion.yml`, so [config.HasConfig] resolves it as
+// carrying orchestrion configuration.
+func writeConfigFixture(t *testing.T) string {
+	t.Helper()
+	fixtureDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+		"module example.com/configuredpkg\n\ngo "+runtime.Version()[2:6]+"\n",
+	), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package configuredpkg\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionYML), []byte(
+		"meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: configuredpkg }, advice: [add-blank-import: unsafe] }]",
+	), 0o644))
+
+	return fixtureDir
 }
 
 // writeBrokenConfigFixture creates a standalone Go module in a fresh temp
