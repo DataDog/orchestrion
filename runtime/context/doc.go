@@ -21,6 +21,13 @@
 // current [Stack], installing the result as the new goroutine's [Stack]
 // before it starts running.
 //
+// A specific `go` statement can be excluded from this rewrite by placing a
+// `//orchestrion:ignore` comment immediately above it, which restores exact
+// plain-Go evaluation order (callee and arguments evaluated on the calling
+// goroutine, before it spawns) for that one statement. See [WrapGoroutine]'s
+// doc comment for why this matters, and the general
+// `//orchestrion:ignore` documentation for how the directive behaves.
+//
 // # Scope of automatic propagation
 //
 // Only goroutine creation (`go` statements) is automatically instrumented.
