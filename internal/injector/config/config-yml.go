@@ -54,6 +54,13 @@ func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *c
 		extFilename := filepath.Join(dir, ext)
 
 		if stat, statErr := os.Stat(extFilename); statErr != nil {
+			if !errors.Is(statErr, fs.ErrNotExist) {
+				// Some other, environmental stat failure (e.g. a permission
+				// error, or a path component that isn't a directory): this
+				// doesn't prove the configuration itself is broken, so leave
+				// it as an ordinary, unclassified ("we don't know") error.
+				return nil, statErr
+			}
 			// The `extends` target is missing entirely: this is a definitively
 			// broken configuration (a dangling reference within an otherwise
 			// well-formed orchestrion.yml), not a resolution ambiguity -- so it
