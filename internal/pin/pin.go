@@ -366,6 +366,13 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 		hasConfig, err := config.HasConfig(ctx, nil, moduleDir, pkg, opts.Validate)
 		switch {
 		case err != nil:
+			if errors.Is(err, config.ErrInvalidConfig) {
+				// Unlike a resolution failure, this package's orchestrion.tool.go or
+				// orchestrion.yml was actually found and is genuinely malformed:
+				// "we don't know" doesn't apply here, so fail loudly instead of
+				// silently keeping (or worse, pruning) a known-broken integration.
+				return pruned, fmt.Errorf("%q: %w", pkg.PkgPath, err)
+			}
 			// We failed to determine whether this package provides integrations.
 			// That is not evidence that it does not -- leave it alone.
 			if opts.Validate {
