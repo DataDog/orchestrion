@@ -485,6 +485,45 @@ import (
 		require.ErrorContains(t, err, "invalid orchestrion configuration")
 	})
 
+	t.Run("invalid-yml-extends-fails-pin", func(t *testing.T) {
+		// Regression test: an orchestrion.yml that is syntactically and
+		// schema valid but whose "extends" references a file that doesn't
+		// exist is a dangling reference -- a definitively broken
+		// configuration, not a transient resolution ambiguity -- and must
+		// cause `pin` to fail rather than silently keep the broken import.
+		// This does not require -validate: the extends target is resolved
+		// unconditionally.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := t.TempDir()
+
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+			"module example.com/danglingextends\n\ngo "+runtime.Version()[2:6]+"\n",
+		), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package danglingextends\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionYML), []byte(
+			"meta: {name: name, description: description}\nextends: [./missing.yml]",
+		), 0o644))
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/danglingextends@v0.0.0",
+			"-replace=example.com/danglingextends="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/danglingextends" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		err := PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true})
+		require.ErrorContains(t, err, "example.com/danglingextends")
+		require.ErrorContains(t, err, "invalid orchestrion configuration")
+	})
+
 	t.Run("empty-tool-dot-go", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
 		chdir(t, tmp)

@@ -53,8 +53,13 @@ func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *c
 	for _, ext := range yml.Extends {
 		extFilename := filepath.Join(dir, ext)
 
-		if stat, err := os.Stat(extFilename); err != nil {
-			return nil, maskErrNotExist(err)
+		if stat, statErr := os.Stat(extFilename); statErr != nil {
+			// The `extends` target is missing entirely: this is a definitively
+			// broken configuration (a dangling reference within an otherwise
+			// well-formed orchestrion.yml), not a resolution ambiguity -- so it
+			// must not be treated as fs.ErrNotExist (which callers read as "this
+			// optional file simply isn't there, carry on").
+			return nil, fmt.Errorf("%w: extends %q: %v", ErrInvalidConfig, ext, statErr)
 		} else if stat.IsDir() {
 			pkgs, err := l.packages(ctx, extFilename)
 			if err != nil {

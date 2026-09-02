@@ -167,6 +167,23 @@ func TestHasConfig(t *testing.T) {
 			_, err := HasConfig(context.Background(), nil, pkg, true)
 			require.ErrorContains(t, err, "meta is required")
 		})
+
+		t.Run("extends missing file", func(t *testing.T) {
+			t.Parallel()
+
+			pkgRoot := t.TempDir()
+			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
+			// Syntactically valid and schema-valid, but "extends" points at a file
+			// that doesn't exist: a dangling reference, not a resolution ambiguity.
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\nextends: [./missing.yml]"), 0o644))
+
+			pkg := &packages.Package{
+				PkgPath: "github.com/DataDog/orchestrion/config_test",
+				GoFiles: []string{filepath.Join(pkgRoot, "main.go")},
+			}
+			_, err := HasConfig(context.Background(), nil, pkg, true)
+			require.ErrorIs(t, err, ErrInvalidConfig, "a missing extends target must be classified as ErrInvalidConfig, not a transient resolution failure")
+		})
 	})
 }
 
