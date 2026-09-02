@@ -6,11 +6,10 @@
 package context
 
 import (
-	"runtime"
-	"strconv"
 	"sync"
 	"testing"
 
+	"github.com/petermattis/goid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,33 +21,19 @@ import (
 // as a local, package-internal duplicate here rather than imported, since
 // this file is white-box (package context) and contexttest imports
 // context -- see registry.go and mutex.go for why context itself must not
-// import "sync"/"runtime"/"strconv", which don't apply to _test.go files
-// like this one).
+// import "sync"/"github.com/petermattis/goid", which don't apply to
+// _test.go files like this one).
 func mockGLS() (cleanup func()) {
 	var stacks sync.Map // goroutine ID -> any
 	return SetGLSForTesting(
 		func() any {
-			val, _ := stacks.Load(goroutineID())
+			val, _ := stacks.Load(goid.Get())
 			return val
 		},
 		func(v any) {
-			stacks.Store(goroutineID(), v)
+			stacks.Store(goid.Get(), v)
 		},
 	)
-}
-
-func goroutineID() uint64 {
-	var buf [64]byte
-	n := runtime.Stack(buf[:], false)
-	s := buf[len("goroutine "):n]
-	for i, b := range s {
-		if b == ' ' {
-			s = s[:i]
-			break
-		}
-	}
-	id, _ := strconv.ParseUint(string(s), 10, 64)
-	return id
 }
 
 // stringHooks is a minimal [Hooks] implementation for tests: it just copies
