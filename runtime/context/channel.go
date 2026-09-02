@@ -20,6 +20,11 @@ package context
 // makes propagation exact rather than best-effort, at the cost of pairwise
 // serializing sends (and receives) that would otherwise race freely on the
 // underlying channel.
+//
+// A zero-value Chan (i.e. one not obtained from [NewChan]) is not valid:
+// its first use via [Chan.Send], [Chan.Recv], or [Chan.Close] panics
+// immediately instead of silently deadlocking on a nil mutex or a nil
+// underlying channel.
 type Chan[T any] struct {
 	data chan T
 
@@ -34,6 +39,9 @@ type Chan[T any] struct {
 // received from directly once wrapped, other than through the returned
 // [Chan]; doing so bypasses propagation and, for sends, will desynchronize
 // the internal pairing between data and the context stacks and pointer.
+//
+// A [Chan] must be constructed via NewChan: a zero-value Chan panics on
+// first use rather than deadlocking silently.
 func NewChan[T any](data chan T) *Chan[T] {
 	return &Chan[T]{
 		data:    data,
@@ -48,6 +56,10 @@ func NewChan[T any](data chan T) *Chan[T] {
 // against the calling goroutine's current stacks and pairing the result
 // with v.
 func (c *Chan[T]) Send(v T) {
+	if c.sendMu == nil {
+		panic("context.Chan[T]: zero-value Chan is not valid; construct one with NewChan")
+	}
+
 	if !enabled() {
 		c.data <- v
 		return
@@ -81,6 +93,10 @@ func (c *Chan[T]) Send(v T) {
 // was closed and drained, mirroring the two-value form of a plain channel
 // receive.
 func (c *Chan[T]) Recv() (T, bool) {
+	if c.recvMu == nil {
+		panic("context.Chan[T]: zero-value Chan is not valid; construct one with NewChan")
+	}
+
 	if !enabled() {
 		v, ok := <-c.data
 		return v, ok
@@ -125,6 +141,10 @@ func (c *Chan[T]) Recv() (T, bool) {
 // Close closes the wrapped channel. It is safe to call at most once, and
 // must only be called by the sole sender, exactly like a plain channel.
 func (c *Chan[T]) Close() {
+	if c.closeMu == nil {
+		panic("context.Chan[T]: zero-value Chan is not valid; construct one with NewChan")
+	}
+
 	c.closeMu.Lock()
 	defer c.closeMu.Unlock()
 	if c.closed {

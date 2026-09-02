@@ -229,3 +229,23 @@ func TestChanDisabledBehavesLikePlainChannel(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, 7, v)
 }
+
+// TestZeroValueChanPanics verifies that a Chan not obtained from [NewChan]
+// panics immediately on first use, rather than silently deadlocking on a
+// nil mutex (or a nil underlying channel).
+func TestZeroValueChanPanics(t *testing.T) {
+	t.Run("Send", func(t *testing.T) {
+		var c Chan[int]
+		assert.Panics(t, func() { c.Send(1) })
+	})
+
+	t.Run("Recv", func(t *testing.T) {
+		var c Chan[int]
+		assert.Panics(t, func() { c.Recv() })
+	})
+
+	t.Run("Close", func(t *testing.T) {
+		var c Chan[int]
+		assert.Panics(t, func() { c.Close() })
+	})
+}
