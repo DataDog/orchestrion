@@ -385,12 +385,35 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 			pruned = pruneImport(importSet, pkg.PkgPath, reason, opts) || pruned
 		default:
 			if decl := importSet.Find(pkg.PkgPath); decl != nil {
-				decl.Decs.End.Replace("// integration")
+				setIntegrationMarker(&decl.Decs.End, true)
 			}
 		}
 	}
 
 	return pruned, nil
+}
+
+// integrationMarker is the trailing comment `pruneImports` uses to flag an
+// import as a known integration.
+const integrationMarker = "// integration"
+
+// setIntegrationMarker sets or clears the [integrationMarker] on the given
+// end-of-line decorations, but only if that line's comment is currently empty
+// or is already the marker itself. A single Go source line can only carry one
+// trailing comment, so if it's something else (e.g. a user-authored note),
+// it's left untouched rather than being overwritten or turned into a second,
+// misplaced decoration line.
+func setIntegrationMarker(decs *dst.Decorations, present bool) {
+	switch {
+	case len(*decs) == 0:
+		if present {
+			decs.Replace(integrationMarker)
+		}
+	case len(*decs) == 1 && (*decs)[0] == integrationMarker:
+		if !present {
+			decs.Clear()
+		}
+	}
 }
 
 // pruneImport prunes a single import from the supplied [*importSet], unless
@@ -405,7 +428,7 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 		}
 
 		_, _ = fmt.Fprintf(opts.Writer, "%q: %s; it would be removed without -prune=false\n", path, reason)
-		spec.Decs.End.Clear() // Remove the // integration comment.
+		setIntegrationMarker(&spec.Decs.End, false) // Remove the // integration comment.
 
 		return false
 	}
