@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/DataDog/orchestrion/internal/goenv"
 	"github.com/DataDog/orchestrion/internal/version"
@@ -83,20 +84,28 @@ func goModVersion(ctx context.Context, dir string) (moduleVersion string, module
 
 	log := zerolog.Ctx(ctx)
 	cfg := &packages.Config{
-		Dir: filepath.Dir(gomod),
-		// This is a pure introspection step (checking which orchestrion version
-		// is required, not building anything), so explicitly pin `-mod=readonly`
-		// to opt out of Go's vendor auto-detection: otherwise this call can fail
-		// with "inconsistent vendoring" if `vendor/` happens to be out of sync
-		// with `go.mod` right as a build starts. `-mod=readonly` (rather than
-		// `-mod=mod`) also keeps this read-only: it must not silently add a
-		// requirement (and touch `go.mod`) if orchestrion isn't required yet.
-		BuildFlags: []string{"-mod=readonly"},
-		Mode:       packages.NeedModule,
-		Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
+		Dir:  filepath.Dir(gomod),
+		Mode: packages.NeedModule,
+		Logf: func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 	}
 
+	// Leave `-mod` unset first, so Go's normal vendor auto-detection applies:
+	// this is what lets a consistent `vendor/` directory be used even when
+	// GOPROXY/GOMODCACHE can't resolve the module (e.g. offline builds).
 	pkgs, err := packages.Load(cfg, orchestrionPkgPath)
+	if err != nil && strings.Contains(err.Error(), "inconsistent vendoring") {
+		// This is a pure introspection step (checking which orchestrion version
+		// is required, not building anything), so on this specific failure we
+		// retry with `-mod=readonly` to opt out of vendor auto-detection: `go
+		// list` fails outright above if `vendor/` happens to be out of sync
+		// with `go.mod` right as a build starts, unrelated to whether
+		// orchestrion itself is what's out of sync. `-mod=readonly` (rather
+		// than `-mod=mod`) keeps this read-only on the fallback path too: it
+		// must not silently add a requirement (and touch `go.mod`) if
+		// orchestrion isn't required yet.
+		cfg.BuildFlags = []string{"-mod=readonly"}
+		pkgs, err = packages.Load(cfg, orchestrionPkgPath)
+	}
 	if err != nil {
 		return "", "", err
 	}

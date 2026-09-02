@@ -32,10 +32,10 @@ func TestGoModVersion(t *testing.T) {
 	for name, test := range map[string]test{
 		"happy":    {version: "v0.9.0"},
 		"replaced": {version: "v0.9.0", replace: true},
-		// The explicit `-mod=readonly` build flag in goModVersion (added to opt
-		// out of Go's vendor auto-detection) changes how `go list` phrases a
-		// missing-module error compared to its implicit default.
-		"missing": {err: fmt.Errorf("cannot find module providing package %s: import lookup disabled by -mod=readonly", orchestrionPkgPath)},
+		// goModVersion only forces `-mod=readonly` as a fallback for
+		// "inconsistent vendoring", so a plain missing-module error (no vendor
+		// dir at all here) goes through Go's unmodified default behavior.
+		"missing": {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag()) >= 0 {
@@ -192,6 +192,56 @@ func TestGoModVersion(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, rVersion)
 		require.Equal(t, orchestrionSrcDir, rDir)
+	})
+
+	t.Run("vendor-consistent-offline", func(t *testing.T) {
+		// Regression test for the Codex review comment on #887: goModVersion
+		// must NOT force `-mod=readonly` unconditionally, or it would ignore a
+		// perfectly consistent `vendor/` directory and always try to resolve
+		// through GOPROXY/GOMODCACHE instead - breaking offline/air-gapped
+		// builds that used to work fine via vendor/ alone.
+		if semver.Compare("v0.9.0", version.Tag()) >= 0 {
+			t.Skipf("Skipping test because version v0.9.0 has not been released yet (current: %s)", version.Tag())
+		}
+
+		tmp := t.TempDir()
+
+		goMod := strings.Join([]string{
+			"module test_case",
+			"",
+			"go " + runtime.Version()[2:],
+			"",
+			"require " + orchestrionPkgPath + " v0.9.0",
+			"",
+		}, "\n")
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.mod"), []byte(goMod), 0o644), "failed to write go.mod file")
+		require.NoError(t,
+			os.WriteFile(filepath.Join(tmp, "tools.go"), []byte(fmt.Sprintf("//go:build tools\npackage tools\n\nimport _ %q\n", orchestrionPkgPath)), 0o644),
+			"failed to write tools.go",
+		)
+
+		runIn := func(name string, args ...string) {
+			t.Helper()
+			cmd := exec.Command(name, args...)
+			cmd.Dir = tmp
+			out, err := cmd.CombinedOutput()
+			require.NoError(t, err, "%s %s: %s", name, strings.Join(args, " "), out)
+		}
+
+		// Populate go.sum/vendor/ with normal network access first; only the
+		// actual goModVersion call below runs "offline".
+		runIn("go", "mod", "tidy")
+		runIn("go", "mod", "vendor")
+
+		// Cut off module cache/proxy access entirely, to prove any successful
+		// resolution below can only have come from vendor/.
+		emptyModCache := t.TempDir()
+		t.Setenv("GOPROXY", "off")
+		t.Setenv("GOMODCACHE", emptyModCache)
+
+		rVersion, _, err := goModVersion(context.Background(), tmp)
+		require.NoError(t, err, "goModVersion should resolve via vendor/ without needing GOPROXY/GOMODCACHE")
+		require.Equal(t, "v0.9.0", rVersion)
 	})
 }
 
