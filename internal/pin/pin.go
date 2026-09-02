@@ -314,7 +314,16 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 			continue
 		}
 		if !hasConfig {
-			pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+config.FilenameOrchestrionYML+" nor "+config.FilenameOrchestrionToolGo+" file in this package", opts) || pruned
+			// A package can have pkg.Errors set while still carrying a valid
+			// configuration, e.g. when GOOS/GOARCH or build tags exclude all its
+			// Go files: config.HasConfig locates the config via pkg.IgnoredFiles
+			// in that case. Only fall back to the load error here, once
+			// config.HasConfig has confirmed there really is no configuration.
+			reason := "there is no " + config.FilenameOrchestrionYML + " nor " + config.FilenameOrchestrionToolGo + " file in this package"
+			if len(pkg.Errors) > 0 {
+				reason = joinPackageErrors(pkg.Errors)
+			}
+			pruned = pruneImport(importSet, pkg.PkgPath, reason, opts) || pruned
 			continue
 		}
 		decl := importSet.Find(pkg.PkgPath)
@@ -345,6 +354,16 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 		_, _ = fmt.Fprintf(opts.Writer, "removing unnecessary import of %q: %v\n", path, reason)
 	}
 	return true
+}
+
+// joinPackageErrors joins the messages of the supplied [packages.Error]
+// values into a single, single-line reason string.
+func joinPackageErrors(errs []packages.Error) string {
+	msgs := make([]string, len(errs))
+	for i, err := range errs {
+		msgs[i] = err.Error()
+	}
+	return strings.Join(msgs, "; ")
 }
 
 // writeUpdated writes the updated AST to the given file, using a temporary file

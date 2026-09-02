@@ -6,6 +6,7 @@
 package pin
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"os"
@@ -155,6 +156,128 @@ func main() {}
 
 		require.ErrorContains(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}), "expected 'package', found 'EOF'")
 	})
+}
+
+// TestPruneImportsLoadError verifies that an import that fails to load (as
+// opposed to one that loads fine but lacks orchestrion configuration) is
+// pruned using the actual load error as the reason, rather than being
+// misreported as "there is no orchestrion.yml/tool.go file in this package".
+//
+// This is exercised by calling pruneImports directly instead of going
+// through PinOrchestrion: PinOrchestrion runs `go mod tidy` before
+// pruneImports ever runs, and `go mod tidy` already fails hard on an
+// unresolvable import, so the pkg.Errors branch inside pruneImports is not
+// reachable from that entry point in this scenario.
+func TestPruneImportsLoadError(t *testing.T) {
+	ctx := context.Background()
+
+	tmp := scaffold(t, make(map[string]string))
+	chdir(t, tmp)
+
+	toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
+	require.NoError(t, os.WriteFile(toolDotGo, []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/this-package-does-not-exist-zzz"
+)
+`), 0o644))
+
+	dstFile, err := parseOrchestrionToolGo(toolDotGo)
+	require.NoError(t, err)
+	importSet := importSetFrom(dstFile)
+
+	var out bytes.Buffer
+	pruned, err := pruneImports(ctx, importSet, Options{Writer: &out, ErrWriter: io.Discard})
+	require.NoError(t, err)
+
+	assert.True(t, pruned)
+	assert.Contains(t, out.String(), "removing unnecessary import")
+	assert.NotContains(t, out.String(), "there is no "+config.FilenameOrchestrionYML)
+}
+
+// TestPruneImportsLoadErrorNoPrune verifies that, when [Options.NoPrune] is
+// set, an import that fails to load is not removed from the [*importSet].
+// Instead, a warning is printed using the actual load error as the reason
+// (not the misleading "there is no orchestrion.yml/tool.go file in this
+// package" message), and the import is left in place.
+func TestPruneImportsLoadErrorNoPrune(t *testing.T) {
+	ctx := context.Background()
+
+	tmp := scaffold(t, make(map[string]string))
+	chdir(t, tmp)
+
+	toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
+	require.NoError(t, os.WriteFile(toolDotGo, []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/this-package-does-not-exist-zzz"
+)
+`), 0o644))
+
+	dstFile, err := parseOrchestrionToolGo(toolDotGo)
+	require.NoError(t, err)
+	importSet := importSetFrom(dstFile)
+
+	var out bytes.Buffer
+	pruned, err := pruneImports(ctx, importSet, Options{Writer: &out, ErrWriter: io.Discard, NoPrune: true})
+	require.NoError(t, err)
+
+	assert.False(t, pruned)
+	assert.Contains(t, out.String(), "unnecessary import")
+	assert.NotContains(t, out.String(), "there is no "+config.FilenameOrchestrionYML)
+	assert.NotNil(t, importSet.Find("github.com/DataDog/orchestrion/this-package-does-not-exist-zzz"))
+}
+
+// TestPruneImportsBuildTagExcluded verifies that an import whose only Go file
+// is excluded by build tags (so packages.Load reports pkg.Errors alongside
+// pkg.IgnoredFiles) is not pruned when it has an adjacent orchestrion.tool.go,
+// since config.HasConfig locates configuration via pkg.IgnoredFiles in that
+// case. Reported by Codex during review of PR #891.
+func TestPruneImportsBuildTagExcluded(t *testing.T) {
+	ctx := context.Background()
+
+	tmp := scaffold(t, make(map[string]string))
+	chdir(t, tmp)
+
+	pkgDir := filepath.Join(tmp, "buildtagpkg")
+	require.NoError(t, os.MkdirAll(pkgDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "only_tag.go"), []byte(`//go:build orchestrion_never_defined
+
+package buildtagpkg
+`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(pkgDir, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+)
+`), 0o644))
+
+	toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
+	require.NoError(t, os.WriteFile(toolDotGo, []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/pin-test/buildtagpkg"
+)
+`), 0o644))
+
+	dstFile, err := parseOrchestrionToolGo(toolDotGo)
+	require.NoError(t, err)
+	importSet := importSetFrom(dstFile)
+
+	var out bytes.Buffer
+	pruned, err := pruneImports(ctx, importSet, Options{Writer: &out, ErrWriter: io.Discard})
+	require.NoError(t, err)
+
+	assert.False(t, pruned)
+	assert.NotNil(t, importSet.Find("github.com/DataDog/orchestrion/pin-test/buildtagpkg"))
+	assert.Empty(t, out.String())
 }
 
 var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test
