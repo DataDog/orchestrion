@@ -330,6 +330,13 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	for _, pkg := range pkgs {
 		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
+			if errors.Is(err, config.ErrInvalidConfig) {
+				// Unlike a resolution failure, this package's orchestrion.tool.go or
+				// orchestrion.yml was actually found and is genuinely malformed:
+				// "we don't know" doesn't apply here, so fail loudly instead of
+				// silently keeping (or worse, pruning) a known-broken integration.
+				return false, fmt.Errorf("%q: %w", pkg.PkgPath, err)
+			}
 			// We failed to determine whether this package carries integration
 			// config, e.g. because a transitively-imported module fails to
 			// resolve for reasons unrelated to whether it has an

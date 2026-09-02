@@ -179,23 +179,23 @@ func (l *Loader) parseYMLFile(ctx context.Context, filename string) (*ymlFile, e
 	if l.validate {
 		var node ast.Node
 		if err := dec.DecodeContext(ctx, &node); err != nil {
-			return nil, fmt.Errorf("yaml.Decode %q -> yaml.Node: %w", filename, err)
+			return nil, fmt.Errorf("%w: yaml.Decode %q -> yaml.Node: %w", ErrInvalidConfig, filename, err)
 		}
 		dec = decodedNode{yamlDec, node}
 
 		var simple map[string]any
 		if err := dec.DecodeContext(ctx, &simple); err != nil {
-			return nil, fmt.Errorf("yaml.Decode %q -> map[string]any: %w", filename, err)
+			return nil, fmt.Errorf("%w: yaml.Decode %q -> map[string]any: %w", ErrInvalidConfig, filename, err)
 		}
 
 		if err := ValidateObject(simple); err != nil {
-			return nil, fmt.Errorf("validate %q: %w", filename, err)
+			return nil, fmt.Errorf("%w: validate %q: %w", ErrInvalidConfig, filename, err)
 		}
 	}
 
 	var yml ymlFile
 	if err := dec.DecodeContext(ctx, &yml); err != nil {
-		return nil, fmt.Errorf("yaml.Decode %q: %w", filename, err)
+		return nil, fmt.Errorf("%w: yaml.Decode %q: %w", ErrInvalidConfig, filename, err)
 	}
 
 	return &yml, nil
