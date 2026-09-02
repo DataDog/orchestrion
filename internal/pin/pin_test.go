@@ -6,6 +6,7 @@
 package pin
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"os"
@@ -155,6 +156,45 @@ func main() {}
 
 		require.ErrorContains(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}), "expected 'package', found 'EOF'")
 	})
+}
+
+// TestPruneImportsLoadError verifies that an import that fails to load (as
+// opposed to one that loads fine but lacks orchestrion configuration) is
+// pruned using the actual load error as the reason, rather than being
+// misreported as "there is no orchestrion.yml/tool.go file in this package".
+//
+// This is exercised by calling pruneImports directly instead of going
+// through PinOrchestrion: PinOrchestrion runs `go mod tidy` before
+// pruneImports ever runs, and `go mod tidy` already fails hard on an
+// unresolvable import, so the pkg.Errors branch inside pruneImports is not
+// reachable from that entry point in this scenario.
+func TestPruneImportsLoadError(t *testing.T) {
+	ctx := context.Background()
+
+	tmp := scaffold(t, make(map[string]string))
+	chdir(t, tmp)
+
+	toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
+	require.NoError(t, os.WriteFile(toolDotGo, []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/this-package-does-not-exist-zzz"
+)
+`), 0o644))
+
+	dstFile, err := parseOrchestrionToolGo(toolDotGo)
+	require.NoError(t, err)
+	importSet := importSetFrom(dstFile)
+
+	var out bytes.Buffer
+	pruned, err := pruneImports(ctx, importSet, Options{Writer: &out, ErrWriter: io.Discard})
+	require.NoError(t, err)
+
+	assert.True(t, pruned)
+	assert.Contains(t, out.String(), "removing unnecessary import")
+	assert.NotContains(t, out.String(), "there is no "+config.FilenameOrchestrionYML)
 }
 
 var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test

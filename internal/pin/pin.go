@@ -308,6 +308,11 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 
 	var pruned bool
 	for _, pkg := range pkgs {
+		if len(pkg.Errors) > 0 {
+			pruned = pruneImport(importSet, pkg.PkgPath, joinPackageErrors(pkg.Errors), opts) || pruned
+			continue
+		}
+
 		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
 			pruned = pruneImport(importSet, pkg.PkgPath, err.Error(), opts) || pruned
@@ -345,6 +350,16 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 		_, _ = fmt.Fprintf(opts.Writer, "removing unnecessary import of %q: %v\n", path, reason)
 	}
 	return true
+}
+
+// joinPackageErrors joins the messages of the supplied [packages.Error]
+// values into a single, single-line reason string.
+func joinPackageErrors(errs []packages.Error) string {
+	msgs := make([]string, len(errs))
+	for i, err := range errs {
+		msgs[i] = err.Error()
+	}
+	return strings.Join(msgs, "; ")
 }
 
 // writeUpdated writes the updated AST to the given file, using a temporary file
