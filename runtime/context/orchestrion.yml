@@ -1,0 +1,71 @@
+%YAML 1.1
+---
+meta:
+  name: github.com/DataDog/orchestrion/runtime/context
+  description: Propagates values pushed on one goroutine to goroutines it spawns, without threading them through every intervening function signature.
+
+aspects:
+  - id: context.gls
+    tracer-internal: true
+    join-point:
+      struct-definition: runtime.g
+    advice:
+      - add-struct-field:
+          name: __dd_orchestrion_ctx
+          type: any
+      - add-blank-import: unsafe
+      - inject-declarations:
+          template: |-
+            //go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get
+            var __dd_orchestrion_ctx_get = func() any {
+              return getg().m.curg.__dd_orchestrion_ctx
+            }
+
+            //go:linkname __dd_orchestrion_ctx_set __dd_orchestrion_ctx_set
+            var __dd_orchestrion_ctx_set = func(val any) {
+              getg().m.curg.__dd_orchestrion_ctx = val
+            }
+
+  - id: context.gls.scrub
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: goexit1
+    advice:
+      - prepend-statements:
+          template: getg().__dd_orchestrion_ctx = nil
+
+  - id: context.goroutine
+    tracer-internal: true
+    join-point:
+      all-of:
+        - not:
+            import-path: runtime
+        - not:
+            package-filter:
+              root: false
+              pattern: "internal/**"
+        - go-statement-call: true
+    advice:
+      - wrap-expression:
+          imports:
+            orchestrionctx: github.com/DataDog/orchestrion/runtime/context
+          template: |-
+            orchestrionctx.WrapGoroutine(func() { {{ . }} })()
+
+  - id: context.main
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: main
+        - function-body:
+            function:
+              - name: main
+    advice:
+      - prepend-statements:
+          template: orchestrionctx.Bootstrap()
+          imports:
+            orchestrionctx: github.com/DataDog/orchestrion/runtime/context

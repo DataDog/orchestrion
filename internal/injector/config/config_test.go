@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
@@ -256,6 +257,70 @@ func TestLoad(t *testing.T) {
 		cfg, err := loader.Load(context.Background())
 		require.NoError(t, err)
 		require.Len(t, cfg.Aspects(), len(builtIn.yaml.aspects))
+	})
+
+	t.Run("context propagation aspects are opt-in", func(t *testing.T) {
+		// The 4 `context.*` aspects live in runtime/context/orchestrion.yml and
+		// must only be woven into a project that actually blank-imports
+		// `github.com/DataDog/orchestrion/runtime/context` -- merely using
+		// orchestrion at all (i.e. blank-importing the root package, which is
+		// what `builtIn` covers) must not be enough to pull them in.
+		aspectIDs := func(t *testing.T, cfg Config) []string {
+			t.Helper()
+			ids := make([]string, len(cfg.Aspects()))
+			for i, a := range cfg.Aspects() {
+				ids[i] = a.ID
+			}
+			return ids
+		}
+
+		t.Run("not imported", func(t *testing.T) {
+			tmp := t.TempDir()
+			runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test_context_not_imported")
+			runGo(t, tmp, "mod", "edit", "-replace=github.com/DataDog/orchestrion="+repoRoot)
+			require.NoError(t, os.WriteFile(filepath.Join(tmp, FilenameOrchestrionToolGo), []byte(`
+				//go:build tools
+				package tools
+				import _ "github.com/DataDog/orchestrion"
+			`), 0o644))
+			runGo(t, tmp, "mod", "tidy")
+
+			loader := NewLoader(nil, tmp, false)
+			cfg, err := loader.Load(context.Background())
+			require.NoError(t, err)
+
+			ids := aspectIDs(t, cfg)
+			require.Len(t, ids, len(builtIn.yaml.aspects))
+			for _, id := range ids {
+				require.False(t, strings.HasPrefix(id, "context."), "unexpected context.* aspect %q when runtime/context was not imported", id)
+			}
+		})
+
+		t.Run("imported", func(t *testing.T) {
+			tmp := t.TempDir()
+			runGo(t, tmp, "mod", "init", "github.com/DataDog/orchestrion/config_test_context_imported")
+			runGo(t, tmp, "mod", "edit", "-replace=github.com/DataDog/orchestrion="+repoRoot)
+			require.NoError(t, os.WriteFile(filepath.Join(tmp, FilenameOrchestrionToolGo), []byte(`
+				//go:build tools
+				package tools
+				import (
+					_ "github.com/DataDog/orchestrion"
+					_ "github.com/DataDog/orchestrion/runtime/context"
+				)
+			`), 0o644))
+			runGo(t, tmp, "mod", "tidy")
+
+			loader := NewLoader(nil, tmp, false)
+			cfg, err := loader.Load(context.Background())
+			require.NoError(t, err)
+
+			ids := aspectIDs(t, cfg)
+			require.Len(t, ids, len(builtIn.yaml.aspects)+4)
+			require.Contains(t, ids, "context.gls")
+			require.Contains(t, ids, "context.gls.scrub")
+			require.Contains(t, ids, "context.goroutine")
+			require.Contains(t, ids, "context.main")
+		})
 	})
 }
 

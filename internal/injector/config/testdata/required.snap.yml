@@ -4,7 +4,3 @@ yaml:
   aspects:
     - built.WithOrchestrion
     - built.WithOrchestrionVersion
-    - context.gls
-    - context.gls.scrub
-    - context.goroutine
-    - context.main
