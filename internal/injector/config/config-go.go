@@ -26,6 +26,13 @@ const FilenameOrchestrionToolGo = "orchestrion.tool.go"
 
 var ErrInvalidGoPackage = errors.New("no .go files in package")
 
+// ErrInvalidConfig indicates that a package's [FilenameOrchestrionToolGo] or
+// [FilenameOrchestrionYML] file was found and opened, but its contents are
+// genuinely malformed (bad syntax, or fails JSON-schema validation) -- as
+// opposed to the package, or one of its transitive imports, simply failing to
+// resolve.
+var ErrInvalidConfig = errors.New("invalid orchestrion configuration")
+
 // loadGoPackage loads configuration from the specified go package.
 func (l *Loader) loadGoPackage(ctx context.Context, pkg *packages.Package) (_ *configGo, err error) {
 	// Special-case the `github.com/DataDog/orchestrion` package, we need not
@@ -98,17 +105,17 @@ func (l *Loader) loadGoFile(ctx context.Context, filename string) (_ []Config, e
 	fset := token.NewFileSet()
 	ast, err := parser.ParseFile(fset, filename, file, parser.ImportsOnly)
 	if err != nil {
-		return nil, fmt.Errorf("parsing %q: %w", filename, err)
+		return nil, fmt.Errorf("%w: parsing %q: %w", ErrInvalidConfig, filename, err)
 	}
 
 	imports := make([]string, 0, len(ast.Imports))
 	for _, spec := range ast.Imports {
 		if spec.Path == nil {
-			return nil, fmt.Errorf("missing import path at %s", fset.Position(spec.Pos()))
+			return nil, fmt.Errorf("%w: missing import path at %s", ErrInvalidConfig, fset.Position(spec.Pos()))
 		}
 		path, err := strconv.Unquote(spec.Path.Value)
 		if err != nil {
-			return nil, fmt.Errorf("invalid import path at %q", fset.Position(spec.Pos()))
+			return nil, fmt.Errorf("%w: invalid import path at %q", ErrInvalidConfig, fset.Position(spec.Pos()))
 		}
 		imports = append(imports, path)
 	}

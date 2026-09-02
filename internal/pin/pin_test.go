@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -283,6 +284,323 @@ func main() { fmt.Println(uuid.NewString()) }
 		require.NoError(t, err, string(out))
 	})
 
+	t.Run("prune-persists-to-tool-file", func(t *testing.T) {
+		// Regression test: pruneImports only mutated the in-memory AST; nothing
+		// ever wrote it back to `orchestrion.tool.go`, so a manually-added import
+		// to a package with no `orchestrion.yml` was silently kept on disk even
+		// though `go.mod` correctly dropped the now-unused requirement.
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/digitalocean/sample-golang" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		assert.NotContains(t, string(content), "github.com/digitalocean/sample-golang")
+
+		data, err := gomod.Parse(ctx, filepath.Join(tmp, "go.mod"))
+		require.NoError(t, err)
+		assert.NotContains(t, data.Require, gomod.Require{Path: "github.com/digitalocean/sample-golang", Version: "v0.0.0-20240904143939-1e058723dcf4"})
+	})
+
+	t.Run("no-prune-clears-marker-comment", func(t *testing.T) {
+		// Regression test: on the `-prune=false` path, `pruneImport` clears the
+		// `// integration` trailing comment on flagged imports (without removing
+		// them), but that mutation was never persisted either.
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/digitalocean/sample-golang" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true, NoPrune: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "github.com/digitalocean/sample-golang") {
+				continue
+			}
+			found = true
+			assert.NotContains(t, line, "integration", "the `// integration` marker should have been cleared, not just the in-memory copy")
+		}
+		assert.True(t, found, "the unnecessary import should still be present, since -prune=false only warns")
+	})
+
+	t.Run("no-prune-preserves-foreign-comment", func(t *testing.T) {
+		// Regression test: `pruneImport`'s `-prune=false` path must only clear the
+		// `// integration` marker it owns, not any other (e.g. user-authored)
+		// trailing comment that happens to be on the same import line.
+		tmp := scaffold(t, map[string]string{"github.com/digitalocean/sample-golang": "v0.0.0-20240904143939-1e058723dcf4"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/digitalocean/sample-golang" // pinned manually, do not remove
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true, NoPrune: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "github.com/digitalocean/sample-golang") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "pinned manually, do not remove", "a foreign trailing comment must survive -prune=false")
+		}
+		assert.True(t, found, "the unnecessary import should still be present, since -prune=false only warns")
+	})
+
+	t.Run("keep-preserves-foreign-comment", func(t *testing.T) {
+		// Regression test: when an import resolves to a package that does carry
+		// orchestrion config, `pruneImports` must not clobber a pre-existing
+		// (e.g. user-authored) trailing comment on that import line by
+		// overwriting it with the `// integration` marker.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeConfigFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/configuredpkg@v0.0.0",
+			"-replace=example.com/configuredpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/configuredpkg" // pinned manually, do not remove
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true}))
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "example.com/configuredpkg") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "pinned manually, do not remove", "a foreign trailing comment must not be overwritten by the `// integration` marker")
+			assert.NotContains(t, line, "// integration")
+		}
+		assert.True(t, found, "the import carrying orchestrion config must be kept")
+	})
+
+	t.Run("hasconfig-resolution-error-warns-and-keeps-import", func(t *testing.T) {
+		// Regression test: pruneImports must not treat a [config.HasConfig] error
+		// caused by a transitively-imported package failing to *resolve* (e.g. a
+		// monorepo-relative `replace` directive that only resolves inside its own
+		// source repository) the same as "there is no config". Doing so would
+		// silently strip a working integration; the fix is to warn and leave the
+		// import untouched instead.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeUnresolvableImportFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/outerpkg@v0.0.0",
+			"-replace=example.com/outerpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/outerpkg" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		var buf strings.Builder
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: &buf, ErrWriter: io.Discard, NoGenerate: true}))
+
+		assert.Contains(t, buf.String(), `unable to determine whether "example.com/outerpkg" has a `+config.FilenameOrchestrionYML)
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "example.com/outerpkg") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "// integration", "the import must be left completely untouched when its config status can't be determined")
+		}
+		assert.True(t, found, "the import whose config status couldn't be determined must not be pruned")
+	})
+
+	t.Run("hasconfig-resolution-error-warns-and-keeps-import-no-prune", func(t *testing.T) {
+		// Same as above, but with -prune=false: the import must be equally
+		// untouched (unlike the plain "no config" case, which clears the `//
+		// integration` marker under NoPrune).
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeUnresolvableImportFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/outerpkg@v0.0.0",
+			"-replace=example.com/outerpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/outerpkg" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		var buf strings.Builder
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: &buf, ErrWriter: io.Discard, NoGenerate: true, NoPrune: true}))
+
+		assert.Contains(t, buf.String(), `unable to determine whether "example.com/outerpkg" has a `+config.FilenameOrchestrionYML)
+
+		content, err := os.ReadFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo))
+		require.NoError(t, err)
+		found := false
+		for _, line := range strings.Split(string(content), "\n") {
+			if !strings.Contains(line, "example.com/outerpkg") {
+				continue
+			}
+			found = true
+			assert.Contains(t, line, "// integration", "the import must be left completely untouched when its config status can't be determined, even with -prune=false")
+		}
+		assert.True(t, found, "the import whose config status couldn't be determined must not be pruned")
+	})
+
+	t.Run("invalid-config-fails-pin", func(t *testing.T) {
+		// Regression test: unlike a resolution failure, a genuinely malformed
+		// orchestrion.tool.go in a dependency (one that was actually found and
+		// opened, but fails to parse) must not be swallowed as "we don't know" --
+		// `pin` must fail loudly instead of silently keeping the broken import.
+		// -prune=false does not change this: the check happens before pruning is
+		// even considered.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := writeBrokenConfigFixture(t)
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/brokenpkg@v0.0.0",
+			"-replace=example.com/brokenpkg="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/brokenpkg" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		err := PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true})
+		require.ErrorContains(t, err, "example.com/brokenpkg")
+		require.ErrorContains(t, err, "invalid orchestrion configuration")
+	})
+
+	t.Run("invalid-yml-fails-pin-with-validate", func(t *testing.T) {
+		// Regression test: an orchestrion.yml that fails JSON-schema validation
+		// must cause `pin -validate` to fail, not silently succeed while leaving
+		// the broken integration pinned.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := t.TempDir()
+
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+			"module example.com/invalidyml\n\ngo "+runtime.Version()[2:6]+"\n",
+		), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package invalidyml\n"), 0o644))
+		// Invalid: missing the required "meta" block.
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionYML), []byte(
+			"aspects: [{ id: ID, join-point: { package-name: invalidyml }, advice: [add-blank-import: unsafe] }]",
+		), 0o644))
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/invalidyml@v0.0.0",
+			"-replace=example.com/invalidyml="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/invalidyml" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		err := PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true, Validate: true})
+		require.ErrorContains(t, err, "example.com/invalidyml")
+		require.ErrorContains(t, err, "invalid orchestrion configuration")
+	})
+
+	t.Run("invalid-yml-extends-fails-pin", func(t *testing.T) {
+		// Regression test: an orchestrion.yml that is syntactically and
+		// schema valid but whose "extends" references a file that doesn't
+		// exist is a dangling reference -- a definitively broken
+		// configuration, not a transient resolution ambiguity -- and must
+		// cause `pin` to fail rather than silently keep the broken import.
+		// This does not require -validate: the extends target is resolved
+		// unconditionally.
+		tmp := scaffold(t, make(map[string]string))
+		modfile := filepath.Join(tmp, "go.mod")
+		fixtureDir := t.TempDir()
+
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+			"module example.com/danglingextends\n\ngo "+runtime.Version()[2:6]+"\n",
+		), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package danglingextends\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionYML), []byte(
+			"meta: {name: name, description: description}\nextends: [./missing.yml]",
+		), 0o644))
+
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard,
+			"-require=example.com/danglingextends@v0.0.0",
+			"-replace=example.com/danglingextends="+fixtureDir,
+		))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "example.com/danglingextends" // integration
+)
+`), 0o644))
+		chdir(t, tmp)
+
+		err := PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard, NoGenerate: true})
+		require.ErrorContains(t, err, "example.com/danglingextends")
+		require.ErrorContains(t, err, "invalid orchestrion configuration")
+	})
+
 	t.Run("empty-tool-dot-go", func(t *testing.T) {
 		tmp := scaffold(t, make(map[string]string))
 		chdir(t, tmp)
@@ -317,6 +635,98 @@ func chdir(t *testing.T, dir string) {
 
 	require.NoError(t, os.Chdir(dir))
 	t.Cleanup(func() { require.NoError(t, os.Chdir(oldwd)) })
+}
+
+// writeConfigFixture creates a standalone Go module in a fresh temp directory
+// containing a valid `orchestrion.yml`, so [config.HasConfig] resolves it as
+// carrying orchestrion configuration.
+func writeConfigFixture(t *testing.T) string {
+	t.Helper()
+	fixtureDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+		"module example.com/configuredpkg\n\ngo "+runtime.Version()[2:6]+"\n",
+	), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package configuredpkg\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionYML), []byte(
+		"meta: {name: name, description: description}\naspects: [{ id: ID, join-point: { package-name: configuredpkg }, advice: [add-blank-import: unsafe] }]",
+	), 0o644))
+
+	return fixtureDir
+}
+
+// writeBrokenConfigFixture creates a standalone Go module in a fresh temp
+// directory containing a valid `.go` file (so [config.HasConfig]'s
+// `packageRoot` resolves to a non-empty directory) alongside a syntactically
+// invalid `orchestrion.tool.go` file. Parsing the latter returns a hard error
+// out of `go/parser`, which is distinct from `fs.ErrNotExist`, and is thus the
+// deterministic way to force [config.HasConfig] to return an
+// [config.ErrInvalidConfig] error: the package resolves fine, but its own
+// configuration file is genuinely malformed.
+func writeBrokenConfigFixture(t *testing.T) string {
+	t.Helper()
+	fixtureDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+		"module example.com/brokenpkg\n\ngo "+runtime.Version()[2:6]+"\n",
+	), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package brokenpkg\n"), 0o644))
+	// Deliberately unterminated import block: this fails `parser.ParseFile`
+	// (used by [config.Loader.loadGoFile]) rather than merely `go build`.
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+
+package tools
+
+import (
+	"unterminated
+`), 0o644))
+
+	return fixtureDir
+}
+
+// writeUnresolvableImportFixture creates a standalone Go module in a fresh
+// temp directory whose `orchestrion.tool.go` imports
+// `github.com/digitalocean/sample-golang`, but the fixture's own `go.mod`
+// replaces it with a relative path that does not exist on disk -- mirroring
+// e.g. `github.com/DataDog/dd-trace-go`'s monorepo-relative `replace`
+// directives, which only resolve inside its own repository checkout.
+//
+// `github.com/digitalocean/sample-golang` is deliberately reused (rather than
+// some brand new module) so that the *outer* test module's own `go mod tidy`
+// resolves it just fine from the shared module cache (it's already a real,
+// published dependency used by other tests in this file) without any network
+// access -- only the fixture's own broken replace, which only takes effect
+// when [config.Loader] runs `go list` rooted *inside* the fixture directory,
+// ever gets hit. (`github.com/DataDog/orchestrion` itself cannot be used
+// here: [Loader.loadGoPackage] special-cases that exact import path and
+// always returns the built-in config without ever inspecting `pkg.Errors`,
+// which would silently swallow the resolution failure this fixture exists to
+// exercise.)
+//
+// This is the deterministic way to force [config.HasConfig] to fail for
+// reasons unrelated to whether the outer package's own configuration is
+// valid (as opposed to [writeBrokenConfigFixture], which simulates a
+// genuinely broken config).
+func writeUnresolvableImportFixture(t *testing.T) string {
+	t.Helper()
+	fixtureDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "go.mod"), []byte(
+		"module example.com/outerpkg\n\ngo "+runtime.Version()[2:6]+"\n\n"+
+			"require github.com/digitalocean/sample-golang v0.0.0-20240904143939-1e058723dcf4\n\n"+
+			"replace github.com/digitalocean/sample-golang => ./does-not-exist\n",
+	), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, "pkg.go"), []byte("package outerpkg\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(fixtureDir, config.FilenameOrchestrionToolGo), []byte(`//go:build tools
+
+package tools
+
+import (
+	_ "github.com/digitalocean/sample-golang"
+)
+`), 0o644))
+
+	return fixtureDir
 }
 
 func scaffold(t *testing.T, requires map[string]string) string {

@@ -147,6 +147,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
 	}
 
+	// pruneImports (and the NoPrune warning path) only mutate the in-memory AST;
+	// persist those changes now, regardless of whether anything was pruned, since
+	// the "keep" and NoPrune paths also update the `// integration` marker comments.
+	if err := writeUpdated(toolFile, dstFile); err != nil {
+		return fmt.Errorf("updating %q: %w", toolFile, err)
+	}
+
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
 		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
@@ -336,7 +343,22 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	for _, pkg := range pkgs {
 		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
-			pruned = pruneImport(importSet, pkg.PkgPath, err.Error(), opts) || pruned
+			if errors.Is(err, config.ErrInvalidConfig) {
+				// Unlike a resolution failure, this package's orchestrion.tool.go or
+				// orchestrion.yml was actually found and is genuinely malformed:
+				// "we don't know" doesn't apply here, so fail loudly instead of
+				// silently keeping (or worse, pruning) a known-broken integration.
+				return false, fmt.Errorf("%q: %w", pkg.PkgPath, err)
+			}
+			// We failed to determine whether this package carries integration
+			// config, e.g. because a transitively-imported module fails to
+			// resolve for reasons unrelated to whether it has an
+			// orchestrion.yml/tool file (such as a monorepo-relative `replace`
+			// directive that only resolves inside its own source repository).
+			// "we don't know" is not the same as "there is no config": treating
+			// it as such would silently strip working integrations, so we leave
+			// the import untouched and only warn.
+			_, _ = fmt.Fprintf(opts.Writer, "unable to determine whether %q has a %s: %v\n", pkg.PkgPath, config.FilenameOrchestrionYML, err)
 			continue
 		}
 		if !hasConfig {
@@ -344,10 +366,33 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 			continue
 		}
 		decl := importSet.Find(pkg.PkgPath)
-		decl.Decs.End.Replace("// integration")
+		setIntegrationMarker(&decl.Decs.End, true)
 	}
 
 	return pruned, nil
+}
+
+// integrationMarker is the trailing comment `pruneImports` uses to flag an
+// import as a known integration.
+const integrationMarker = "// integration"
+
+// setIntegrationMarker sets or clears the [integrationMarker] on the given
+// end-of-line decorations, but only if that line's comment is currently empty
+// or is already the marker itself. A single Go source line can only carry one
+// trailing comment, so if it's something else (e.g. a user-authored note),
+// it's left untouched rather than being overwritten or turned into a second,
+// misplaced decoration line.
+func setIntegrationMarker(decs *dst.Decorations, present bool) {
+	switch {
+	case len(*decs) == 0:
+		if present {
+			decs.Replace(integrationMarker)
+		}
+	case len(*decs) == 1 && (*decs)[0] == integrationMarker:
+		if !present {
+			decs.Clear()
+		}
+	}
 }
 
 // pruneImport prunes a single import from the supplied [*importSet], unless
@@ -362,7 +407,7 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 		}
 
 		_, _ = fmt.Fprintf(opts.Writer, "unnecessary import of %q: %v\n", path, reason)
-		spec.Decs.End.Clear() // Remove the // integration comment.
+		setIntegrationMarker(&spec.Decs.End, false) // Remove the // integration comment.
 
 		return false
 	}
