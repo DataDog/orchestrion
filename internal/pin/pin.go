@@ -310,11 +310,11 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	for _, pkg := range pkgs {
 		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
-			pruned = pruneImport(importSet, pkg.PkgPath, err.Error(), opts) || pruned
+			pruned = pruneImport(log, importSet, pkg.PkgPath, err.Error(), opts) || pruned
 			continue
 		}
 		if !hasConfig {
-			pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+config.FilenameOrchestrionYML+" nor "+config.FilenameOrchestrionToolGo+" file in this package", opts) || pruned
+			pruned = pruneImport(log, importSet, pkg.PkgPath, "there is no "+config.FilenameOrchestrionYML+" nor "+config.FilenameOrchestrionToolGo+" file in this package", opts) || pruned
 			continue
 		}
 		decl := importSet.Find(pkg.PkgPath)
@@ -334,11 +334,12 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 // pruneImport prunes a single import from the supplied [*importSet], unless
 // [*Options.NoPrune] is set, in which case it prints a warning using the
 // provided `reason` message.
-func pruneImport(importSet *importSet, path string, reason string, opts Options) bool {
+func pruneImport(log *zerolog.Logger, importSet *importSet, path string, reason string, opts Options) bool {
 	if opts.NoPrune {
 		spec := importSet.Find(path)
 		if spec == nil {
 			// Nothing to do... already removed!²
+			log.Warn().Str("pkgPath", path).Msg("pruneImport: could not find import spec to clear; already removed or PkgPath mismatch")
 			return false
 		}
 
@@ -350,6 +351,8 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 
 	if importSet.Remove(path) {
 		_, _ = fmt.Fprintf(opts.Writer, "removing unnecessary import of %q: %v\n", path, reason)
+	} else {
+		log.Warn().Str("pkgPath", path).Msg("pruneImport: could not find import spec to remove; already removed or PkgPath mismatch")
 	}
 	return true
 }
