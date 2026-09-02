@@ -197,6 +197,41 @@ import (
 	assert.NotContains(t, out.String(), "there is no "+config.FilenameOrchestrionYML)
 }
 
+// TestPruneImportsLoadErrorNoPrune verifies that, when [Options.NoPrune] is
+// set, an import that fails to load is not removed from the [*importSet].
+// Instead, a warning is printed using the actual load error as the reason
+// (not the misleading "there is no orchestrion.yml/tool.go file in this
+// package" message), and the import is left in place.
+func TestPruneImportsLoadErrorNoPrune(t *testing.T) {
+	ctx := context.Background()
+
+	tmp := scaffold(t, make(map[string]string))
+	chdir(t, tmp)
+
+	toolDotGo := filepath.Join(tmp, config.FilenameOrchestrionToolGo)
+	require.NoError(t, os.WriteFile(toolDotGo, []byte(`//go:build tools
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/this-package-does-not-exist-zzz"
+)
+`), 0o644))
+
+	dstFile, err := parseOrchestrionToolGo(toolDotGo)
+	require.NoError(t, err)
+	importSet := importSetFrom(dstFile)
+
+	var out bytes.Buffer
+	pruned, err := pruneImports(ctx, importSet, Options{Writer: &out, ErrWriter: io.Discard, NoPrune: true})
+	require.NoError(t, err)
+
+	assert.False(t, pruned)
+	assert.Contains(t, out.String(), "unnecessary import")
+	assert.NotContains(t, out.String(), "there is no "+config.FilenameOrchestrionYML)
+	assert.NotNil(t, importSet.Find("github.com/DataDog/orchestrion/this-package-does-not-exist-zzz"))
+}
+
 var goModTemplate = template.Must(template.New("go-mod").Parse(`module github.com/DataDog/orchestrion/pin-test
 
 go {{ .GoVersion }}
