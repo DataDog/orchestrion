@@ -308,18 +308,22 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 
 	var pruned bool
 	for _, pkg := range pkgs {
-		if len(pkg.Errors) > 0 {
-			pruned = pruneImport(importSet, pkg.PkgPath, joinPackageErrors(pkg.Errors), opts) || pruned
-			continue
-		}
-
 		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
 		if err != nil {
 			pruned = pruneImport(importSet, pkg.PkgPath, err.Error(), opts) || pruned
 			continue
 		}
 		if !hasConfig {
-			pruned = pruneImport(importSet, pkg.PkgPath, "there is no "+config.FilenameOrchestrionYML+" nor "+config.FilenameOrchestrionToolGo+" file in this package", opts) || pruned
+			// A package can have pkg.Errors set while still carrying a valid
+			// configuration, e.g. when GOOS/GOARCH or build tags exclude all its
+			// Go files: config.HasConfig locates the config via pkg.IgnoredFiles
+			// in that case. Only fall back to the load error here, once
+			// config.HasConfig has confirmed there really is no configuration.
+			reason := "there is no " + config.FilenameOrchestrionYML + " nor " + config.FilenameOrchestrionToolGo + " file in this package"
+			if len(pkg.Errors) > 0 {
+				reason = joinPackageErrors(pkg.Errors)
+			}
+			pruned = pruneImport(importSet, pkg.PkgPath, reason, opts) || pruned
 			continue
 		}
 		decl := importSet.Find(pkg.PkgPath)
