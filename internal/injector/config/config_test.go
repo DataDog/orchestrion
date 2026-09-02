@@ -184,6 +184,30 @@ func TestHasConfig(t *testing.T) {
 			_, err := HasConfig(context.Background(), nil, pkgRoot, pkg, true)
 			require.ErrorIs(t, err, ErrInvalidConfig, "a missing extends target must be classified as ErrInvalidConfig, not a transient resolution failure")
 		})
+
+		t.Run("extends environmental stat error", func(t *testing.T) {
+			t.Parallel()
+
+			pkgRoot := t.TempDir()
+			runGo(t, pkgRoot, "mod", "init", "github.com/DataDog/orchestrion/config_test")
+			// "extends" resolves through a path component that is a regular
+			// file, not a directory: os.Stat fails with ENOTDIR, which is
+			// neither fs.ErrNotExist nor proof the configuration is broken
+			// (an EACCES from a permission error would be the same kind of
+			// environmental failure). On Windows this same traversal failure
+			// reports as fs.ErrNotExist (ERROR_PATH_NOT_FOUND), so the
+			// containing-directory check is what keeps it unclassified.
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, "not-a-dir"), []byte(""), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(pkgRoot, FilenameOrchestrionYML), []byte("meta: {name: name, description: description}\nextends: [./not-a-dir/nested.yml]"), 0o644))
+
+			pkg := &packages.Package{
+				PkgPath: "github.com/DataDog/orchestrion/config_test",
+				GoFiles: []string{filepath.Join(pkgRoot, "main.go")},
+			}
+			_, err := HasConfig(context.Background(), nil, pkgRoot, pkg, true)
+			require.Error(t, err)
+			require.NotErrorIs(t, err, ErrInvalidConfig, "an environmental stat failure must not be classified as a definitively invalid configuration")
+		})
 	})
 }
 
