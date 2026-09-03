@@ -1,0 +1,8 @@
+[
+  {
+    "name": "interface receiver isolation",
+    "taintPath": "/tmp/iast-receiver",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

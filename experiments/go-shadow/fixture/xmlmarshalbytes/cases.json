@@ -1,0 +1,8 @@
+[
+  {
+    "name": "xml marshal bytes",
+    "taintPath": "/tmp/iast-xmlmarshalbytes",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

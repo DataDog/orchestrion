@@ -1,0 +1,8 @@
+[
+  {
+    "name": "static recursion",
+    "taintPath": "/tmp/iast-static-recursion",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "equal bytes, one dirty and one clean",
+    "taintPath": "/tmp/iast-equalbytesonedirtyandonecl",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

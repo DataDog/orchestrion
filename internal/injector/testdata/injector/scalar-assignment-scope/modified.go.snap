@@ -1,0 +1,32 @@
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import __orchestrion_taint "github.com/DataDog/orchestrion/runtime/taint"
+
+//line input.go:3
+var global byte
+
+func assignGlobal(source string) {
+  global = source[0]
+}
+
+func assignOuter(source string) byte {
+  var outer byte
+  func() {
+    outer = source[0]
+  }()
+  return outer
+}
+
+func assignLocal(source string) byte {
+  var local byte
+  if len(source) > 0 {
+    local = source[0]
+//line <generated>:1
+    __orchestrion_taint.MarkByteFromString(&local, source, 0)
+    defer __orchestrion_taint.ReleaseByte(&local)
+  }
+//line input.go:22
+  return local
+}

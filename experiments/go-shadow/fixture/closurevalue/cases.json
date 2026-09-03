@@ -1,0 +1,8 @@
+[
+  {
+    "name": "closure environment",
+    "taintPath": "/tmp/iast-closure",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,26 @@
+%YAML 1.1
+---
+# Verifies that method-expression wraps captured expressions but does not
+# rewrite immediate direct method-expression calls.
+aspects:
+  - id: buffer-grow-method-expression
+    join-point:
+      method-expression:
+        receiver: bytes.Buffer
+        name: Grow
+        match: pointer-only
+    advice:
+      - wrap-expression:
+          template: func(buffer *bytes.Buffer, size int) { {{ . }}(buffer, size) }
+
+code: |-
+  package test
+
+  import "bytes"
+
+  func growBuffer() {
+    var buffer bytes.Buffer
+    grow := (*bytes.Buffer).Grow
+    grow(&buffer, 1024)
+    (*bytes.Buffer).Grow(&buffer, 2048)
+  }

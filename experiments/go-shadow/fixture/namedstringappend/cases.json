@@ -1,0 +1,20 @@
+[
+  {
+    "name": "named string append",
+    "taintPath": "/tmp/iast-namedstringappend",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "named string append clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "named string append disabled",
+    "taintPath": "/tmp/iast-namedstringappend",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

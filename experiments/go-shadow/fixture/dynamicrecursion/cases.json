@@ -1,0 +1,8 @@
+[
+  {
+    "name": "dynamic recursion",
+    "taintPath": "/tmp/iast-recursion",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

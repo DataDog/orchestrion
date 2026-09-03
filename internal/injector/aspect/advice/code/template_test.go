@@ -44,6 +44,26 @@ func (m mockAdviceContext) ResolveType(dst.Expr) types.Type {
 	return nil
 }
 
+func (m mockAdviceContext) Selection(*dst.SelectorExpr) *types.Selection {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
+}
+
+func (m mockAdviceContext) IsConstant(dst.Expr) bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
+}
+
+func (m mockAdviceContext) IsBuiltin(*dst.Ident) bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
+}
+
+func (m mockAdviceContext) IsAddressable(dst.Expr) bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
+}
+
 func (m mockAdviceContext) Release() {
 	assert.FailNow(m.t, "unexpected method call")
 }
@@ -95,6 +115,15 @@ func (m mockAdviceContext) Child(dst.Node, string, int) context.AdviceContext {
 
 func (m mockAdviceContext) ReplaceNode(dst.Node) {
 	assert.FailNow(m.t, "unexpected method call")
+}
+
+func (m mockAdviceContext) InsertAfter(dst.Node) {
+	assert.FailNow(m.t, "unexpected method call")
+}
+
+func (m mockAdviceContext) CanInsertAfter() bool {
+	assert.FailNow(m.t, "unexpected method call")
+	return false
 }
 
 func (m mockAdviceContext) AddImport(string, string) bool {

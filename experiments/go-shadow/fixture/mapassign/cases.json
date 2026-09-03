@@ -1,0 +1,8 @@
+[
+  {
+    "name": "map assignment",
+    "taintPath": "/tmp/iast-map",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

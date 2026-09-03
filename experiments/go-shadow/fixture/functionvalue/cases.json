@@ -1,0 +1,8 @@
+[
+  {
+    "name": "function value",
+    "taintPath": "/tmp/iast-function",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]
