@@ -97,9 +97,9 @@ jobs:
           echo "::error::Files have been modified by 'go generate ./...' (see logs)."
           cat .repo.patch
           if [ "${IS_FORK}" = 'true' ]; then
-            echo '::notice::Automatic fixups are not available for fork pull requests. Run the' \
-                 'generators locally and commit the result: `find . -name go.mod -execdir go' \
-                 'generate ./... \;`, `./_tools/make-licenses.sh`, then `make docs`.'
+            echo "::notice::Automatic fixups are not available for fork pull requests. Run the" \
+                 "generators locally and commit the result: \`find . -name go.mod -execdir go" \
+                 "generate ./... \;\`, \`./_tools/make-licenses.sh\`, then \`make docs\`."
           else
             echo '::notice::The "Self Mutation" workflow will push these changes to this branch' \
                  'once this run completes; see the Actions tab.'
