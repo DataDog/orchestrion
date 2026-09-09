@@ -1,0 +1,2 @@
+meta: {name: name, description: description}
+aspects: [{ id: ID, join-point: { package-name: thing }, advice: [add-blank-import: unsafe] }]
