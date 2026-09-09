@@ -373,6 +373,8 @@
         { "$ref": "#/$defs/join-point/function-call" },
         { "$ref": "#/$defs/join-point/import-path" },
         { "$ref": "#/$defs/join-point/method-call" },
+        { "$ref": "#/$defs/join-point/slice-expression" },
+        { "$ref": "#/$defs/join-point/string-concat" },
         { "$ref": "#/$defs/join-point/not" },
         { "$ref": "#/$defs/join-point/one-of" },
         { "$ref": "#/$defs/join-point/package-name" },
@@ -380,6 +382,7 @@
         { "$ref": "#/$defs/join-point/struct-definition" },
         { "$ref": "#/$defs/join-point/struct-literal" },
         { "$ref": "#/$defs/join-point/test-main" },
+        { "$ref": "#/$defs/join-point/type-conversion" },
         { "$ref": "#/$defs/join-point/value-declaration" }
       ]
     },
@@ -634,6 +637,60 @@
           { "import-path": "github.com/gorilla/mux" }
         ]
       },
+      "slice-expression": {
+        "required": ["slice-expression"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "slice-expression": {
+            "title": "Target typed slice expressions",
+            "markdownDescription": "The `slice-expression` join point matches slice expressions whose operand has the selected core type.",
+            "type": "object",
+            "required": ["operand"],
+            "properties": {
+              "operand": {
+                "description": "The operand core type to match.",
+                "type": "string",
+                "enum": ["string", "bytes"]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          { "slice-expression": { "operand": "string" } },
+          { "slice-expression": { "operand": "bytes" } }
+        ]
+      },
+      "string-concat": {
+        "required": ["string-concat"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "string-concat": {
+            "title": "Target maximal string concatenations",
+            "markdownDescription": "The `string-concat` join point matches one maximal non-constant string addition chain within the configured operand bounds.",
+            "type": "object",
+            "properties": {
+              "min-operands": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 16,
+                "default": 2
+              },
+              "max-operands": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 16,
+                "default": 16
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          { "string-concat": {} },
+          { "string-concat": { "min-operands": 2, "max-operands": 8 } }
+        ]
+      },
       "method-call": {
         "required": ["method-call"],
         "unevaluatedProperties": false,
@@ -864,6 +921,27 @@
             "type": "boolean"
           }
         }
+      },
+      "type-conversion": {
+        "required": ["type-conversion"],
+        "unevaluatedProperties": false,
+        "properties": {
+          "type-conversion": {
+            "title": "Target string and byte conversions",
+            "markdownDescription": "Matches explicit byte-to-string conversions in non-discarded assignment, value declaration, and return contexts. String-to-byte conversions match only direct return contexts, where the result necessarily escapes. Optimized calls, comparisons, ranges, map keys, concatenations, and other parent contexts are excluded.",
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string", "enum": ["string", "bytes"] },
+              "to": { "type": "string", "enum": ["string", "bytes"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "examples": [
+          { "type-conversion": { "from": "bytes", "to": "string" } },
+          { "type-conversion": { "from": "string", "to": "bytes" } }
+        ]
       },
       "value-declaration": {
         "required": ["value-declaration"],

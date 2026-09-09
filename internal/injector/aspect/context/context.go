@@ -8,6 +8,7 @@ package context
 import (
 	gocontext "context"
 	"go/ast"
+	"go/constant"
 	"go/types"
 	"sync"
 
@@ -53,6 +54,11 @@ type AspectContext interface {
 
 	// ResolveType resolves a dst.Expr to its corresponding types.Type.
 	ResolveType(dst.Expr) types.Type
+
+	// ResolveConstant returns the compile-time constant value of the provided
+	// dst.Expr, or nil if the expression is not a constant expression (or its
+	// value could not be determined).
+	ResolveConstant(dst.Expr) constant.Value
 }
 
 type AdviceContext interface {
@@ -265,6 +271,30 @@ func (c *context) AddLink(path string) bool {
 
 func (c *context) EnsureMinGoLang(lang GoLangVersion) {
 	c.minGoLang.SetAtLeast(lang)
+}
+
+// ResolveConstant returns the compile-time constant value the type-checker
+// determined for the provided expression, or nil if that expression is not a
+// constant expression.
+func (c *context) ResolveConstant(expr dst.Expr) constant.Value {
+	astExpr, ok := c.astExpr(expr)
+	if !ok {
+		return nil
+	}
+
+	return c.typeInfo.Types[astExpr].Value
+}
+
+// astExpr returns the [ast.Expr] that corresponds to the provided [dst.Expr],
+// if one is known to this context.
+func (c *context) astExpr(expr dst.Expr) (ast.Expr, bool) {
+	astNode, ok := c.nodeMap[expr]
+	if !ok {
+		return nil, false
+	}
+
+	astExpr, ok := astNode.(ast.Expr)
+	return astExpr, ok
 }
 
 // ResolveType resolves a dst.Expr to its corresponding types.Type within the

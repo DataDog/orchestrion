@@ -6,6 +6,7 @@
 package code_test
 
 import (
+	"go/constant"
 	"go/types"
 	"testing"
 
@@ -40,6 +41,11 @@ func (mockAdviceContext) ParseSource(src []byte) (*dst.File, error) {
 // The rest is not used by the tests as of now...
 
 func (m mockAdviceContext) ResolveType(dst.Expr) types.Type {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
+}
+
+func (m mockAdviceContext) ResolveConstant(dst.Expr) constant.Value {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil
 }
