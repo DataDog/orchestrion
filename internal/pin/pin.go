@@ -90,7 +90,8 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		}
 	}()
 
-	toolFile := filepath.Join(goMod, "..", config.FilenameOrchestrionToolGo)
+	moduleDir := filepath.Dir(goMod)
+	toolFile := filepath.Join(moduleDir, config.FilenameOrchestrionToolGo)
 	dstFile, err := parseOrchestrionToolGo(toolFile)
 	if errors.Is(err, os.ErrNotExist) {
 		log.Debug().Msg("no " + config.FilenameOrchestrionToolGo + " file found, creating a new one")
@@ -138,13 +139,25 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		edits = append(edits, gomod.Require{Path: orchestrionImportPath, Version: version})
 	}
 
+	// gomod.RunEdit only runs `go mod tidy` when it has at least one edit to
+	// apply.
+	tidied := len(edits) > 0
 	if err := gomod.RunEdit(ctx, goMod, edits...); err != nil {
 		return fmt.Errorf("editing %q: %w", goMod, err)
 	}
+	if !tidied {
+		// pruneImports resolves the whole orchestrion.tool.go import closure from
+		// this module, which needs go.sum entries for modules only reachable
+		// through build-constrained files (the contribs behind
+		// orchestrion/all/v2). Only `go mod tidy` records those.
+		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
+			return fmt.Errorf("running `go mod tidy`: %w", err)
+		}
+	}
 
-	pruned, err := pruneImports(ctx, importSet, opts)
+	pruned, err := pruneImports(ctx, moduleDir, importSet, opts)
 	if err != nil {
-		return fmt.Errorf("pruning imports from %q: %w", toolFile, err)
+		return fmt.Errorf("checking imports of %q: %w", toolFile, err)
 	}
 
 	if pruned {
@@ -283,10 +296,18 @@ func updateGoGenerateDirective(opts Options, file *dst.File) {
 	file.Decs.Start.Append("\n", newDirective, "\n")
 }
 
-// pruneImports removes unnecessary or invalid imports from the provided
-// [*importSet]; unless the [*Options.NoPrune] field is true, in which case it
-// only outputs a message informing the user about uncalled-for imports.
-func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool, error) {
+// pruneImports removes unnecessary imports from the provided [*importSet];
+// unless the [*Options.NoPrune] field is true, in which case it only outputs
+// a message informing the user about uncalled-for imports. An import is only
+// ever pruned once we have positively established that it provides no
+// orchestrion integrations; a failure to determine this (e.g. because a
+// transitive import could not be resolved) is reported as a warning and the
+// import is left untouched. moduleDir must be the root directory of the
+// module being pinned: it is used to resolve every import, including
+// transitive imports found in a dependency's own [config.FilenameOrchestrionToolGo]
+// file, so that the dependency's own `replace` directives are never
+// mistakenly applied.
+func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, opts Options) (bool, error) {
 	importPaths := importSet.Except(orchestrionImportPath)
 	if len(importPaths) == 0 {
 		// Nothing to do!
@@ -296,6 +317,7 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 	log := zerolog.Ctx(ctx)
 	pkgs, err := packages.Load(
 		&packages.Config{
+			Dir:        moduleDir,
 			BuildFlags: []string{"-toolexec="},
 			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			Mode:       packages.NeedName | packages.NeedFiles,
@@ -308,53 +330,87 @@ func pruneImports(ctx context.Context, importSet *importSet, opts Options) (bool
 
 	var pruned bool
 	for _, pkg := range pkgs {
-		hasConfig, err := config.HasConfig(ctx, nil, pkg, opts.Validate)
-		if err != nil {
-			pruned = pruneImport(log, importSet, pkg.PkgPath, err.Error(), opts) || pruned
-			continue
+		hasConfig, err := config.HasConfig(ctx, nil, moduleDir, pkg, opts.Validate)
+		switch {
+		case err != nil:
+			// We failed to determine whether this package provides integrations.
+			// That is not evidence that it does not -- leave it alone.
+			if opts.Validate {
+				return pruned, fmt.Errorf("checking imports of %q: %w", pkg.PkgPath, err)
+			}
+			warnImport(ctx, pkg.PkgPath, err, opts)
+		case !hasConfig:
+			// A package can have pkg.Errors set while still carrying a valid
+			// configuration, e.g. when GOOS/GOARCH or build tags exclude all its
+			// Go files: config.HasConfig locates the config via pkg.IgnoredFiles
+			// in that case. Only fall back to the load error here, once
+			// config.HasConfig has confirmed there really is no configuration.
+			reason := "there is no " + config.FilenameOrchestrionYML + " nor " + config.FilenameOrchestrionToolGo + " file in this package"
+			if len(pkg.Errors) > 0 {
+				reason = joinPackageErrors(pkg.Errors)
+			}
+			pruned = pruneImport(importSet, pkg.PkgPath, reason, opts) || pruned
+		default:
+			decl := importSet.Find(pkg.PkgPath)
+			if decl == nil {
+				// This should not happen: pkg.PkgPath is expected to match one of
+				// the paths we requested via packages.Load. Guard against a
+				// nil-deref in case go/packages ever returns a differently
+				// canonicalized PkgPath.
+				log.Warn().Str("pkgPath", pkg.PkgPath).Msg("pruneImports: could not find import spec for loaded package")
+				continue
+			}
+			decl.Decs.End.Replace("// integration")
 		}
-		if !hasConfig {
-			pruned = pruneImport(log, importSet, pkg.PkgPath, "there is no "+config.FilenameOrchestrionYML+" nor "+config.FilenameOrchestrionToolGo+" file in this package", opts) || pruned
-			continue
-		}
-		decl := importSet.Find(pkg.PkgPath)
-		if decl == nil {
-			// This should not happen: pkg.PkgPath is expected to match one of the
-			// paths we requested via packages.Load. Guard against a nil-deref in
-			// case go/packages ever returns a differently-canonicalized PkgPath.
-			log.Warn().Str("pkgPath", pkg.PkgPath).Msg("pruneImports: could not find import spec for loaded package")
-			continue
-		}
-		decl.Decs.End.Replace("// integration")
 	}
 
 	return pruned, nil
 }
 
 // pruneImport prunes a single import from the supplied [*importSet], unless
-// [*Options.NoPrune] is set, in which case it prints a warning using the
-// provided `reason` message.
-func pruneImport(log *zerolog.Logger, importSet *importSet, path string, reason string, opts Options) bool {
+// [*Options.NoPrune] is set, in which case it prints a message using the
+// provided `reason`.
+func pruneImport(importSet *importSet, path string, reason string, opts Options) bool {
 	if opts.NoPrune {
 		spec := importSet.Find(path)
 		if spec == nil {
 			// Nothing to do... already removed!²
-			log.Warn().Str("pkgPath", path).Msg("pruneImport: could not find import spec to clear; already removed or PkgPath mismatch")
 			return false
 		}
 
-		_, _ = fmt.Fprintf(opts.Writer, "unnecessary import of %q: %v\n", path, reason)
+		_, _ = fmt.Fprintf(opts.Writer, "%q: %s; it would be removed without -prune=false\n", path, reason)
 		spec.Decs.End.Clear() // Remove the // integration comment.
 
 		return false
 	}
 
 	if importSet.Remove(path) {
-		_, _ = fmt.Fprintf(opts.Writer, "removing unnecessary import of %q: %v\n", path, reason)
-	} else {
-		log.Warn().Str("pkgPath", path).Msg("pruneImport: could not find import spec to remove; already removed or PkgPath mismatch")
+		_, _ = fmt.Fprintf(opts.Writer, "removed %q from %s: %s\n", path, config.FilenameOrchestrionToolGo, reason)
 	}
 	return true
+}
+
+// joinPackageErrors joins the messages of the supplied [packages.Error]
+// values into a single, single-line reason string.
+func joinPackageErrors(errs []packages.Error) string {
+	msgs := make([]string, len(errs))
+	for i, err := range errs {
+		msgs[i] = err.Error()
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// warnImport reports that we could not determine whether the package at path
+// provides orchestrion integrations, so it is being left untouched. This is
+// not an error: the build is unaffected, and nothing was changed.
+func warnImport(ctx context.Context, path string, cause error, opts Options) {
+	zerolog.Ctx(ctx).Warn().Err(cause).Str("import-path", path).
+		Msg("Could not determine whether package provides orchestrion integrations; leaving it untouched")
+	_, _ = fmt.Fprintf(opts.ErrWriter,
+		"note: keeping %q in %s -- orchestrion could not check whether it provides integrations.\n"+
+			"      this is not an error: nothing was changed and your build is unaffected.\n"+
+			"      details: %v\n",
+		path, config.FilenameOrchestrionToolGo, cause)
 }
 
 // writeUpdated writes the updated AST to the given file, using a temporary file
