@@ -54,7 +54,7 @@ jobs:
         if: github.event_name != 'push'
         run: |-
           currentTag=$(go run . version -static | cut -d' ' -f 2)
-          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
+          find . -iname go.mod -not -path './_docs/themes/**' -not -path '*/testdata/*' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             if [[ -n $(go -C="${dir}" mod edit --json | jq '(.Replace // []).[] | select(.Old.Path == "github.com/DataDog/orchestrion")') ]]; then
               echo "Aligning orchestrion version in ${dir} to ${currentTag} if necessary..."
@@ -97,9 +97,9 @@ jobs:
           echo "::error::Files have been modified by 'go generate ./...' (see logs)."
           cat .repo.patch
           if [ "${IS_FORK}" = 'true' ]; then
-            echo '::notice::Automatic fixups are not available for fork pull requests. Run the' \
-                 'generators locally and commit the result: `find . -name go.mod -execdir go' \
-                 'generate ./... \;`, `./_tools/make-licenses.sh`, then `make docs`.'
+            echo "::notice::Automatic fixups are not available for fork pull requests. Run the" \
+                 "generators locally and commit the result: \`find . -name go.mod -execdir go" \
+                 "generate ./... \;\`, \`./_tools/make-licenses.sh\`, then \`make docs\`."
           else
             echo '::notice::The "Self Mutation" workflow will push these changes to this branch' \
                  'once this run completes; see the Actions tab.'
@@ -122,7 +122,7 @@ jobs:
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@4d9c206a77c041268485162b8e2579ad7a5cb9a3 # v1.50.0
+        uses: crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -156,7 +156,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@c5fc58bd0be7a4b94b73ce40250322d5b838a108 # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@60e3a74c7b74a319e8e53e46bc455205f7173e1a # v3
         with:
           allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
       - name: Verify actions are pinned with ratchet
@@ -164,7 +164,7 @@ jobs:
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@dbe5299849118fd6f099ba563d263d770955a64a # v1.73.2
+        uses: reviewdog/action-actionlint@d290e336d5a743810aef4404f757dc862276d2ae # v1.73.4
         with:
           reporter: github-check
           level: error
