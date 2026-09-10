@@ -53,8 +53,26 @@ func (l *Loader) loadYMLFile(ctx context.Context, dir string, name string) (_ *c
 	for _, ext := range yml.Extends {
 		extFilename := filepath.Join(dir, ext)
 
-		if stat, err := os.Stat(extFilename); err != nil {
-			return nil, maskErrNotExist(err)
+		if stat, statErr := os.Stat(extFilename); statErr != nil {
+			if errors.Is(statErr, fs.ErrNotExist) && dirExists(filepath.Dir(extFilename)) {
+				// The containing directory exists, but the `extends` target is
+				// missing entirely: this is a definitively broken configuration
+				// (a dangling reference within an otherwise well-formed
+				// orchestrion.yml), not a resolution ambiguity -- so it must not
+				// be treated as fs.ErrNotExist (which callers read as "this
+				// optional file simply isn't there, carry on").
+				return nil, fmt.Errorf("%w: extends %q: %v", ErrInvalidConfig, ext, statErr)
+			}
+			// Some other, environmental stat failure (e.g. a permission error,
+			// or a path component that isn't a directory -- which on Windows
+			// also reports as fs.ErrNotExist, so the containing-directory check
+			// above is what disambiguates the two): this doesn't prove the
+			// configuration itself is broken, so leave it as an ordinary,
+			// unclassified ("we don't know") error. The fs.ErrNotExist identity
+			// must be broken regardless: callers read it as "this optional file
+			// simply isn't there, carry on", which would silently drop the
+			// extends reference.
+			return nil, maskErrNotExist(statErr)
 		} else if stat.IsDir() {
 			pkgs, err := l.packages(ctx, extFilename)
 			if err != nil {
@@ -179,23 +197,23 @@ func (l *Loader) parseYMLFile(ctx context.Context, filename string) (*ymlFile, e
 	if l.validate {
 		var node ast.Node
 		if err := dec.DecodeContext(ctx, &node); err != nil {
-			return nil, fmt.Errorf("yaml.Decode %q -> yaml.Node: %w", filename, err)
+			return nil, fmt.Errorf("%w: yaml.Decode %q -> yaml.Node: %w", ErrInvalidConfig, filename, err)
 		}
 		dec = decodedNode{yamlDec, node}
 
 		var simple map[string]any
 		if err := dec.DecodeContext(ctx, &simple); err != nil {
-			return nil, fmt.Errorf("yaml.Decode %q -> map[string]any: %w", filename, err)
+			return nil, fmt.Errorf("%w: yaml.Decode %q -> map[string]any: %w", ErrInvalidConfig, filename, err)
 		}
 
 		if err := ValidateObject(simple); err != nil {
-			return nil, fmt.Errorf("validate %q: %w", filename, err)
+			return nil, fmt.Errorf("%w: validate %q: %w", ErrInvalidConfig, filename, err)
 		}
 	}
 
 	var yml ymlFile
 	if err := dec.DecodeContext(ctx, &yml); err != nil {
-		return nil, fmt.Errorf("yaml.Decode %q: %w", filename, err)
+		return nil, fmt.Errorf("%w: yaml.Decode %q: %w", ErrInvalidConfig, filename, err)
 	}
 
 	return &yml, nil
@@ -218,4 +236,13 @@ func maskErrNotExist(err error) error {
 		return fmt.Errorf("%v", err)
 	}
 	return err
+}
+
+// dirExists reports whether path refers to an existing directory. Any stat
+// failure is reported as "does not exist": the caller only uses this to
+// disambiguate a missing `extends` target from a broken path, and any other
+// stat failure is environmental regardless.
+func dirExists(path string) bool {
+	stat, err := os.Stat(path)
+	return err == nil && stat.IsDir()
 }
