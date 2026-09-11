@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      all-of:
+        - go-statement-call: false
+        - function-call: work
+    advice:
+      - wrap-expression:
+          template: (({{ . }}))
+
+code: |-
+  package main
+
+  func work() {}
+
+  func main() {
+    work()
+    go work()
+  }

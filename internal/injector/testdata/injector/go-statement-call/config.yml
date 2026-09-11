@@ -1,0 +1,34 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      go-statement-call: true
+    advice:
+      - wrap-expression:
+          imports:
+            orchestrionctx: github.com/DataDog/orchestrion/runtime/context
+          template: |-
+            orchestrionctx.WrapGoroutine(func() { {{ . }} })()
+
+syntheticReferences:
+  github.com/DataDog/orchestrion/runtime/context: true
+
+code: |-
+  package main
+
+  func work(x int) {}
+
+  func main() {
+    go work(1)
+
+    result := make(chan int)
+    defer close(result)
+    go func() {
+      result <- work2()
+    }()
+    <-result
+  }
+
+  func work2() int {
+    return 42
+  }
