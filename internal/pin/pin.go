@@ -160,6 +160,13 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		return fmt.Errorf("checking imports of %q: %w", toolFile, err)
 	}
 
+	// pruneImports (and the NoPrune warning path) only mutate the in-memory AST;
+	// persist those changes now, regardless of whether anything was pruned, since
+	// the "keep" and NoPrune paths also update the `// integration` marker comments.
+	if err := writeUpdated(toolFile, dstFile); err != nil {
+		return fmt.Errorf("updating %q: %w", toolFile, err)
+	}
+
 	if pruned {
 		// Run "go mod tidy" to ensure the `go.mod` file is up-to-date with detected dependencies.
 		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
@@ -315,10 +322,36 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 	}
 
 	log := zerolog.Ctx(ctx)
+
+	buildFlags := []string{"-toolexec="}
+	if inWorkspace, err := goenv.GOWORK(""); err != nil {
+		return false, fmt.Errorf("pruneImports: checking for workspace mode: %w", err)
+	} else if inWorkspace == "" {
+		// This is a pure introspection step (determining which imports still
+		// have a matching orchestrion.yml/tool file), not a build of the final
+		// vendored artifact, so we resolve packages via the module cache
+		// (`-mod=mod`) instead of inheriting Go's vendor auto-detection.
+		// Otherwise, this call can fail with "inconsistent vendoring" if an
+		// earlier step (e.g. `ensure.RequiredIntegrations`) already mutated
+		// go.mod without re-vendoring; the module cache always has the
+		// orchestrion.yml files needed here, whereas `vendor/` never does.
+		//
+		// `-mod` may only be `readonly` or `vendor` while in workspace mode
+		// (and workspace builds don't consult a member module's own `vendor/`
+		// directory the way a plain module does, so the "inconsistent
+		// vendoring" failure this routes around cannot occur there anyway),
+		// so this is skipped entirely under workspace mode: forcing it would
+		// also require disabling workspace resolution, which would make this
+		// call resolve replaced/`use`d modules from their published copy
+		// instead of the workspace's own version, and wrongly prune real
+		// integrations that only carry configuration in the workspace copy.
+		buildFlags = append(buildFlags, "-mod=mod")
+	}
+
 	pkgs, err := packages.Load(
 		&packages.Config{
 			Dir:        moduleDir,
-			BuildFlags: []string{"-toolexec="},
+			BuildFlags: buildFlags,
 			Logf:       func(format string, args ...any) { log.Trace().Str("operation", "packages.Load").Msgf(format, args...) },
 			Mode:       packages.NeedName | packages.NeedFiles,
 		},
@@ -333,6 +366,13 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 		hasConfig, err := config.HasConfig(ctx, nil, moduleDir, pkg, opts.Validate)
 		switch {
 		case err != nil:
+			if errors.Is(err, config.ErrInvalidConfig) {
+				// Unlike a resolution failure, this package's orchestrion.tool.go or
+				// orchestrion.yml was actually found and is genuinely malformed:
+				// "we don't know" doesn't apply here, so fail loudly instead of
+				// silently keeping (or worse, pruning) a known-broken integration.
+				return pruned, fmt.Errorf("%q: %w", pkg.PkgPath, err)
+			}
 			// We failed to determine whether this package provides integrations.
 			// That is not evidence that it does not -- leave it alone.
 			if opts.Validate {
@@ -352,12 +392,35 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 			pruned = pruneImport(importSet, pkg.PkgPath, reason, opts) || pruned
 		default:
 			if decl := importSet.Find(pkg.PkgPath); decl != nil {
-				decl.Decs.End.Replace("// integration")
+				setIntegrationMarker(&decl.Decs.End, true)
 			}
 		}
 	}
 
 	return pruned, nil
+}
+
+// integrationMarker is the trailing comment `pruneImports` uses to flag an
+// import as a known integration.
+const integrationMarker = "// integration"
+
+// setIntegrationMarker sets or clears the [integrationMarker] on the given
+// end-of-line decorations, but only if that line's comment is currently empty
+// or is already the marker itself. A single Go source line can only carry one
+// trailing comment, so if it's something else (e.g. a user-authored note),
+// it's left untouched rather than being overwritten or turned into a second,
+// misplaced decoration line.
+func setIntegrationMarker(decs *dst.Decorations, present bool) {
+	switch {
+	case len(*decs) == 0:
+		if present {
+			decs.Replace(integrationMarker)
+		}
+	case len(*decs) == 1 && (*decs)[0] == integrationMarker:
+		if !present {
+			decs.Clear()
+		}
+	}
 }
 
 // pruneImport prunes a single import from the supplied [*importSet], unless
@@ -372,7 +435,7 @@ func pruneImport(importSet *importSet, path string, reason string, opts Options)
 		}
 
 		_, _ = fmt.Fprintf(opts.Writer, "%q: %s; it would be removed without -prune=false\n", path, reason)
-		spec.Decs.End.Clear() // Remove the // integration comment.
+		setIntegrationMarker(&spec.Decs.End, false) // Remove the // integration comment.
 
 		return false
 	}
