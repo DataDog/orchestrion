@@ -1,0 +1,12 @@
+diff --git a/src/cmd/compile/internal/base/debug.go b/src/cmd/compile/internal/base/debug.go
+index c92df0c9b3..7f8d2c1f45 100644
+--- a/src/cmd/compile/internal/base/debug.go
++++ b/src/cmd/compile/internal/base/debug.go
+@@ -68,6 +68,7 @@ type DebugFlags struct {
+ 	StaticCopy            int    `help:"print information about missed static copies" concurrent:"ok"`
+ 	SyncFrames            int    `help:"how many writer stack frames to include at sync points in unified export data"`
+ 	TailCall              int    `help:"print information about tail calls"`
++	Taint                 int    `help:"enable experimental IAST shadow taint instrumentation" concurrent:"ok"`
+ 	TypeAssert            int    `help:"print information about type assertion inlining"`
+ 	WB                    int    `help:"print information about write barriers"`
+ 	ABIWrap               int    `help:"print information about ABI wrapper generation"`

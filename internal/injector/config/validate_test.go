@@ -7,11 +7,16 @@ package config_test
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 
+	"github.com/DataDog/orchestrion/internal/yaml"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +25,18 @@ func TestSchemaValidity(t *testing.T) {
 	count := validateExamples(t, getSchema(), "", nil)
 	// Make sure we verified some examples...
 	require.Greater(t, count, 30)
+}
+
+func TestSchemaValidatesTaintIntegration(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	require.True(t, ok)
+	root := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..", ".."))
+	content, err := os.ReadFile(filepath.Join(root, "runtime", "taint", "instrument", "orchestrion.yml"))
+	require.NoError(t, err)
+
+	var document any
+	require.NoError(t, yaml.UnmarshalContext(context.Background(), bytes.NewReader(content), &document))
+	require.NoError(t, getSchema().Validate(document))
 }
 
 func validateExamples(t *testing.T, schema *jsonschema.Schema, path string, visited map[*jsonschema.Schema]struct{}) int {

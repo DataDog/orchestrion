@@ -1,0 +1,8 @@
+[
+  {
+    "name": "clean byte overwrites dirty byte",
+    "taintPath": "/tmp/iast-cleanbyteoverwritesdirtybyte",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

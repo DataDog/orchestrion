@@ -1,0 +1,8 @@
+[
+  {
+    "name": "buffer bytes alias gets clean overwrite",
+    "taintPath": "/tmp/iast-bufferbytesaliasgetscleanov",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

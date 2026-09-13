@@ -1,0 +1,8 @@
+[
+  {
+    "name": "zero-sized channel",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

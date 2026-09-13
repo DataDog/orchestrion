@@ -1,0 +1,20 @@
+[
+  {
+    "name": "named string copy",
+    "taintPath": "/tmp/iast-namedstringcopy",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "named string copy clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "named string copy disabled",
+    "taintPath": "/tmp/iast-namedstringcopy",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

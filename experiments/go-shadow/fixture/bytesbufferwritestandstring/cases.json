@@ -1,0 +1,8 @@
+[
+  {
+    "name": "bytes buffer write string",
+    "taintPath": "/tmp/iast-bytesbufferwritestandstring",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "omitted-bound or three-index slice",
+    "taintPath": "/tmp/iast-omittedboundorthreeindexsli",
+    "dirtyReports": 2,
+    "taintEnabled": true
+  }
+]

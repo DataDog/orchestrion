@@ -1,0 +1,15 @@
+[
+  {
+    "name": "map lifecycle",
+    "taintPath": "/tmp/iast-map-cases",
+    "dirtyReports": 4,
+    "taintEnabled": true
+  },
+  {
+    "name": "map race",
+    "taintPath": "/tmp/iast-map-race",
+    "dirtyReports": 4,
+    "taintEnabled": true,
+    "race": true
+  }
+]

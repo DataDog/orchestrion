@@ -1,0 +1,8 @@
+[
+  {
+    "name": "dirty indexed byte assigned into clean slice",
+    "taintPath": "/tmp/iast-dirtyindexedbyteassignedtocleanslice",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

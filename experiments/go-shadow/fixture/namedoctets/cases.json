@@ -1,0 +1,20 @@
+[
+  {
+    "name": "named octets",
+    "taintPath": "/tmp/iast-namedoctets",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "named octets clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "named octets disabled",
+    "taintPath": "/tmp/iast-namedoctets",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "clear bytes removes taint",
+    "taintPath": "/tmp/iast-clearbyteremovestaint",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "clear bytes control without clear",
+    "taintPath": "/tmp/iast-clearbyteremovestaint-control",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "env": {
+      "SKIP_CLEAR": "1"
+    }
+  }
+]

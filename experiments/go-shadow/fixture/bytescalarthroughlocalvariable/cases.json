@@ -1,0 +1,8 @@
+[
+  {
+    "name": "byte scalar through local variable",
+    "taintPath": "/tmp/iast-bytescalarthroughlocalvariable",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

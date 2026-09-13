@@ -1,0 +1,19 @@
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product includes software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+package main
+
+import (
+	"os"
+	"strconv"
+)
+
+func main() {
+	clean := strconv.Quote("/tmp/iast-strconvquotefreshoutput")
+	_, _ = os.Open(clean)
+
+	value := strconv.Quote(os.Getenv("TAINT_PATH"))
+	_, _ = os.Open(value)
+}

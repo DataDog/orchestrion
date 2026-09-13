@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched tainted string as map key",
+    "taintPath": "/tmp/iast-taintedstringusedasmapkeya",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

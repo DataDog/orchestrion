@@ -1,0 +1,8 @@
+[
+  {
+    "name": "buffered channel GC",
+    "taintPath": "/tmp/iast-channel-gc",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

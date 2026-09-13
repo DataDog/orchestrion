@@ -1,0 +1,8 @@
+[
+  {
+    "name": "strings map",
+    "taintPath": "/tmp/iast-stringsmap",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

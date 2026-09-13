@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+aspects:
+  - id: taint-dependency-clone
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: github.com/DataDog/orchestrion/runtime/taint/instrument/testdata/dependency.Clone
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.CallStringTransform({{ .AST.Fun }}, {{ index .AST.Args 0 }})
+
+  - id: taint-dependency-fresh-string
+    join-point:
+      all-of:
+        - package-filter: {root: true}
+        - function-call: github.com/DataDog/orchestrion/runtime/taint/instrument/testdata/dependency.FreshString
+    advice:
+      - wrap-expression:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.CallStringTransform({{ .AST.Fun }}, {{ index .AST.Args 0 }})

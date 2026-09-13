@@ -1,0 +1,8 @@
+[
+  {
+    "name": "map literal",
+    "taintPath": "/tmp/iast-map-literal",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

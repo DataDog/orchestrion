@@ -1,0 +1,20 @@
+//line input.go:1:1
+package test
+
+import "bytes"
+
+//line input.go:5
+func growBuffer() {
+  var buffer bytes.Buffer
+  grow :=
+//line <generated>:1
+    func(size int) {
+//line input.go:7
+      buffer.Grow(
+//line <generated>:1
+        size)
+    }
+//line input.go:8
+  grow(1024)
+  buffer.Grow(2048)
+}

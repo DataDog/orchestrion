@@ -1,0 +1,8 @@
+[
+  {
+    "name": "rune scalar through local variable",
+    "taintPath": "/tmp/iast-runescalarthroughlocalvariable",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

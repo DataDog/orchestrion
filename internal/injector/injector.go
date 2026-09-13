@@ -214,11 +214,27 @@ func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decora
 
 func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (result, error) {
 	var (
-		chain      *context.NodeChain
-		modified   bool
-		references = typed.NewReferenceMap(params.Decorator.Ast.Nodes, params.TypeInfo.Scopes)
-		err        error
+		chain         *context.NodeChain
+		modified      bool
+		references    = typed.NewReferenceMap(params.Decorator.Ast.Nodes, params.TypeInfo.Scopes)
+		matchedAdvice = make(map[dst.Node][]*advice.OrderedAdvice)
+		minGoLang     context.GoLangVersion
+		err           error
 	)
+
+	adviceContext := func(csor *dstutil.Cursor) context.AdviceContext {
+		return chain.Context(ctx, context.ContextArgs{
+			Cursor:       csor,
+			ImportPath:   params.Decorator.Path,
+			File:         params.File,
+			RefMap:       &references,
+			SourceParser: params.Decorator,
+			MinGoLang:    &minGoLang,
+			TestMain:     i.TestMain,
+			TypeInfo:     params.TypeInfo,
+			NodeMap:      params.Decorator.Ast.Nodes,
+		})
+	}
 
 	pre := func(csor *dstutil.Cursor) bool {
 		if err != nil || csor.Node() == nil || isIgnored(ctx, csor.Node()) {
@@ -230,10 +246,12 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 		if root {
 			chain.SetConfig(i.RootConfig)
 		}
+		matchContext := adviceContext(csor)
+		matchedAdvice[csor.Node()] = matchNode(matchContext, params.Aspects)
+		matchContext.Release()
 		return true
 	}
 
-	var minGoLang context.GoLangVersion
 	post := func(csor *dstutil.Cursor) bool {
 		// Pop the ancestry stack now that we're done with this node.
 		defer func() {
@@ -243,20 +261,11 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 		}()
 
 		var changed bool
-		ctx := chain.Context(ctx, context.ContextArgs{
-			Cursor:       csor,
-			ImportPath:   params.Decorator.Path,
-			File:         params.File,
-			RefMap:       &references,
-			SourceParser: params.Decorator,
-			MinGoLang:    &minGoLang,
-			TestMain:     i.TestMain,
-			TypeInfo:     params.TypeInfo,
-			NodeMap:      params.Decorator.Ast.Nodes,
-		})
+		ctx := adviceContext(csor)
 		defer ctx.Release()
 
-		changed, err = injectNode(ctx, params.Aspects)
+		changed, err = applyAdvice(ctx, matchedAdvice[csor.Node()])
+		delete(matchedAdvice, csor.Node())
 		modified = modified || changed
 
 		return err == nil
@@ -284,10 +293,7 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 	}, nil
 }
 
-// injectNode assesses all configured aspects against the current node, and performs any AST
-// transformations. It returns whether the AST was indeed modified. In case of an error, the
-// injector aborts immediately and returns the error.
-func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, err error) {
+func matchNode(ctx context.AspectContext, aspects []*aspect.Aspect) []*advice.OrderedAdvice {
 	var orderedAdvice []*advice.OrderedAdvice
 	var index int
 	for _, inj := range aspects {
@@ -300,7 +306,11 @@ func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, 
 			index++
 		}
 	}
+	return orderedAdvice
+}
 
+// applyAdvice performs transformations that were matched against the original AST.
+func applyAdvice(ctx context.AdviceContext, orderedAdvice []*advice.OrderedAdvice) (mod bool, err error) {
 	if len(orderedAdvice) == 0 {
 		return false, nil
 	}

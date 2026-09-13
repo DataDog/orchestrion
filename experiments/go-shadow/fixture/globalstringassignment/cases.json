@@ -1,0 +1,15 @@
+[
+  {
+    "name": "global-string-assignment",
+    "taintPath": "secret",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "exactRanges": [[0, 6]]
+  },
+  {
+    "name": "global-string-assignment-disabled",
+    "taintPath": "secret",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

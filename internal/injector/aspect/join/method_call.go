@@ -7,7 +7,6 @@ package join
 
 import (
 	gocontext "context"
-	"errors"
 	"fmt"
 	"go/types"
 
@@ -22,6 +21,12 @@ import (
 
 type (
 	MethodCallMatch int
+
+	methodSpec struct {
+		Receiver string          `yaml:"receiver"`
+		Name     string          `yaml:"name"`
+		Match    MethodCallMatch `yaml:"match"`
+	}
 
 	methodCall struct {
 		Receiver typed.TypeName
@@ -112,32 +117,37 @@ func (m *methodCall) Hash(h *fingerprint.Hasher) error {
 
 func init() {
 	unmarshalers["method-call"] = func(ctx gocontext.Context, node ast.Node) (Point, error) {
-		var spec struct {
-			Receiver string          `yaml:"receiver"`
-			Name     string          `yaml:"name"`
-			Match    MethodCallMatch `yaml:"match"`
-		}
-		if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
+		tn, name, match, err := unmarshalMethodSpec(ctx, node, "method-call")
+		if err != nil {
 			return nil, err
 		}
 
-		if spec.Receiver == "" {
-			return nil, errors.New("method-call: missing required field 'receiver'")
-		}
-		if spec.Name == "" {
-			return nil, errors.New("method-call: missing required field 'name'")
-		}
-
-		tn, err := typed.NewTypeName(spec.Receiver)
-		if err != nil {
-			return nil, fmt.Errorf("method-call: invalid receiver type %q: %w", spec.Receiver, err)
-		}
-		if tn.Pointer {
-			return nil, fmt.Errorf("method-call: receiver type must not include a pointer sigil (use match: pointer-only instead): %q", spec.Receiver)
-		}
-
-		return MethodCall(tn, spec.Name, spec.Match), nil
+		return MethodCall(tn, name, match), nil
 	}
+}
+
+func unmarshalMethodSpec(ctx gocontext.Context, node ast.Node, kind string) (typed.TypeName, string, MethodCallMatch, error) {
+	var spec methodSpec
+	if err := yaml.NodeToValueContext(ctx, node, &spec); err != nil {
+		return typed.TypeName{}, "", MethodCallMatchAny, err
+	}
+
+	if spec.Receiver == "" {
+		return typed.TypeName{}, "", MethodCallMatchAny, fmt.Errorf("%s: missing required field 'receiver'", kind)
+	}
+	if spec.Name == "" {
+		return typed.TypeName{}, "", MethodCallMatchAny, fmt.Errorf("%s: missing required field 'name'", kind)
+	}
+
+	tn, err := typed.NewTypeName(spec.Receiver)
+	if err != nil {
+		return typed.TypeName{}, "", MethodCallMatchAny, fmt.Errorf("%s: invalid receiver type %q: %w", kind, spec.Receiver, err)
+	}
+	if tn.Pointer {
+		return typed.TypeName{}, "", MethodCallMatchAny, fmt.Errorf("%s: receiver type must not include a pointer sigil (use match: pointer-only instead): %q", kind, spec.Receiver)
+	}
+
+	return tn, spec.Name, spec.Match, nil
 }
 
 var _ yaml.NodeUnmarshalerContext = (*MethodCallMatch)(nil)
