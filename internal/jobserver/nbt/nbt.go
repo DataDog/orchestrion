@@ -91,6 +91,11 @@ type (
 	StartRequest struct {
 		ImportPath string `json:"importPath"`
 		BuildID    string `json:"buildID"`
+		// ParentImportPath is the import path of the package being compiled by the
+		// task that spawned the build this request belongs to, if any. It is blank
+		// when the caller is part of a build the user started directly, and it
+		// identifies which compilation task is waiting for this one otherwise.
+		ParentImportPath string `json:"parentImportPath,omitempty"`
 	}
 	// StartResponse informs the caller about what should be done with the
 	// compilation task. If a [*StartResponse.FinishToken] is present, the caller
@@ -121,6 +126,9 @@ func (StartRequest) Subject() string           { return startSubject }
 func (StartRequest) ResponseIs(*StartResponse) {}
 func (r StartRequest) ForeachSpanTag(set func(key string, value any)) {
 	set("request.importPath", r.ImportPath)
+	if r.ParentImportPath != "" {
+		set("request.parentImportPath", r.ParentImportPath)
+	}
 }
 
 // cacheKey creates a composite key from importPath and buildID to support

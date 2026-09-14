@@ -32,6 +32,13 @@ const (
 	envVarGotmpdir = "GOTMPDIR"
 )
 
+// ResolveParentImportPath returns the import path of the package whose
+// compilation triggered the resolution that spawned the current process' build,
+// if any. It is blank in builds the user started directly.
+func ResolveParentImportPath() string {
+	return os.Getenv(envVarParentID)
+}
+
 var envIgnoreList = map[string]func(*ResolveRequest, string){
 	// We don't use this, instead rely on the [ResolveRequest.Dir] field.
 	"PWD": nil,

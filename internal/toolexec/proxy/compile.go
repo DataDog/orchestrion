@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/blakesmith/ar"
@@ -275,7 +276,11 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 		return nil, err
 	}
 
-	res, err := client.Request(ctx, jobs, nbt.StartRequest{ImportPath: importPath, BuildID: cmd.Flags.BuildID})
+	res, err := client.Request(ctx, jobs, nbt.StartRequest{
+		ImportPath:       importPath,
+		BuildID:          cmd.Flags.BuildID,
+		ParentImportPath: pkgs.ResolveParentImportPath(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("sending never-build-twice request: %w", err)
 	}

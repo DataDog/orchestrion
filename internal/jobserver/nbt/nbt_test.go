@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -379,5 +380,46 @@ func Test(t *testing.T) {
 		})
 		require.ErrorContains(t, err, extraFile)
 		require.Nil(t, res)
+	})
+
+	// Compilation tasks resolve the archives of the dependencies injected code
+	// introduced by spawning nested builds, which may have to compile a package one
+	// of their ancestors is already compiling. The artifacts of that task can only
+	// be produced once the nested build completed, so waiting for them deadlocks
+	// the whole build. See TestCompileLoop in `test/e2e` for the same scenario in a
+	// real build.
+	//
+	// KNOWN GAP: this test currently fails, as the job server waits for artifacts
+	// that can never be produced.
+	t.Run("re-entrant", func(t *testing.T) {
+		subject := &service{dir: t.TempDir()}
+
+		start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
+		require.NoError(t, err)
+		require.NotEmpty(t, start.FinishToken)
+
+		// The same package, compiled by a nested build the in-flight task spawned.
+		// That task cannot report its outcome until this request has returned.
+		type result struct {
+			res *StartResponse
+			err error
+		}
+		done := make(chan result, 1)
+		go func() {
+			res, err := subject.start(context.Background(), StartRequest{
+				ImportPath:       importPath,
+				BuildID:          buildID,
+				ParentImportPath: importPath,
+			})
+			done <- result{res, err}
+		}()
+
+		select {
+		case got := <-done:
+			require.ErrorContains(t, got.err, "cycle detected")
+			require.Nil(t, got.res)
+		case <-time.After(5 * time.Second):
+			t.Fatalf("start() is still waiting for the compilation of %q, which cannot complete until it returns", importPath)
+		}
 	})
 }
