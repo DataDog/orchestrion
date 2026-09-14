@@ -256,4 +256,10 @@ server is responsible for the following aspects:
   re-compile packages that are both in the build's original dependency closure
   and part of some injected package dependencies.
 
+Package resolution and `compile` task re-use share a single wait-for graph, so
+that a task which cannot complete until another one has &ndash; for example when
+a child build needs a package that is currently being compiled by one of its
+ancestors &ndash; fails with a `cycle detected` error instead of deadlocking the
+build.
+
 [nats]: https://nats.io/

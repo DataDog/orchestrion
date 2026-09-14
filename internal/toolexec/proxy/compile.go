@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/blakesmith/ar"
@@ -275,7 +276,11 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 		return nil, err
 	}
 
-	res, err := client.Request(ctx, jobs, nbt.StartRequest{ImportPath: importPath, BuildID: cmd.Flags.BuildID})
+	res, err := client.Request(ctx, jobs, nbt.StartRequest{
+		ImportPath:       importPath,
+		BuildID:          cmd.Flags.BuildID,
+		ParentImportPath: pkgs.ResolveParentImportPath(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("sending never-build-twice request: %w", err)
 	}
@@ -285,12 +290,16 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 
 		imports, err := importcfg.ParseFile(ctx, cmd.Flags.ImportCfg)
 		if err != nil {
-			return nil, fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+			err = fmt.Errorf("parsing %q: %w", cmd.Flags.ImportCfg, err)
+			// The token was never used, so tasks waiting for this one would otherwise
+			// wait forever.
+			return nil, errors.Join(err, cmd.notifyJobServer(ctx, err))
 		}
 
 		cmd.LinkDeps, err = linkdeps.FromImportConfig(ctx, &imports)
 		if err != nil {
-			return nil, fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
+			err = fmt.Errorf("reading %s closure from %s: %w", linkdeps.Filename, cmd.Flags.ImportCfg, err)
+			return nil, errors.Join(err, cmd.notifyJobServer(ctx, err))
 		}
 
 		return cmd, nil

@@ -35,14 +35,15 @@ type resolvedPackageSet struct {
 type service struct {
 	resolved  common.Cache[resolvedPackageSet]
 	loaded    common.Cache[*packages.Package]
-	graph     common.Graph
+	graph     *common.Graph
 	serverURL string
 }
 
-func Subscribe(ctx context.Context, serverURL string, conn *nats.Conn, stats *common.CacheStats) (config.PackageLoader, error) {
+func Subscribe(ctx context.Context, serverURL string, conn *nats.Conn, stats *common.CacheStats, graph *common.Graph) (config.PackageLoader, error) {
 	s := &service{
 		loaded:    common.NewCache[*packages.Package](stats),
 		resolved:  common.NewCache[resolvedPackageSet](stats),
+		graph:     graph,
 		serverURL: serverURL,
 	}
 
