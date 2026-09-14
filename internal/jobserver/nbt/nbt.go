@@ -161,6 +161,9 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		if state.buildID != req.BuildID {
 			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
 		}
+		if !state.isDone.Load() && req.ParentImportPath == req.ImportPath {
+			return nil, fmt.Errorf("cycle detected: %s -> %s", req.ImportPath, req.ImportPath)
+		}
 
 		zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Waiting for concurrent task to complete...")
 		defer zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Concurrent was completed!")
