@@ -156,18 +156,14 @@ func New(ctx context.Context, opts *Options) (srv *Server, err error) {
 		clientURL:  clientURL,
 		log:        log,
 	}
-	// The wait-for graph is shared by the package resolution and never-build-twice
-	// services, so that cycles spanning both of them are detected instead of
-	// deadlocking.
-	graph := &common.Graph{}
-	pkgLoader, err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats, graph)
+	pkgLoader, err := pkgs.Subscribe(ctx, clientURL, conn, res.CacheStats)
 	if err != nil {
 		return nil, err
 	}
 	if err := buildid.Subscribe(ctx, conn, pkgLoader, res.CacheStats); err != nil {
 		return nil, err
 	}
-	cleanup, err := nbt.Subscribe(ctx, conn, graph)
+	cleanup, err := nbt.Subscribe(ctx, conn)
 	if err != nil {
 		return nil, err
 	}

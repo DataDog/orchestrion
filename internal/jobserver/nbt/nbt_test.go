@@ -11,9 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
-	"github.com/DataDog/orchestrion/internal/jobserver/common"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -382,119 +380,4 @@ func Test(t *testing.T) {
 		require.ErrorContains(t, err, extraFile)
 		require.Nil(t, res)
 	})
-
-	// Compilation tasks may spawn nested builds in order to resolve the archives
-	// of the dependencies injected code introduced. If such a nested build ends up
-	// compiling a package that is already being built by one of its ancestors, the
-	// artifacts of that task can never become available, and waiting for them
-	// deadlocks the whole build.
-	t.Run("re-entrant", func(t *testing.T) {
-		const nestedImportPath = "github.com/DataDog/orchestrion.test/nested"
-
-		t.Run("self", func(t *testing.T) {
-			subject := &service{dir: t.TempDir(), graph: &common.Graph{}}
-
-			start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
-			require.NoError(t, err)
-			require.NotEmpty(t, start.FinishToken)
-
-			res, err := startWithin(t, subject, StartRequest{
-				ImportPath:       importPath,
-				BuildID:          buildID,
-				ParentImportPath: importPath,
-			})
-			require.ErrorContains(t, err, "cycle detected: "+importPath+" -> "+importPath)
-			require.Nil(t, res)
-		})
-
-		t.Run("transitive", func(t *testing.T) {
-			graph := &common.Graph{}
-			subject := &service{dir: t.TempDir(), graph: graph}
-
-			start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
-			require.NoError(t, err)
-			require.NotEmpty(t, start.FinishToken)
-
-			// The in-flight compilation of importPath is resolving dependencies through
-			// a nested build that is compiling nestedImportPath.
-			require.NoError(t, graph.AddEdge(importPath, nestedImportPath))
-
-			res, err := startWithin(t, subject, StartRequest{
-				ImportPath:       importPath,
-				BuildID:          buildID,
-				ParentImportPath: nestedImportPath,
-			})
-			require.ErrorContains(t, err, "cycle detected: "+importPath+" -> "+nestedImportPath+" -> "+importPath)
-			require.Nil(t, res)
-		})
-
-		t.Run("no-cycle", func(t *testing.T) {
-			graph := &common.Graph{}
-			subject := &service{dir: t.TempDir(), graph: graph}
-
-			start, err := subject.start(ctx, StartRequest{ImportPath: importPath, BuildID: buildID})
-			require.NoError(t, err)
-			require.NotEmpty(t, start.FinishToken)
-
-			archiveContent := uuid.NewString()
-			archive := filepath.Join(t.TempDir(), "_pkg_.a")
-			require.NoError(t, os.WriteFile(archive, []byte(archiveContent), 0o644))
-
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				res, err := subject.start(ctx, StartRequest{
-					ImportPath:       importPath,
-					BuildID:          buildID,
-					ParentImportPath: nestedImportPath,
-				})
-				if !assert.NoError(t, err) {
-					return
-				}
-				assert.Empty(t, res.FinishToken)
-				content, err := os.ReadFile(res.Files[LabelArchive])
-				assert.NoError(t, err)
-				assert.Equal(t, archiveContent, string(content))
-			}()
-
-			res, err := subject.finish(ctx, FinishRequest{
-				ImportPath:  importPath,
-				BuildID:     buildID,
-				FinishToken: start.FinishToken,
-				Files:       map[Label]string{LabelArchive: archive},
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res)
-			wg.Wait()
-
-			// The wait was released, so the reverse edge no longer closes a cycle.
-			require.NoError(t, graph.AddEdge(importPath, nestedImportPath))
-		})
-	})
-}
-
-// startWithin calls [service.start] and fails the test if it blocks instead of
-// returning, which is what a missing cyclic wait detection results in.
-func startWithin(t *testing.T, subject *service, req StartRequest) (*StartResponse, error) {
-	t.Helper()
-
-	type result struct {
-		res *StartResponse
-		err error
-	}
-	done := make(chan result, 1)
-	go func() {
-		res, err := subject.start(context.Background(), req)
-		done <- result{res, err}
-	}()
-
-	select {
-	case res := <-done:
-		return res.res, res.err
-	case <-time.After(10 * time.Second):
-		t.Fatalf("waiting for the concurrent compilation of %q did not return", req.ImportPath)
-		return nil, nil
-	}
 }

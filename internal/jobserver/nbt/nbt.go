@@ -32,9 +32,6 @@ type (
 	service struct {
 		state sync.Map
 		dir   string
-		// graph is shared with the package resolution service, so that cyclic
-		// wait-for relationships involving both services can be detected.
-		graph *common.Graph
 	}
 	buildState struct {
 		initOnce sync.Once
@@ -49,7 +46,7 @@ type (
 	}
 )
 
-func Subscribe(ctx context.Context, conn *nats.Conn, graph *common.Graph) (cleanup func(context.Context) error, resErr error) {
+func Subscribe(ctx context.Context, conn *nats.Conn) (cleanup func(context.Context) error, resErr error) {
 	dir, err := os.MkdirTemp("", "orchestrion.nbt-*")
 	if err != nil {
 		return nil, fmt.Errorf("creating storage directory: %w", err)
@@ -63,7 +60,7 @@ func Subscribe(ctx context.Context, conn *nats.Conn, graph *common.Graph) (clean
 		}
 	}()
 
-	s := &service{dir: dir, graph: graph}
+	s := &service{dir: dir}
 	_, err = conn.Subscribe(startSubject,
 		common.HandleRequest(
 			zerolog.Ctx(ctx).With().Str("nats.subject", startSubject).Logger().WithContext(ctx),
@@ -94,10 +91,6 @@ type (
 	StartRequest struct {
 		ImportPath string `json:"importPath"`
 		BuildID    string `json:"buildID"`
-		// ParentImportPath is the import path of the package being compiled by the
-		// task that spawned the build this request belongs to, if any. It is blank
-		// when the caller is part of a build the user started directly.
-		ParentImportPath string `json:"parentImportPath,omitempty"`
 	}
 	// StartResponse informs the caller about what should be done with the
 	// compilation task. If a [*StartResponse.FinishToken] is present, the caller
@@ -128,9 +121,6 @@ func (StartRequest) Subject() string           { return startSubject }
 func (StartRequest) ResponseIs(*StartResponse) {}
 func (r StartRequest) ForeachSpanTag(set func(key string, value any)) {
 	set("request.importPath", r.ImportPath)
-	if r.ParentImportPath != "" {
-		set("request.parentImportPath", r.ParentImportPath)
-	}
 }
 
 // cacheKey creates a composite key from importPath and buildID to support
@@ -164,19 +154,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
 		}
 
-		if !state.isDone.Load() {
-			// The original task is still running, so we are about to block until it
-			// completes. This deadlocks if the caller is itself part of the work that
-			// task is waiting for, which happens when injected code introduces a
-			// dependency cycle: resolving it re-enters the very compilation that is
-			// waiting for that resolution to complete.
-			release, err := s.registerWait(req)
-			if err != nil {
-				return nil, err
-			}
-			defer release()
-		}
-
 		zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Waiting for concurrent task to complete...")
 		defer zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Concurrent was completed!")
 
@@ -197,30 +174,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 	// Otherwise, return a finalization token, etc...
 	zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Compile task started")
 	return &StartResponse{FinishToken: state.token}, nil
-}
-
-// registerWait records that the compilation of [StartRequest.ParentImportPath]
-// cannot complete until the task for [StartRequest.ImportPath] has, and returns
-// a function that removes that record. It returns an error instead of waiting
-// forever if this would close a cycle in the wait-for graph, as no participant
-// of such a cycle can ever make progress.
-func (s *service) registerWait(req StartRequest) (func(), error) {
-	if s.graph == nil || req.ParentImportPath == "" {
-		// The caller is part of a build that was started directly by the user, so it
-		// cannot be blocking any other compilation task.
-		return func() {}, nil
-	}
-
-	if err := s.graph.AddEdge(req.ParentImportPath, req.ImportPath); err != nil {
-		return nil, fmt.Errorf(
-			"refusing to wait for the concurrent compilation of %q, as this would deadlock"+
-				" (this usually means injected code introduced a dependency cycle): %w",
-			req.ImportPath,
-			err,
-		)
-	}
-
-	return func() { s.graph.RemoveEdge(req.ParentImportPath, req.ImportPath) }, nil
 }
 
 type (
