@@ -69,6 +69,42 @@ func TestParseCompile(t *testing.T) {
 				Output:  work + "/b002/a.out",
 			},
 		},
+		// Regression tests for tolerance of flags introduced by newer Go
+		// toolchains but unknown to the generated flag set, such as the
+		// `-exportfd` flag passed by cmd/go in Go 1.28 (golang/go#15734).
+		"unknown_flag_equals_form": {
+			input:   []string{"/path/compile", "-o", work + "/b002/a.out", "-p", "mypackage", "-buildid", "123456", "-exportfd=3", "-importcfg", importCfgFile, "/source/dir/main.go"},
+			goFiles: []string{"/source/dir/main.go"},
+			flags: compileFlagSet{
+				BuildID:   "123456",
+				Package:   "mypackage",
+				ImportCfg: importCfgFile,
+				Output:    work + "/b002/a.out",
+			},
+		},
+		"unknown_flag_two_token_form": {
+			// The value token of an unknown flag given in two-token form is
+			// consumed (unless it looks like an input file), so it does not leak
+			// into the positional file list.
+			input:   []string{"/path/compile", "-o", work + "/b002/a.out", "-p", "mypackage", "-buildid", "123456", "-exportfd", "3", "-importcfg", importCfgFile, "/source/dir/main.go"},
+			goFiles: []string{"/source/dir/main.go"},
+			flags: compileFlagSet{
+				BuildID:   "123456",
+				Package:   "mypackage",
+				ImportCfg: importCfgFile,
+				Output:    work + "/b002/a.out",
+			},
+		},
+		"unknown_valueless_flag_before_file": {
+			// An unknown flag directly followed by what looks like an input file
+			// is treated as value-less, so the file remains a positional argument.
+			input:   []string{"/path/compile", "-o", work + "/b002/a.out", "-p", "mypackage", "-somefutureflag", "/source/dir/main.go", "/source/dir/file1.go"},
+			goFiles: []string{"/source/dir/main.go", "/source/dir/file1.go"},
+			flags: compileFlagSet{
+				Package: "mypackage",
+				Output:  work + "/b002/a.out",
+			},
+		},
 	} {
 		if tc.goFiles == nil {
 			// Simplify comparisons, as goFiles always returns non-nil
@@ -78,6 +114,8 @@ func TestParseCompile(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cmd, err := parseCompileCommand(gocontext.Background(), "github.com/DataDog/orchestrion.test/"+name, tc.input)
 			require.NoError(t, err)
+			// Unknown flags must be forwarded verbatim to the proxied tool.
+			require.Equal(t, tc.input, cmd.Args())
 			require.Equal(t, CommandTypeCompile, cmd.Type())
 			require.Equal(t, tc.flags, cmd.Flags)
 			require.Equal(t, tc.goFiles, cmd.GoFiles())
