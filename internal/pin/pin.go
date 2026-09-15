@@ -391,9 +391,16 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 			}
 			pruned = pruneImport(importSet, pkg.PkgPath, reason, opts) || pruned
 		default:
-			if decl := importSet.Find(pkg.PkgPath); decl != nil {
-				setIntegrationMarker(&decl.Decs.End, true)
+			decl := importSet.Find(pkg.PkgPath)
+			if decl == nil {
+				// This should not happen: pkg.PkgPath is expected to match one of
+				// the paths we requested via packages.Load. Guard against a
+				// nil-deref in case go/packages ever returns a differently
+				// canonicalized PkgPath.
+				log.Warn().Str("pkgPath", pkg.PkgPath).Msg("pruneImports: could not find import spec for loaded package")
+				continue
 			}
+			setIntegrationMarker(&decl.Decs.End, true)
 		}
 	}
 

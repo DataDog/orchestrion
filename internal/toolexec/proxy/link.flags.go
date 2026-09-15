@@ -10,7 +10,7 @@ package proxy
 import "flag"
 
 func (f *linkFlagSet) parse(args []string) ([]string, error) {
-	flagSet := flag.NewFlagSet("link version go1.26", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("link version go1.27", flag.ContinueOnError)
 	flagSet.String("B", "", "set ELF NT_GNU_BUILD_ID note or Mach-O UUID; use \"gobuildid\" to generate it from the Go build ID; \"none\" to disable")
 	flagSet.Int("D", 0, "set the start address of data symbols")
 	flagSet.String("E", "", "set entry symbol name")
@@ -57,6 +57,8 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.String("libgcc", "", "compiler support lib for internal linking; use \"none\" to disable")
 	flagSet.String("linkmode", "", "set link mode")
 	flagSet.Bool("linkshared", false, "link against installed Go shared libraries")
+	flagSet.String("macos", "", "mac OS version to write in build info (only used in internal linking)")
+	flagSet.String("macsdk", "", "mac SDK version to write in build info (only used in internal linking)")
 	flagSet.String("memprofile", "", "write memory profile to file")
 	flagSet.String("memprofilerate", "", "set runtime.MemProfileRate to rate")
 	flagSet.Bool("msan", false, "enable MSan interface")
@@ -73,6 +75,5 @@ func (f *linkFlagSet) parse(args []string) ([]string, error) {
 	flagSet.Bool("v", false, "print link trace")
 	flagSet.Bool("w", false, "disable DWARF generation")
 
-	err := flagSet.Parse(args)
-	return flagSet.Args(), err
+	return parseToolFlags(flagSet, args)
 }
