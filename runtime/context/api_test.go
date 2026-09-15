@@ -118,26 +118,26 @@ func TestMultipleRegistrationsAreIndependent(t *testing.T) {
 	assert.Equal(t, "hello", strCtrl.Pop())
 }
 
-func TestWrapGoroutinePropagatesToChild(t *testing.T) {
+func TestRuntimeBlobPropagatesToChild(t *testing.T) {
 	restore := mockGLS()
 	defer restore()
 
 	ctrl := Register[string](stringHooks{})
 	ctrl.Push("root")
 	ctrl.Push("child-span")
+	childBlob := propagateGoroutine(getBlob()).([]any)
 
 	done := make(chan string, 1)
-
-	// This is exactly the shape orchestrion's advice weaves in place of a
-	// `go` statement: `go f()` becomes `go WrapGoroutine(func() { f() })()`.
-	go WrapGoroutine(func() {
+	go func() {
+		// runtime.newproc installs this precomputed blob directly on the child g.
+		setBlob(childBlob)
 		v, ok := ctrl.Peek()
 		if !ok {
 			done <- "<none>"
 			return
 		}
 		done <- v
-	})()
+	}()
 
 	assert.Equal(t, "child-span", <-done)
 
@@ -146,19 +146,13 @@ func TestWrapGoroutinePropagatesToChild(t *testing.T) {
 	assert.Equal(t, "root", ctrl.Pop())
 }
 
-func TestWrapGoroutineDisabledIsPlainGo(t *testing.T) {
-	// No MockGLS: enabled() is false, so WrapGoroutine must degrade to
-	// returning body unchanged.
+func TestRegisterWithoutInstrumentationRemainsDisabled(t *testing.T) {
+	// The linked runtime callback and GLS accessors are nil in an unwoven test
+	// binary, so Register must remain safe and Controller methods stay no-ops.
 	ctrl := Register[string](stringHooks{})
 	ctrl.Push("root")
-
-	done := make(chan bool, 1)
-	go WrapGoroutine(func() {
-		_, ok := ctrl.Peek()
-		done <- ok
-	})()
-
-	assert.False(t, <-done)
+	_, ok := ctrl.Peek()
+	assert.False(t, ok)
 }
 
 func TestBootstrapSeedsMainStack(t *testing.T) {

@@ -18,57 +18,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestContextGLSScrubJoinPointTargetExists is a CI canary for the
-// "context.gls.scrub" aspect declared in builtin_context.go. That aspect's
-// join point (join.ImportPath("runtime") + join.FunctionBody(join.Function(
-// join.Name("goexit1")))) matches a real Go toolchain's runtime package by
-// looking for a top-level, unexported function literally named `goexit1`.
-// That function is not part of any API contract; if a future Go release
-// renames, restructures, or removes it, the join point silently stops
-// matching and the scrub statement is no longer woven in -- no build error,
-// no failure from the existing (synthetic-runtime-backed) golden test.
-//
-// This test walks the real, currently running Go toolchain's actual GOROOT
-// runtime package source (using the same build-constraint-aware file
-// selection go/build.Import performs) looking for that exact declaration, so
-// a break surfaces here instead of silently.
-func TestContextGLSScrubJoinPointTargetExists(t *testing.T) {
+// TestContextRuntimeJoinPointTargetsExist is a CI canary for unexported Go
+// runtime implementation details used by runtime/context/orchestrion.yml.
+func TestContextRuntimeJoinPointTargetsExist(t *testing.T) {
 	pkg, err := build.Import("runtime", "", 0)
-	require.NoError(t, err, "failed to resolve the runtime package via go/build.Import")
+	require.NoError(t, err, "failed to resolve runtime via go/build.Import")
+	t.Logf("checked %s runtime sources in %q", runtime.Version(), pkg.Dir)
 
-	t.Logf("checked Go toolchain %s (GOROOT runtime package dir: %q)", runtime.Version(), pkg.Dir)
-
+	found := map[string]bool{"goexit1": false, "newproc": false, "newproc1": false}
+	newprocCallsNewproc1 := false
 	fset := token.NewFileSet()
-	found := false
-
-	files := slices.Concat(pkg.GoFiles, pkg.CgoFiles)
-	for _, name := range files {
+	for _, name := range slices.Concat(pkg.GoFiles, pkg.CgoFiles) {
 		path := filepath.Join(pkg.Dir, name)
-
 		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
 		require.NoError(t, err, "failed to parse %q", path)
 
 		for _, decl := range file.Decls {
-			funcDecl, ok := decl.(*ast.FuncDecl)
-			if !ok || funcDecl.Recv != nil {
-				// Not a plain (receiver-less) top-level function declaration.
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil {
 				continue
 			}
-			if funcDecl.Name.Name == "goexit1" {
-				found = true
-				break
+			if _, tracked := found[fn.Name.Name]; tracked {
+				found[fn.Name.Name] = true
 			}
-		}
-		if found {
-			break
+			if fn.Name.Name == "newproc" {
+				ast.Inspect(fn.Body, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "newproc1" {
+						newprocCallsNewproc1 = true
+					}
+					return true
+				})
+			}
 		}
 	}
 
-	require.True(t, found,
-		"runtime.goexit1 not found in this Go toolchain's runtime package (checked GOROOT %q) — "+
-			"the context.gls.scrub aspect's join point in internal/injector/config/builtin_context.go "+
-			"depends on this function existing under that exact name; update the join point to match "+
-			"wherever this logic now lives",
-		pkg.Dir,
-	)
+	for name, ok := range found {
+		require.True(t, ok, "runtime.%s not found in %s; update runtime/context join points", name, runtime.Version())
+	}
+	require.True(t, newprocCallsNewproc1,
+		"runtime.newproc no longer calls newproc1 in %s; context must attach before the child is queued", runtime.Version())
 }

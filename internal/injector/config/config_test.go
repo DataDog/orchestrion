@@ -369,7 +369,7 @@ func TestLoad(t *testing.T) {
 	})
 
 	t.Run("context propagation aspects are opt-in", func(t *testing.T) {
-		// The 4 `context.*` aspects live in runtime/context/orchestrion.yml and
+		// The 5 `context.*` aspects live in runtime/context/orchestrion.yml and
 		// must only be woven into a project that actually blank-imports
 		// `github.com/DataDog/orchestrion/runtime/context` -- merely using
 		// orchestrion at all (i.e. blank-importing the root package, which is
@@ -424,10 +424,11 @@ func TestLoad(t *testing.T) {
 			require.NoError(t, err)
 
 			ids := aspectIDs(t, cfg)
-			require.Len(t, ids, len(builtIn.yaml.aspects)+4)
+			require.Len(t, ids, len(builtIn.yaml.aspects)+5)
 			require.Contains(t, ids, "context.gls")
 			require.Contains(t, ids, "context.gls.scrub")
-			require.Contains(t, ids, "context.goroutine")
+			require.Contains(t, ids, "context.goroutine.prepare")
+			require.Contains(t, ids, "context.goroutine.attach")
 			require.Contains(t, ids, "context.main")
 		})
 	})

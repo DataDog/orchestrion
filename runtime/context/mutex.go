@@ -5,13 +5,10 @@
 
 package context
 
-// mutex is a minimal binary mutex built purely on the `chan` language
-// primitive, so this package does not need to import "sync". [WrapGoroutine]
-// is woven into every `go` statement orchestrion compiles, including ones
-// inside sync's own transitive dependencies; importing sync here would risk
-// an import cycle invisible to Go's static build graph (it only appears once
-// toolexec starts rewriting `go` statements at compile time). See
-// [registry] for the same reasoning applied to the registration slice.
+// mutex is a minimal binary mutex built purely on the chan language primitive,
+// so this low-level package does not need to import "sync". Keeping the
+// dependency closure small is important because runtime reaches propagation
+// through a reverse callback.
 type mutex chan struct{}
 
 func newMutex() mutex {

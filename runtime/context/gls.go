@@ -5,9 +5,7 @@
 
 package context
 
-import (
-	_ "unsafe" // for go:linkname
-)
+import "unsafe" // for go:linkname and the cycle-free runtime callback bridge
 
 // getGLS and setGLS read/write the current goroutine's context blob. They
 // default to a disabled no-op pair, and are switched to the real
@@ -46,11 +44,10 @@ func SetGLSForTesting(get func() any, set func(any)) (restore func()) {
 	}
 }
 
-// __dd_orchestrion_ctx_get and __dd_orchestrion_ctx_set are populated by the
-// orchestrion builtin aspect that instruments the standard library's
-// runtime package, which injects a struct field on runtime.g together with
-// matching accessor closures exposed under these link names. They remain
-// nil when the program was not built with orchestrion.
+// __dd_orchestrion_ctx_get, __dd_orchestrion_ctx_set, and
+// __dd_orchestrion_ctx_set_go are populated by the aspect that instruments
+// the standard library's runtime package. They remain nil when the program
+// was not built with orchestrion.
 //
 // These accessors reach storage via getg().m.curg.<field>, resolving to the
 // currently *running* g. A separate aspect (context.gls.scrub, woven into
@@ -67,11 +64,33 @@ var __dd_orchestrion_ctx_get func() any
 //go:linkname __dd_orchestrion_ctx_set __dd_orchestrion_ctx_set
 var __dd_orchestrion_ctx_set func(any)
 
+// __dd_orchestrion_ctx_set_go atomically publishes the goroutine propagation
+// callback into runtime. It is a function variable rather than an unresolved
+// function declaration so this package still links and behaves as a no-op in
+// binaries that were not woven by orchestrion.
+//
+//go:linkname __dd_orchestrion_ctx_set_go __dd_orchestrion_ctx_set_go
+var __dd_orchestrion_ctx_set_go func(unsafe.Pointer)
+
+// runtimeGoHook has static storage so runtime can atomically retain a pointer
+// to it without making a runtime function value escape to the heap (which the
+// runtime package compiler rejects).
+var runtimeGoHook = propagateGoroutine
+
 func init() {
 	if __dd_orchestrion_ctx_get != nil && __dd_orchestrion_ctx_set != nil {
 		getGLS = __dd_orchestrion_ctx_get
 		setGLS = __dd_orchestrion_ctx_set
 		isEnabled = true
+	}
+}
+
+// enableGoroutinePropagation publishes the callback only after a registration
+// is visible in registry. A woven program with no registrations therefore
+// retains runtime.newproc's nil-pointer fast path.
+func enableGoroutinePropagation() {
+	if __dd_orchestrion_ctx_set_go != nil {
+		__dd_orchestrion_ctx_set_go(unsafe.Pointer(&runtimeGoHook))
 	}
 }
 
