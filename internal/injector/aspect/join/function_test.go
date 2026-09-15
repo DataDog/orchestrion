@@ -6,6 +6,7 @@
 package join
 
 import (
+	"go/constant"
 	"go/types"
 	"testing"
 
@@ -336,6 +337,9 @@ func (functionTestContext) Package() string                     { return "test" 
 func (functionTestContext) TestMain() bool                      { return false }
 func (functionTestContext) Release()                            {}
 func (functionTestContext) ResolveType(dst.Expr) types.Type     { return nil }
+func (functionTestContext) ResolveConstant(dst.Expr) constant.Value {
+	return nil
+}
 
 func TestUnmarshalYAMLSignatureContains(t *testing.T) {
 	yamlStr := `

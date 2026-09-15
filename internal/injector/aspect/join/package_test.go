@@ -7,6 +7,7 @@ package join
 
 import (
 	gocontext "context"
+	"go/constant"
 	"go/types"
 	"testing"
 
@@ -481,3 +482,6 @@ func (*mockAspectContext) Package() string                 { return "" }
 func (*mockAspectContext) TestMain() bool                  { return false }
 func (*mockAspectContext) Release()                        {}
 func (*mockAspectContext) ResolveType(dst.Expr) types.Type { return nil }
+func (*mockAspectContext) ResolveConstant(dst.Expr) constant.Value {
+	return nil
+}
