@@ -33,8 +33,8 @@ import (
 // function that restores the previous state.
 //
 // This is intended for use by tests of code that calls
-// [orchestrionctx.Register] and exercises Controller/WrapGoroutine/
-// Bootstrap/Chan behavior.
+// [orchestrionctx.Register] and exercises Controller/Bootstrap/Chan or
+// parent/child blob behavior.
 //
 // Tests using MockGLS must not run in parallel with each other, as it
 // mutates runtime/context's package-level state without synchronization.

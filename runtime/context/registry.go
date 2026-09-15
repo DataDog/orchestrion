@@ -57,30 +57,14 @@ func (e typedEntry[T]) chanRecv(parent any, sent any) any {
 }
 
 // registry holds the current set of registered entries as an atomic
-// copy-on-write pointer: [newSlot] never mutates the slice a concurrent
-// reader might be holding, it builds a new one and swaps the pointer, so
-// [registrySnapshot] can never observe a data race against a concurrent
-// [newSlot] call.
+// copy-on-write pointer. newSlot uses a compare-and-swap loop, so concurrent
+// registrations cannot overwrite each other and readers always observe a
+// complete immutable snapshot. This matters during initialization: init
+// functions may start goroutines before later packages finish registering.
 //
-// In practice, [Register] (and therefore [newSlot]) is documented to only
-// ever be called at init time, and Go guarantees init (across every
-// package) completes -- with a full happens-before edge -- before main()
-// starts and before any goroutine can be spawned. So by the time
-// [registrySnapshot] is ever read concurrently (from WrapGoroutine,
-// Bootstrap, or a [Chan]), the registry is already expected to be
-// immutable in practice. This atomic pointer closes the theoretical race
-// that would otherwise exist if a [Register] call happened later than
-// documented, at near-zero cost to readers.
-//
-// This uses "sync/atomic" rather than "sync" (e.g. a [sync.RWMutex])
-// because [WrapGoroutine] is woven into every `go` statement orchestrion
-// compiles, including ones inside sync's own transitive dependencies --
-// importing "sync" here would risk introducing an import cycle invisible
-// to Go's static build graph (it only appears once toolexec starts
-// rewriting `go` statements at compile time). "sync/atomic"'s entire
-// transitive dependency closure is just "unsafe", neither of which
-// contains a `go` statement for orchestrion to weave, so it carries none
-// of that risk.
+// This uses "sync/atomic" rather than "sync" to keep the package's dependency
+// closure minimal; runtime imports this package's behavior only through a
+// reverse callback and must never acquire an application-level lock.
 var registry atomic.Pointer[[]entry]
 
 // newSlot registers hooks under a freshly allocated index and returns the
@@ -88,19 +72,22 @@ var registry atomic.Pointer[[]entry]
 // [Register]), but the copy-on-write update below makes any concurrent
 // [registrySnapshot] read race-free regardless.
 func newSlot[T any](hooks Hooks[T]) *slot[T] {
-	old := registry.Load()
-	var current []entry
-	if old != nil {
-		current = *old
+	for {
+		old := registry.Load()
+		var current []entry
+		if old != nil {
+			current = *old
+		}
+
+		index := len(current)
+		updated := make([]entry, index, index+1)
+		copy(updated, current)
+		updated = append(updated, typedEntry[T]{hooks: hooks})
+
+		if registry.CompareAndSwap(old, &updated) {
+			return &slot[T]{index: index}
+		}
 	}
-
-	index := len(current)
-	updated := make([]entry, index, index+1)
-	copy(updated, current)
-	updated = append(updated, typedEntry[T]{hooks: hooks})
-
-	registry.Store(&updated)
-	return &slot[T]{index: index}
 }
 
 // registrySnapshot returns the current set of registered entries.

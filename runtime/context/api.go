@@ -17,9 +17,9 @@ type Hooks[T any] interface {
 	// Main is called before the main function of the program is executed.
 	Main() *Stack[T]
 
-	// Go is called when a new goroutine is created using the `go` keyword.
-	// It receives the parent goroutine's stack and returns the stack that
-	// will be installed on the new goroutine.
+	// Go is called synchronously by runtime.newproc on the parent goroutine,
+	// after the go statement's callee and arguments are evaluated. It returns
+	// the stack that will be installed before the child becomes runnable.
 	Go(parent *Stack[T]) *Stack[T]
 
 	// ChanRecv is called when a value is received from a channel that was
@@ -99,5 +99,8 @@ func (c *Controller[T]) Peek() (T, bool) {
 // needs propagation is created.
 func Register[T any](hooks Hooks[T]) *Controller[T] {
 	s := newSlot(hooks)
+	// Publish only after the new registry snapshot is visible. This is an
+	// atomic runtime-side store when woven and a no-op otherwise.
+	enableGoroutinePropagation()
 	return &Controller[T]{slot: s}
 }
