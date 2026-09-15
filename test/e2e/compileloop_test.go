@@ -35,10 +35,6 @@ const buildBudget = 4 * time.Minute
 // never-build-twice service then makes it wait for the in-flight compilation
 // that spawned it, and that one cannot complete until the nested build does:
 // nothing ever unblocks, and no timeout exists.
-//
-// KNOWN GAP: this test currently fails, as `orchestrion go build` never
-// terminates. This is the reproduction of the hangs observed on dd-trace-go's
-// `Integration Test` jobs, which had to be canceled after more than two hours.
 func TestCompileLoop(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping e2e compile loop test in short mode")

@@ -14,7 +14,7 @@ test/e2e/
 │   │   ├── main.go
 │   │   ├── go.mod
 │   │   └── orchestrion.tool.go
-│   └── compileloop/    # App instrumented with a dependency on one of its dependents
+│   └── compileloop/    # Injected dependency cycle fixture
 │       ├── main.go
 │       ├── go.mod
 │       ├── orchestrion.yml

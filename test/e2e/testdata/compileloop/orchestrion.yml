@@ -10,11 +10,9 @@ meta:
 aspects:
   - id: victim.Work
     join-point:
-      all-of:
-        - import-path: example.com/compileloop/victim
-        - function-body:
-            function:
-              - name: Work
+      function-body:
+        function:
+          - name: Work
     advice:
       - prepend-statements:
           imports:
