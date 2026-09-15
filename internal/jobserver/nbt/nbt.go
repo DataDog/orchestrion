@@ -91,6 +91,11 @@ type (
 	StartRequest struct {
 		ImportPath string `json:"importPath"`
 		BuildID    string `json:"buildID"`
+		// ParentImportPath is the import path of the package being compiled by the
+		// task that spawned the build this request belongs to, if any. It is blank
+		// when the caller is part of a build the user started directly, and it
+		// identifies which compilation task is waiting for this one otherwise.
+		ParentImportPath string `json:"parentImportPath,omitempty"`
 	}
 	// StartResponse informs the caller about what should be done with the
 	// compilation task. If a [*StartResponse.FinishToken] is present, the caller
@@ -121,6 +126,9 @@ func (StartRequest) Subject() string           { return startSubject }
 func (StartRequest) ResponseIs(*StartResponse) {}
 func (r StartRequest) ForeachSpanTag(set func(key string, value any)) {
 	set("request.importPath", r.ImportPath)
+	if r.ParentImportPath != "" {
+		set("request.parentImportPath", r.ParentImportPath)
+	}
 }
 
 // cacheKey creates a composite key from importPath and buildID to support
@@ -139,7 +147,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 	rawState, reused := s.state.LoadOrStore(key, &buildState{buildID: req.BuildID})
 	state, _ := rawState.(*buildState)
 
-	// Initialize the build state.
 	state.initOnce.Do(func() {
 		state.token = uuid.NewString()
 		// We use a cancellable context as a barrier here...
@@ -148,10 +155,12 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		state.onDone = isDone
 	})
 
-	// If the build state is re-used, wait for the original to complete...
 	if reused {
 		if state.buildID != req.BuildID {
 			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
+		}
+		if !state.isDone.Load() && req.ParentImportPath == req.ImportPath {
+			return nil, fmt.Errorf("cycle detected: %s -> %s", req.ImportPath, req.ImportPath)
 		}
 
 		zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Waiting for concurrent task to complete...")
@@ -171,7 +180,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		return &StartResponse{Files: state.files}, nil
 	}
 
-	// Otherwise, return a finalization token, etc...
 	zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Compile task started")
 	return &StartResponse{FinishToken: state.token}, nil
 }
@@ -259,8 +267,7 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return nil, state.error
 	}
 
-	// Use composite key for storage directory to support different build IDs (e.g., with/without PGO)
-	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(cacheKey(req.ImportPath, req.BuildID))).String())
+	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(key)).String())
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		state.error = fmt.Errorf("creating storage directory: %w", err)
 		return nil, state.error

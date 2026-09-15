@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/orchestrion/internal/injector/aspect/context"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/nbt"
+	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
 	"github.com/blakesmith/ar"
@@ -103,17 +104,14 @@ func (c *CompileCommand) detectTestMain() bool {
 
 func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
 	if to.IsAny() {
-		// No minimal language requirement change, nothing to do...
 		return nil
 	}
 
 	if cmd.Flags.Lang == "" {
-		// No language level was specified, so anything the compiler can do is possible...
 		return nil
 	}
 
 	if curr, _ := context.ParseGoLangVersion(cmd.Flags.Lang); context.Compare(curr, to) >= 0 {
-		// Minimum language requirement from injected code is already met, nothing to do...
 		return nil
 	}
 
@@ -159,7 +157,6 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 		}
 	}
 
-	// Notify the job server of the status of the command, and combine with the previous error if any...
 	err = errors.Join(err, cmd.notifyJobServer(ctx, errors.Join(cmdErr, err)))
 
 	return err
@@ -209,7 +206,6 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) (err error) {
 
 func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) error {
 	if cmd.finishToken == "" {
-		// Nothing to do...
 		zerolog.Ctx(ctx).Info().Msg("No finish token, skipping job server notification...")
 		return nil
 	}
@@ -275,7 +271,11 @@ func parseCompileCommand(ctx gocontext.Context, importPath string, args []string
 		return nil, err
 	}
 
-	res, err := client.Request(ctx, jobs, nbt.StartRequest{ImportPath: importPath, BuildID: cmd.Flags.BuildID})
+	res, err := client.Request(ctx, jobs, nbt.StartRequest{
+		ImportPath:       importPath,
+		BuildID:          cmd.Flags.BuildID,
+		ParentImportPath: pkgs.ResolveParentImportPath(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("sending never-build-twice request: %w", err)
 	}
