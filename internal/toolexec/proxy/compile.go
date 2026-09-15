@@ -104,17 +104,14 @@ func (c *CompileCommand) detectTestMain() bool {
 
 func (cmd *CompileCommand) SetLang(to context.GoLangVersion) error {
 	if to.IsAny() {
-		// No minimal language requirement change, nothing to do...
 		return nil
 	}
 
 	if cmd.Flags.Lang == "" {
-		// No language level was specified, so anything the compiler can do is possible...
 		return nil
 	}
 
 	if curr, _ := context.ParseGoLangVersion(cmd.Flags.Lang); context.Compare(curr, to) >= 0 {
-		// Minimum language requirement from injected code is already met, nothing to do...
 		return nil
 	}
 
@@ -160,7 +157,6 @@ func (cmd *CompileCommand) Close(ctx gocontext.Context, cmdErr error) (err error
 		}
 	}
 
-	// Notify the job server of the status of the command, and combine with the previous error if any...
 	err = errors.Join(err, cmd.notifyJobServer(ctx, errors.Join(cmdErr, err)))
 
 	return err
@@ -210,7 +206,6 @@ func (cmd *CompileCommand) attachLinkDeps(ctx gocontext.Context) (err error) {
 
 func (cmd *CompileCommand) notifyJobServer(ctx gocontext.Context, cmdErr error) error {
 	if cmd.finishToken == "" {
-		// Nothing to do...
 		zerolog.Ctx(ctx).Info().Msg("No finish token, skipping job server notification...")
 		return nil
 	}
