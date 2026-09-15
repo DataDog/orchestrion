@@ -1,0 +1,53 @@
+%YAML 1.1
+---
+aspects:
+  - id: context.gls
+    join-point:
+      struct-definition: runtime.g
+    advice:
+      - add-struct-field:
+          name: __dd_orchestrion_ctx
+          type: any
+      - add-blank-import: unsafe
+      - inject-declarations:
+          template: |-
+            //go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get
+            var __dd_orchestrion_ctx_get = func() any {
+              return getg().m.curg.__dd_orchestrion_ctx
+            }
+
+            //go:linkname __dd_orchestrion_ctx_set __dd_orchestrion_ctx_set
+            var __dd_orchestrion_ctx_set = func(val any) {
+              getg().m.curg.__dd_orchestrion_ctx = val
+            }
+  - id: context.gls.scrub
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: goexit1
+    advice:
+      - prepend-statements:
+          template: getg().__dd_orchestrion_ctx = nil
+
+import-path: runtime
+
+syntheticReferences:
+  unsafe: true
+
+code: |-
+  package runtime
+
+  type m struct {
+    curg *g
+  }
+
+  type g struct {
+    m *m
+  }
+
+  func getg() *g { return nil }
+
+  func goexit1() {
+  }

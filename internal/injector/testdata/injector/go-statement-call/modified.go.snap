@@ -1,0 +1,33 @@
+//line input.go:1:1
+package main
+
+//line <generated>:1
+import __orchestrion_orchestrionctx "github.com/DataDog/orchestrion/runtime/context"
+
+//line input.go:3
+func work(x int) {}
+
+func main() {
+  go
+//line <generated>:1
+  __orchestrion_orchestrionctx.WrapGoroutine(func() {
+//line input.go:6
+    work(1)
+  })()
+
+  result := make(chan int)
+  defer close(result)
+  go
+//line <generated>:1
+  __orchestrion_orchestrionctx.WrapGoroutine(func() {
+//line input.go:10
+    func() {
+      result <- work2()
+    }()
+  })()
+  <-result
+}
+
+func work2() int {
+  return 42
+}
