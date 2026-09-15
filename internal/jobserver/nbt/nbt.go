@@ -147,7 +147,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 	rawState, reused := s.state.LoadOrStore(key, &buildState{buildID: req.BuildID})
 	state, _ := rawState.(*buildState)
 
-	// Initialize the build state.
 	state.initOnce.Do(func() {
 		state.token = uuid.NewString()
 		// We use a cancellable context as a barrier here...
@@ -156,7 +155,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		state.onDone = isDone
 	})
 
-	// If the build state is re-used, wait for the original to complete...
 	if reused {
 		if state.buildID != req.BuildID {
 			return nil, fmt.Errorf("mismatched build ID for %q: %q != %q", req.ImportPath, state.buildID, req.BuildID)
@@ -182,7 +180,6 @@ func (s *service) start(ctx context.Context, req StartRequest) (*StartResponse, 
 		return &StartResponse{Files: state.files}, nil
 	}
 
-	// Otherwise, return a finalization token, etc...
 	zerolog.Ctx(ctx).Trace().Str("token", state.token).Str("import-path", req.ImportPath).Msg("Compile task started")
 	return &StartResponse{FinishToken: state.token}, nil
 }
@@ -270,8 +267,7 @@ func (s *service) finish(ctx context.Context, req FinishRequest) (*FinishRespons
 		return nil, state.error
 	}
 
-	// Use composite key for storage directory to support different build IDs (e.g., with/without PGO)
-	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(cacheKey(req.ImportPath, req.BuildID))).String())
+	dir := filepath.Join(s.dir, uuid.NewSHA1(ns, []byte(key)).String())
 	if err := os.Mkdir(dir, 0o755); err != nil {
 		state.error = fmt.Errorf("creating storage directory: %w", err)
 		return nil, state.error
