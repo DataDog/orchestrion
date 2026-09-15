@@ -32,7 +32,10 @@ func TestGoModVersion(t *testing.T) {
 	for name, test := range map[string]test{
 		"happy":    {version: "v0.9.0"},
 		"replaced": {version: "v0.9.0", replace: true},
-		"missing":  {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
+		// goModVersion only forces `-mod=readonly` as a fallback for
+		// "inconsistent vendoring", so a plain missing-module error (no vendor
+		// dir at all here) goes through Go's unmodified default behavior.
+		"missing": {err: fmt.Errorf("no required module provides package %s", orchestrionPkgPath)},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if !test.replace && test.version != "" && semver.Compare(test.version, version.Tag()) >= 0 {
@@ -100,6 +103,145 @@ func TestGoModVersion(t *testing.T) {
 			_, _, err := goModVersion(context.Background(), tmp)
 			require.ErrorIs(t, err, goenv.ErrNoGoMod)
 		})
+	})
+
+	t.Run("vendor-inconsistent", func(t *testing.T) {
+		// Regression test: goModVersion must not fail with "inconsistent
+		// vendoring" merely because some *other* dependency's `go.mod`
+		// requirement drifted out of sync with `vendor/modules.txt` (e.g.
+		// because something upstream ran a raw `go get` without re-vendoring).
+		// This mirrors the scenario fixed for pruneImports in internal/pin/pin.go
+		// (see BuildFlags there), except goModVersion must stay strictly
+		// read-only: it must not silently add/mutate requirements either, since
+		// it runs on every -toolexec build, before any pinning decision is made.
+		tmp := t.TempDir()
+
+		// A purely local, replaced dependency: no network access is needed to
+		// resolve it, and its "version" is nominal since resolution goes
+		// through the `replace` directive regardless.
+		fakeModDir := filepath.Join(tmp, "fakemod")
+		require.NoError(t, os.MkdirAll(fakeModDir, 0o755))
+		require.NoError(t,
+			os.WriteFile(filepath.Join(fakeModDir, "go.mod"), []byte("module example.com/fakemod\n\ngo "+runtime.Version()[2:]+"\n"), 0o644),
+			"failed to write fakemod go.mod",
+		)
+		require.NoError(t,
+			os.WriteFile(filepath.Join(fakeModDir, "fake.go"), []byte("package fakemod\n\nfunc Hello() string { return \"hello\" }\n"), 0o644),
+			"failed to write fakemod source",
+		)
+
+		goMod := strings.Join([]string{
+			"module test_case",
+			"",
+			"go " + runtime.Version()[2:],
+			"",
+			"require (",
+			"\t" + orchestrionPkgPath + " v0.9.0",
+			"\texample.com/fakemod v0.0.1",
+			")",
+			"",
+			"replace (",
+			"\t" + orchestrionPkgPath + " v0.9.0 => " + orchestrionSrcDir,
+			"\texample.com/fakemod => " + fakeModDir,
+			")",
+			"",
+		}, "\n")
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.mod"), []byte(goMod), 0o644), "failed to write go.mod file")
+
+		// tools.go pulls in orchestrion (mirroring the other sub-tests above);
+		// main.go pulls in the fake module so it is a normal (non-`tools`)
+		// dependency that `go mod vendor` will actually vendor.
+		require.NoError(t,
+			os.WriteFile(filepath.Join(tmp, "tools.go"), []byte(fmt.Sprintf("//go:build tools\npackage tools\n\nimport _ %q\n", orchestrionPkgPath)), 0o644),
+			"failed to write tools.go",
+		)
+		require.NoError(t,
+			os.WriteFile(filepath.Join(tmp, "main.go"), []byte("package main\n\nimport \"example.com/fakemod\"\n\nfunc main() { fakemod.Hello() }\n"), 0o644),
+			"failed to write main.go",
+		)
+
+		runIn := func(name string, args ...string) {
+			t.Helper()
+			cmd := exec.Command(name, args...)
+			cmd.Dir = tmp
+			out, err := cmd.CombinedOutput()
+			require.NoError(t, err, "%s %s: %s", name, strings.Join(args, " "), out)
+		}
+
+		runIn("go", "mod", "tidy")
+		runIn("go", "mod", "vendor")
+
+		// Simulate a dependency's requirement drifting away from what was
+		// vendored (e.g. via a raw `go get` elsewhere) without `vendor/` being
+		// re-synced. This is unrelated to orchestrion itself, but is enough to
+		// make Go's vendor-consistency check fail for *any* `go list` call in
+		// this module unless vendor auto-detection is explicitly disabled.
+		runIn("go", "mod", "edit", "-require=example.com/fakemod@v0.0.2")
+
+		// Sanity-check that this setup does reproduce the "inconsistent
+		// vendoring" failure Go would normally auto-select `-mod=vendor` into,
+		// so this test would actually catch a regression if goModVersion ever
+		// stopped forcing `-mod=readonly`.
+		cmd := exec.Command("go", "list", "./...")
+		cmd.Dir = tmp
+		out, err := cmd.CombinedOutput()
+		require.Error(t, err, "expected inconsistent vendoring to be reproduced, got: %s", out)
+		require.Contains(t, string(out), "inconsistent vendoring")
+
+		rVersion, rDir, err := goModVersion(context.Background(), tmp)
+		require.NoError(t, err)
+		require.Empty(t, rVersion)
+		require.Equal(t, orchestrionSrcDir, rDir)
+	})
+
+	t.Run("vendor-consistent-offline", func(t *testing.T) {
+		// Regression test for the Codex review comment on #887: goModVersion
+		// must NOT force `-mod=readonly` unconditionally, or it would ignore a
+		// perfectly consistent `vendor/` directory and always try to resolve
+		// through GOPROXY/GOMODCACHE instead - breaking offline/air-gapped
+		// builds that used to work fine via vendor/ alone.
+		if semver.Compare("v0.9.0", version.Tag()) >= 0 {
+			t.Skipf("Skipping test because version v0.9.0 has not been released yet (current: %s)", version.Tag())
+		}
+
+		tmp := t.TempDir()
+
+		goMod := strings.Join([]string{
+			"module test_case",
+			"",
+			"go " + runtime.Version()[2:],
+			"",
+			"require " + orchestrionPkgPath + " v0.9.0",
+			"",
+		}, "\n")
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.mod"), []byte(goMod), 0o644), "failed to write go.mod file")
+		require.NoError(t,
+			os.WriteFile(filepath.Join(tmp, "tools.go"), []byte(fmt.Sprintf("//go:build tools\npackage tools\n\nimport _ %q\n", orchestrionPkgPath)), 0o644),
+			"failed to write tools.go",
+		)
+
+		runIn := func(name string, args ...string) {
+			t.Helper()
+			cmd := exec.Command(name, args...)
+			cmd.Dir = tmp
+			out, err := cmd.CombinedOutput()
+			require.NoError(t, err, "%s %s: %s", name, strings.Join(args, " "), out)
+		}
+
+		// Populate go.sum/vendor/ with normal network access first; only the
+		// actual goModVersion call below runs "offline".
+		runIn("go", "mod", "tidy")
+		runIn("go", "mod", "vendor")
+
+		// Cut off module cache/proxy access entirely, to prove any successful
+		// resolution below can only have come from vendor/.
+		emptyModCache := t.TempDir()
+		t.Setenv("GOPROXY", "off")
+		t.Setenv("GOMODCACHE", emptyModCache)
+
+		rVersion, _, err := goModVersion(context.Background(), tmp)
+		require.NoError(t, err, "goModVersion should resolve via vendor/ without needing GOPROXY/GOMODCACHE")
+		require.Equal(t, "v0.9.0", rVersion)
 	})
 }
 
