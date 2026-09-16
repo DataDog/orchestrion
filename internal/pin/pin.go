@@ -155,6 +155,14 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		}
 	}
 
+	// The `go mod tidy` runs above can raise the module's `go` directive when a
+	// newly pinned dependency requires a newer language version. If the module is
+	// part of a workspace, the enclosing go.work file must be kept in sync, or
+	// every subsequent `go` command in that workspace fails.
+	if err := gomod.AlignWorkGoVersion(ctx, moduleDir, goMod); err != nil {
+		return fmt.Errorf("aligning the `go` directive of the enclosing go.work file: %w", err)
+	}
+
 	pruned, err := pruneImports(ctx, moduleDir, importSet, opts)
 	if err != nil {
 		return fmt.Errorf("checking imports of %q: %w", toolFile, err)
