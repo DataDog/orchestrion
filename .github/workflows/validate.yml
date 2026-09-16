@@ -223,7 +223,11 @@ jobs:
       matrix:
         # Not running unit tests on macOS, because it's UNIX-like and the only
         # os-specific code paths are UNIX vs. Windows.
-        runs-on: [ubuntu-latest, windows-latest]
+        # The Windows legs take close to an hour, which is longer than the
+        # merge queue's check response timeout (60 minutes at the time of
+        # writing), so merge groups only run the Ubuntu legs: Windows remains
+        # covered by pull request and push runs.
+        runs-on: ${{ fromJSON(github.event_name == 'merge_group' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest"]') }}
         go-version: [oldstable, stable]
     name: Unit tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
