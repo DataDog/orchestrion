@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 //line <generated>:1
+	__orchestrion_crashtracker "github.com/DataDog/dd-trace-go/v2/crashtracker"
 	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	__orchestrion_env "github.com/DataDog/dd-trace-go/v2/instrumentation/env"
 	__orchestrion_profiler "github.com/DataDog/dd-trace-go/v2/profiler"
@@ -19,6 +20,11 @@ import (
 //line samples/server/main.go:14
 func main() {
 //line <generated>:1
+	{
+		if err := __orchestrion_crashtracker.Start(); err != nil {
+			log.Printf("failed to start crashtracker: %s", err.Error())
+		}
+	}
 	{
 		defer __orchestrion_profiler.Stop()
 	}

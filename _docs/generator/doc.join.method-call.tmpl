@@ -1,0 +1,11 @@
+<div class="flex join-point method-call">
+  <span class="type">Call to method</span>
+  <code>{{ .Name }}</code>
+  <span class="type">of</span>
+  {{ render .Receiver }}
+  {{- if eq .Match.String "pointer-only" }}
+  <span class="type">on a pointer</span>
+  {{- else if eq .Match.String "value-only" }}
+  <span class="type">on a value</span>
+  {{- end }}
+</div>
