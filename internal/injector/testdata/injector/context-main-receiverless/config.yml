@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+aspects:
+  - id: context.main
+    join-point:
+      all-of:
+        - import-path: main
+        - function-body:
+            function:
+              - name: main
+              - receiver: false
+    advice:
+      - prepend-statements:
+          template: orchestrionctx.Bootstrap()
+          imports:
+            orchestrionctx: github.com/DataDog/orchestrion/runtime/context
+
+import-path: main
+
+syntheticReferences:
+  github.com/DataDog/orchestrion/runtime/context: true
+
+code: |-
+  package main
+
+  type server struct{}
+
+  func (s *server) main() {
+  }
+
+  func main() {
+  }
