@@ -6,7 +6,7 @@ on:
       - .github/workflows/release.yml
       - .github/chainguard/self.github.release.*.sts.yaml
       - _tools/tag-submodules.sh
-      - _tools/test_tag_submodules.py
+      - _tools/tag-submodules.bats
   push:
     branches: [main]
     paths: [internal/version/version.go]
@@ -31,10 +31,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
           persist-credentials: false
-      - name: Check shell script
-        run: shellcheck -x _tools/tag-submodules.sh
+      - name: Checkout Bats
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          repository: bats-core/bats-core
+          ref: eb7f42f8d608ac693d7a4b67474f6714ea68cfc5 # v1.14.0
+          path: .bats
+          persist-credentials: false
+      - name: Check shell scripts
+        run: shellcheck -x _tools/tag-submodules.sh _tools/tag-submodules.bats
       - name: Test against local Git repositories
-        run: python3 -m unittest discover -v -s _tools -p 'test_tag_submodules.py'
+        run: .bats/bin/bats --print-output-on-failure _tools/tag-submodules.bats
   validate:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     name: Validate Release

@@ -85,33 +85,6 @@ PRs that have been reviewed and are left open for more than a month awaiting upd
 closed due to staleness. If you want to resume working on a PR that was closed for staleness at a later point, feel free
 to open a new PR.
 
-### Release tag recovery
-
-Publishing a GitHub release creates its root tag. The `Tag Release` job then creates annotated tags for
-publishable nested modules at the same commit, using a repository-scoped `dd-octo-sts` token.
-The trust policies in `.github/chainguard/self.github.release.*.sts.yaml` restrict that token to the
-release workflow: published-release events on version tags, or manual recovery from `main`.
-
-If nested-module tagging fails, repair the published release using the reviewed workflow on `main`:
-
-```console
-gh workflow run release.yml --repo DataDog/orchestrion --ref main -f tag=v1.13.1
-```
-
-Replace `v1.13.1` with the published root release tag. The job rejects drafts, skips existing tags that
-resolve to the correct commit, and fails on conflicting tags without moving them. It reads module
-metadata from the root tag's commit, not from the current `main` checkout. After the job finishes,
-verify the nested tags and check that the Go module proxy resolves them; cached misses can delay
-proxy availability.
-
-A release event uses the workflow revision associated with that release. Merging an automation fix
-into `main` does not update an already-cut release's workflow. Use the manual recovery command for
-such releases rather than moving the published root tag.
-
-The default `GITHUB_TOKEN` cannot create tags under the organization tag-protection rules. If token
-exchange succeeds but tag creation still fails with `GH013`, ask SDLC Security to verify the STS
-App's authorization. Do not disable tag protection or fall back to a stored personal token.
-
 ### Code Style
 
 All Go code must be formatted using `go fmt` so that it is in "canonical go format". YAML files must be consistently
