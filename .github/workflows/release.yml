@@ -1,12 +1,7 @@
 name: Release
 on:
   pull_request:
-    paths:
-      - internal/version/version.go
-      - .github/workflows/release.yml
-      - .github/chainguard/self.github.release.*.sts.yaml
-      - _tools/tag-submodules.sh
-      - _tools/tag-submodules.bats
+    paths: [internal/version/version.go]
   push:
     branches: [main]
     paths: [internal/version/version.go]
@@ -20,28 +15,6 @@ on:
         type: string
 permissions: read-all
 jobs:
-  test-tagger:
-    if: github.event_name == 'pull_request'
-    name: Test release tagging
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-        with:
-          persist-credentials: false
-      - name: Checkout Bats
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-        with:
-          repository: bats-core/bats-core
-          ref: eb7f42f8d608ac693d7a4b67474f6714ea68cfc5 # v1.14.0
-          path: .bats
-          persist-credentials: false
-      - name: Check shell scripts
-        run: shellcheck -x _tools/tag-submodules.sh _tools/tag-submodules.bats
-      - name: Test against local Git repositories
-        run: .bats/bin/bats --print-output-on-failure _tools/tag-submodules.bats
   validate:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     name: Validate Release

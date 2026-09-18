@@ -1,5 +1,5 @@
 
-.PHONY: all test test-e2e format format/go format/yaml lint lint/action lint/go lint/yaml lint/makefile \
+.PHONY: all test test-bats test-e2e format format/go format/yaml lint lint/action lint/go lint/yaml lint/makefile \
         build install dd-trace-go dd-trace-go-setup test-integration \
         docs tmp/make-help.txt actionlint yamlfmt gotestfmt ratchet \
         ratchet/pin ratchet/update ratchet/check checkmake embedmd help
@@ -8,6 +8,7 @@
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
 DD_TRACE_GO_DIR ?= $(CURDIR)/tmp/dd-trace-go
 DDTRACE_INTEGRATION_DIR := $(DD_TRACE_GO_DIR)/internal/orchestrion/_integration
+BATS ?= bats
 
 .DEFAULT_GOAL := help
 
@@ -88,6 +89,9 @@ tmp/make-help.txt: $(MAKEFILE_LIST)
 	@$(MAKE) --no-print-directory help > tmp/make-help.txt
 
 # Tests
+
+test-bats: ## Run Bash script tests with Bats
+	"$(BATS)" --recursive --print-output-on-failure _tools _docs
 
 # Integration with dd-trace-go using orchestrion
 #
