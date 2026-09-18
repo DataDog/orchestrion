@@ -3,6 +3,7 @@
         build install dd-trace-go dd-trace-go-setup test-integration \
         docs tmp/make-help.txt actionlint yamlfmt gotestfmt ratchet \
         ratchet/pin ratchet/update ratchet/check checkmake embedmd help
+.PHONY: format/shell lint/shell shfmt
 
 # Allow overriding via env var `orchestrion_dir` or `ORCHESTRION_DIR`
 ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
@@ -26,8 +27,8 @@ build: ## Build orchestrion binary to bin/orchestrion
 install: ## Install orchestrion to $$GOPATH/bin
 	go install .
 
-format: ## Format Go code and YAML files
-format: format/go format/yaml
+format: ## Format Go, YAML, and shell files
+format: format/go format/yaml format/shell
 
 format/go: ## Format Go code only
 format/go: golangci-lint
@@ -39,8 +40,12 @@ format/yaml: yamlfmt
 	@echo "Formatting YAML files..."
 	yamlfmt -dstar '**/*.yml' '**/*.yaml'
 
-lint: ## Run all linters (Go, YAML, GitHub Actions, Makefiles)
-lint: lint/go lint/yaml lint/action lint/makefile
+format/shell: ## Format tracked shell scripts and Bats tests
+format/shell: shfmt
+	git ls-files -z '*.sh' '*.bats' | xargs -0 shfmt -i 2 -ci -bn -w
+
+lint: ## Run all linters (Go, YAML, GitHub Actions, Makefiles, shell)
+lint: lint/go lint/yaml lint/action lint/makefile lint/shell
 
 lint/action: ## Lint GitHub Actions workflows
 lint/action: actionlint ratchet/check
@@ -61,6 +66,12 @@ lint/makefile: ## Lint Makefiles
 lint/makefile: checkmake
 	@echo "Linting Makefiles..."
 	checkmake --config=.checkmake Makefile $(shell find . -type f \( -name 'Makefile' -o -name 'makefile' -o -name 'GNUmakefile' -o -name '*.mk' \) -not -path './tmp/*' -not -path './_*' -not -path './Makefile')
+
+lint/shell: ## Check tracked shell scripts with ShellCheck and shfmt
+lint/shell: shfmt
+	set -o errexit
+	git ls-files -z '*.sh' '*.bats' | xargs -0 shellcheck -x
+	git ls-files -z '*.sh' '*.bats' | xargs -0 shfmt -i 2 -ci -bn -d
 
 ratchet/pin: ## Pin GitHub Actions to commit SHAs
 ratchet/pin: ratchet
@@ -143,6 +154,12 @@ test-integration: dd-trace-go-setup
 	go run github.com/DataDog/orchestrion go test -v -shuffle=on -failfast ./... | tee $(ORCHESTRION_DIR)/test-integration.log
 
 # Install tools
+
+shfmt:
+	@if ! command -v shfmt >/dev/null 2>&1; then \
+		echo "Installing shfmt..."; \
+		go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1; \
+	fi
 
 gotestfmt:
 	@if ! command -v gotestfmt >/dev/null 2>&1; then \

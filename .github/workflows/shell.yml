@@ -1,0 +1,29 @@
+name: Shell quality
+on:
+  pull_request:
+    paths:
+      - '**/*.sh'
+      - '**/*.bats'
+      - Makefile
+      - .github/workflows/shell.yml
+  merge_group:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  lint:
+    name: ShellCheck and shfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5
+        with:
+          go-version: stable
+      - name: Install shfmt
+        run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
+      - name: Lint and check shell formatting
+        run: make lint/shell
