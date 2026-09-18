@@ -1,0 +1,8 @@
+[
+  {
+    "name": "dynamic defer",
+    "taintPath": "/tmp/iast-defer",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "address-taken parameter",
+    "taintPath": "/tmp/iast-param",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

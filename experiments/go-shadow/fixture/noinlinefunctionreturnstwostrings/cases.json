@@ -1,0 +1,14 @@
+[
+  {
+    "name": "noinline-function-returns-two-strings",
+    "taintPath": "/tmp/iast-noinline-function-returns-two-strings",
+    "dirtyReports": 2,
+    "taintEnabled": true
+  },
+  {
+    "name": "noinline-function-returns-two-strings-disabled",
+    "taintPath": "/tmp/iast-noinline-function-returns-two-strings",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

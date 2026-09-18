@@ -1,0 +1,14 @@
+[
+  {
+    "name": "string-slice-element-store-and-load",
+    "taintPath": "/tmp/iast-string-slice-element-store-and-load",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "string-slice-element-store-and-load-disabled",
+    "taintPath": "/tmp/iast-string-slice-element-store-and-load",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

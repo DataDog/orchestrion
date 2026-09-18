@@ -1,0 +1,17 @@
+[
+  {
+    "name": "exact-source-occurrence-identity",
+    "taintPath": "secret",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "exactRanges": [[0, 12]],
+    "exactSourceRangeCoordinates": [[0, 6], [6, 12]],
+    "distinctSourceIDs": 2
+  },
+  {
+    "name": "exact-source-occurrence-identity-disabled",
+    "taintPath": "secret",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

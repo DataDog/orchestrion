@@ -1,0 +1,26 @@
+[
+  {
+    "name": "no inline prebuilt fresh string function",
+    "taintPath": "/tmp/iast-noinlineprebuiltfreshstring",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "uninstrumentedPackages": [
+      "github.com/DataDog/orchestrion/experiments/go-shadow/fixture/noinlineprebuiltfreshstring/dependency"
+    ]
+  },
+  {
+    "name": "no inline prebuilt fresh string function clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true,
+    "uninstrumentedPackages": [
+      "github.com/DataDog/orchestrion/experiments/go-shadow/fixture/noinlineprebuiltfreshstring/dependency"
+    ]
+  },
+  {
+    "name": "no inline prebuilt fresh string function disabled",
+    "taintPath": "/tmp/iast-noinlineprebuiltfreshstring",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

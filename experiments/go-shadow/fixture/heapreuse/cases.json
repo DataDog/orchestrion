@@ -1,0 +1,15 @@
+[
+  {
+    "name": "heap address reuse",
+    "taintPath": "/tmp/iast-reuse",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "heap reuse race",
+    "taintPath": "/tmp/iast-reuse-race",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "race": true
+  }
+]

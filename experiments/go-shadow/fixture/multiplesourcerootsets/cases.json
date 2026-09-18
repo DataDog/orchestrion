@@ -1,0 +1,17 @@
+[
+  {
+    "name": "multiple-exact-source-root-sets",
+    "taintPath": "alpha",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "exactRanges": [[0, 10]],
+    "exactSourceRangeCoordinates": [[0, 10], [0, 10]],
+    "distinctSourceIDs": 2
+  },
+  {
+    "name": "multiple-exact-source-root-sets-disabled",
+    "taintPath": "alpha",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

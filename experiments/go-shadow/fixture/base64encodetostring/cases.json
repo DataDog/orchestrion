@@ -1,0 +1,20 @@
+[
+  {
+    "name": "base64 encode to string",
+    "taintPath": "/tmp/iast-base64encodetostring",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "base64 encode to string clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "base64 encode to string disabled",
+    "taintPath": "/tmp/iast-base64encodetostring-disabled",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

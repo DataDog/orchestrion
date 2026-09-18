@@ -1,0 +1,8 @@
+[
+  {
+    "name": "bytes new buffer from bytes",
+    "taintPath": "/tmp/iast-bytesnewbufferbyte",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

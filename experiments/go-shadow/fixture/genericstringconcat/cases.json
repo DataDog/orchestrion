@@ -1,0 +1,20 @@
+[
+  {
+    "name": "generic string concat",
+    "taintPath": "/tmp/iast-genericstringconcat",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "generic string concat clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "generic string concat disabled",
+    "taintPath": "/tmp/iast-genericstringconcat",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

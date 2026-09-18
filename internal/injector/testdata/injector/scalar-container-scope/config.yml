@@ -1,0 +1,71 @@
+%YAML 1.1
+---
+aspects:
+  - id: byte-map
+    join-point:
+      value-operation: byte-scalar-map-make
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $call := index .AST.Rhs 0 -}}
+            {{- $map := index $call.Args 0 -}}
+            {{ index .AST.Lhs 0 }} := taint.NewScalarByteMap[{{ $map.Key }}]()
+  - id: byte-channel
+    join-point:
+      value-operation: byte-scalar-channel-make
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            {{- $call := index .AST.Rhs 0 -}}
+            {{ $target }} := taint.NewScalarByteChannel({{ index $call.Args 1 }})
+  - id: byte-map-store
+    join-point:
+      value-operation: byte-scalar-map-store
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: |-
+            {{- $target := index .AST.Lhs 0 -}}
+            taint.MapSetByte({{ $target.X }}, {{ $target.Index }}, taint.PackByte(&{{ index .AST.Rhs 0 }}))
+  - id: byte-channel-send
+    join-point:
+      value-operation: byte-scalar-channel-send
+    advice:
+      - replace-statement:
+          imports:
+            taint: github.com/DataDog/orchestrion/runtime/taint
+          template: taint.SendByte({{ .AST.Chan }}, taint.PackByte(&{{ .AST.Value }}))
+
+code: |-
+  package test
+
+  func consume(values map[string]byte) {}
+
+  func excluded(value byte) {
+    channel := make(chan byte, 1)
+    channel <- value
+    select {
+    case channel <- value:
+    default:
+    }
+    values := make(map[string]byte)
+    values["value"] = value
+    consume(values)
+    for range values {
+    }
+  }
+
+  func captured(value byte) {
+    channel := make(chan byte, 1)
+    values := make(map[string]byte)
+    func() {
+      channel <- value
+      values["value"] = value
+    }()
+  }

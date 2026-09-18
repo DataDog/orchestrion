@@ -1,0 +1,8 @@
+[
+  {
+    "name": "direct string byte index reconstruction",
+    "taintPath": "/tmp/iast-directstringbyteindexreconstruction",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

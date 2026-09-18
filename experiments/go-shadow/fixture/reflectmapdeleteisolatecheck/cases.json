@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched reflection map delete",
+    "taintPath": "/tmp/iast-reflectmapdeleteisolatecheck",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  }
+]

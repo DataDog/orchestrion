@@ -1,0 +1,9 @@
+[
+  {
+    "name": "independent concurrent registrations",
+    "taintPath": "/tmp/iast-indepenconcurrrangeregistr",
+    "dirtyReports": 32,
+    "taintEnabled": true,
+    "race": true
+  }
+]

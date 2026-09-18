@@ -1,0 +1,21 @@
+[
+  {
+    "name": "scalar call map channel",
+    "taintPath": "/tmp/iast-scalarcallmapchannel",
+    "dirtyReports": 6,
+    "taintEnabled": true
+  },
+  {
+    "name": "scalar call map channel disabled",
+    "taintPath": "/tmp/iast-scalarcallmapchannel-disabled",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  },
+  {
+    "name": "scalar call map channel race",
+    "taintPath": "/tmp/iast-scalarcallmapchannel-race",
+    "dirtyReports": 6,
+    "taintEnabled": true,
+    "race": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "recovered return",
+    "taintPath": "/tmp/iast-recover",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

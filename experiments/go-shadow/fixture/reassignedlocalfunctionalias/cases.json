@@ -1,0 +1,14 @@
+[
+  {
+    "name": "reassigned-local-getenv-alias-stays-clean",
+    "taintPath": "secret",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "reassigned-local-getenv-alias-stays-clean-disabled",
+    "taintPath": "secret",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

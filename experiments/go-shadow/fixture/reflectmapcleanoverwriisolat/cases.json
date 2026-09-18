@@ -1,0 +1,8 @@
+[
+  {
+    "name": "patched reflection map clean overwrite",
+    "taintPath": "/tmp/iast-reflectmapcleanoverwriisolat",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "buffer read string",
+    "taintPath": "/tmp/iast-bufferreadreadbytreadstrorr",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

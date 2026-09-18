@@ -1,0 +1,11 @@
+[
+  {
+    "name": "patched two tainted inputs concatenated",
+    "taintPath": "/tmp/iast-twoindepentaintedinputsconca",
+    "dirtyReports": 1,
+    "taintEnabled": true,
+    "env": {
+      "RIGHT": "/tmp/iast-twoindepentaintedinputsconca-right"
+    }
+  }
+]

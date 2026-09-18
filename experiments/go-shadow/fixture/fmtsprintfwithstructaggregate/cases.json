@@ -1,0 +1,20 @@
+[
+  {
+    "name": "fmt sprintf with struct aggregate",
+    "taintPath": "/tmp/iast-fmtsprintfwithstructaggregate",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "fmt sprintf with struct aggregate clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "fmt sprintf with struct aggregate disabled",
+    "taintPath": "/tmp/iast-fmtsprintfwithstructaggregate",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

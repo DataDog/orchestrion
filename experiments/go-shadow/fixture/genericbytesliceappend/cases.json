@@ -1,0 +1,20 @@
+[
+  {
+    "name": "generic byte-slice append",
+    "taintPath": "/tmp/iast-genericbytesliceappend",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  },
+  {
+    "name": "generic byte-slice append clean",
+    "taintPath": "",
+    "dirtyReports": 0,
+    "taintEnabled": true
+  },
+  {
+    "name": "generic byte-slice append disabled",
+    "taintPath": "/tmp/iast-genericbytesliceappend",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  }
+]

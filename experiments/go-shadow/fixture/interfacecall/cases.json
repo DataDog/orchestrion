@@ -1,0 +1,8 @@
+[
+  {
+    "name": "interface dispatch",
+    "taintPath": "/tmp/iast-interface",
+    "dirtyReports": 1,
+    "taintEnabled": true
+  }
+]

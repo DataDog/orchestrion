@@ -1,0 +1,20 @@
+[
+  {
+    "name": "broad-implicit-control-flow",
+    "taintPath": "secret",
+    "dirtyReports": 6,
+    "taintEnabled": true
+  },
+  {
+    "name": "broad-implicit-control-flow-disabled",
+    "taintPath": "secret",
+    "dirtyReports": 0,
+    "taintEnabled": false
+  },
+  {
+    "name": "broad-implicit-control-flow-mismatch",
+    "taintPath": "other",
+    "dirtyReports": 3,
+    "taintEnabled": true
+  }
+]
