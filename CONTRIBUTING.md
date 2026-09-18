@@ -90,6 +90,9 @@ to open a new PR.
 All Go code must be formatted using `go fmt` so that it is in "canonical go format". YAML files must be consistently
 formatted. We run `golangci-lint` and other linters as part of our automated testing suite.
 
+For shell scripts and Bats tests, install [ShellCheck](https://www.shellcheck.net/), then run `make lint/shell`.
+Use `make format/shell` to apply formatting. Both targets install shfmt if it is missing.
+
 > See also the [Makefile](Makefile) for more details on how to run the linters locally.
 
 #### Local Development Commands
@@ -105,14 +108,16 @@ Targets:
   help                 Show this help message
   build                Build orchestrion binary to bin/orchestrion
   install              Install orchestrion to $$GOPATH/bin
-  format               Format Go code and YAML files
+  format               Format Go, YAML, and shell files
   format/go            Format Go code only
   format/yaml          Format YAML files only (excludes testdata)
-  lint                 Run all linters (Go, YAML, GitHub Actions, Makefiles)
+  format/shell         Format tracked shell scripts and Bats tests
+  lint                 Run all linters (Go, YAML, GitHub Actions, Makefiles, shell)
   lint/action          Lint GitHub Actions workflows
   lint/go              Run golangci-lint on Go code
   lint/yaml            Lint YAML formatting
   lint/makefile        Lint Makefiles
+  lint/shell           Check tracked shell scripts with ShellCheck and shfmt
   ratchet/pin          Pin GitHub Actions to commit SHAs
   ratchet/update       Update pinned GitHub Actions to latest versions
   ratchet/check        Verify all GitHub Actions are pinned
