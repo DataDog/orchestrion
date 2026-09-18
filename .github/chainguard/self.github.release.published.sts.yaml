@@ -1,0 +1,14 @@
+# Policy for the published-release job in .github/workflows/release.yml.
+# Only version-tagged release events may obtain this repository-scoped token.
+# workflow_ref identifies this top-level workflow; job_workflow_ref is for reusable workflows.
+issuer: https://token.actions.githubusercontent.com
+subject_pattern: ^repo:DataDog/orchestrion:ref:refs/tags/v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$
+
+claim_pattern:
+  event_name: ^release$
+  workflow_ref: ^DataDog/orchestrion/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$
+  ref: ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$
+  repository: ^DataDog/orchestrion$
+
+permissions:
+  contents: write
