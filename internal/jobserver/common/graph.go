@@ -11,14 +11,16 @@ import (
 	"sync"
 )
 
-// Graph keeps track of a directed acyclic graph.
+// Graph keeps track of a directed acyclic graph. Edges are reference-counted: an
+// edge added N times remains in the graph until it has been removed N times.
 type Graph struct {
-	nodes map[string]map[string]struct{}
+	nodes map[string]map[string]int
 	mu    sync.Mutex
 }
 
-// AddEdge adds a new edge to this graph. Returns an error if the new edge would
-// introduce a cycle in the graph.
+// AddEdge adds a new edge to this graph (or adds a reference to it, if it is
+// already present). Returns an error if the new edge would introduce a cycle in
+// the graph.
 func (g *Graph) AddEdge(from string, to string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -32,26 +34,33 @@ func (g *Graph) AddEdge(from string, to string) error {
 	}
 
 	if g.nodes == nil {
-		g.nodes = make(map[string]map[string]struct{})
+		g.nodes = make(map[string]map[string]int)
 	}
 
 	edges := g.nodes[from]
 	if edges == nil {
-		edges = make(map[string]struct{})
+		edges = make(map[string]int)
 		g.nodes[from] = edges
 	}
 
-	edges[to] = struct{}{}
+	edges[to]++
 	return nil
 }
 
-// RemoveEdge removes an edge from this graph.
+// RemoveEdge removes a reference to an edge from this graph, and removes the
+// edge once no reference to it remains.
 func (g *Graph) RemoveEdge(from string, to string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	delete(g.nodes[from], to)
-	if len(g.nodes[from]) == 0 {
+	edges := g.nodes[from]
+	if edges[to] > 1 {
+		edges[to]--
+		return
+	}
+
+	delete(edges, to)
+	if len(edges) == 0 {
 		delete(g.nodes, from)
 	}
 }

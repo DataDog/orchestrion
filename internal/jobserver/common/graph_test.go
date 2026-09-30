@@ -37,3 +37,18 @@ func TestCycleThroughOneOfManyChildren(t *testing.T) {
 		require.ErrorContains(t, g.AddEdge("z", "x"), "cycle detected: x -> y -> z -> x")
 	}
 }
+
+func TestGraphEdgesAreReferenceCounted(t *testing.T) {
+	g := common.Graph{}
+
+	// The same edge is added by two concurrent operations...
+	require.NoError(t, g.AddEdge("a", "b"))
+	require.NoError(t, g.AddEdge("a", "b"))
+
+	// ... and one of them completes; the edge must remain until the other one completes too.
+	g.RemoveEdge("a", "b")
+	require.ErrorContains(t, g.AddEdge("b", "a"), "cycle detected: a -> b -> a")
+
+	g.RemoveEdge("a", "b")
+	require.NoError(t, g.AddEdge("b", "a"))
+}
