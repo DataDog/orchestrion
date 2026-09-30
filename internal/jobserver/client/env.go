@@ -175,10 +175,16 @@ func clientFromURLFile(ctx context.Context, path string) (*Client, string, error
 }
 
 func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-chan error) (*Client, error) {
-	const retryDelay = 150 * time.Millisecond
+	// Job servers are usually ready within a few milliseconds; so start checking frequently, and then
+	// less so as time goes by.
+	const (
+		initialRetryDelay = 10 * time.Millisecond
+		maxRetryDelay     = 150 * time.Millisecond
+	)
 	var (
-		log   = zerolog.Ctx(ctx)
-		retry *time.Timer
+		log        = zerolog.Ctx(ctx)
+		retry      *time.Timer
+		retryDelay = initialRetryDelay
 	)
 
 	for {
@@ -206,6 +212,7 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-
 			defer retry.Stop()
 			//revive:enable:defer
 		} else {
+			retryDelay = min(2*retryDelay, maxRetryDelay)
 			retry.Reset(retryDelay)
 		}
 
