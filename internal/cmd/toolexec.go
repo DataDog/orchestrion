@@ -69,12 +69,17 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		// Ensure Orchestrion is properly pinned
-		if err := pin.AutoPinOrchestrion(ctx, clictx.App.Writer, clictx.App.ErrWriter); err != nil {
-			return cli.Exit(err, -1)
-		}
-
 		if proxyCmd.ShowVersion() {
+			// Ensure Orchestrion is properly pinned. This is only needed here: the go command obtains the
+			// `-V=full` output of the compile & link tools to compute the action ID of any compile or link
+			// action (see cmd/go/internal/work.(*Builder).toolID), so it always runs this invocation
+			// before any compile or link invocation. Checking in every invocation would repeat the check
+			// (which involves running `go list`) for each compiled package.
+			log.Trace().Strs("command", proxyCmd.Args()).Msg("Verifying orchestrion is pinned in go.mod")
+			if err := pin.AutoPinOrchestrion(ctx, clictx.App.Writer, clictx.App.ErrWriter); err != nil {
+				return cli.Exit(err, -1)
+			}
+
 			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec version command")
 			fullVersion, err := toolexec.ComputeVersion(ctx, proxyCmd)
 			if err != nil {
