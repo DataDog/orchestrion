@@ -213,3 +213,25 @@ func readFile(filename string) (rawFile, error) {
 
 	return rawFile{filename, mappedFilename, fileContent}, nil
 }
+
+// AnyFileMayMatch reports whether [Parser.ParseFiles] would return any file: that is, whether at least
+// one of the aspects may match on at least one of the files (according to [join.Point.FileMayMatch]),
+// or whether the files are larger than [maxBytesEagerness] in total. It returns true whenever it cannot
+// tell (e.g, if a file cannot be read, or if its package clause cannot be parsed), so that callers fall
+// back to [Parser.ParseFiles], which reports such errors.
+func AnyFileMayMatch(files []string, aspects []*aspect.Aspect) bool {
+	var size uint64
+	for _, file := range files {
+		raw, err := readFile(file)
+		if err != nil {
+			return true
+		}
+		if size += uint64(len(raw.content)); size > maxBytesEagerness {
+			return true
+		}
+		if mayMatch, err := anyAspectMayMatch(aspects, raw); err != nil || mayMatch {
+			return true
+		}
+	}
+	return false
+}

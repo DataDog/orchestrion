@@ -18,8 +18,9 @@ import (
 const (
 	subjectPrefix = "packages."
 
-	resolveSubject = subjectPrefix + "resolve"
-	loadSubject    = subjectPrefix + "load"
+	resolveSubject   = subjectPrefix + "resolve"
+	loadSubject      = subjectPrefix + "load"
+	mayModifySubject = subjectPrefix + "mayModify"
 )
 
 type resolvedPackageSet struct {
@@ -35,6 +36,7 @@ type resolvedPackageSet struct {
 type service struct {
 	resolved  common.Cache[resolvedPackageSet]
 	loaded    common.Cache[*packages.Package]
+	configs   configSnapshots
 	graph     common.Graph
 	serverURL string
 }
@@ -53,6 +55,11 @@ func Subscribe(ctx context.Context, serverURL string, conn *nats.Conn, stats *co
 	}
 
 	_, err = conn.Subscribe(loadSubject, common.HandleRequest(ctx, s.load))
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = conn.Subscribe(mayModifySubject, common.HandleRequest(ctx, s.mayModify))
 	if err != nil {
 		return nil, err
 	}

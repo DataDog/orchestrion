@@ -8,6 +8,7 @@ package aspect
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -72,6 +73,25 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 	}
 	pkgLoader := packageLoader(js)
 
+	// Both signals are required: cmd.TestMain validates the generated source, while w.isTestMain
+	// validates a variant-free ".test" identity; package names may themselves end in ".test".
+	testMain := cmd.TestMain() && w.isTestMain()
+
+	// Loading the injector configuration is the most expensive part of processing a package, but most
+	// packages cannot be modified by any aspect. The job server, which loads the configuration only
+	// once, applies the same filtering as the injector to tell whether any aspect may apply to this
+	// package's files; if none can, there is nothing to do.
+	if !mayModify(ctx, js, pkgs.MayModifyRequest{
+		ConfigDir:  goModDir,
+		ImportPath: w.ImportPath,
+		Imports:    slices.Sorted(maps.Keys(imports.PackageFile)),
+		TestMain:   testMain,
+		Files:      cmd.GoFiles(),
+	}) {
+		log.Debug().Msg("No aspect may apply to this package, skipping weaving")
+		return nil
+	}
+
 	cfg, resErr := config.NewLoader(pkgLoader, goModDir, false).Load(ctx)
 	if resErr != nil {
 		return fmt.Errorf("loading injector configuration: %w", resErr)
@@ -104,12 +124,9 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 		RootConfig: map[string]string{"httpmode": "wrap"},
 		Lookup:     imports.Lookup,
 		ImportPath: w.ImportPath,
-		// Both signals are required: cmd.TestMain validates the generated source,
-		// while w.isTestMain validates a variant-free ".test" identity; package
-		// names may themselves end in ".test".
-		TestMain:  cmd.TestMain() && w.isTestMain(),
-		ImportMap: imports.PackageFile,
-		GoVersion: cmd.Flags.Lang,
+		TestMain:   testMain,
+		ImportMap:  imports.PackageFile,
+		GoVersion:  cmd.Flags.Lang,
 		ModifiedFile: func(file string) string {
 			return filepath.Join(filepath.Dir(cmd.Flags.Output), OrchestrionDirPathElement, cmd.Flags.Package, filepath.Base(file))
 		},
@@ -238,6 +255,35 @@ func writeUpdatedImportConfig(log zerolog.Logger, reg importcfg.ImportConfig, fi
 	}
 
 	return nil
+}
+
+// mayModify asks the job server whether any aspect may apply to the package described by req, after
+// setting its working directory and making its file paths absolute. It returns true if the job server
+// cannot tell.
+func mayModify(ctx context.Context, js *client.Client, req pkgs.MayModifyRequest) bool {
+	log := zerolog.Ctx(ctx)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to determine the working directory")
+		return true
+	}
+	req.WorkDir = wd
+	files := make([]string, len(req.Files))
+	for idx, file := range req.Files {
+		files[idx] = file
+		if !filepath.IsAbs(file) {
+			files[idx] = filepath.Join(wd, file)
+		}
+	}
+	req.Files = files
+
+	res, err := client.Request(ctx, js, req)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to determine whether any aspect may apply to this package")
+		return true
+	}
+	return !res.NoAspectMayApply
 }
 
 func packageLoader(js *client.Client) config.PackageLoader {

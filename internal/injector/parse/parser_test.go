@@ -80,6 +80,33 @@ func TestParseFiles(t *testing.T) {
 	})
 }
 
+func TestAnyFileMayMatch(t *testing.T) {
+	aspects := []*aspect.Aspect{{ID: "enabled", JoinPoint: join.Directive("orchestrion:enabled")}}
+
+	files := writeGoFiles(t, map[string]string{
+		"a.go": "package example\n\nvar a bool\n",
+		"b.go": "package example\n\n//orchestrion:enabled\nvar b bool\n",
+	})
+	assert.True(t, AnyFileMayMatch(files, aspects))
+	assert.False(t, AnyFileMayMatch(files[:1], aspects))
+	assert.False(t, AnyFileMayMatch(files, nil))
+
+	// Large packages are parsed regardless of the aspects that may match on them.
+	large := writeGoFiles(t, map[string]string{
+		"a.go": "package example\n\nvar a bool\n",
+		"b.go": "package example\n\nvar large = `" + strings.Repeat("x", maxBytesEagerness) + "`\n",
+	})
+	assert.True(t, AnyFileMayMatch(large, aspects))
+	assert.True(t, AnyFileMayMatch(large, nil))
+
+	// When the outcome cannot be determined, it is assumed an aspect may match; including when there
+	// are no aspects, as ParseFiles reports malformed package clauses regardless.
+	assert.True(t, AnyFileMayMatch([]string{filepath.Join(t.TempDir(), "missing.go")}, aspects))
+	malformed := writeGoFiles(t, map[string]string{"c.go": "package\n"})
+	assert.True(t, AnyFileMayMatch(malformed, aspects))
+	assert.True(t, AnyFileMayMatch(malformed, nil))
+}
+
 // writeGoFiles writes the provided files in a temporary directory, and returns their paths in lexical
 // order of their names.
 func writeGoFiles(t *testing.T, files map[string]string) []string {

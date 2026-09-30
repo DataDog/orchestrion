@@ -54,6 +54,9 @@ type (
 		Lookup importer.Lookup
 		// RootConfig is the root configuration value to use.
 		RootConfig map[string]string
+		// WorkDir is the working directory of the build, which determines its root module. If blank,
+		// the current working directory is used.
+		WorkDir string
 
 		// restorerResolver is used to restore modified files. It's created on-demand then re-used.
 		restorerResolver resolver.RestorerResolver
@@ -321,4 +324,13 @@ func injectNode(ctx context.AdviceContext, aspects []*aspect.Aspect) (mod bool, 
 		}
 	}
 	return mod, nil
+}
+
+// MayModify reports whether [Injector.InjectFiles] would process any of the provided files. It returns
+// false only if [Injector.InjectFiles] would do nothing with them (and report no error): when no aspect
+// can match on any of them, as determined by the same package-level and file-level filtering, and they
+// are not large enough to be parsed and type-checked regardless. This only requires reading the files'
+// contents and package clauses. It only uses the ImportPath, ImportMap, TestMain and WorkDir fields.
+func (i *Injector) MayModify(files []string, aspects []*aspect.Aspect) bool {
+	return parse.AnyFileMayMatch(files, i.packageFilterAspects(aspects))
 }
