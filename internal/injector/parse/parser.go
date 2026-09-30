@@ -22,11 +22,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// maxBytesEagerness is the maximum number of bytes the files of a certain package can have before
-// stop we decide to stop trying to run join.Point.FileMayMatch on each file.
-// Since 99% of package have no aspects that ACTUALLY match on them, we can save a lot of time by
-// applying the join.Point.FileMayMatch heuristic. But if the package has a lot of files, we may
-// end up parsing all files anyway so we can just skip this heuristic if the package is too big.
+// maxBytesEagerness is the size of a package's files beyond which the package is parsed and
+// type-checked even if no aspect may match on any of its files, so that errors in such packages
+// (e.g., syntax errors, or a Go version newer than orchestrion supports) keep being reported.
 const maxBytesEagerness = 1 << 19 // 512 KiB
 
 type rawFile struct {
@@ -35,13 +33,14 @@ type rawFile struct {
 	content    []byte
 }
 
-// File represents a parsed file with its name, its AST and with the aspects that may match on it.
+// File represents a parsed file with its name, its AST and with the aspects to apply to it.
 type File struct {
 	// Name is the name of the file.
 	Name string
 	// AstFile is the parsed AST of the file, cannot be nil
 	AstFile *ast.File
-	// Aspects is the list of aspects that may match on this file.
+	// Aspects is the list of aspects to apply to this file: empty if none may match on it, and all of
+	// them otherwise, as advice may add code to the file that any aspect may match on.
 	Aspects []*aspect.Aspect
 }
 
@@ -73,8 +72,8 @@ func NewParser(fset *token.FileSet, nbFiles int) *Parser {
 	}
 }
 
-// ParseFiles return either zero files if no aspect matched on any file of the package,
-// or all files parsed with their respective aspects that can match on them.
+// ParseFiles returns either zero files if no aspect may match on any file of the package (unless it
+// is larger than [maxBytesEagerness]), or all files parsed with the aspects to apply to them.
 func (p *Parser) ParseFiles(ctx context.Context, files []string, aspects []*aspect.Aspect) ([]File, error) {
 	for idx, file := range files {
 		idx, file := idx, file
@@ -85,24 +84,21 @@ func (p *Parser) ParseFiles(ctx context.Context, files []string, aspects []*aspe
 				return fmt.Errorf("reading %q: %w", file, err)
 			}
 
-			fileAspects := aspects
 			p.filesBytesCount.Add(uint64(len(p.rawFiles[idx].content)))
-			if !p.hasApplicableAspects() {
-				// While the current package still has a chance to not require all files to be parsed, we can try to filter out
-				// aspects that cannot match on this file before parsing it.
-				fileAspects, err = p.fileFilterAspects(fileAspects, p.rawFiles[idx])
-				if err != nil {
-					return fmt.Errorf("filtering aspects for %q: %w", file, err)
-				}
-				if len(fileAspects) == 0 {
-					// No aspects can match on this file, no need to fill up the File.AstFile field.
-					p.parsedFiles[idx] = File{Name: file}
-					return nil
-				}
+			// Most files have no aspect that may match on them, and are left untouched; the others get all
+			// aspects (see [File.Aspects]).
+			fileAspects, err := p.fileFilterAspects(aspects, p.rawFiles[idx])
+			if err != nil {
+				return fmt.Errorf("filtering aspects for %q: %w", file, err)
+			}
+			if len(fileAspects) == 0 {
+				// No aspects can match on this file, no need to fill up the File.AstFile field.
+				p.parsedFiles[idx] = File{Name: file}
+				return nil
 			}
 
 			p.mustParseAll.Store(true)
-			p.parsedFiles[idx], err = p.parseFile(ctx, p.rawFiles[idx], fileAspects)
+			p.parsedFiles[idx], err = p.parseFile(ctx, p.rawFiles[idx], aspects)
 			return err
 		})
 	}
