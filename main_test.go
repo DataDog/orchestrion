@@ -16,10 +16,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/shirou/gopsutil/v4/process"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/tools/cover"
@@ -560,6 +563,223 @@ func main() {
 	// configuration is appropriately loaded from the module's root anyway.
 	runCmd := runner{dir: filepath.Join(run.dir, "cmd")}
 	runCmd.exec(t, orchestrionBin, "go", "run", ".")
+}
+
+// TestToolexecVerifiesPinOnVersionQueries ensures `orchestrion toolexec` verifies that orchestrion is
+// pinned in `go.mod` when the go command queries the version of the compile & link tools (which it
+// always does before invoking them), without repeating that verification for every compile & link
+// invocation; including those of the nested builds triggered by woven dependencies.
+func TestToolexecVerifiesPinOnVersionQueries(t *testing.T) {
+	orchestrion := buildOrchestrion(t)
+	toolexec := "-toolexec=" + orchestrion + " toolexec"
+
+	t.Run("pinned", func(t *testing.T) {
+		run := runner{dir: t.TempDir()}
+		writeFiles(t, run.dir, map[string]string{
+			"go.mod": `module example.com/pincheck
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => ` + rootDir + "\n",
+			"orchestrion.tool.go": `//go:build tools
+
+package tools
+
+import (
+	_ "example.com/pincheck/instrumentation"
+	_ "github.com/DataDog/orchestrion"
+)
+`,
+			"instrumentation/instrumentation.go": "package instrumentation\n",
+			// The woven package does not import `injected` itself, so weaving it requires a nested build.
+			"instrumentation/orchestrion.yml": `meta:
+  name: Pin verification
+  description: Injects a dependency that is not part of the woven package's closure.
+aspects:
+  - id: inject-dependency
+    join-point:
+      all-of:
+        - import-path: example.com/pincheck/subject
+        - function-body:
+            function:
+              - name: Value
+    advice:
+      - prepend-statements:
+          imports:
+            injected: example.com/pincheck/injected
+          template: injected.Mark()
+`,
+			"injected/injected.go": "package injected\n\nvar Marked bool\n\nfunc Mark() { Marked = true }\n",
+			// subject imports a package, as injecting an import into a package that imports nothing is
+			// fixed separately.
+			"subject/subject.go": "package subject\n\nimport \"strconv\"\n\nfunc Value() int { n, _ := strconv.Atoi(\"42\"); return n }\n",
+			"main.go": `package main
+
+import (
+	"log"
+
+	"example.com/pincheck/injected"
+	"example.com/pincheck/subject"
+)
+
+func main() {
+	if subject.Value() != 42 || !injected.Marked {
+		log.Fatalln("The aspect was not woven")
+	}
+}
+`,
+			"main_test.go": "package main\n\nimport \"testing\"\n\nfunc TestWoven(*testing.T) { main() }\n",
+		})
+		run.exec(t, "go", "mod", "tidy")
+
+		for _, tc := range []struct {
+			name    string
+			goflags string
+			args    func(binary string) []string
+		}{
+			// `go test` compiles and links (also in the nested build), and runs main, which checks that the
+			// aspect was woven.
+			{name: "test", args: func(string) []string { return []string{"test", toolexec, "."} }},
+			{name: "GOFLAGS", goflags: "'" + toolexec + "'", args: func(binary string) []string { return []string{"build", "-o", binary, "."} }},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				logDir := t.TempDir()
+				t.Setenv("GOFLAGS", tc.goflags)
+				t.Setenv("ORCHESTRION_LOG_LEVEL", "TRACE")
+				t.Setenv("ORCHESTRION_LOG_FILE", filepath.Join(logDir, "$PID.log"))
+				if runtime.GOOS == "windows" {
+					// Registered after logDir was created, so this runs before it is removed.
+					t.Cleanup(func() { waitForJobServersToExit(t, logDir) })
+				}
+
+				binary := filepath.Join(t.TempDir(), "app")
+				if runtime.GOOS == "windows" {
+					binary += ".exe"
+				}
+				run.exec(t, "go", tc.args(binary)...)
+				if _, err := os.Stat(binary); err == nil {
+					run.exec(t, binary)
+				}
+
+				requirePinVerifiedOnVersionQueriesOnly(t, logDir)
+			})
+		}
+	})
+
+	t.Run("incorrect version", func(t *testing.T) {
+		out, err := exec.Command(orchestrion, "version").Output()
+		require.NoError(t, err)
+		if strings.HasSuffix(strings.TrimSpace(string(out)), "+dev") {
+			t.Skip("development builds of orchestrion do not verify the version required by go.mod")
+		}
+		t.Setenv("GOFLAGS", "")
+		t.Setenv("DD_ORCHESTRION_IS_GOMOD_VERSION", "")
+
+		run := runner{dir: t.TempDir()}
+		writeFiles(t, run.dir, map[string]string{
+			"go.mod": `module example.com/pincheck
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => ./stub
+`,
+			"stub/go.mod":         "module github.com/DataDog/orchestrion\n\ngo 1.25\n",
+			"stub/orchestrion.go": "package orchestrion\n",
+			"orchestrion.tool.go": "//go:build tools\n\npackage tools\n\nimport _ \"github.com/DataDog/orchestrion\"\n",
+			"main.go":             "package main\n\nfunc main() {}\n",
+		})
+		run.exec(t, "go", "mod", "tidy")
+
+		output := run.execError(t, "go", "build", toolexec, ".")
+		require.Contains(t, output, "orchestrion is diverted by a replace directive")
+	})
+}
+
+// waitForJobServersToExit waits for the job servers that logged to logDir to exit. When `-toolexec` is
+// used directly, the go command starts job servers as daemons, which shut down once it has removed its
+// work directory. Their working directory is that of the build; and on Windows, a directory cannot be
+// removed while it is the working directory of a process.
+func waitForJobServersToExit(t *testing.T, logDir string) {
+	t.Helper()
+
+	entries, err := os.ReadDir(logDir)
+	require.NoError(t, err)
+
+	const timeout = time.Minute
+	deadline := time.Now().Add(timeout)
+	for _, entry := range entries {
+		data, err := os.ReadFile(filepath.Join(logDir, entry.Name()))
+		require.NoError(t, err)
+		if !bytes.Contains(data, []byte(`"message":"Server component successfully started"`)) {
+			continue
+		}
+
+		pid, err := strconv.ParseInt(strings.TrimSuffix(entry.Name(), ".log"), 10, 32)
+		require.NoError(t, err, "unexpected log file name %q", entry.Name())
+		for {
+			running, err := process.PidExists(int32(pid))
+			require.NoError(t, err)
+			if !running {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Errorf("job server process %d is still running %v after the build completed", pid, timeout)
+				return
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+
+// requirePinVerifiedOnVersionQueriesOnly asserts, from the trace logs written in logDir, that orchestrion
+// verified it is pinned in `go.mod`, that it only did so when the version of a tool was queried, and that
+// it proxied some compile or link commands (without verifying the pin again).
+func requirePinVerifiedOnVersionQueriesOnly(t *testing.T, logDir string) {
+	t.Helper()
+
+	entries, err := os.ReadDir(logDir)
+	require.NoError(t, err)
+
+	var verifications, proxied int
+	for _, entry := range entries {
+		data, err := os.ReadFile(filepath.Join(logDir, entry.Name()))
+		require.NoError(t, err)
+
+		for _, line := range bytes.Split(data, []byte{'\n'}) {
+			var record struct {
+				Message string   `json:"message"`
+				Command []string `json:"command"`
+			}
+			if json.Unmarshal(line, &record) != nil {
+				continue
+			}
+			switch record.Message {
+			case "Verifying orchestrion is pinned in go.mod":
+				verifications++
+				require.Contains(t, record.Command, "-V=full", "the pin was verified while proxying %q", record.Command)
+			case "Toolexec original command":
+				proxied++
+			}
+		}
+	}
+
+	t.Logf("The pin was verified %d times, and %d compile or link commands were proxied", verifications, proxied)
+	require.NotZero(t, verifications, "the pin was never verified")
+	require.NotZero(t, proxied, "no compile or link command was proxied")
+}
+
+func writeFiles(t *testing.T, dir string, files map[string]string) {
+	t.Helper()
+
+	for name, contents := range files {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
 }
 
 type benchCase interface {
