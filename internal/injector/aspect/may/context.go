@@ -22,6 +22,11 @@ type PackageContext struct {
 
 	// TestMain is true if the package is a test package.
 	TestMain bool
+
+	// WorkDir is the directory of the build, whose module is the root module (e.g, for
+	// `package-filter` join points with `root: true`). If blank, the current working directory is
+	// used.
+	WorkDir string
 }
 
 func (ctx *PackageContext) PackageImports(path string) MatchType {
