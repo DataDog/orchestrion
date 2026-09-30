@@ -130,8 +130,14 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		resultMu     sync.Mutex
 	)
 
-	wg.Add(len(parsedFiles))
 	for _, parsedFile := range parsedFiles {
+		if len(parsedFile.Aspects) == 0 {
+			// No aspect may match anything in this file, so it cannot be modified: it was only parsed
+			// because type-checking needs all of the package's files.
+			continue
+		}
+
+		wg.Add(1)
 		go func(parsedFile parse.File) {
 			defer wg.Done()
 
