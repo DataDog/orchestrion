@@ -18,6 +18,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/rs/zerolog"
 )
 
@@ -81,8 +82,16 @@ func FromEnvironment(ctx context.Context, workDir string) (*Client, error) {
 	cmd.Env = append(os.Environ(), "TOOLEXEC_IMPORTPATH=") // Suppress the TOOLEXEC_IMPORTPATH variable if it's set.
 	cmd.WaitDelay = jobserverStartTimeout
 	cmd.Stdin = nil // Connect to `os.DevNull`
-	cmd.Stderr, _ = os.Create(urlFilePath + ".stderr.log")
-	cmd.Stdout, _ = os.Create(urlFilePath + ".stdout.log")
+	// The job server keeps these open until it exits, which happens once the go command has removed the
+	// URL file while removing its work directory: they must not prevent that removal.
+	if stderr, err := files.AppendLog(urlFilePath + ".stderr.log"); err == nil {
+		defer stderr.Close()
+		cmd.Stderr = stderr
+	}
+	if stdout, err := files.AppendLog(urlFilePath + ".stdout.log"); err == nil {
+		defer stdout.Close()
+		cmd.Stdout = stdout
+	}
 	log.Trace().
 		Strs("args", cmd.Args).
 		Msg("Starting daemonized jobserver process...")
