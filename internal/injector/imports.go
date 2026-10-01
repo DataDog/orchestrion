@@ -28,6 +28,7 @@ func (i *Injector) packageFilterAspects(aspects []*aspect.Aspect) []*aspect.Aspe
 		ImportPath: i.ImportPath,
 		ImportMap:  i.ImportMap,
 		TestMain:   i.TestMain,
+		WorkDir:    i.WorkDir,
 	}
 	return slices.DeleteFunc(copyAspects, func(a *aspect.Aspect) bool {
 		return a.JoinPoint.PackageMayMatch(ctx) == may.NeverMatch

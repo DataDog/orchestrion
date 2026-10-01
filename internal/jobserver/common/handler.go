@@ -40,6 +40,8 @@ func HandleRequest[Res any, Req Request[Res]](ctx context.Context, handler Reque
 
 		// Spawn the handler in a new goroutine to avoid blocking the NATS subscription poller.
 		go func() {
+			// The request's span must only be in this request's context; ctx is shared by all requests.
+			reqCtx := ctx
 			if spanCtx, err := tracer.Extract(traceutil.NATSCarrier{Msg: msg}); err == nil && spanCtx != nil {
 				span := tracer.StartSpan("nats.server",
 					tracer.ServiceName("github.com/DataDog/orchestrion/internal/jobserver"),
@@ -49,15 +51,15 @@ func HandleRequest[Res any, Req Request[Res]](ctx context.Context, handler Reque
 					tracer.ChildOf(spanCtx),
 				)
 				defer span.Finish()
-				ctx = tracer.ContextWithSpan(ctx, span)
+				reqCtx = tracer.ContextWithSpan(reqCtx, span)
 			}
 
-			resp, err := handler(ctx, req)
+			resp, err := handler(reqCtx, req)
 			if err != nil {
-				respond(ctx, msg, errorResponse{Error: err.Error()})
+				respond(reqCtx, msg, errorResponse{Error: err.Error()})
 				return
 			}
-			respond(ctx, msg, successResponse[Res]{Result: resp})
+			respond(reqCtx, msg, successResponse[Res]{Result: resp})
 		}()
 	}
 }

@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+aspects:
+  # A blank name only matches function literal expressions; and as this is the only aspect, no other
+  # aspect makes the file a candidate for weaving.
+  - id: function-literals
+    join-point:
+      function-body:
+        function:
+          - name: ''
+    advice:
+      - prepend-statements:
+          template: print("function literal")
+
+code: |-
+  package test
+
+  var handler = func() string {
+    return "hello"
+  }
+
+  func named() string {
+    return handler()
+  }
