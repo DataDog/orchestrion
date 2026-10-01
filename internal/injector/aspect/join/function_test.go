@@ -16,6 +16,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/fingerprint"
 	aspectcontext "github.com/DataDog/orchestrion/internal/injector/aspect/context"
+	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
 	"github.com/DataDog/orchestrion/internal/injector/typed"
 )
 
@@ -357,4 +358,20 @@ signature-contains:
 
 	require.Len(t, signatureContains.Results, 1, "Expected 1 result")
 	assert.Equal(t, "bool", signatureContains.Results[0].Name, "Result should be bool")
+}
+
+func TestFunctionNameFileMayMatch(t *testing.T) {
+	withLiteral := &may.FileContext{FileContent: []byte(`package main; var f = func() {}`)}
+	withDeclaration := &may.FileContext{FileContent: []byte(`package main; func Handler() {}`)}
+	withoutFunction := &may.FileContext{FileContent: []byte(`package main; var v = 1`)}
+
+	// A blank name matches function literal expressions, wherever they are.
+	literals := Function(Name(""))
+	assert.Equal(t, may.Match, literals.FileMayMatch(withLiteral))
+	assert.Equal(t, may.Match, literals.FileMayMatch(withDeclaration))
+	assert.Equal(t, may.NeverMatch, literals.FileMayMatch(withoutFunction))
+
+	named := Function(Name("Handler"))
+	assert.Equal(t, may.NeverMatch, named.FileMayMatch(withLiteral))
+	assert.Equal(t, may.Match, named.FileMayMatch(withDeclaration))
 }
