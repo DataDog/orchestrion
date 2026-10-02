@@ -217,6 +217,9 @@ func waitForURLFile(ctx context.Context, path string, cmd *exec.Cmd, exitChan <-
 					Str("url-file", path).
 					Msg("Job server process exited with status 0 (another process is serving)")
 			}
+			// The process has nothing more to report. Stop receiving from the (now closed) channel, which
+			// would otherwise return right away, and turn this into a busy loop.
+			exitChan = nil
 
 		case <-retry.C:
 			// The retry timer has elapsed, we shall try again!
