@@ -164,6 +164,7 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 
 	// Write the ClientURL into the urlFile
 	if _, err := file.Write([]byte(clientURL)); err != nil {
+		server.Close()
 		return cli.Exit(fmt.Errorf("failed to write URL file at %q: %w", urlFile, err), 1)
 	}
 	log.Trace().
@@ -174,7 +175,7 @@ func startWithURLFile(ctx context.Context, opts *jobserver.Options, urlFile stri
 	// Release the URL File lock
 	if err := file.Unlock(ctx); err != nil {
 		// Shut the server down, as we won't actually be returning it...
-		server.Shutdown()
+		server.Close()
 		return cli.Exit(fmt.Errorf("failed to release lock on %q: %w", urlFile, err), 1)
 	}
 	log.Trace().
