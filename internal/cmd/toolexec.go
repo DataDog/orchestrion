@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
@@ -33,6 +34,16 @@ func joinCommandCloseError(result error, closeErr error) error {
 	return errors.Join(result, closeErr)
 }
 
+// relaxGarbageCollection makes the garbage collector run less often, unless the user configured it
+// (GOGC or GOMEMLIMIT): toolexec processes are short-lived and allocation-heavy. Unlike setting GOGC,
+// this leaves the go toolchain commands they run unaffected.
+func relaxGarbageCollection() {
+	if os.Getenv("GOGC") != "" || os.Getenv("GOMEMLIMIT") != "" {
+		return
+	}
+	debug.SetGCPercent(400)
+}
+
 var Toolexec = &cli.Command{
 	Name:            "toolexec",
 	Usage:           "Standard `-toolexec` plugin for the Go toolchain",
@@ -40,6 +51,8 @@ var Toolexec = &cli.Command{
 	Args:            true,
 	SkipFlagParsing: true,
 	Action: func(clictx *cli.Context) (resErr error) {
+		relaxGarbageCollection()
+
 		log := zerolog.Ctx(clictx.Context)
 		importPath := os.Getenv("TOOLEXEC_IMPORTPATH")
 
