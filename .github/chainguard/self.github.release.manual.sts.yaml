@@ -1,0 +1,13 @@
+# Policy for manually repairing a published release from reviewed automation on main.
+# The workflow verifies the published release and uses its root tag, not main, as the target.
+issuer: https://token.actions.githubusercontent.com
+subject: repo:DataDog/orchestrion:ref:refs/heads/main
+
+claim_pattern:
+  event_name: ^workflow_dispatch$
+  workflow_ref: ^DataDog/orchestrion/\.github/workflows/release\.yml@refs/heads/main$
+  ref: ^refs/heads/main$
+  repository: ^DataDog/orchestrion$
+
+permissions:
+  contents: write

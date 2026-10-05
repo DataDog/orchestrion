@@ -106,6 +106,29 @@ jobs:
           fi
           exit 1
   ##############################################################################
+  # Run shell tests independently of Go code generation.
+  test-bats:
+    name: Bats tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          persist-credentials: false
+      - name: Checkout Bats
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          repository: bats-core/bats-core
+          ref: eb7f42f8d608ac693d7a4b67474f6714ea68cfc5 # v1.14.0
+          path: .bats
+          persist-credentials: false
+      - name: Check release shell scripts
+        run: shellcheck -x _tools/tag-submodules.sh _tools/tag-submodules.bats
+      - name: Run Bash script tests
+        run: make test-bats BATS=.bats/bin/bats
+  ##############################################################################
   # Run the various linters we have set up...
   lint:
     needs: generate
