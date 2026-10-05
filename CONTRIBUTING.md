@@ -118,6 +118,7 @@ Targets:
   ratchet/check        Verify all GitHub Actions are pinned
   docs                 Update embedded documentation in markdown files
   tmp/make-help.txt    Generate make help output for embedding in documentation
+  test-bats            Run Bash script tests with Bats
   test                 Run unit tests
   test-e2e             Run end-to-end tests
   test-integration     Run integration tests with dd-trace-go
