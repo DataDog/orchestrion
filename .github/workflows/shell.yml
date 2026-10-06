@@ -24,6 +24,7 @@ jobs:
         with:
           go-version: stable
       - name: Install shfmt
+        # Keep this version in sync with the `shfmt` target in the Makefile.
         run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
       - name: Lint and check shell formatting
         run: make lint/shell

@@ -10,6 +10,7 @@ ORCHESTRION_DIR ?= $(if $(orchestrion_dir),$(orchestrion_dir),$(CURDIR))
 DD_TRACE_GO_DIR ?= $(CURDIR)/tmp/dd-trace-go
 DDTRACE_INTEGRATION_DIR := $(DD_TRACE_GO_DIR)/internal/orchestrion/_integration
 BATS ?= bats
+SHELLFMT_FLAGS := -i 2 -ci -bn
 
 .DEFAULT_GOAL := help
 
@@ -43,7 +44,7 @@ format/yaml: yamlfmt
 
 format/shell: ## Format tracked shell scripts and Bats tests
 format/shell: shfmt
-	git ls-files -z '*.sh' '*.bats' | xargs -0 shfmt -i 2 -ci -bn -w
+	git ls-files -z '*.sh' '*.bats' | xargs -0 shfmt $(SHELLFMT_FLAGS) -w
 
 lint: ## Run all linters (Go, YAML, GitHub Actions, Makefiles, shell)
 lint: lint/go lint/yaml lint/action lint/makefile lint/shell
@@ -72,7 +73,7 @@ lint/shell: ## Check tracked shell scripts with ShellCheck and shfmt
 lint/shell: shfmt
 	set -o errexit
 	git ls-files -z '*.sh' '*.bats' | xargs -0 shellcheck -x
-	git ls-files -z '*.sh' '*.bats' | xargs -0 shfmt -i 2 -ci -bn -d
+	git ls-files -z '*.sh' '*.bats' | xargs -0 shfmt $(SHELLFMT_FLAGS) -d
 
 ratchet/pin: ## Pin GitHub Actions to commit SHAs
 ratchet/pin: ratchet
