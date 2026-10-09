@@ -49,7 +49,7 @@ func TestResolveInterfaceTypeByName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			iface, err := ResolveInterfaceTypeByName(tc.interfaceName)
+			iface, err := ResolveInterfaceTypeByName(nil, tc.interfaceName)
 
 			if !tc.shouldSucceed {
 				require.Error(t, err)
@@ -265,7 +265,7 @@ func TestTypeImplements(t *testing.T) {
 
 	t.Run("real context.Context case with cross-importer time.Time", func(t *testing.T) {
 		// Load context.Context via ResolveInterfaceTypeByName (uses importer.Default internally).
-		contextIface, err := ResolveInterfaceTypeByName("context.Context")
+		contextIface, err := ResolveInterfaceTypeByName(nil, "context.Context")
 		require.NoError(t, err)
 		require.NotNil(t, contextIface)
 
@@ -334,4 +334,36 @@ func TestTypeImplements(t *testing.T) {
 		assert.True(t, typeImplements(ptrToCustomCtx, contextIface),
 			"typeImplements should return true using method-name fallback for context.Context")
 	})
+}
+
+// failingImporter is a [types.Importer] that fails all imports, simulating an
+// importcfg-backed importer that does not contain the target package (importcfg
+// files only list the direct dependencies of the package being woven).
+type failingImporter struct{}
+
+func (failingImporter) Import(string) (*types.Package, error) {
+	return nil, assert.AnError
+}
+
+// TestResolveInterfaceTypeByNameImporterFallback verifies that interface resolution
+// falls back to the default importer when the provided importer cannot resolve
+// the interface's package, and that a nil importer also uses the default importer.
+func TestResolveInterfaceTypeByNameImporterFallback(t *testing.T) {
+	for _, imp := range []types.Importer{nil, failingImporter{}} {
+		iface, err := ResolveInterfaceTypeByName(imp, "context.Context")
+		require.NoError(t, err)
+		require.NotNil(t, iface)
+		assert.Equal(t, 4, iface.NumMethods(), "context.Context has Deadline, Done, Err, and Value")
+
+		// The fallback applies to arbitrary stdlib interfaces as well.
+		iface, err = ResolveInterfaceTypeByName(imp, "io.Reader")
+		require.NoError(t, err)
+		require.NotNil(t, iface)
+	}
+
+	// Interface resolution still fails for packages that can't be resolved by
+	// either importer, reporting both errors.
+	_, err := ResolveInterfaceTypeByName(failingImporter{}, "example.invalid.DoesNotExist")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, assert.AnError.Error())
 }

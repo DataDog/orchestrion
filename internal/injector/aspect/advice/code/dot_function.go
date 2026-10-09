@@ -199,7 +199,7 @@ func (s signature) LastResultThatImplements(name string) (string, error) {
 	} // If parsing failed or no match, fall through to type resolution.
 
 	// Resolve the interface type.
-	iface, err := typed.ResolveInterfaceTypeByName(name)
+	iface, err := typed.ResolveInterfaceTypeByName(s.context.Importer(), name)
 	if err != nil {
 		// Propagate error if interface resolution fails
 		return "", fmt.Errorf("resolving interface type %q: %w", name, err)
@@ -320,7 +320,7 @@ func (s signature) FinalResultImplements(interfaceName string) (bool, error) {
 		}
 	} // If parsing failed or no match, fall through to type resolution.
 
-	iface, err := typed.ResolveInterfaceTypeByName(interfaceName)
+	iface, err := typed.ResolveInterfaceTypeByName(s.context.Importer(), interfaceName)
 	if err != nil {
 		return false, fmt.Errorf("resolving interface type %q: %w", interfaceName, err)
 	}
@@ -342,7 +342,7 @@ func findImplementingField(ctx context.AdviceContext, fields *dst.FieldList, int
 	}
 
 	// 2. If no exact name match, check for interface implementation.
-	iface, err := typed.ResolveInterfaceTypeByName(interfaceName)
+	iface, err := typed.ResolveInterfaceTypeByName(ctx.Importer(), interfaceName)
 	if err != nil {
 		// Invalid interface name, cannot proceed with implementation check.
 		return "", fmt.Errorf("resolving interface type %q: %w", interfaceName, err)
