@@ -58,7 +58,12 @@ func typeImplements(t types.Type, iface *types.Interface) bool {
 }
 
 // ResolveInterfaceTypeByName takes an interface name as a string and resolves it to an interface type.
-func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
+//
+// The provided [types.Importer], if non-nil, is used to resolve package-qualified type names (e.g.
+// "io.Reader"); a nil importer falls back to [importer.Default], which can be slow as it resolves
+// packages using external commands. Importers backed by the compilation's importcfg should be
+// preferred whenever available, as they resolve types exactly as the compiler sees them.
+func ResolveInterfaceTypeByName(imp types.Importer, name string) (*types.Interface, error) {
 	pkgPath, typeName := SplitPackageAndName(name)
 
 	if pkgPath == "" {
@@ -74,8 +79,10 @@ func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
 	}
 
 	// Handle package-qualified types (e.g., "io.Writer").
-	imp := importer.Default()
-	pkg, err := imp.Import(pkgPath)
+	if imp == nil {
+		imp = importer.Default()
+	}
+	pkg, err := importPackage(imp, pkgPath)
 	if err != nil {
 		// Specific error for import failure.
 		return nil, fmt.Errorf("failed to import package %q: %w", pkgPath, err)
@@ -90,6 +97,24 @@ func ResolveInterfaceTypeByName(name string) (*types.Interface, error) {
 
 	// Found in package scope, now validate it's an interface type name.
 	return validateTypeNameIsInterface(obj, name, pkgPath, typeName)
+}
+
+// importPackage imports the package at the given path, falling back to the default importer if the
+// provided importer cannot resolve it (e.g. because the package is not part of the compilation's
+// importcfg, which only contains direct dependencies of the package being woven).
+func importPackage(imp types.Importer, path string) (*types.Package, error) {
+	pkg, impErr := imp.Import(path)
+	if impErr == nil {
+		return pkg, nil
+	}
+
+	// The default importer may be able to resolve the package (e.g. standard library packages via
+	// `go list -export`); if it fails as well, report both errors.
+	pkg, err := importer.Default().Import(path)
+	if err == nil {
+		return pkg, nil
+	}
+	return nil, fmt.Errorf("%w; %T: %v", err, imp, impErr)
 }
 
 // SplitPackageAndName splits a fully qualified type name like "io.Reader" or "example.com/pkg.Type"

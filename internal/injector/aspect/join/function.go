@@ -25,6 +25,10 @@ type (
 	// typeResolver defines the capability to resolve a dst expression to its go/types type.
 	typeResolver interface {
 		ResolveType(dst.Expr) types.Type
+		// Importer returns the type importer used to type-check the files being
+		// woven, if any. It is used to resolve interface types by their qualified
+		// name (e.g. "context.Context") without spawning external processes.
+		Importer() types.Importer
 	}
 
 	functionInformation struct {
@@ -441,7 +445,7 @@ func evaluateFieldListImplements(fields *dst.FieldList, interfaceName string, in
 		return false // Cannot check implementation without resolver.
 	}
 
-	targetInterface, err := typed.ResolveInterfaceTypeByName(interfaceName)
+	targetInterface, err := typed.ResolveInterfaceTypeByName(info.typeResolver.Importer(), interfaceName)
 	if err != nil {
 		return false // Invalid interface name.
 	}
@@ -514,7 +518,7 @@ func (fo *finalResultImplements) evaluate(info functionInformation) bool {
 	}
 
 	// Resolve the target interface name (e.g., "io.Reader", "error") to a types.Interface.
-	targetInterface, err := typed.ResolveInterfaceTypeByName(fo.InterfaceName)
+	targetInterface, err := typed.ResolveInterfaceTypeByName(info.typeResolver.Importer(), fo.InterfaceName)
 	if err != nil {
 		// If the interface name is invalid or cannot be resolved, we cannot match.
 		return false

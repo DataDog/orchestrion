@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/goenv"
@@ -61,10 +62,19 @@ func (w Weaver) OnCompile(ctx context.Context, cmd *proxy.CompileCommand) (resEr
 
 	goMod, err := goenv.GOMOD(".")
 	if err != nil {
-		return fmt.Errorf("go env GOMOD: %w", err)
+		if !isStdlibCompilation(cmd) {
+			return fmt.Errorf("go env GOMOD: %w", err)
+		}
+		// Compilations of the standard library can be started with a working directory that is not
+		// part of any module; e.g. when a nested `go list -export` (such as the one run by
+		// go/importer's default importer to locate standard library export data) drives toolchain
+		// executions from $GOROOT. Standard library packages carry no weaving configuration of their
+		// own (aspects targeting them come from the user's module, which cannot be identified here),
+		// so weave nothing and let the compilation proceed unmodified rather than failing the build.
+		log.Debug().Str("import-path", w.ImportPath).Msg("Compiling standard library package outside of any module context; weaving nothing")
+		return nil
 	}
 	goModDir := filepath.Dir(goMod)
-	log.Trace().Str("module.dir", goModDir).Msg("Identified module directory")
 
 	js, err := client.FromEnvironment(ctx, cmd.WorkDir)
 	if err != nil {
@@ -244,4 +254,21 @@ func packageLoader(js *client.Client) config.PackageLoader {
 	return func(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
 		return client.Request(ctx, js, pkgs.LoadRequest{Dir: dir, Patterns: patterns})
 	}
+}
+
+// isStdlibCompilation reports whether the compilation at hand is of standard library packages,
+// i.e. that all of its Go source files are under the $GOROOT/src directory of the toolchain that
+// is running the compilation. The toolchain's $GOROOT is derived from the compiler binary path
+// ($GOROOT/pkg/tool/$GOOS_$GOARCH/compile), which correctly handles downloaded toolchains
+// (e.g. golang.org/toolchain@v0.0.1-goX.Y.Z...), as those may differ from the toolchain orchestrion
+// itself was built with.
+func isStdlibCompilation(cmd *proxy.CompileCommand) bool {
+	toolPath := cmd.Args()[0]
+	goRootSrc := filepath.Join(filepath.Dir(filepath.Dir(filepath.Dir(toolPath))), "src") + string(os.PathSeparator)
+	for _, file := range cmd.GoFiles() {
+		if !strings.HasPrefix(file, goRootSrc) {
+			return false
+		}
+	}
+	return true
 }

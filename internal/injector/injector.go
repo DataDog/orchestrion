@@ -72,6 +72,7 @@ type (
 		Decorator *decorator.Decorator
 		File      *dst.File
 		TypeInfo  types.Info
+		Importer  types.Importer
 		Aspects   []*aspect.Aspect
 	}
 
@@ -111,7 +112,7 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		return nil, context.GoLangVersion{}, nil
 	}
 
-	typeInfo, err := i.typeCheck(ctx, fset, parsedFiles)
+	typeCheckRes, err := i.typeCheck(ctx, fset, parsedFiles)
 	if errors.Is(err, typeCheckingError{}) {
 		// We don't want to fail here on type-checking errors... Instead do nothing and let the standard
 		// go compiler/toolchain surface the error to the user in a canonical way.
@@ -135,7 +136,7 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 		go func(parsedFile parse.File) {
 			defer wg.Done()
 
-			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(typeInfo.Uses))
+			decorator := decorator.NewDecoratorWithImports(fset, i.ImportPath, gotypes.New(typeCheckRes.Uses))
 			dstFile, err := decorator.DecorateFile(parsedFile.AstFile)
 			if err != nil {
 				errsMu.Lock()
@@ -144,7 +145,7 @@ func (i *Injector) InjectFiles(ctx gocontext.Context, files []string, aspects []
 				return
 			}
 
-			res, err := i.injectFile(ctx, decorator, dstFile, typeInfo, parsedFile.Aspects)
+			res, err := i.injectFile(ctx, decorator, dstFile, typeCheckRes, parsedFile.Aspects)
 			if err != nil {
 				errsMu.Lock()
 				defer errsMu.Unlock()
@@ -184,7 +185,7 @@ func (i *Injector) validate() error {
 
 // injectFile injects code in the specified file. This method can be called concurrently by multiple goroutines,
 // as is guarded by a sync.Mutex.
-func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decorator, file *dst.File, typeInfo types.Info, aspects []*aspect.Aspect) (result, error) {
+func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decorator, file *dst.File, typeCheckRes typeCheckResult, aspects []*aspect.Aspect) (result, error) {
 	span, ctx := tracer.StartSpanFromContext(ctx, "Injector.injectFile",
 		tracer.ResourceName(decorator.Filenames[file]),
 	)
@@ -193,7 +194,8 @@ func (i *Injector) injectFile(ctx gocontext.Context, decorator *decorator.Decora
 	result, err := i.applyAspects(ctx, parameters{
 		Decorator: decorator,
 		File:      file,
-		TypeInfo:  typeInfo,
+		TypeInfo:  typeCheckRes.Info,
+		Importer:  typeCheckRes.Importer,
 		Aspects:   aspects,
 	})
 	if err != nil {
@@ -253,6 +255,7 @@ func (i *Injector) applyAspects(ctx gocontext.Context, params parameters) (resul
 			TestMain:     i.TestMain,
 			TypeInfo:     params.TypeInfo,
 			NodeMap:      params.Decorator.Ast.Nodes,
+			Importer:     params.Importer,
 		})
 		defer ctx.Release()
 

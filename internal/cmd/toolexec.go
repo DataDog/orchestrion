@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/goflags/quoted"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/DataDog/orchestrion/internal/toolexec"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
@@ -19,6 +20,51 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
 )
+
+// sanitizeGOFLAGS removes the `-toolexec` entry from this process's $GOFLAGS environment variable.
+//
+// The weaving process spawns nested `go` commands (e.g. `go env`, or the `go list -export` run by
+// go/importer's default importer to locate standard library export data). If $GOFLAGS still
+// contains `-toolexec`, these nested commands re-enter the weaving process for every package they
+// build; this is at best needlessly expensive, and at worst breaks the build, as the nested
+// `go list -export` runs with $GOROOT (which is not part of any module) as its working directory.
+// Builds that genuinely need to be woven (e.g. resolving synthetic dependencies) opt back into
+// `-toolexec` explicitly in their build flags, so they are unaffected.
+func sanitizeGOFLAGS(log *zerolog.Logger) {
+	goFlags := os.Getenv("GOFLAGS")
+	if goFlags == "" {
+		return
+	}
+
+	entries, err := quoted.Split(goFlags)
+	if err != nil {
+		log.Warn().Str("GOFLAGS", goFlags).Err(err).Msg("Failed to interpret quoted strings in $GOFLAGS; leaving it untouched")
+		return
+	}
+
+	filtered := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if strings.HasPrefix(entry, "-toolexec") || strings.HasPrefix(entry, "--toolexec") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	if len(filtered) == len(entries) {
+		return // No `-toolexec` entry, nothing to do.
+	}
+
+	joined, err := quoted.Join(filtered)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to re-quote $GOFLAGS; leaving it untouched")
+		return
+	}
+
+	if err := os.Setenv("GOFLAGS", joined); err != nil {
+		log.Warn().Err(err).Msg("Failed to update $GOFLAGS")
+		return
+	}
+	log.Trace().Str("GOFLAGS", joined).Msg("Removed -toolexec from $GOFLAGS for this process")
+}
 
 func joinCommandCloseError(result error, closeErr error) error {
 	if closeErr == nil {
@@ -41,6 +87,7 @@ var Toolexec = &cli.Command{
 	SkipFlagParsing: true,
 	Action: func(clictx *cli.Context) (resErr error) {
 		log := zerolog.Ctx(clictx.Context)
+		sanitizeGOFLAGS(log)
 		importPath := os.Getenv("TOOLEXEC_IMPORTPATH")
 
 		span, ctx := tracer.StartSpanFromContext(clictx.Context, "toolexec",
