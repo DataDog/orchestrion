@@ -43,6 +43,7 @@ type (
 		log        zerolog.Logger
 
 		shutdownHooks []func(context.Context) error
+		shutdownOnce  sync.Once // Ensures the shutdown hooks run exactly once
 
 		// Tracking connected clients for automatic shutdown on inactivity...
 		clients           map[uint64]string
@@ -230,23 +231,34 @@ func (s *Server) ClientURL() string {
 	return s.clientURL
 }
 
-// Shutdown initiates the shutdown of this server.
+// Shutdown initiates the shutdown of this server, and returns without waiting for it to complete. Use
+// [Server.Close] instead to wait for it, for example before the process exits.
 func (s *Server) Shutdown() {
 	s.server.Shutdown()
 	go s.WaitForShutdown()
 }
 
-// WaitForShutdown waits indefinitely for this server to have shut down.
+// Close shuts this server down, and waits for its shutdown to complete; including its shutdown hooks,
+// which remove its temporary files.
+func (s *Server) Close() {
+	s.server.Shutdown()
+	s.WaitForShutdown()
+}
+
+// WaitForShutdown waits indefinitely for this server to have shut down, including for its shutdown
+// hooks to have run. The hooks run only once, regardless of how many times this is called.
 func (s *Server) WaitForShutdown() {
 	s.server.WaitForShutdown()
-	s.log.Trace().Msg(s.CacheStats.String())
+	s.shutdownOnce.Do(func() {
+		s.log.Trace().Msg(s.CacheStats.String())
 
-	ctx := s.log.WithContext(context.Background())
-	for _, cb := range s.shutdownHooks {
-		if err := cb(ctx); err != nil {
-			s.log.Error().Err(err).Msg("Shutdown hook error")
+		ctx := s.log.WithContext(context.Background())
+		for _, cb := range s.shutdownHooks {
+			if err := cb(ctx); err != nil {
+				s.log.Error().Err(err).Msg("Shutdown hook error")
+			}
 		}
-	}
+	})
 }
 
 func (s *Server) handleClients(msg *nats.Msg) {

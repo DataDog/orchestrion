@@ -47,7 +47,8 @@ func ComputeVersion(ctx context.Context, cmd proxy.Command) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		defer server.Shutdown()
+		// This process exits soon after; the server's temporary files must be removed before it does.
+		defer server.Close()
 		if conn, err = server.Connect(); err != nil {
 			return "", err
 		}
