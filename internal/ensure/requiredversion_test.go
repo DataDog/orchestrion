@@ -298,3 +298,18 @@ func TestRequiredVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestRequiredVersionReplacedThroughSymlink(t *testing.T) {
+	// The go command may report the replacement's directory through a symbolic link, or resolve one
+	// that orchestrionSrcDir goes through (e.g, macOS' /tmp), depending on how the working directory
+	// was reported to it. That is still this orchestrion's source directory.
+	link := filepath.Join(t.TempDir(), "orchestrion")
+	if err := os.Symlink(orchestrionSrcDir, link); err != nil {
+		t.Skipf("cannot create a symbolic link: %v", err)
+	}
+
+	err := requiredVersion(context.Background(), func(context.Context, string) (string, string, error) {
+		return "", link, nil
+	})
+	require.NoError(t, err)
+}
