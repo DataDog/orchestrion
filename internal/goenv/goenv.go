@@ -69,9 +69,9 @@ func GOWORK(dir string) (string, error) {
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-// modulePath returns the module path of the current module using go/packages API.
-// Results are cached to avoid repeated package loading calls.
-func modulePath(ctx context.Context, dir string) (string, error) {
+// ModulePath returns the path of the module containing the designated directory, using the
+// go/packages API. Results are cached to avoid repeated package loading calls.
+func ModulePath(ctx context.Context, dir string) (string, error) {
 	muCache.RLock()
 	cached, exists := modulePathCache[dir]
 	muCache.RUnlock()
@@ -114,5 +114,5 @@ func RootModulePath(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("getting working directory: %w", err)
 	}
-	return modulePath(ctx, wd)
+	return ModulePath(ctx, wd)
 }

@@ -12,6 +12,7 @@ import (
 	"sort"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/archive"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
@@ -76,6 +77,23 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 	sort.Slice(queue, less)
 	processed := make(map[archiveWork]bool)
 	resolveTestTargetProvenance := newTestTargetProvenanceResolver(ctx, testVariantFor, cmd.WorkDir)
+
+	// The dependencies that need resolving are resolved one at a time below, as each resolution may
+	// affect which of the following ones remain necessary. They are started concurrently ahead of time
+	// instead; which occasionally results in resolving a dependency that turns out to be satisfied by
+	// an earlier resolution.
+	prefetcher := newResolutionPrefetcher(ctx,
+		func() error {
+			_, err := client.FromEnvironment(ctx, cmd.WorkDir)
+			return err
+		},
+		func(ctx context.Context, importPath string) error {
+			_, err := resolvePackageFilesForTest(ctx, importPath, testVariantFor, cmd.WorkDir)
+			return err
+		},
+	)
+	defer prefetcher.Close()
+
 	for len(queue) > 0 {
 		item := queue[0]
 		queue = queue[1:]
@@ -94,6 +112,17 @@ func (w Weaver) OnLink(ctx context.Context, cmd *proxy.LinkCommand) (err error) 
 			return fmt.Errorf("reading %s from %q: %w", linkdeps.Filename, item.importPath, err)
 		}
 		log.Debug().Str("import-path", item.importPath).Str("archive", item.archive).Msg("Processing " + linkdeps.Filename + " dependencies")
+		for _, depPath := range linkDeps.Dependencies() {
+			// These conditions mirror those of the loop below, as they stand before it runs.
+			if depPath == testVariantFor && linkDeps.Kind(depPath) == linkdeps.ImportDependency &&
+				(variantArchives[item.importPath] == item.archive || item.importPath == testVariantFor+".test") {
+				continue
+			}
+			if _, found := reg.PackageFile[depPath]; found && (testVariantFor == "" || depPath == testVariantFor) {
+				continue
+			}
+			prefetcher.Prefetch(depPath)
+		}
 		for _, depPath := range linkDeps.Dependencies() {
 			kind := linkDeps.Kind(depPath)
 			if depPath == testVariantFor && kind == linkdeps.ImportDependency &&

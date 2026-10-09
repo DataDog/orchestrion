@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect/linkdeps"
 	"github.com/DataDog/orchestrion/internal/toolexec/importcfg"
@@ -108,10 +109,26 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 	pending := make(map[string]pendingLinkDep, len(stack))
 	processed := make(map[string]pkgs.ResolvedArchive)
 	paths := make([]string, 0, len(stack))
+
+	// Every path pushed onto paths is resolved (one at a time) below, so their resolutions are started
+	// concurrently as soon as they are pushed.
+	prefetcher := newResolutionPrefetcher(ctx,
+		func() error {
+			_, err := client.FromEnvironment(ctx, cmd.WorkDir)
+			return err
+		},
+		func(ctx context.Context, importPath string) error {
+			_, err := resolvePackageFilesForTest(ctx, importPath, testVariantFor, cmd.WorkDir)
+			return err
+		},
+	)
+	defer prefetcher.Close()
+
 	for _, dep := range stack {
 		newDeps = append(newDeps, dep.path)
 		pending[dep.path] = dep
 		paths = append(paths, dep.path)
+		prefetcher.Prefetch(dep.path)
 	}
 
 	// Add package resolutions of link-time dependencies to the importcfg file:
@@ -208,6 +225,7 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 				cmd.LinkDeps.Add(tDep, candidate.kind)
 				pending[tDep] = candidate
 				paths = append(paths, tDep)
+				prefetcher.Prefetch(tDep)
 				newDeps = append(newDeps, tDep)
 			}
 		}

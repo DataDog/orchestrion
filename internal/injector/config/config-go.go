@@ -12,7 +12,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -123,14 +122,13 @@ func (l *Loader) loadGoFile(ctx context.Context, filename string) (_ []Config, e
 		span.Finish(tracer.WithError(spanErr))
 	}()
 
-	file, err := os.Open(filename)
+	data, err := l.readFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("open %q: %w", filename, err)
 	}
-	defer file.Close()
 
 	fset := token.NewFileSet()
-	ast, err := parser.ParseFile(fset, filename, file, parser.ImportsOnly)
+	ast, err := parser.ParseFile(fset, filename, data, parser.ImportsOnly)
 	if err != nil {
 		return nil, fmt.Errorf("%w: parsing %q: %w", ErrInvalidConfig, filename, err)
 	}

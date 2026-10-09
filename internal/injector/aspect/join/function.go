@@ -137,6 +137,11 @@ func (functionName) packageMayMatch(_ *may.PackageContext) may.MatchType {
 }
 
 func (fo functionName) fileMayMatch(ctx *may.FileContext) may.MatchType {
+	if fo == "" {
+		// A blank name matches function literal expressions, which can only be found in files that
+		// contain the `func` keyword.
+		return ctx.FileContains("func")
+	}
 	return ctx.FileContains(string(fo))
 }
 

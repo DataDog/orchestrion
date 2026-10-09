@@ -6,6 +6,7 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -178,11 +179,10 @@ type ymlFile struct {
 }
 
 func (l *Loader) parseYMLFile(ctx context.Context, filename string) (*ymlFile, error) {
-	file, err := os.Open(filename)
+	data, err := l.readFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("open %q: %w", filename, err)
 	}
-	defer file.Close()
 
 	// In validation mode, we will pre-parse the YAML into a [yaml.Node] tree,
 	// which can then be cheaply decoded into a value type that validation
@@ -190,7 +190,7 @@ func (l *Loader) parseYMLFile(ctx context.Context, filename string) (*ymlFile, e
 	// This dance is significantly cheaper (both in time & allocations) than doing
 	// a full blown [yaml.Decoder.Decode] twice (as it internally transits through
 	// the [yaml.Node] representation anyway).
-	ctx, yamlDec := yaml.NewDecoderContext(ctx, file)
+	ctx, yamlDec := yaml.NewDecoderContext(ctx, bytes.NewReader(data))
 	var dec interface {
 		DecodeContext(context.Context, any) error
 	} = yamlDec

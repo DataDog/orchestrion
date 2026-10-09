@@ -9,7 +9,12 @@ package config
 
 import (
 	"context"
+	"crypto/sha256"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
@@ -64,6 +69,7 @@ func HasConfig(ctx context.Context, pkgLoader PackageLoader, dir string, pkg *pa
 type Loader struct {
 	pkgLoader PackageLoader
 	loaded    map[string]struct{}
+	files     FileDigests
 	dir       string
 	validate  bool
 }
@@ -101,6 +107,7 @@ func NewLoader(pkgLoader PackageLoader, dir string, validate bool) *Loader {
 	return &Loader{
 		pkgLoader: pkgLoader,
 		loaded:    make(map[string]struct{}),
+		files:     make(FileDigests),
 		dir:       dir,
 		validate:  validate,
 	}
@@ -139,4 +146,52 @@ func (l *Loader) markLoaded(filename string) bool {
 
 func (l *Loader) packages(ctx context.Context, patterns ...string) ([]*packages.Package, error) {
 	return l.pkgLoader(ctx, l.dir, patterns...)
+}
+
+// FileDigests associates configuration files with a digest of their content, or with nil if they
+// do not exist.
+type FileDigests map[string]*[sha256.Size]byte
+
+// Files returns the configuration files this loader read or looked for, associated with a digest
+// of the content that it read from them (or with nil if they did not exist).
+func (l *Loader) Files() FileDigests {
+	return l.files
+}
+
+// Unchanged reports whether each file still has the recorded content, or still does not exist (in a
+// directory that still exists).
+func (d FileDigests) Unchanged() bool {
+	for filename, digest := range d {
+		data, err := os.ReadFile(filename)
+		switch {
+		case err == nil:
+			if digest == nil || sha256.Sum256(data) != *digest {
+				return false
+			}
+		case errors.Is(err, fs.ErrNotExist):
+			// Files are looked for in package directories, which existed at the time. If the directory
+			// no longer exists (or is now a file, which Windows also reports as fs.ErrNotExist for the
+			// files it would contain), the configuration loaded from it may have changed.
+			if digest != nil || !dirExists(filepath.Dir(filename)) {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// readFile reads the named file, and records a digest of its content (or the fact it does not
+// exist) in the loader's [Loader.Files].
+func (l *Loader) readFile(filename string) ([]byte, error) {
+	data, err := os.ReadFile(filename)
+	switch {
+	case err == nil:
+		digest := sha256.Sum256(data)
+		l.files[filename] = &digest
+	case errors.Is(err, fs.ErrNotExist):
+		l.files[filename] = nil
+	}
+	return data, err
 }

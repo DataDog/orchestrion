@@ -235,7 +235,7 @@ func (_ packageFilter) ImpliesImported() []string {
 }
 
 func (pf packageFilter) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	if pf.matchesPattern(ctx.ImportPath) {
+	if pf.matchesPattern(ctx.ImportPath, rootModulePathOf(ctx.WorkDir)) {
 		return may.Match
 	}
 	return may.NeverMatch
@@ -246,7 +246,7 @@ func (_ packageFilter) FileMayMatch(_ *may.FileContext) may.MatchType {
 }
 
 func (pf packageFilter) Matches(ctx context.AspectContext) bool {
-	return pf.matchesPattern(ctx.ImportPath())
+	return pf.matchesPattern(ctx.ImportPath(), rootModulePathOf(""))
 }
 
 func (pf packageFilter) Hash(h *fingerprint.Hasher) error {
@@ -256,14 +256,25 @@ func (pf packageFilter) Hash(h *fingerprint.Hasher) error {
 	)
 }
 
-func (pf packageFilter) matchesPattern(importPath string) bool {
+// rootModulePathOf returns a function that resolves the path of the module containing dir, or the
+// current working directory if dir is blank.
+func rootModulePathOf(dir string) func() (string, error) {
+	return func() (string, error) {
+		if dir == "" {
+			return goenv.RootModulePath(gocontext.Background())
+		}
+		return goenv.ModulePath(gocontext.Background(), dir)
+	}
+}
+
+func (pf packageFilter) matchesPattern(importPath string, rootModulePathFn func() (string, error)) bool {
 	if importPath == "" {
 		return false
 	}
 
 	// For root-only filters without pattern, match all packages in root module.
 	if pf.pattern == "" && pf.root {
-		return isInRootModule(importPath)
+		return isInRootModule(importPath, rootModulePathFn)
 	}
 
 	if pf.pattern == "" {
@@ -272,12 +283,12 @@ func (pf packageFilter) matchesPattern(importPath string) bool {
 
 	targetPath := importPath
 	if pf.root {
-		rootModulePath, err := goenv.RootModulePath(gocontext.Background())
+		rootModulePath, err := rootModulePathFn()
 		if err != nil {
 			return false
 		}
 
-		if !isInRootModule(importPath) {
+		if !isInRootModule(importPath, rootModulePathFn) {
 			return false
 		}
 
@@ -296,8 +307,8 @@ func (pf packageFilter) matchesPattern(importPath string) bool {
 }
 
 // isInRootModule checks if the given import path belongs to the root module.
-func isInRootModule(importPath string) bool {
-	rootPath, err := goenv.RootModulePath(gocontext.Background())
+func isInRootModule(importPath string, rootModulePathFn func() (string, error)) bool {
+	rootPath, err := rootModulePathFn()
 	if err != nil {
 		return false // If we can't determine, assume it doesn't match
 	}

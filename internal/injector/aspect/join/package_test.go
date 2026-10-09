@@ -8,6 +8,8 @@ package join
 import (
 	gocontext "context"
 	"go/types"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/dave/dst"
@@ -206,7 +208,7 @@ func TestPackageFilterGlobMatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pf := PackageFilter(false, tt.pattern)
-			result := pf.matchesPattern(tt.importPath)
+			result := pf.matchesPattern(tt.importPath, rootModulePathOf(""))
 			assert.Equal(t, tt.shouldMatch, result, "Pattern %q should match %q: %v", tt.pattern, tt.importPath, tt.shouldMatch)
 		})
 	}
@@ -251,6 +253,22 @@ func TestPackageFilterMatches(t *testing.T) {
 			result := pf.Matches(mockCtx)
 			assert.Equal(t, tt.shouldMatch, result)
 		})
+	}
+}
+
+func TestRootPackageFilterPackageMayMatchUsesWorkDir(t *testing.T) {
+	// The test process runs in the orchestrion module, so the root module is only example.com/workdir
+	// if the context's WorkDir is honored.
+	workDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "go.mod"), []byte("module example.com/workdir\n\ngo 1.25\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(workDir, "main.go"), []byte("package main\n"), 0o644))
+
+	for _, pf := range []packageFilter{PackageFilter(true, ""), PackageFilter(true, "sub/*")} {
+		ctx := &may.PackageContext{ImportPath: "example.com/workdir/sub/pkg", WorkDir: workDir}
+		assert.Equal(t, may.Match, pf.PackageMayMatch(ctx), "pattern %q", pf.pattern)
+
+		ctx = &may.PackageContext{ImportPath: "github.com/DataDog/orchestrion/sub/pkg", WorkDir: workDir}
+		assert.Equal(t, may.NeverMatch, pf.PackageMayMatch(ctx), "pattern %q", pf.pattern)
 	}
 }
 
@@ -327,7 +345,7 @@ func TestPackageFilterRootModule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pf := PackageFilter(tt.root, tt.pattern)
-			result := pf.matchesPattern(tt.importPath)
+			result := pf.matchesPattern(tt.importPath, rootModulePathOf(""))
 
 			if tt.name == "root module with internal package" || tt.name == "root module with external package" {
 				// Skip root module tests as they depend on actual module setup
@@ -373,7 +391,7 @@ func TestPackageFilterSpecificModule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pf := PackageFilter(tt.root, tt.pattern)
-			result := pf.matchesPattern(tt.importPath)
+			result := pf.matchesPattern(tt.importPath, rootModulePathOf(""))
 			assert.Equal(t, tt.shouldMatch, result, "Root %v with pattern %q should match %q: %v",
 				tt.root, tt.pattern, tt.importPath, tt.shouldMatch)
 		})
@@ -457,7 +475,7 @@ func TestPackageFilterDebugCase(t *testing.T) {
 	importPath := "github.com/ACME/internal/my-component/mypackage"
 
 	pf := PackageFilter(false, pattern)
-	result := pf.matchesPattern(importPath)
+	result := pf.matchesPattern(importPath, rootModulePathOf(""))
 
 	t.Logf("Pattern: %q", pattern)
 	t.Logf("Import Path: %q", importPath)

@@ -1,0 +1,15 @@
+//line input.go:1:1
+package test
+
+var handler = func() string {
+//line <generated>:1
+  {
+    print("function literal")
+  }
+//line input.go:4
+  return "hello"
+}
+
+func named() string {
+  return handler()
+}
