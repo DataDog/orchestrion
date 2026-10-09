@@ -1,0 +1,18 @@
+//line input.go:1:1
+package main
+
+//line <generated>:1
+import __orchestrion_orchestrionctx "github.com/DataDog/orchestrion/runtime/context"
+
+//line input.go:3
+type server struct{}
+
+func (s *server) main() {
+}
+
+func main() {
+//line <generated>:1
+  {
+    __orchestrion_orchestrionctx.Bootstrap()
+  }
+}

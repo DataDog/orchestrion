@@ -63,6 +63,7 @@ orchestrion,github.com/nats-io/nkeys,Apache-2.0,unknown
 orchestrion,github.com/nats-io/nuid,Apache-2.0,unknown
 orchestrion,github.com/outcaste-io/ristretto,Apache-2.0,unknown
 orchestrion,github.com/outcaste-io/ristretto/z,MIT,unknown
+orchestrion,github.com/petermattis/goid,Apache-2.0,unknown
 orchestrion,github.com/philhofer/fwd,MIT,"Copyright (c) 2014-2015, Philip Hofer"
 orchestrion,github.com/pkg/errors,BSD-2-Clause,"Copyright (c) 2015, Dave Cheney <dave@cheney.net>"
 orchestrion,github.com/planetscale/vtprotobuf/protohelpers,BSD-3-Clause,"Copyright (c) 2021, PlanetScale Inc. All rights reserved. | Copyright (c) 2013, The GoGo Authors. All rights reserved. | Copyright (c) 2018 The Go Authors. All rights reserved."
