@@ -165,10 +165,11 @@ func executeBuildAndCaptureWorkDir(clictx *cli.Context, buildArgs []string) (str
 		return "", cli.Exit(err, -1)
 	}
 
-	cmd, err := goproxy.BuildCmd(clictx.Context, buildArgs, goproxy.WithToolexec(binpath.Orchestrion, "toolexec"))
+	cmd, cleanup, err := goproxy.BuildCmd(clictx.Context, buildArgs, goproxy.WithToolexec(binpath.Orchestrion, "toolexec"))
 	if err != nil {
 		return "", fmt.Errorf("building command: %w", err)
 	}
+	defer cleanup()
 
 	r, w, err := os.Pipe()
 	if err != nil {
