@@ -62,7 +62,8 @@ func (g *Graph) path(from string, to string) []string {
 		if child == to {
 			return []string{from, to}
 		}
-		if childPath := g.path(child, to); path == nil || len(childPath) < len(path) {
+		// Keep the shortest path found so far; children with no path to `to` must not discard it.
+		if childPath := g.path(child, to); childPath != nil && (path == nil || len(childPath) < len(path)) {
 			path = childPath
 		}
 	}
