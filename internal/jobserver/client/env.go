@@ -18,7 +18,6 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/binpath"
 	"github.com/DataDog/orchestrion/internal/filelock"
-	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 )
 
@@ -286,11 +285,7 @@ func tryExistingServer(ctx context.Context, path string) (*Client, string, bool)
 		return nil, "", false
 	}
 	url := string(urlBytes)
-	conn, err := nats.Connect(url,
-		nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())),
-		nats.UserInfo(Username, NoPassword),
-		nats.Timeout(time.Second),
-	)
+	conn, err := dial(url, time.Second)
 	if err != nil {
 		return nil, "", false
 	}
