@@ -137,7 +137,12 @@ func (functionName) packageMayMatch(_ *may.PackageContext) may.MatchType {
 }
 
 func (fo functionName) fileMayMatch(ctx *may.FileContext) may.MatchType {
-	return ctx.FileContains(string(fo))
+	// Function declarations and literals both need the `func` keyword. A blank name matches function
+	// literals, so in that case the keyword is all there is to look for.
+	if fo != "" && ctx.FileContains(string(fo)) == may.NeverMatch {
+		return may.NeverMatch
+	}
+	return ctx.FileContains("func")
 }
 
 func (fo functionName) evaluate(info functionInformation) bool {
