@@ -364,6 +364,7 @@ func TestFunctionNameFileMayMatch(t *testing.T) {
 	withLiteral := &may.FileContext{FileContent: []byte(`package main; var f = func() {}`)}
 	withDeclaration := &may.FileContext{FileContent: []byte(`package main; func Handler() {}`)}
 	withoutFunction := &may.FileContext{FileContent: []byte(`package main; var v = 1`)}
+	withNameOnly := &may.FileContext{FileContent: []byte(`package main; var Handler = 1`)}
 
 	// A blank name matches function literal expressions, wherever they are.
 	literals := Function(Name(""))
@@ -374,4 +375,6 @@ func TestFunctionNameFileMayMatch(t *testing.T) {
 	named := Function(Name("Handler"))
 	assert.Equal(t, may.NeverMatch, named.FileMayMatch(withLiteral))
 	assert.Equal(t, may.Match, named.FileMayMatch(withDeclaration))
+	// Functions are declared with the `func` keyword, so mentioning the name is not enough.
+	assert.Equal(t, may.NeverMatch, named.FileMayMatch(withNameOnly))
 }
