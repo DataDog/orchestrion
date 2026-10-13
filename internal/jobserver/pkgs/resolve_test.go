@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/DataDog/orchestrion/internal/goflags"
 	"github.com/DataDog/orchestrion/internal/jobserver"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/jobserver/pkgs"
@@ -23,11 +22,6 @@ import (
 )
 
 func Test(t *testing.T) {
-	// Force the goflags so we don't get tainted by the `go test` flags!
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-	goflags.SetFlags(context.Background(), wd, []string{"test"})
-
 	t.Run("Cache", func(t *testing.T) {
 		server, err := jobserver.New(context.Background(), nil)
 		require.NoError(t, err)
