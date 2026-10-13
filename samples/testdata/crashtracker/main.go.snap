@@ -1,0 +1,62 @@
+//line samples/crashtracker/main.go:1:1
+// Unless explicitly stated otherwise all files in this repository are licensed
+// under the Apache License Version 2.0.
+// This product contains software developed at Datadog (https://www.datadoghq.com/).
+// Copyright 2023-present Datadog, Inc.
+
+// This sample opts into the crashtracker integration. That integration is not
+// enabled by default; the opt-in happens in this directory's
+// `orchestrion.tool.go` file, which imports `dd-trace-go/v2/crashtracker`.
+package main
+
+import (
+	"log"
+
+//line <generated>:1
+	__orchestrion_crashtracker "github.com/DataDog/dd-trace-go/v2/crashtracker"
+	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	__orchestrion_env "github.com/DataDog/dd-trace-go/v2/instrumentation/env"
+	__orchestrion_profiler "github.com/DataDog/dd-trace-go/v2/profiler"
+)
+
+//line samples/crashtracker/main.go:13
+func main() {
+//line <generated>:1
+	{
+		if err := __orchestrion_crashtracker.Start(); err != nil {
+			log.Printf("failed to start crashtracker: %s", err.Error())
+		}
+	}
+	{
+		defer __orchestrion_profiler.Stop()
+	}
+	{
+		defer __orchestrion_tracer.Stop()
+	}
+//line samples/crashtracker/main.go:14
+	log.Println("hello, world")
+}
+
+//line <generated>:1
+func init() { __orchestrion_tracer.Start() }
+func init() {
+	switch __orchestrion_env.Get("DD_PROFILING_ENABLED") {
+	case "1", "true", "auto":
+		// The "auto" value can be set if profiling is enabled via the
+		// Datadog Admission Controller. We always turn on the profiler in
+		// the "auto" case since we only send profiles after at least a
+		// minute, and we assume anything running that long is worth
+		// profiling.
+		err := __orchestrion_profiler.Start(
+			__orchestrion_profiler.WithProfileTypes(__orchestrion_profiler.CPUProfile, __orchestrion_profiler.HeapProfile, __orchestrion_profiler.GoroutineProfile, __orchestrion_profiler.MutexProfile),
+			__orchestrion_profiler.WithTags("orchestrion:true"),
+		)
+		if err != nil {
+			// TODO: is there a better reporting mechanism?
+			// The tracer and profiler already use the stdlib logger, so
+			// we're not adding anything new. But users might be using a
+			// different logger.
+			log.Printf("failed to start profiling: %s", err.Error())
+		}
+	}
+}

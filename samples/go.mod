@@ -9,6 +9,7 @@ replace (
 
 require (
 	github.com/99designs/gqlgen v0.17.94
+	github.com/DataDog/dd-trace-go/v2 v2.11.2
 	github.com/DataDog/orchestrion v1.14.0
 	github.com/DataDog/orchestrion/instrument v1.12.1
 	github.com/IBM/sarama v1.60.2
@@ -108,7 +109,6 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.11.2 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valyala/fasthttp/v2 v2.11.2 // indirect
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.11.2 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.11.2 // indirect
 	github.com/DataDog/go-libddwaf/v5 v5.0.1 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20260217080614-b0f4edc38a6d // indirect
 	github.com/DataDog/go-sqllexer v0.2.4 // indirect
