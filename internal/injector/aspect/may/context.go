@@ -6,8 +6,7 @@
 package may
 
 import (
-	"index/suffixarray"
-	"sync"
+	"bytes"
 )
 
 // PackageContext is the context for a package to be matched.
@@ -41,17 +40,10 @@ type FileContext struct {
 
 	// PackageName is the name of the package given as seen in `package main` for example.
 	PackageName string
-
-	once  sync.Once
-	index *suffixarray.Index
 }
 
 func (ctx *FileContext) FileContains(content string) MatchType {
-	ctx.once.Do(func() {
-		ctx.index = suffixarray.New(ctx.FileContent)
-	})
-
-	if len(ctx.index.Lookup([]byte(content), 1)) > 0 {
+	if bytes.Contains(ctx.FileContent, []byte(content)) {
 		return Match
 	}
 
