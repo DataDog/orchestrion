@@ -6,7 +6,7 @@ replace github.com/DataDog/orchestrion => ..
 
 require (
 	github.com/DataDog/dd-trace-go/orchestrion/all/v2 v2.12.0-rc.1
-	github.com/DataDog/orchestrion v1.14.0
+	github.com/DataDog/orchestrion v1.15.0-rc.1
 )
 
 require (
