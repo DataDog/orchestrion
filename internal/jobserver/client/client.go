@@ -44,12 +44,7 @@ func Connect(addr string) (*Client, error) {
 	backoff := initialBackoff
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		conn, err := nats.Connect(
-			addr,
-			nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())),
-			nats.UserInfo(Username, NoPassword),
-			nats.Timeout(natsTimeout),
-		)
+		conn, err := dial(addr, natsTimeout)
 		if err == nil {
 			if attempt > 0 {
 				log.Debug().
@@ -83,6 +78,16 @@ func Connect(addr string) (*Client, error) {
 	}
 
 	return nil, fmt.Errorf("failed to connect to NATS job server at %s after %d attempts: %w", addr, maxRetries, lastErr)
+}
+
+// dial makes a single attempt at connecting to the NATS server at addr.
+func dial(addr string, timeout time.Duration) (*nats.Conn, error) {
+	return nats.Connect(
+		addr,
+		nats.Name(fmt.Sprintf("orchestrion[%d]", os.Getpid())),
+		nats.UserInfo(Username, NoPassword),
+		nats.Timeout(timeout),
+	)
 }
 
 func New(conn *nats.Conn) *Client {
