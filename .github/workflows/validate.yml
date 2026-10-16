@@ -4,6 +4,10 @@ on:
     branches: ["**"]
   merge_group:
     branches: [main]
+  # The nightly run reports test results for the default branch to Datadog CI Visibility. Pull
+  # request and merge queue runs use other branch names.
+  schedule:
+    - cron: "17 3 * * *"
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || ((github.event_name == 'push' && github.sha) || github.ref) }}
   cancel-in-progress: true
@@ -262,18 +266,38 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
+      - name: Install gotestsum
+        # gotestsum runs `go test -json` and writes the JUnit report that the upload step sends to
+        # Datadog. It keeps the exit code of `go test`, so a test failure still fails the job.
+        # _tools/go.sum pins the version and the hash, and the deps-update workflow updates it.
+        shell: bash
+        run: |-
+          go -C _tools build -o "${RUNNER_TEMP}/bin/" gotest.tools/gotestsum
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
       - name: Run unit tests
         shell: bash
         run: |-
-          mkdir -p coverage
+          mkdir -p coverage junit
           # The root package's tests each run several complete instrumented builds of a synthetic module,
           # which takes them well past Go's default 10 minute per-package timeout on CI runners.
           test_args=("-shuffle=on" "-race" "-timeout=60m")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
           fi
-          go            test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.out" ./...
-          go -C samples test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/samples.out" ./...
+          gotestsum --format=standard-quiet "--junitfile=${{ github.workspace }}/junit/unit.xml" -- "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.out" ./...
+          (cd samples && gotestsum --format=standard-quiet "--junitfile=${{ github.workspace }}/junit/samples.xml" -- "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/samples.out" ./...)
+      - name: Upload test results to Datadog
+        # Run after a test failure, because failed tests are the reason for the upload. Fork pull
+        # requests have no access to the secret. An upload failure does not fail the job. The action
+        # pins a datadog-ci release and verifies its checksum. Dependabot updates the action.
+        if: ${{ !cancelled() && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
+        continue-on-error: true
+        uses: DataDog/junit-upload-github-action@a8b8ef95fb1c5d5faa639953f37cbeb45c1e9a97 # v4.0.0
+        with:
+          api_key: ${{ secrets.DD_CI_API_KEY }}
+          service: orchestrion
+          files: junit
+          tags: go:${{ steps.setup-go.outputs.go-version }},arch:${{ runner.arch }},os:${{ runner.os }}
       - name: Determine simple go version
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
