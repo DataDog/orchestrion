@@ -21,7 +21,7 @@ func fiberV2Server() {
 //line samples/server/fiberv2.go:13
 				fiber.New()
 //line <generated>:1
-			app.Use(__orchestrion_fibertrace.Middleware())
+			__orchestrion_fibertrace.Wrap(app)
 			app.Server().DD_Instrumented = true
 			return app
 		}()
