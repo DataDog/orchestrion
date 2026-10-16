@@ -55,7 +55,19 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	// The function call has an ellipsis, so we need to append our new arguments to the last argument,
 	// which is a slice. To do so, we need to provision a new slice of the right type and size, append
 	// all the relevant data in there, and then replace the last argument with the new slice.
+	//
+	// The copy starts from an empty slice so the append can never write into the spare capacity of
+	// the slice the caller spread into the call: appending to the caller's backing array would
+	// silently mutate the caller's slice, or race with concurrent calls that share it (see
+	// DataDog/dd-trace-go#5486). It also avoids referencing any predeclared identifier other than
+	// append (which this advice already relies on), so a caller-scope shadow of e.g. len cannot
+	// break the generated code.
 	lastIdx := len(call.Args) - 1
+	copiedOpts := &dst.CallExpr{
+		Fun:      dst.NewIdent("append"),
+		Args:     []dst.Expr{&dst.CompositeLit{Type: &dst.ArrayType{Elt: a.TypeName.AsNode()}}, dst.NewIdent("opts")},
+		Ellipsis: true,
+	}
 	call.Args[lastIdx] = &dst.CallExpr{
 		Fun: &dst.FuncLit{
 			Type: &dst.FuncType{
@@ -79,7 +91,7 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 							Args: append(
 								append(
 									make([]dst.Expr, 0, len(newArgs)+1),
-									dst.NewIdent("opts"),
+									copiedOpts,
 								),
 								newArgs...,
 							),

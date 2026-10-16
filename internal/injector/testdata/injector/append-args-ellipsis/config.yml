@@ -1,0 +1,19 @@
+%YAML 1.1
+---
+aspects:
+  - join-point:
+      function-call: fmt.Println
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+code: |-
+  package test
+
+  import "fmt"
+
+  func printAll(args []any) {
+    fmt.Println(args...)
+  }
