@@ -25,6 +25,119 @@ import (
 	"golang.org/x/tools/cover"
 )
 
+func TestRuntimeContextPropagation(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+	writeFile := func(name, contents string) {
+		t.Helper()
+		path := filepath.Join(run.dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	writeFile("go.mod", `module example.com/runtimecontext
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => `+rootDir+"\n")
+	writeFile("orchestrion.tool.go", `//go:build tools
+
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/runtime/context"
+)
+`)
+	writeFile("main.go", `package main
+
+import orchestrionctx "github.com/DataDog/orchestrion/runtime/context"
+
+type hooks struct{}
+func (hooks) Main() *orchestrionctx.Stack[string] { return new(orchestrionctx.Stack[string]) }
+func (hooks) Go(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] {
+	if expectEvaluated && !argumentEvaluated { panic("Hooks.Go ran before argument evaluation") }
+	if panicInHook { panic(hookPanic{}) }
+	if parent == nil { return new(orchestrionctx.Stack[string]) }
+	child := append(orchestrionctx.Stack[string](nil), (*parent)...)
+	return &child
+}
+func (hooks) ChanSend(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] { return parent }
+func (hooks) ChanRecv(_ *orchestrionctx.Stack[string], sent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] { return sent }
+
+var controller = orchestrionctx.Register[string](hooks{})
+var expectEvaluated, argumentEvaluated, panicInHook bool
+
+type argumentPanic struct{}
+type hookPanic struct{}
+
+func evaluatedArgument(ch chan struct{}) chan struct{} { argumentEvaluated = true; return ch }
+func panicArgument() int { panic(argumentPanic{}) }
+func shouldNotRun(int) { panic("goroutine started despite argument panic") }
+
+func main() {
+	controller.Push("parent")
+	done := make(chan string, 1)
+	go func(ch chan<- string) {
+		value, ok := controller.Peek()
+		if !ok { panic("child context missing") }
+		ch <- value
+	}(done)
+	controller.Pop()
+	if value := <-done; value != "parent" { panic("wrong child context: " + value) }
+
+	// runtime.newproc must dispatch Hooks.Go after native argument evaluation.
+	evaluatedDone := make(chan struct{})
+	expectEvaluated = true
+	go func(ch chan struct{}) { close(ch) }(evaluatedArgument(evaluatedDone))
+	expectEvaluated = false
+	<-evaluatedDone
+
+	// A native argument panic occurs on the parent before runtime.newproc.
+	recovered := func() (recovered any) {
+		defer func() { recovered = recover() }()
+		go shouldNotRun(panicArgument())
+		return nil
+	}()
+	if _, ok := recovered.(argumentPanic); !ok { panic("argument panic did not occur on parent") }
+
+	// Hooks.Go also runs on the parent and retains its original panic value.
+	panicInHook = true
+	recovered = func() (recovered any) {
+		defer func() { recovered = recover() }()
+		go func() { panic("goroutine started despite Hooks.Go panic") }()
+		return nil
+	}()
+	panicInHook = false
+	if _, ok := recovered.(hookPanic); !ok { panic("Hooks.Go panic did not occur on parent") }
+
+	// Exercise reused goroutines after the parent stack has been emptied. Every
+	// child must receive the new empty blob, never storage retained by a prior g.
+	for range 1000 {
+		clean := make(chan bool, 1)
+		go func() { _, ok := controller.Peek(); clean <- !ok }()
+		if !<-clean { panic("stale context observed") }
+	}
+}
+`)
+	writeFile("noreg/main.go", `package main
+
+import _ "github.com/DataDog/orchestrion/runtime/context"
+
+func main() {
+	done := make(chan struct{})
+	go func() { close(done) }()
+	<-done
+}
+`)
+
+	run.exec(t, "go", "mod", "tidy")
+	orchestrion := buildOrchestrion(t)
+	run.exec(t, orchestrion, "go", "run", ".")
+	run.exec(t, orchestrion, "go", "run", "./noreg")
+}
+
 func TestSyntheticLinkDependencyUsesTestVariant(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 	writeFile := func(name, contents string) {

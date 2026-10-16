@@ -1,0 +1,137 @@
+%YAML 1.1
+---
+aspects:
+  - id: context.gls
+    join-point:
+      struct-definition: runtime.g
+    advice:
+      - add-struct-field:
+          name: __dd_orchestrion_ctx
+          type: any
+      - add-struct-field:
+          name: __dd_orchestrion_ctx_pending
+          type: any
+      - add-struct-field:
+          name: __dd_orchestrion_ctx_pending_set
+          type: bool
+      - add-blank-import: unsafe
+      - inject-declarations:
+          imports:
+            orchestrionunsafe: unsafe
+          template: |-
+            var __dd_orchestrion_ctx_go atomicPointer[byte]
+
+            //go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get
+            var __dd_orchestrion_ctx_get = func() any {
+              return getg().m.curg.__dd_orchestrion_ctx
+            }
+
+            //go:linkname __dd_orchestrion_ctx_set __dd_orchestrion_ctx_set
+            var __dd_orchestrion_ctx_set = func(val any) {
+              getg().m.curg.__dd_orchestrion_ctx = val
+            }
+
+            //go:linkname __dd_orchestrion_ctx_set_go __dd_orchestrion_ctx_set_go
+            var __dd_orchestrion_ctx_set_go = func(hook orchestrionunsafe.Pointer) {
+              __dd_orchestrion_ctx_go.Store((*byte)(hook))
+            }
+
+            func __dd_orchestrion_ctx_prepare_go(gp *g) bool {
+              if gp != gp.m.curg {
+                return false
+              }
+              hookPtr := __dd_orchestrion_ctx_go.Load()
+              if hookPtr == nil {
+                return false
+              }
+              hook := (*func(any) any)(orchestrionunsafe.Pointer(hookPtr))
+              gp.__dd_orchestrion_ctx_pending = (*hook)(gp.__dd_orchestrion_ctx)
+              gp.__dd_orchestrion_ctx_pending_set = true
+              return true
+            }
+
+            func __dd_orchestrion_ctx_clear_go(gp *g) {
+              gp.__dd_orchestrion_ctx_pending = nil
+              gp.__dd_orchestrion_ctx_pending_set = false
+            }
+
+            func __dd_orchestrion_ctx_attach_go(newg *g) *g {
+              parent := getg().m.curg
+              if parent != nil && parent.__dd_orchestrion_ctx_pending_set {
+                newg.__dd_orchestrion_ctx = parent.__dd_orchestrion_ctx_pending
+              }
+              return newg
+            }
+  - id: context.gls.scrub
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: goexit1
+    advice:
+      - prepend-statements:
+          template: |-
+            getg().__dd_orchestrion_ctx = nil
+            getg().__dd_orchestrion_ctx_pending = nil
+            getg().__dd_orchestrion_ctx_pending_set = false
+  - id: context.goroutine.prepare
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: newproc
+    advice:
+      - prepend-statements:
+          template: |-
+            if gp := getg(); __dd_orchestrion_ctx_prepare_go(gp) {
+              defer __dd_orchestrion_ctx_clear_go(gp)
+            }
+  - id: context.goroutine.attach
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-call: newproc1
+    advice:
+      - wrap-expression:
+          template: __dd_orchestrion_ctx_attach_go({{ . }})
+
+import-path: runtime
+
+syntheticReferences:
+  unsafe: true
+
+code: |-
+  package runtime
+
+  type atomicPointer[T any] struct { value *T }
+  func (p *atomicPointer[T]) Load() *T { return p.value }
+  func (p *atomicPointer[T]) Store(v *T) { p.value = v }
+
+  type m struct {
+    curg *g
+  }
+
+  type g struct {
+    m *m
+  }
+
+  type funcval struct{}
+  type p struct{}
+
+  func getg() *g { return &g{m: &m{}} }
+  func systemstack(f func()) { f() }
+  func newproc1(_ *funcval, callergp *g) *g { return &g{} }
+  func runqput(_ *p, _ *g, _ bool) {}
+
+  func newproc(fn *funcval) {
+    gp := getg()
+    systemstack(func() {
+      newg := newproc1(fn, gp)
+      runqput(nil, newg, true)
+    })
+  }
+
+  func goexit1() {
+  }
