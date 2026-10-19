@@ -1,0 +1,13 @@
+//line input.go:1:1
+package test
+
+import "fmt"
+
+//line input.go:5
+func printAll(args []any) {
+  fmt.Println(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:6
+      args...)...)
+}

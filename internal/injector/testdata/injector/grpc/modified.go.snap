@@ -16,7 +16,7 @@ func grpcClient() {
   conn, err := grpc.Dial("localhost:50051",
 //line <generated>:1
     func(opts ...grpc.DialOption) []grpc.DialOption {
-      return append(opts, grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
+      return append(append([]grpc.DialOption{}, opts...), grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
     }(
 //line input.go:12
       dialOpts...)...)
