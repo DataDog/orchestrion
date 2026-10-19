@@ -60,6 +60,21 @@ func TestAlignWorkGoVersion(t *testing.T) {
 		assert.Equal(t, original, string(updated), "an aligned go.work must not be rewritten")
 	})
 
+	t.Run("go directive with a trailing comment", func(t *testing.T) {
+		// The go.work file is already newer than the module, so it must not be
+		// lowered to the module's version.
+		moduleDir, modfile := writeModule(t, "1.26.0")
+		workfile := filepath.Join(filepath.Dir(moduleDir), "go.work")
+		original := "go 1.26.4 // keep in sync with CI\n\nuse ./server\n"
+		require.NoError(t, os.WriteFile(workfile, []byte(original), 0o644))
+
+		require.NoError(t, AlignWorkGoVersion(ctx, moduleDir, modfile))
+
+		updated, err := os.ReadFile(workfile)
+		require.NoError(t, err)
+		assert.Equal(t, original, string(updated), "a newer go.work must not be downgraded")
+	})
+
 	t.Run("no workspace", func(t *testing.T) {
 		// The module directory is created under a fresh t.TempDir tree, so no
 		// go.work file encloses it.
