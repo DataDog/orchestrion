@@ -6,8 +6,11 @@
 package importcfg
 
 import (
+	"errors"
+	"io"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,4 +22,13 @@ func TestParseWithoutEntries(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, reg.PackageFile)
 	require.NotNil(t, reg.ImportMap)
+}
+
+func TestParseReturnsReadError(t *testing.T) {
+	// A read error part way through must be reported, not returned as a
+	// truncated, apparently valid ImportConfig.
+	errRead := errors.New("read failed")
+	r := io.MultiReader(strings.NewReader("packagefile fmt=/tmp/fmt.a\n"), iotest.ErrReader(errRead))
+	_, err := parse(r)
+	require.ErrorIs(t, err, errRead)
 }
