@@ -8,4 +8,4 @@ go 1.26.0
 // must never happen when resolving this package's imports as a dependency.
 replace example.com/thing v1.0.0 => ../does-not-exist
 
-require github.com/DataDog/dd-trace-go/v2 v2.12.0-rc.2 // indirect
+require github.com/DataDog/dd-trace-go/v2 v2.12.0-rc.3 // indirect
