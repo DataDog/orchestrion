@@ -93,7 +93,9 @@ func readGoDirective(workfile string) (string, bool) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
+		// The go.work syntax allows a trailing `//` comment on any line.
+		line, _, _ := strings.Cut(scanner.Text(), "//")
+		fields := strings.Fields(line)
 		if len(fields) == 2 && fields[0] == "go" {
 			return fields[1], true
 		}
