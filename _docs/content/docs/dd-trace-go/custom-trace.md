@@ -202,3 +202,77 @@ If you directly use integrations, we encourage you carefully review the
 upgrading to a new `orchestrion` release, so you can remove manual
 instrumentation that was made redundant as necessary.
 {{</callout>}}
+
+### OpenTelemetry API
+
+{{<callout emoji="ℹ️">}}
+The behavior in this section requires `github.com/DataDog/dd-trace-go/v2`
+v2.13.0 or later. The last paragraph of the section is for earlier versions.
+{{</callout>}}
+
+Set the environment variable `DD_TRACE_OTEL_ENABLED` to `true` to turn on this
+support. When it is not set, `orchestrion` does not change `trace.SpanFromContext`
+or the OpenTelemetry global tracer.
+
+Code that uses the OpenTelemetry API works in an application built with
+`orchestrion`. The code does not need to be specific to Datadog.
+
+- {{<godoc import-path="go.opentelemetry.io/otel/trace" package="trace" name="SpanFromContext" >}}
+  returns the span that `orchestrion` instrumentation started, for example the
+  `net/http` server span. Attributes, events, errors, and status that you set on
+  this span go to the Datadog span.
+- If the application does not call
+  {{<godoc import-path="go.opentelemetry.io/otel" package="otel" name="SetTracerProvider" >}},
+  the spans that `otel.Tracer(...).Start` creates are Datadog spans. They are
+  children of the Datadog span in the `context.Context` that you give to
+  `Start`. Pass the context that contains the span, for example `r.Context()`.
+  Code that passes `context.Background()` starts a new trace.
+- If the application calls
+  {{<godoc import-path="go.opentelemetry.io/otel" package="otel" name="SetTracerProvider" >}}
+  (for example with the OpenTelemetry SDK), the OpenTelemetry API uses that
+  TracerProvider. `orchestrion` does not replace it. The parent of a span comes
+  from the `context.Context` that you give to `Start`. Pass the context that
+  contains the span, for example `r.Context()`. Code that passes
+  `context.Background()` starts a new trace.
+
+```go
+package demo
+
+import (
+  "net/http"
+
+  "go.opentelemetry.io/otel"
+  "go.opentelemetry.io/otel/attribute"
+  "go.opentelemetry.io/otel/trace"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+  ctx := r.Context()
+
+  // The net/http server span that orchestrion started.
+  span := trace.SpanFromContext(ctx)
+  span.SetAttributes(attribute.String("user.id", "42"))
+
+  // A child span of the net/http server span.
+  ctx, child := otel.Tracer("demo").Start(ctx, "load-cart")
+  defer child.End()
+
+  // ... etc ...
+}
+```
+
+{{<callout emoji="⚠️">}}
+Calling `End` on a span from `trace.SpanFromContext` finishes the span. The
+OpenTelemetry API has the same contract. Do not end a span that your code did
+not start.
+{{</callout>}}
+
+With `github.com/DataDog/dd-trace-go/v2` versions before v2.13.0,
+`trace.SpanFromContext` returns a no-op span for the spans that `orchestrion`
+started. Spans that your code starts with the OpenTelemetry API work as usual.
+To make `otel.Tracer(...).Start` create Datadog child spans, call
+`otel.SetTracerProvider(ddotel.NewTracerProvider())`. The `ddotel` package is
+{{<godoc import-path="github.com/DataDog/dd-trace-go/v2/ddtrace/opentelemetry" package="opentelemetry" >}}.
+With this workaround, `trace.SpanFromContext` still returns a no-op span for the
+spans that `orchestrion` started. For more information, refer to
+[issue 936](https://github.com/DataDog/orchestrion/issues/936).
