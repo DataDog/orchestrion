@@ -59,10 +59,6 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 	scanner.Split(bufio.ScanLines)
 
 	for scanner.Scan() {
-		if err = scanner.Err(); err != nil {
-			return
-		}
-
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || line[0] == '#' {
 			continue
@@ -98,6 +94,9 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 		}
 	}
 
+	// Scan returns false on a read error (or a line too long for the
+	// scanner), so the error is only available once the loop is done.
+	err = scanner.Err()
 	return
 }
 
