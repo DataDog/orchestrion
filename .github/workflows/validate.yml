@@ -299,7 +299,7 @@ jobs:
           files: junit
           # Auto-discovery skips unit.xml and samples.xml, because their names do not contain junit or test.
           auto-discovery: "false"
-          tags: go:${{ steps.setup-go.outputs.go-version }},arch:${{ runner.arch }},os:${{ runner.os }}
+          tags: go:${{ steps.setup-go.outputs.go-version }},arch:${{ runner.arch }},os:${{ runner.os }},test.source.file:*
       - name: Determine simple go version
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
