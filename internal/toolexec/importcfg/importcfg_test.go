@@ -6,6 +6,7 @@
 package importcfg
 
 import (
+	"bufio"
 	"errors"
 	"io"
 	"strings"
@@ -31,4 +32,12 @@ func TestParseReturnsReadError(t *testing.T) {
 	r := io.MultiReader(strings.NewReader("packagefile fmt=/tmp/fmt.a\n"), iotest.ErrReader(errRead))
 	_, err := parse(r)
 	require.ErrorIs(t, err, errRead)
+}
+
+func TestParseReturnsTooLongLineError(t *testing.T) {
+	// A line longer than the scanner buffer stops the scan, so the error must
+	// surface instead of a truncated ImportConfig.
+	line := "packagefile fmt=" + strings.Repeat("a", bufio.MaxScanTokenSize+1)
+	_, err := parse(strings.NewReader(line + "\n"))
+	require.ErrorIs(t, err, bufio.ErrTooLong)
 }
