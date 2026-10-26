@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/99designs/gqlgen v0.17.94
-	github.com/DataDog/dd-trace-go/v2 v2.12.0-rc.3
+	github.com/DataDog/dd-trace-go/v2 v2.12.0-rc.6
 	github.com/DataDog/orchestrion v1.15.0-rc.1
 	github.com/DataDog/orchestrion/instrument v1.12.1
 	github.com/IBM/sarama v1.60.2

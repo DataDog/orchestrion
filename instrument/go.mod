@@ -78,7 +78,7 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/twmb/franz-go/v2 v2.12.0-rc.3 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valkey-io/valkey-go/v2 v2.12.0-rc.3 // indirect
 	github.com/DataDog/dd-trace-go/contrib/valyala/fasthttp/v2 v2.12.0-rc.3 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.12.0-rc.3 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.12.0-rc.6 // indirect
 	github.com/DataDog/go-libddwaf/v5 v5.0.1 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20260217080614-b0f4edc38a6d // indirect
 	github.com/DataDog/go-sqllexer v0.2.4 // indirect
