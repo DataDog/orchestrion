@@ -10,6 +10,7 @@ import (
 	"go/build"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -36,6 +37,10 @@ func TestContextRuntimeJoinPointTargetsExist(t *testing.T) {
 
 	// Functions whose existence the aspects depend on (weave targets).
 	found := map[string]bool{"goexit1": false, "newproc": false, "newproc1": false, "newcoro": false, "gdestroy": false}
+	// The attach hook calls isSystemGoroutine(gp, false) to keep runtime-owned
+	// goroutines from inheriting context; its signature is a compile-time
+	// dependency of the injected template.
+	isSystemGoroutineSignature := ""
 	// The complete, exact set of direct newproc1 callers, classified by
 	// whether propagation is woven into them. This must be updated (together
 	// with the aspects and their documentation) whenever a Go release changes
@@ -62,6 +67,13 @@ func TestContextRuntimeJoinPointTargetsExist(t *testing.T) {
 			if fn.Name.Name == "gdestroy" {
 				if params := fn.Type.Params; params != nil && len(params.List) > 0 && len(params.List[0].Names) > 0 {
 					gdestroyParamName = params.List[0].Names[0].Name
+				}
+			}
+			if fn.Name.Name == "isSystemGoroutine" {
+				if fn.Type.Params == nil || len(fn.Type.Params.List) != 2 {
+					t.Errorf("runtime.isSystemGoroutine no longer takes (*g, bool) in %s; the attach hook's no-system-goroutine guard references it by that shape", runtime.Version())
+				} else {
+					isSystemGoroutineSignature = types.ExprString(fn.Type.Params.List[0].Type) + "/" + types.ExprString(fn.Type.Params.List[1].Type)
 				}
 			}
 			callsNewproc1 := false
@@ -104,5 +116,8 @@ func TestContextRuntimeJoinPointTargetsExist(t *testing.T) {
 	}
 	require.Equal(t, "gp", gdestroyParamName,
 		"runtime.gdestroy's first parameter is no longer named 'gp' in %s; the context.gls.scrub.destroy aspect references it by name",
+		runtime.Version())
+	require.Equal(t, "*g/bool", isSystemGoroutineSignature,
+		"runtime.isSystemGoroutine's parameter types are no longer (*g, bool) in %s; the attach hook calls it as such",
 		runtime.Version())
 }

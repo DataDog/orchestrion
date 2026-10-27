@@ -29,11 +29,14 @@ type Hooks[T any] interface {
 	// it): the parent keeps using its own stack concurrently, so returning it
 	// directly (or a slice sharing its backing array) makes concurrent Push and
 	// Pop a data race. Return a fresh copy of the values to propagate instead.
-	// Implementations must be non-blocking, lock-free, and bounded-allocation:
-	// Go is invoked from the runtime while the parent g is being duplicated,
-	// including for runtime-internal goroutines (e.g. background GC workers).
-	// Propagation is skipped (not deferred) for goroutines spawned while the
-	// runtime holds locks, so a hook that blocks or parks would be fatal.
+	// Implementations must be non-blocking, lock-free, and bounded-allocation.
+	// Go runs while the runtime duplicates the parent g. Goroutine creations
+	// that happen with runtime locks held (e.g. background GC workers) skip
+	// propagation entirely instead of dispatching the hook: a hook that blocks
+	// or parks there would kill the process. Runtime code spawning a goroutine
+	// on an unlocked user goroutine (e.g. runtime.AddCleanup's cleanup worker)
+	// does dispatch the hook on the parent, but the resulting stack is not
+	// installed: goroutines the runtime owns never inherit context.
 	Go(parent *Stack[T]) *Stack[T]
 
 	// ChanRecv is called when a value is received from a channel that was

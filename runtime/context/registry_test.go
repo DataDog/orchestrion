@@ -23,9 +23,21 @@ func registerSomeHooks() {
 
 type float64Hooks struct{}
 
-func (float64Hooks) Main() *Stack[float64]                                            { return new(Stack[float64]) }
-func (float64Hooks) Go(parent *Stack[float64]) *Stack[float64]                        { return parent }
-func (float64Hooks) ChanSend(parent *Stack[float64]) *Stack[float64]                  { return parent }
+func (float64Hooks) Main() *Stack[float64] { return new(Stack[float64]) }
+
+func (float64Hooks) Go(parent *Stack[float64]) *Stack[float64] {
+	return float64Hooks{}.ChanSend(parent)
+}
+
+func (float64Hooks) ChanSend(parent *Stack[float64]) *Stack[float64] {
+	if parent == nil {
+		return new(Stack[float64])
+	}
+	cp := make(Stack[float64], len(*parent))
+	copy(cp, *parent)
+	return &cp
+}
+
 func (float64Hooks) ChanRecv(_ *Stack[float64], sent *Stack[float64]) *Stack[float64] { return sent }
 
 func TestConcurrentRegistrationsAreNotLost(t *testing.T) {

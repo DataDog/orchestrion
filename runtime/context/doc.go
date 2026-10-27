@@ -47,11 +47,13 @@
 //   - the goroutine backing an iterator pulled with iter.Pull/iter.Pull2
 //     (via runtime.newcoro).
 //
-// Goroutines the runtime spawns for itself while holding internal locks
-// (e.g. background GC workers) and the roots of testing/synctest bubbles and
-// debugger-injected calls are deliberately not propagated into: dispatching
-// arbitrary user hook code there could deadlock or crash the runtime. They
-// receive no context rather than stale context.
+// Goroutines the runtime creates for itself are deliberately never
+// propagated into, whatever the lock state at creation: background GC workers
+// (spawned with internal locks held, where user hook code must not run), the
+// roots of testing/synctest bubbles, debugger-injected calls, and lazily
+// started runtime services such as runtime.AddCleanup's cleanup worker or the
+// finalizer goroutine. They receive no context rather than stale or
+// misattributed context.
 //
 // [Hooks.Go] must be non-blocking, lock-free, bounded-allocation, and must
 // return a stack that does not alias its parent argument (see its

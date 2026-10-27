@@ -10,11 +10,11 @@
 // runtime/context: [MockGLS] needs per-goroutine isolation to faithfully
 // simulate orchestrion's real behavior, which requires importing "sync"
 // and "github.com/petermattis/goid". runtime/context itself must not
-// import those (see that package's registry.go and mutex.go for why),
-// since orchestrion weaves a call to runtime/context into every `go`
-// statement it compiles, including ones inside those very packages' own
-// transitive dependencies -- so this package must never be imported by
-// anything on that path, only by tests.
+// import those (see that package's registry.go and mutex.go for why):
+// the instrumented runtime calls back into it while creating goroutines,
+// so anything runtime/context imports is effectively on the runtime's own
+// dependency path -- this package must never be imported from there, only
+// by tests.
 package contexttest
 
 import (

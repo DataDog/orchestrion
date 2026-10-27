@@ -57,7 +57,7 @@ aspects:
 
             func __dd_orchestrion_ctx_attach_go(newg *g) *g {
               parent := getg().m.curg
-              if parent != nil && parent.__dd_orchestrion_ctx_pending_set {
+              if parent != nil && parent.__dd_orchestrion_ctx_pending_set && !isSystemGoroutine(newg, false) {
                 newg.__dd_orchestrion_ctx = parent.__dd_orchestrion_ctx_pending
               }
               return newg
@@ -152,6 +152,7 @@ code: |-
   func systemstack(f func()) { f() }
   func newproc1(_ *funcval, callergp *g) *g { return &g{} }
   func runqput(_ *p, _ *g, _ bool) {}
+  func isSystemGoroutine(_ *g, _ bool) bool { return false }
 
   func newproc(fn *funcval) {
     gp := getg()

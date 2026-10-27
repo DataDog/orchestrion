@@ -126,11 +126,38 @@ func main() {
 	// The runtime spawns background GC workers with internal locks held
 	// (runtime.gcBgMarkStartWorkers); Hooks.Go must never be dispatched there.
 	// blockInHook makes the hook park, which would fatal-throw via
-	// "schedule: holding locks" if the prepare guard were missing; forcing a
-	// GC cycle walks that exact path.
+	// "schedule: holding locks" if the prepare guard were missing. Raising
+	// GOMAXPROCS first forces *new* mark workers to be spawned on the next
+	// cycles (an already-run GC would otherwise just reuse the existing ones).
 	blockInHook = true
-	runtime.GC()
+	oldProcs := runtime.GOMAXPROCS(64)
+	for range 6 {
+		runtime.GC()
+	}
+	runtime.GOMAXPROCS(oldProcs)
 	blockInHook = false
+
+	// Goroutines the runtime creates for itself on a user goroutine with no
+	// locks held (runtime.AddCleanup's cleanup worker is the reproducible one)
+	// must not inherit the creating goroutine's context either.
+	controller.Push("request-span")
+	target := new(int)
+	cleanupSawContext := make(chan bool, 1)
+	runtime.AddCleanup(target, func(ctl *orchestrionctx.Controller[string]) {
+		_, ok := ctl.Peek()
+		cleanupSawContext <- ok
+	}, controller)
+	target = nil
+	for range 3 {
+		runtime.GC()
+	}
+	select {
+	case sawContext := <-cleanupSawContext:
+		if sawContext { panic("runtime cleanup goroutine inherited user context") }
+	case <-time.After(10 * time.Second):
+		panic("cleanup never ran; cannot verify runtime goroutines get no context")
+	}
+	controller.Pop()
 
 	// The goroutine backing an iter.Pull coroutine (runtime.newcoro) also
 	// propagates context, and must be scrubbed when the coroutine's g is

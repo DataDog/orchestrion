@@ -32,6 +32,7 @@ func getg() *g                            { return &g{m: &m{}} }
 func systemstack(f func())                { f() }
 func newproc1(_ *funcval, callergp *g) *g { return &g{} }
 func runqput(_ *p, _ *g, _ bool)          {}
+func isSystemGoroutine(_ *g, _ bool) bool { return false }
 
 func newproc(fn *funcval) {
 //line <generated>:1
@@ -40,13 +41,13 @@ func newproc(fn *funcval) {
       defer __dd_orchestrion_ctx_clear_go(gp)
     }
   }
-//line input.go:26
+//line input.go:27
   gp := getg()
   systemstack(func() {
     newg :=
 //line <generated>:1
       __dd_orchestrion_ctx_attach_go(
-//line input.go:28
+//line input.go:29
         newproc1(fn, gp))
     runqput(nil, newg, true)
   })
@@ -59,13 +60,13 @@ func newcoro(f func()) {
       defer __dd_orchestrion_ctx_clear_go(gp)
     }
   }
-//line input.go:34
+//line input.go:35
   gp := getg()
   systemstack(func() {
     gp =
 //line <generated>:1
       __dd_orchestrion_ctx_attach_go(
-//line input.go:36
+//line input.go:37
         newproc1(nil, gp))
   })
   _ = f
@@ -80,7 +81,7 @@ func goexit1() {
   }
 }
 
-//line input.go:44
+//line input.go:45
 func gdestroy(gp *g) {
 //line <generated>:1
   {
@@ -128,7 +129,7 @@ func __dd_orchestrion_ctx_clear_go(gp *g) {
 
 func __dd_orchestrion_ctx_attach_go(newg *g) *g {
   parent := getg().m.curg
-  if parent != nil && parent.__dd_orchestrion_ctx_pending_set {
+  if parent != nil && parent.__dd_orchestrion_ctx_pending_set && !isSystemGoroutine(newg, false) {
     newg.__dd_orchestrion_ctx = parent.__dd_orchestrion_ctx_pending
   }
   return newg

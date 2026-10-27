@@ -77,7 +77,14 @@ aspects:
             func __dd_orchestrion_ctx_attach_go(newg *g) *g {
               // newproc1 runs on g0; m.curg is the suspended parent user g.
               parent := getg().m.curg
-              if parent != nil && parent.__dd_orchestrion_ctx_pending_set {
+              // Goroutines the runtime creates for itself (runtime.AddCleanup's
+              // cleanup worker, the finalizer goroutine, ensureSigM, ...) never
+              // inherit context even when they are created on a user goroutine
+              // with no locks held: misattributed context would follow them and
+              // anything they spawn for the life of the process.
+              // isSystemGoroutine classifies coroutine gs (corostart) as user
+              // goroutines, so iter.Pull propagation is unaffected.
+              if parent != nil && parent.__dd_orchestrion_ctx_pending_set && !isSystemGoroutine(newg, false) {
                 newg.__dd_orchestrion_ctx = parent.__dd_orchestrion_ctx_pending
               }
               return newg
