@@ -35,11 +35,11 @@ type ImportConfig struct {
 // ParseFile parses the contents of the provided `importcfg` (or `importcfg.link`) file. The maps of
 // the returned [ImportConfig] are never nil, even if the file has no corresponding entries (as is
 // the case for packages that import nothing), so entries can be added to them.
-func ParseFile(ctx context.Context, filename string) (ImportConfig, error) {
+func ParseFile(ctx context.Context, filename string) (reg ImportConfig, err error) {
 	span, _ := tracer.StartSpanFromContext(ctx, "importcfg.ParseFile",
 		tracer.ResourceName(filename),
 	)
-	defer span.Finish()
+	defer func() { span.Finish(tracer.WithError(err)) }()
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -50,7 +50,7 @@ func ParseFile(ctx context.Context, filename string) (ImportConfig, error) {
 	return parse(file)
 }
 
-// ParseFile parses the `importcfg` (or `importcfg.link`) data from the provided reader.
+// parse parses the `importcfg` (or `importcfg.link`) data from the provided reader.
 func parse(r io.Reader) (reg ImportConfig, err error) {
 	reg.PackageFile = make(map[string]string)
 	reg.ImportMap = make(map[string]string)
@@ -59,10 +59,6 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 	scanner.Split(bufio.ScanLines)
 
 	for scanner.Scan() {
-		if err = scanner.Err(); err != nil {
-			return
-		}
-
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || line[0] == '#' {
 			continue
@@ -98,6 +94,12 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 		}
 	}
 
+	// Scan returns false on a read error (or a line too long for the
+	// scanner), so the error is only available once the loop is done.
+	err = scanner.Err()
+	if err != nil {
+		return ImportConfig{}, err
+	}
 	return
 }
 
