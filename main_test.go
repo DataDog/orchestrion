@@ -52,6 +52,12 @@ import (
 `)
 	writeFile("main.go", `package main
 
+import (
+	"iter"
+	"runtime"
+	"time"
+)
+
 import orchestrionctx "github.com/DataDog/orchestrion/runtime/context"
 
 type hooks struct{}
@@ -59,15 +65,20 @@ func (hooks) Main() *orchestrionctx.Stack[string] { return new(orchestrionctx.St
 func (hooks) Go(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] {
 	if expectEvaluated && !argumentEvaluated { panic("Hooks.Go ran before argument evaluation") }
 	if panicInHook { panic(hookPanic{}) }
+	if blockInHook { time.Sleep(50 * time.Millisecond) }
 	if parent == nil { return new(orchestrionctx.Stack[string]) }
 	child := append(orchestrionctx.Stack[string](nil), (*parent)...)
 	return &child
 }
-func (hooks) ChanSend(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] { return parent }
+func (hooks) ChanSend(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] {
+	if parent == nil { return new(orchestrionctx.Stack[string]) }
+	child := append(orchestrionctx.Stack[string](nil), (*parent)...)
+	return &child
+}
 func (hooks) ChanRecv(_ *orchestrionctx.Stack[string], sent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] { return sent }
 
 var controller = orchestrionctx.Register[string](hooks{})
-var expectEvaluated, argumentEvaluated, panicInHook bool
+var expectEvaluated, argumentEvaluated, panicInHook, blockInHook bool
 
 type argumentPanic struct{}
 type hookPanic struct{}
@@ -111,6 +122,29 @@ func main() {
 	}()
 	panicInHook = false
 	if _, ok := recovered.(hookPanic); !ok { panic("Hooks.Go panic did not occur on parent") }
+
+	// The runtime spawns background GC workers with internal locks held
+	// (runtime.gcBgMarkStartWorkers); Hooks.Go must never be dispatched there.
+	// blockInHook makes the hook park, which would fatal-throw via
+	// "schedule: holding locks" if the prepare guard were missing; forcing a
+	// GC cycle walks that exact path.
+	blockInHook = true
+	runtime.GC()
+	blockInHook = false
+
+	// The goroutine backing an iter.Pull coroutine (runtime.newcoro) also
+	// propagates context, and must be scrubbed when the coroutine's g is
+	// destroyed (runtime.gdestroy) rather than leaking into a recycled g.
+	controller.Push("coro")
+	next, stop := iter.Pull(func(yield func(string) bool) {
+		value, ok := controller.Peek()
+		if ok {
+			yield(value)
+		}
+	})
+	if value, ok := next(); !ok || value != "coro" { panic("wrong or missing coroutine context") }
+	stop()
+	controller.Pop()
 
 	// Exercise reused goroutines after the parent stack has been emptied. Every
 	// child must receive the new empty blob, never storage retained by a prior g.

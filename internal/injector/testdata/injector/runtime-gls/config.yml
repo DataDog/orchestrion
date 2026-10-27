@@ -37,7 +37,7 @@ aspects:
             }
 
             func __dd_orchestrion_ctx_prepare_go(gp *g) bool {
-              if gp != gp.m.curg {
+              if gp != gp.m.curg || gp.m.locks != 0 || gp.m.mallocing != 0 {
                 return false
               }
               hookPtr := __dd_orchestrion_ctx_go.Load()
@@ -75,6 +75,32 @@ aspects:
             getg().__dd_orchestrion_ctx = nil
             getg().__dd_orchestrion_ctx_pending = nil
             getg().__dd_orchestrion_ctx_pending_set = false
+  - id: context.coroutine.prepare
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: newcoro
+    advice:
+      - prepend-statements:
+          template: |-
+            if gp := getg(); __dd_orchestrion_ctx_prepare_go(gp) {
+              defer __dd_orchestrion_ctx_clear_go(gp)
+            }
+  - id: context.gls.scrub.destroy
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: gdestroy
+    advice:
+      - prepend-statements:
+          template: |-
+            gp.__dd_orchestrion_ctx = nil
+            gp.__dd_orchestrion_ctx_pending = nil
+            gp.__dd_orchestrion_ctx_pending_set = false
   - id: context.goroutine.prepare
     join-point:
       all-of:
@@ -110,7 +136,9 @@ code: |-
   func (p *atomicPointer[T]) Store(v *T) { p.value = v }
 
   type m struct {
-    curg *g
+    curg      *g
+    locks     int32
+    mallocing int32
   }
 
   type g struct {
@@ -133,5 +161,16 @@ code: |-
     })
   }
 
+  func newcoro(f func()) {
+    gp := getg()
+    systemstack(func() {
+      gp = newproc1(nil, gp)
+    })
+    _ = f
+  }
+
   func goexit1() {
+  }
+
+  func gdestroy(gp *g) {
   }

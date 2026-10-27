@@ -20,6 +20,20 @@ type Hooks[T any] interface {
 	// Go is called synchronously by runtime.newproc on the parent goroutine,
 	// after the go statement's callee and arguments are evaluated. It returns
 	// the stack that will be installed before the child becomes runnable.
+	//
+	// It is also dispatched from runtime.newcoro, so the goroutine backing an
+	// iterator pulled via iter.Pull/iter.Pull2 inherits the creating
+	// goroutine's context the same way.
+	//
+	// The returned stack must not alias parent (or any stack reachable from
+	// it): the parent keeps using its own stack concurrently, so returning it
+	// directly (or a slice sharing its backing array) makes concurrent Push and
+	// Pop a data race. Return a fresh copy of the values to propagate instead.
+	// Implementations must be non-blocking, lock-free, and bounded-allocation:
+	// Go is invoked from the runtime while the parent g is being duplicated,
+	// including for runtime-internal goroutines (e.g. background GC workers).
+	// Propagation is skipped (not deferred) for goroutines spawned while the
+	// runtime holds locks, so a hook that blocks or parks would be fatal.
 	Go(parent *Stack[T]) *Stack[T]
 
 	// ChanRecv is called when a value is received from a channel that was
@@ -27,11 +41,20 @@ type Hooks[T any] interface {
 	// goroutine's own stack and the stack captured by the corresponding
 	// [Hooks.ChanSend] call, and returns the stack to install on the
 	// receiving goroutine.
+	//
+	// The returned stack must not alias parent: the receiving goroutine keeps
+	// using its own stack concurrently. The sent stack is owned by the
+	// receiving side after the call, so returning it (or a copy) is safe.
 	ChanRecv(parent *Stack[T], sent *Stack[T]) *Stack[T]
 
 	// ChanSend is called when a value is sent on a channel that was opted
 	// into propagation (see [NewChan]). The returned stack is delivered to
 	// the corresponding [Hooks.ChanRecv] call as its `sent` argument.
+	//
+	// The returned stack must not alias parent (or any stack reachable from
+	// it): the sending goroutine keeps using its own stack after the send, so
+	// returning it directly makes concurrent Push and Pop a data race. Return
+	// a fresh copy of the values to propagate instead.
 	ChanSend(parent *Stack[T]) *Stack[T]
 }
 

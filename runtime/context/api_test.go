@@ -95,11 +95,26 @@ func TestControllerPushPop(t *testing.T) {
 	assert.Empty(t, ctrl.Pop()) // empty stack returns zero value
 }
 
+// intHooks models the documented [Hooks] aliasing contract: Go and ChanSend
+// return stacks that never alias their parent argument (the parent goroutine
+// keeps mutating its own stack concurrently), while ChanRecv may take
+// ownership of the sent stack, whose only remaining reference is the
+// receiving side.
 type intHooks struct{}
 
-func (intHooks) Main() *Stack[int]                                    { return new(Stack[int]) }
-func (intHooks) Go(parent *Stack[int]) *Stack[int]                    { return parent }
-func (intHooks) ChanSend(parent *Stack[int]) *Stack[int]              { return parent }
+func (intHooks) Main() *Stack[int] { return new(Stack[int]) }
+
+func (intHooks) Go(parent *Stack[int]) *Stack[int] { return intHooks{}.ChanSend(parent) }
+
+func (intHooks) ChanSend(parent *Stack[int]) *Stack[int] {
+	if parent == nil {
+		return new(Stack[int])
+	}
+	cp := make(Stack[int], len(*parent))
+	copy(cp, *parent)
+	return &cp
+}
+
 func (intHooks) ChanRecv(_ *Stack[int], sent *Stack[int]) *Stack[int] { return sent }
 
 func TestMultipleRegistrationsAreIndependent(t *testing.T) {
@@ -213,6 +228,25 @@ func TestChanDisabledBehavesLikePlainChannel(t *testing.T) {
 	v, ok := ch.Recv()
 	require.True(t, ok)
 	assert.Equal(t, 7, v)
+}
+
+// TestNewChanRejectsPreBufferedChannel verifies that NewChan refuses to wrap
+// a channel that already holds buffered values: those values have no paired
+// context stack, so an enabled Recv would block forever before returning
+// them (see the Datadog autotest P2 on the original implementation).
+func TestNewChanRejectsPreBufferedChannel(t *testing.T) {
+	restore := mockGLS()
+	defer restore()
+
+	Register[string](stringHooks{}) // ensure enabled() is true
+
+	raw := make(chan int, 1)
+	raw <- 42
+	assert.Panics(t, func() { NewChan(raw) })
+
+	// An empty buffered channel remains fine.
+	empty := make(chan int, 1)
+	assert.NotPanics(t, func() { NewChan(empty) })
 }
 
 // TestZeroValueChanPanics verifies that a Chan not obtained from [NewChan]

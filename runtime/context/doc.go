@@ -41,7 +41,22 @@
 //
 // # Scope of automatic propagation
 //
-// Only goroutine creation (go statements) is automatically instrumented.
+// Goroutine creation is automatically instrumented wherever it is safe:
+//
+//   - every `go` statement (via runtime.newproc), and
+//   - the goroutine backing an iterator pulled with iter.Pull/iter.Pull2
+//     (via runtime.newcoro).
+//
+// Goroutines the runtime spawns for itself while holding internal locks
+// (e.g. background GC workers) and the roots of testing/synctest bubbles and
+// debugger-injected calls are deliberately not propagated into: dispatching
+// arbitrary user hook code there could deadlock or crash the runtime. They
+// receive no context rather than stale context.
+//
+// [Hooks.Go] must be non-blocking, lock-free, bounded-allocation, and must
+// return a stack that does not alias its parent argument (see its
+// documentation for details).
+//
 // Channel-based propagation ([Hooks.ChanSend], [Hooks.ChanRecv]) is implemented
 // and callable, but is deliberately not woven into plain channel operations.
 // Exact correlation under concurrent senders, receivers, and select requires

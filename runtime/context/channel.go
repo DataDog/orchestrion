@@ -40,9 +40,17 @@ type Chan[T any] struct {
 // [Chan]; doing so bypasses propagation and, for sends, will desynchronize
 // the internal pairing between data and the context stacks and pointer.
 //
+// data must be empty: a value already buffered in data has no paired context
+// stack, so an enabled [Chan.Recv] could never return it without
+// deadlocking first. NewChan panics if data is non-empty (len(data) != 0).
+// Wrap the channel before any value is sent on it.
+//
 // A [Chan] must be constructed via NewChan: a zero-value Chan panics on
 // first use rather than deadlocking silently.
 func NewChan[T any](data chan T) *Chan[T] {
+	if len(data) != 0 {
+		panic("context.NewChan: cannot wrap a channel that already holds buffered values; values received before the wrap have no paired context")
+	}
 	return &Chan[T]{
 		data:    data,
 		ctx:     make(chan []any, cap(data)),

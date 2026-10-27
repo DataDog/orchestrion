@@ -11,7 +11,9 @@ func (p *atomicPointer[T]) Load() *T   { return p.value }
 func (p *atomicPointer[T]) Store(v *T) { p.value = v }
 
 type m struct {
-  curg *g
+  curg      *g
+  locks     int32
+  mallocing int32
 }
 
 type g struct {
@@ -22,7 +24,7 @@ type g struct {
   __dd_orchestrion_ctx_pending_set bool
 }
 
-//line input.go:15
+//line input.go:17
 type funcval struct{}
 type p struct{}
 
@@ -38,16 +40,35 @@ func newproc(fn *funcval) {
       defer __dd_orchestrion_ctx_clear_go(gp)
     }
   }
-//line input.go:24
+//line input.go:26
   gp := getg()
   systemstack(func() {
     newg :=
 //line <generated>:1
       __dd_orchestrion_ctx_attach_go(
-//line input.go:26
+//line input.go:28
         newproc1(fn, gp))
     runqput(nil, newg, true)
   })
+}
+
+func newcoro(f func()) {
+//line <generated>:1
+  {
+    if gp := getg(); __dd_orchestrion_ctx_prepare_go(gp) {
+      defer __dd_orchestrion_ctx_clear_go(gp)
+    }
+  }
+//line input.go:34
+  gp := getg()
+  systemstack(func() {
+    gp =
+//line <generated>:1
+      __dd_orchestrion_ctx_attach_go(
+//line input.go:36
+        newproc1(nil, gp))
+  })
+  _ = f
 }
 
 func goexit1() {
@@ -56,6 +77,16 @@ func goexit1() {
     getg().__dd_orchestrion_ctx = nil
     getg().__dd_orchestrion_ctx_pending = nil
     getg().__dd_orchestrion_ctx_pending_set = false
+  }
+}
+
+//line input.go:44
+func gdestroy(gp *g) {
+//line <generated>:1
+  {
+    gp.__dd_orchestrion_ctx = nil
+    gp.__dd_orchestrion_ctx_pending = nil
+    gp.__dd_orchestrion_ctx_pending_set = false
   }
 }
 
@@ -77,7 +108,7 @@ var __dd_orchestrion_ctx_set_go = func(hook __orchestrion_orchestrionunsafe.Poin
 }
 
 func __dd_orchestrion_ctx_prepare_go(gp *g) bool {
-  if gp != gp.m.curg {
+  if gp != gp.m.curg || gp.m.locks != 0 || gp.m.mallocing != 0 {
     return false
   }
   hookPtr := __dd_orchestrion_ctx_go.Load()
