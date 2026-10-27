@@ -4,6 +4,10 @@ on:
     branches: ["**"]
   merge_group:
     branches: [main]
+  # The nightly run reports test results for the default branch to Datadog CI Visibility. Pull
+  # request and merge queue runs use other branch names.
+  schedule:
+    - cron: "17 3 * * *"
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || ((github.event_name == 'push' && github.sha) || github.ref) }}
   cancel-in-progress: true
@@ -45,7 +49,7 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-generators+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
           path: ./coverage/generator.out
@@ -83,7 +87,7 @@ jobs:
         # commits this artifact back onto the pull request's branch. Renaming the artifact, the file,
         # or this workflow's `name:` breaks that silently -- the two files are not otherwise linked.
         if: github.event_name != 'push' && steps.is-tree-dirty.outputs.result == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           if-no-files-found: error
           include-hidden-files: true
@@ -106,6 +110,29 @@ jobs:
           fi
           exit 1
   ##############################################################################
+  # Run shell tests independently of Go code generation.
+  test-bats:
+    name: Bats tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          persist-credentials: false
+      - name: Checkout Bats
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          repository: bats-core/bats-core
+          ref: eb7f42f8d608ac693d7a4b67474f6714ea68cfc5 # v1.14.0
+          path: .bats
+          persist-credentials: false
+      - name: Check release shell scripts
+        run: shellcheck -x _tools/tag-submodules.sh _tools/tag-submodules.bats
+      - name: Run Bash script tests
+        run: make test-bats BATS=.bats/bin/bats
+  ##############################################################################
   # Run the various linters we have set up...
   lint:
     needs: generate
@@ -122,7 +149,7 @@ jobs:
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1
+        uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -145,7 +172,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v6
         with:
-          version: v2.13.2
+          version: v2.14.0
           working-directory: ${{ matrix.working-directory }}
   ##############################################################################
   # Verify all GitHub workflows have hash-pinned actions
@@ -156,7 +183,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - name: Ensure SHA pinned actions
-        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@60e3a74c7b74a319e8e53e46bc455205f7173e1a # v3
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@76ed8a4c86957c2d27d44bab47f172193149d926 # v3
         with:
           allowlist: DataDog/dd-trace-go # Trust actions/workflows in the dd-trace-go repository
       - name: Verify actions are pinned with ratchet
@@ -164,7 +191,7 @@ jobs:
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@d290e336d5a743810aef4404f757dc862276d2ae # v1.73.4
+        uses: reviewdog/action-actionlint@48e36f54d8da326b83ab061aee2cc5e01b5ca46f # v1.80.6
         with:
           reporter: github-check
           level: error
@@ -223,7 +250,11 @@ jobs:
       matrix:
         # Not running unit tests on macOS, because it's UNIX-like and the only
         # os-specific code paths are UNIX vs. Windows.
-        runs-on: [ubuntu-latest, windows-latest]
+        # The Windows legs take close to an hour, which is longer than the
+        # merge queue's check response timeout (60 minutes at the time of
+        # writing), so merge groups only run the Ubuntu legs: Windows remains
+        # covered by pull request and push runs.
+        runs-on: ${{ fromJSON(github.event_name == 'merge_group' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest"]') }}
         go-version: [oldstable, stable]
     name: Unit tests (go ${{ matrix.go-version }}, ${{ matrix.runs-on }})
     steps:
@@ -235,18 +266,40 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: "**/go.mod"
+      - name: Install gotestsum
+        # gotestsum runs `go test -json` and writes the JUnit report that the upload step sends to
+        # Datadog. It keeps the exit code of `go test`, so a test failure still fails the job.
+        # _tools/go.sum pins the version and the hash, and the deps-update workflow updates it.
+        shell: bash
+        run: |-
+          go -C _tools build -o "${RUNNER_TEMP}/bin/" gotest.tools/gotestsum
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
       - name: Run unit tests
         shell: bash
         run: |-
-          mkdir -p coverage
+          mkdir -p coverage junit
           # The root package's tests each run several complete instrumented builds of a synthetic module,
           # which takes them well past Go's default 10 minute per-package timeout on CI runners.
           test_args=("-shuffle=on" "-race" "-timeout=60m")
           if [ "${{ github.event_name }}" != "merge_group" ]; then
             test_args+=("-cover" "-covermode=atomic" "-coverpkg=./...,github.com/DataDog/orchestrion/...")
           fi
-          go            test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.out" ./...
-          go -C samples test "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/samples.out" ./...
+          gotestsum --format=standard-quiet "--junitfile=${{ github.workspace }}/junit/unit.xml" -- "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/unit.out" ./...
+          (cd samples && gotestsum --format=standard-quiet "--junitfile=${{ github.workspace }}/junit/samples.xml" -- "${test_args[@]}" "-coverprofile=${{ github.workspace }}/coverage/samples.out" ./...)
+      - name: Upload test results to Datadog
+        # Run after a test failure, because failed tests are the reason for the upload. Fork pull
+        # requests have no access to the secret. An upload failure does not fail the job. The action
+        # pins a datadog-ci release and verifies its checksum. Dependabot updates the action.
+        if: ${{ !cancelled() && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
+        continue-on-error: true
+        uses: DataDog/junit-upload-github-action@a8b8ef95fb1c5d5faa639953f37cbeb45c1e9a97 # v4.0.0
+        with:
+          api_key: ${{ secrets.DD_CI_API_KEY }}
+          service: orchestrion
+          files: junit
+          # Auto-discovery skips unit.xml and samples.xml, because their names do not contain junit or test.
+          auto-discovery: "false"
+          tags: go:${{ steps.setup-go.outputs.go-version }},arch:${{ runner.arch }},os:${{ runner.os }},test.source.file:*
       - name: Determine simple go version
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
         id: go
@@ -256,7 +309,7 @@ jobs:
           echo "version=$(echo '${{ steps.setup-go.outputs.go-version }}' | cut -d'.' -f1,2)" >> "${GITHUB_OUTPUT}"
       - name: Upload coverage report
         if: github.event_name != 'merge_group' && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-unit+go${{ steps.go.outputs.version }}+${{ runner.os }}+${{ runner.arch }}
           path: |-
@@ -293,7 +346,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Upload benchmark report (raw)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           if-no-files-found: error
           name: benchmarks-${{ matrix.run_number }}.txt
@@ -312,7 +365,7 @@ jobs:
           go-version: stable
           cache-dependency-path: "**/go.mod"
       - name: Download benchmark reports (raw)
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: benchmarks-*.txt
           path: ${{ runner.temp }}
@@ -376,7 +429,7 @@ jobs:
           E2E_TEST_TIMEOUT: 12m
       - name: Upload E2E artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: e2e-artifacts-${{ matrix.runs-on }}-go${{ matrix.go-version }}
           path: |
@@ -426,11 +479,11 @@ jobs:
       matrix: ${{ steps.compute.outputs.matrix }}
     steps:
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v4
         with:
           node-version: latest
       - name: Download Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: coverage-*
       - name: Compute Matrix
@@ -492,7 +545,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - name: Download Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: coverage-*
       - name: Upload coverage to Datadog

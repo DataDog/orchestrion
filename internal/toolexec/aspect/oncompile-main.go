@@ -12,6 +12,7 @@ import (
 	"go/ast"
 	"go/format"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -163,7 +164,11 @@ func (w Weaver) OnCompileMain(ctx context.Context, cmd *proxy.CompileCommand) (e
 			log.Debug().Str("import-path", p).Str("archive", archive).Msg("Recording resolved " + linkdeps.Filename + " dependency")
 		}
 
-		for p, resolved := range deps {
+		// Visit the resolved packages in a consistent order: the order in which link-time dependencies
+		// are discovered decides which of them get a blank import below (one that is part of the
+		// closure of an earlier resolution does not), so it must not depend on map iteration order.
+		for _, p := range slices.Sorted(maps.Keys(deps)) {
+			resolved := deps[p]
 			archive := resolved.ExportFile
 			// The package may have its own link-time dependencies we need to resolve.
 			tDeps, err := linkdeps.FromArchive(ctx, archive)

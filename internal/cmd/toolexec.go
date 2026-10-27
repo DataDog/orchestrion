@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
+	"github.com/DataDog/orchestrion/internal/goflags/quoted"
 	"github.com/DataDog/orchestrion/internal/pin"
 	"github.com/DataDog/orchestrion/internal/toolexec"
 	"github.com/DataDog/orchestrion/internal/toolexec/aspect"
@@ -19,6 +21,51 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
 )
+
+// sanitizeGOFLAGS removes the `-toolexec` entry from this process's $GOFLAGS environment variable.
+//
+// The weaving process spawns nested `go` commands (e.g. `go env`, or the `go list -export` run by
+// go/importer's default importer to locate standard library export data). If $GOFLAGS still
+// contains `-toolexec`, these nested commands re-enter the weaving process for every package they
+// build; this is at best needlessly expensive, and at worst breaks the build, as the nested
+// `go list -export` runs with $GOROOT (which is not part of any module) as its working directory.
+// Builds that genuinely need to be woven (e.g. resolving synthetic dependencies) opt back into
+// `-toolexec` explicitly in their build flags, so they are unaffected.
+func sanitizeGOFLAGS(log *zerolog.Logger) {
+	goFlags := os.Getenv("GOFLAGS")
+	if goFlags == "" {
+		return
+	}
+
+	entries, err := quoted.Split(goFlags)
+	if err != nil {
+		log.Warn().Str("GOFLAGS", goFlags).Err(err).Msg("Failed to interpret quoted strings in $GOFLAGS; leaving it untouched")
+		return
+	}
+
+	filtered := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if strings.HasPrefix(entry, "-toolexec") || strings.HasPrefix(entry, "--toolexec") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	if len(filtered) == len(entries) {
+		return // No `-toolexec` entry, nothing to do.
+	}
+
+	joined, err := quoted.Join(filtered)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to re-quote $GOFLAGS; leaving it untouched")
+		return
+	}
+
+	if err := os.Setenv("GOFLAGS", joined); err != nil {
+		log.Warn().Err(err).Msg("Failed to update $GOFLAGS")
+		return
+	}
+	log.Trace().Str("GOFLAGS", joined).Msg("Removed -toolexec from $GOFLAGS for this process")
+}
 
 func joinCommandCloseError(result error, closeErr error) error {
 	if closeErr == nil {
@@ -33,6 +80,16 @@ func joinCommandCloseError(result error, closeErr error) error {
 	return errors.Join(result, closeErr)
 }
 
+// relaxGarbageCollection makes the garbage collector run less often, unless the user configured it
+// (GOGC or GOMEMLIMIT): toolexec processes are short-lived and allocation-heavy. Unlike setting GOGC,
+// this leaves the go toolchain commands they run unaffected.
+func relaxGarbageCollection() {
+	if os.Getenv("GOGC") != "" || os.Getenv("GOMEMLIMIT") != "" {
+		return
+	}
+	debug.SetGCPercent(400)
+}
+
 var Toolexec = &cli.Command{
 	Name:            "toolexec",
 	Usage:           "Standard `-toolexec` plugin for the Go toolchain",
@@ -40,7 +97,10 @@ var Toolexec = &cli.Command{
 	Args:            true,
 	SkipFlagParsing: true,
 	Action: func(clictx *cli.Context) (resErr error) {
+		relaxGarbageCollection()
+
 		log := zerolog.Ctx(clictx.Context)
+		sanitizeGOFLAGS(log)
 		importPath := os.Getenv("TOOLEXEC_IMPORTPATH")
 
 		span, ctx := tracer.StartSpanFromContext(clictx.Context, "toolexec",
@@ -69,12 +129,15 @@ var Toolexec = &cli.Command{
 			return err
 		}
 
-		// Ensure Orchestrion is properly pinned
-		if err := pin.AutoPinOrchestrion(ctx, clictx.App.Writer, clictx.App.ErrWriter); err != nil {
-			return cli.Exit(err, -1)
-		}
-
 		if proxyCmd.ShowVersion() {
+			// Verify the pin only here: the go command runs `<tool> -V=full` before any compile or link (see
+			// cmd/go/internal/work.(*Builder).toolID), so this covers every go command, without repeating
+			// the check (and the `go list` it runs) for each compiled package.
+			log.Trace().Strs("command", proxyCmd.Args()).Msg("Verifying orchestrion is pinned in go.mod")
+			if err := pin.AutoPinOrchestrion(ctx, clictx.App.Writer, clictx.App.ErrWriter); err != nil {
+				return cli.Exit(err, -1)
+			}
+
 			log.Trace().Strs("command", proxyCmd.Args()).Msg("Toolexec version command")
 			fullVersion, err := toolexec.ComputeVersion(ctx, proxyCmd)
 			if err != nil {

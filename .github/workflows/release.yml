@@ -7,10 +7,16 @@ on:
     paths: [internal/version/version.go]
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published release tag to repair (for example, v1.13.1)'
+        required: true
+        type: string
 permissions: read-all
 jobs:
   validate:
-    if: github.event_name != 'release'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     name: Validate Release
     runs-on: ubuntu-latest
     permissions:
@@ -80,56 +86,47 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
   release:
-    if: github.event_name == 'release'
+    if: >-
+      github.repository == 'DataDog/orchestrion' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
     name: Tag Release
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-tags-${{ github.event.release.tag_name || inputs.tag }}
+      cancel-in-progress: false
     permissions:
-      contents: write # To be able to create new tags
+      contents: read
+      id-token: write # Obtain a repository-scoped GitHub App token through dd-octo-sts.
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
-      - name: Checkout
+      # Keep automation from the workflow revision, including when repairing an older release
+      # through workflow_dispatch on main. The helper reads release metadata with git show.
+      - name: Checkout automation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
         with:
-          ref: ${{ github.event.release.target_commitish }}
-      - name: Setup go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5
-        with:
-          go-version: oldstable
-          cache-dependency-path: '**/go.mod'
-      - name: Configure git
+          persist-credentials: false
+      - name: Resolve published release
+        id: release
         env:
-          AUTHOR_NAME: ${{ github.event.release.author.name || 'Github Actions' }}
-          AUTHOR_EMAIL: ${{ github.event.release.author.email || 'github-actions@github.com' }}
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ github.event_name == 'release' && github.sha || '' }}
         run: |-
-          git config --global user.name "${AUTHOR_NAME}"
-          git config --global user.email "${AUTHOR_EMAIL}"
+          set -euo pipefail
+          source _tools/tag-submodules.sh
+          sha=$(resolve_release "${RELEASE_TAG}")
+          if [[ -n "${EXPECTED_SHA}" && "${sha}" != "${EXPECTED_SHA}" ]]; then
+            printf 'Root tag does not match the release event commit.\n' >&2
+            exit 1
+          fi
+          echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
+      - name: Get GitHub token (DataDog/orchestrion)
+        id: generate-token
+        uses: DataDog/dd-octo-sts-action@c85802a58e202b7e764b5441e4378c76043c8108 # v1.0.5
+        with:
+          scope: DataDog/orchestrion
+          policy: ${{ github.event_name == 'release' && 'self.github.release.published' || 'self.github.release.manual' }}
       - name: Tag all submodules
         env:
-          EVENT_TAG: ${{ github.event.release.tag_name }}
-        run: |-
-          find . -iname go.mod -not -path '*/_*' -print0 | while IFS= read -r -d '' gomod; do
-            dir=$(dirname "${gomod}")
-            mod=$(go -C "${dir}" list -m)
-            case "${mod}" in
-              github.com/DataDog/orchestrion)
-                # This is the main module, the release already tagged it
-                continue
-                ;;
-              github.com/DataDog/orchestrion/*)
-                # This is a submodule, we'll publish it if the prefix matches the directory name
-                echo "Found sub-module: ${mod} in ${gomod}"
-                suffix="${mod#'github.com/DataDog/orchestrion/'}"
-                if [ "${suffix}" != "${dir#'./'}" ]; then
-                  echo "-> Ignoring submodule with mismatched directory path and suffix: ${dir#'./'} != ${suffix}"
-                  continue
-                fi
-                tag="${suffix}/${EVENT_TAG}"
-                echo "-> Adding required submodule tag: ${tag}"
-                git tag -m "${EVENT_TAG}" "${tag}"
-                git push origin "${tag}"
-                ;;
-              *)
-                # This is not a submodule, we'll skip it
-                echo "-> Ignorning non-submodule: ${mod} in ${gomod}"
-                ;;
-            esac
-          done
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: bash _tools/tag-submodules.sh "${RELEASE_TAG}" "${RELEASE_SHA}"

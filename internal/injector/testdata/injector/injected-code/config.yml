@@ -1,0 +1,27 @@
+%YAML 1.1
+---
+aspects:
+  # Injects a function that only the next aspect matches on: the latter must be applied to it, even
+  # though the original file does not contain its directive.
+  - id: inject
+    join-point:
+      function-body:
+        function:
+          - name: main
+    advice:
+      - inject-declarations:
+          template: |-
+            //dd:mark
+            func injected() {}
+  - id: mark
+    join-point:
+      function-body:
+        directive: 'dd:mark'
+    advice:
+      - prepend-statements:
+          template: print("marked")
+
+code: |-
+  package main
+
+  func main() {}

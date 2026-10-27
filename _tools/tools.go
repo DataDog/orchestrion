@@ -11,4 +11,5 @@ import (
 	// Tool dependencies
 	_ "github.com/google/go-licenses/v2"
 	_ "golang.org/x/perf/cmd/benchstat" // Used in GitHub Workflow validate.yml
+	_ "gotest.tools/gotestsum"          // Used in GitHub Workflow validate.yml
 )

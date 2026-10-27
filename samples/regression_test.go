@@ -37,9 +37,9 @@ var (
 func TestSamples(t *testing.T) {
 	t.Parallel()
 
-	config, err := config.NewLoader(nil, samplesDir, false).Load(context.Background())
+	rootConfig, err := config.NewLoader(nil, samplesDir, false).Load(context.Background())
 	require.NoError(t, err)
-	aspects := config.Aspects()
+	aspects := rootConfig.Aspects()
 
 	dirs, err := os.ReadDir(samplesDir)
 	require.NoError(t, err)
@@ -53,6 +53,17 @@ func TestSamples(t *testing.T) {
 			t.Parallel()
 
 			pkgDir := filepath.Join(samplesDir, dir)
+
+			// A sample directory can carry its own `orchestrion.tool.go` to enable
+			// integrations that are not enabled by default, such as the
+			// `dd-trace-go/v2/crashtracker` integration. When present, that file
+			// determines the aspect set used for this sample.
+			dirAspects := aspects
+			if _, err := os.Stat(filepath.Join(pkgDir, config.FilenameOrchestrionToolGo)); err == nil {
+				dirConfig, err := config.NewLoader(nil, pkgDir, false).Load(context.Background())
+				require.NoError(t, err)
+				dirAspects = dirConfig.Aspects()
+			}
 
 			testLookup := func(path string) (io.ReadCloser, error) {
 				pkgs, err := packages.Load(
@@ -70,7 +81,7 @@ func TestSamples(t *testing.T) {
 			}
 
 			importMap := make(map[string]string)
-			for _, a := range aspects {
+			for _, a := range dirAspects {
 				for _, i := range a.JoinPoint.ImpliesImported() {
 					importMap[i] = ""
 				}
@@ -87,11 +98,19 @@ func TestSamples(t *testing.T) {
 				ImportMap:  importMap,
 			}
 
-			files, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
+			allFiles, err := filepath.Glob(filepath.Join(pkgDir, "*.go"))
 			require.NoError(t, err)
+			// The `orchestrion.tool.go` file holds configuration, not application
+			// code; it is not subject to injection.
+			files := make([]string, 0, len(allFiles))
+			for _, filename := range allFiles {
+				if filepath.Base(filename) != config.FilenameOrchestrionToolGo {
+					files = append(files, filename)
+				}
+			}
 
-			copyAspects := make([]*aspect.Aspect, len(aspects))
-			copy(copyAspects, aspects)
+			copyAspects := make([]*aspect.Aspect, len(dirAspects))
+			copy(copyAspects, dirAspects)
 
 			results, _, err := inj.InjectFiles(context.Background(), files, copyAspects)
 			require.NoError(t, err)

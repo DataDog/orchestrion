@@ -22,6 +22,7 @@ import (
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/cmd"
+	"github.com/DataDog/orchestrion/internal/files"
 	"github.com/DataDog/orchestrion/internal/jobserver/client"
 	"github.com/DataDog/orchestrion/internal/traceutil"
 	"github.com/DataDog/orchestrion/internal/version"
@@ -267,7 +268,9 @@ func actionSetLogFile(ctx *cli.Context, path string) error {
 	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
 		return err
 	}
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	// Job servers keep their log file open until they shut down, possibly after the build that started
+	// them has completed; this must not prevent removing that file (or its directory) in the meantime.
+	file, err := files.AppendLog(filename)
 	if err != nil {
 		return err
 	}

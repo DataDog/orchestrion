@@ -57,3 +57,50 @@ func TestSplit(t *testing.T) {
 		})
 	}
 }
+
+func TestJoin(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		value   []string
+		want    string
+		wantErr string
+	}{
+		{name: "empty", value: nil, want: ""},
+		{name: "single", value: []string{"-mod=mod"}, want: "-mod=mod"},
+		{name: "multiple", value: []string{"-mod=mod", "-tags=foo"}, want: "-mod=mod -tags=foo"},
+		{name: "space_needs_quoting", value: []string{"-toolexec=orchestrion toolexec"}, want: "'-toolexec=orchestrion toolexec'"},
+		{name: "double_quote_inside", value: []string{`a"b c`}, want: `'a"b c'`},
+		{name: "single_quote_inside", value: []string{"a'b c"}, want: `"a'b c"`},
+		{
+			name:    "both_quotes_inside",
+			value:   []string{`a'b"c`},
+			wantErr: "cannot be quoted",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := Join(test.value)
+			if err != nil {
+				if test.wantErr == "" {
+					t.Fatalf("unexpected error: %v", err)
+				} else if errMsg := err.Error(); !strings.Contains(errMsg, test.wantErr) {
+					t.Fatalf("error %q does not contain %q", errMsg, test.wantErr)
+				}
+				return
+			}
+			if test.wantErr != "" {
+				t.Fatalf("unexpected success; wanted error containing %q", test.wantErr)
+			}
+			if got != test.want {
+				t.Errorf("got %q; want %q", got, test.want)
+			}
+			// Round-trip: Split must recover the original fields.
+			split, err := Split(got)
+			if err != nil {
+				t.Fatalf("Split(%q): %v", got, err)
+			}
+			if !reflect.DeepEqual(split, test.value) {
+				t.Errorf("Split(Join(%q)) = %q; want %q", test.value, split, test.value)
+			}
+		})
+	}
+}

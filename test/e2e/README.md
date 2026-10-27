@@ -8,11 +8,18 @@ End-to-end tests verify complete orchestrion workflows in realistic scenarios.
 test/e2e/
 ├── helpers.go          # Common test utilities
 ├── pgo_test.go         # PGO test
+├── compileloop_test.go # Injected dependency cycle test
 ├── testdata/           # Test applications
-│   └── pgo/            # PGO sample app
+│   ├── pgo/            # PGO sample app
+│   │   ├── main.go
+│   │   ├── go.mod
+│   │   └── orchestrion.tool.go
+│   └── compileloop/    # Injected dependency cycle fixture
 │       ├── main.go
 │       ├── go.mod
-│       └── orchestrion.tool.go
+│       ├── orchestrion.yml
+│       ├── tracer/
+│       └── victim/
 └── [your]_test.go      # Add new test files here
 ```
 

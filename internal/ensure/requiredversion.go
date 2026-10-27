@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -64,12 +65,26 @@ func requiredVersion(
 	}
 
 	rawTag, _ := version.TagInfo()
-	if rVersion == rawTag || rVersion == version.Tag() || (rVersion == "" && path == orchestrionSrcDir) {
+	if rVersion == rawTag || rVersion == version.Tag() || (rVersion == "" && sameDir(path, orchestrionSrcDir)) {
 		// This is the correct version already, so we can proceed without further ado.
 		return nil
 	}
 
 	return IncorrectVersionError{RequiredVersion: rVersion}
+}
+
+// sameDir reports whether a and b designate the same directory, even if they are spelled differently
+// (e.g, one of them goes through a symbolic link).
+func sameDir(a string, b string) bool {
+	if a == b {
+		return true
+	}
+	aInfo, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	bInfo, err := os.Stat(b)
+	return err == nil && os.SameFile(aInfo, bInfo)
 }
 
 // goModVersion returns the version and path of the "github.com/DataDog/orchestrion" module that is

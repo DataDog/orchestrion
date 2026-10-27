@@ -2,11 +2,11 @@
 set -euo pipefail
 
 TMPDIR=$(mktemp -d "${TMPDIR}/make-licenses.XXXXXX")
-trap "rm -rf ${TMPDIR}" EXIT ERR TERM
+trap 'rm -rf "${TMPDIR}"' EXIT ERR TERM
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
-go -C $(dirname "${BASH_SOURCE[0]}") build -o "${TMPDIR}/bin/go-licenses" github.com/google/go-licenses/v2
+go -C "${SCRIPT_DIR}" build -o "${TMPDIR}/bin/go-licenses" github.com/google/go-licenses/v2
 
 # This package somehow breaks the license detection...
 IGNORE_LIST="github.com/DataDog/sketches-go/ddsketch"
@@ -21,13 +21,13 @@ for GOOS in linux darwin windows; do
   for GOARCH in amd64 arm64; do
     SOURCE_DIR="${TMPDIR}/sources-${GOOS}-${GOARCH}"
     echo "Aggregating source files in $(basename "${SOURCE_DIR}") so we can scrape copyright statements later..."
-    GOOS="${GOOS}" GOARCH="${GOARCH}" "${TMPDIR}/bin/go-licenses" save --ignore "${IGNORE_LIST}" --save_path "${SOURCE_DIR}" ./... 2> "${TMPDIR}/errors" || (cat "${TMPDIR}/errors" >&2 && exit -1)
+    GOOS="${GOOS}" GOARCH="${GOARCH}" "${TMPDIR}/bin/go-licenses" save --ignore "${IGNORE_LIST}" --save_path "${SOURCE_DIR}" ./... 2>"${TMPDIR}/errors" || (cat "${TMPDIR}/errors" >&2 && exit 255)
     chmod -R a+rw "${SOURCE_DIR}"
     cp -r "${SOURCE_DIR}"/* "${SOURCES}/"
 
     OUTFILE="${TMPDIR}/LICENSE-3rdparty.${GOOS}-${GOARCH}.csv"
     echo "Building $(basename "${OUTFILE}")"
-    GOOS="${GOOS}" GOARCH="${GOARCH}" "${TMPDIR}/bin/go-licenses" report ./... --ignore "${IGNORE_LIST}" --template ./_tools/licenses.tpl > "${OUTFILE}" 2> "${TMPDIR}/errors" || (cat "${TMPDIR}/errors" >&2 && exit -1)
+    GOOS="${GOOS}" GOARCH="${GOARCH}" "${TMPDIR}/bin/go-licenses" report ./... --ignore "${IGNORE_LIST}" --template ./_tools/licenses.tpl >"${OUTFILE}" 2>"${TMPDIR}/errors" || (cat "${TMPDIR}/errors" >&2 && exit 255)
     LICENSE_FILES+=("${OUTFILE}")
   done
 done

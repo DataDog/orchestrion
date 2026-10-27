@@ -281,10 +281,11 @@ func main() {
 			}
 			g.Line()
 
-			g.Id("err").Op(":=").Id("flagSet").Dot("Parse").Call(jen.Id("args"))
+			// Parsing is delegated to parseToolFlags so that flags introduced by
+			// newer Go toolchains but unknown to this generated flag set are
+			// tolerated and forwarded verbatim instead of failing the build.
 			g.Return(
-				jen.Id("flagSet").Dot("Args").Call(),
-				jen.Id("err"),
+				jen.Id("parseToolFlags").Call(jen.Id("flagSet"), jen.Id("args")),
 			)
 		})
 

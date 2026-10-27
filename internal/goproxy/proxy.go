@@ -54,8 +54,10 @@ func WithToolexec(bin string, args ...string) Option {
 	}
 }
 
-// BuildCmd returns a new exec.BuildCmd that will run the given goArgs, with the given opts applied.
-func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, error) {
+// BuildCmd returns a new exec.Cmd that will run the given goArgs, with the given opts applied. The
+// returned cleanup function must be called once the command has completed: it shuts down the job
+// server started for the command (if any), and waits for its shutdown to complete.
+func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (_ *exec.Cmd, cleanup func(), _ error) {
 	log := zerolog.Ctx(ctx)
 
 	var cfg config
@@ -65,12 +67,12 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 
 	goArgs, err := processDashC(ctx, goArgs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	goBin, err := goenv.GoBinPath()
 	if err != nil {
-		return nil, fmt.Errorf("locating 'go' binary: %w", err)
+		return nil, nil, fmt.Errorf("locating 'go' binary: %w", err)
 	}
 
 	// Pre-allocate space for extra arguments...
@@ -87,6 +89,7 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 		serverStartErr error
 		env            = os.Environ()
 	)
+	cleanup = func() {}
 	if len(argv) > 1 {
 		switch cmd := argv[1]; cmd {
 		// "go build" arguments are shared by build, clean, get, install, list, run, and test.
@@ -104,8 +107,15 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 				argv[3] = cfg.toolexec
 
 				log.Debug().Msg("Starting job server goroutine")
+				serverCtx, stopServer := context.WithCancel(ctx)
 				serverStarted := make(chan struct{})
+				serverStopped := make(chan struct{})
+				cleanup = func() {
+					stopServer()
+					<-serverStopped
+				}
 				go func() {
+					defer close(serverStopped)
 					// We'll need a job server to support toolexec operations
 					log.Debug().Msg("Initializing job server")
 					server, serverStartErr = jobserver.New(ctx, nil)
@@ -117,13 +127,12 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 					log.Debug().Str("url", server.ClientURL()).Msg("Job server started successfully")
 					defer func() {
 						log.Debug().Msg("Shutting down job server")
-						server.Shutdown()
-						log.Trace().Msg(server.CacheStats.String())
+						server.Close()
 						log.Debug().Msg("Job server shut down complete")
 					}()
 					close(serverStarted)
 
-					<-ctx.Done()
+					<-serverCtx.Done()
 					if ctxErr := ctx.Err(); ctxErr != nil {
 						log.Debug().
 							Err(ctxErr).
@@ -145,7 +154,8 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 		}
 	}
 	if serverStartErr != nil {
-		return nil, fmt.Errorf("job server failed to start: %w", serverStartErr)
+		cleanup()
+		return nil, nil, fmt.Errorf("job server failed to start: %w", serverStartErr)
 	}
 
 	log.Trace().Strs("command", argv).Msg("exec")
@@ -155,7 +165,7 @@ func BuildCmd(ctx context.Context, goArgs []string, opts ...Option) (*exec.Cmd, 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return cmd, nil
+	return cmd, cleanup, nil
 }
 
 // Run takes a go command ("build", "install", etc...) with its arguments, and
@@ -165,10 +175,11 @@ func Run(ctx context.Context, goArgs []string, opts ...Option) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	cmd, err := BuildCmd(ctx, goArgs, opts...)
+	cmd, cleanup, err := BuildCmd(ctx, goArgs, opts...)
 	if err != nil {
 		return fmt.Errorf("building command: %w", err)
 	}
+	defer cleanup()
 
 	span, _ := tracer.StartSpanFromContext(ctx, "exec",
 		tracer.ResourceName(cmd.String()),

@@ -119,6 +119,20 @@ to each file.
 If the file already exists, new entries are appended to it, instead of
 clobbering it.
 
+## Memory Usage
+
+By default, Orchestrion's `toolexec` processes run the Go garbage collector less
+often (as if `GOGC=400` was set), because they are short-lived and allocate a
+lot. This makes builds faster, but increases their memory usage, mostly when
+compiling very large packages.
+
+To turn this off, set the `GOGC` or `GOMEMLIMIT` environment variable.
+
+{{<callout type="info">}}
+These variables apply to every Go process in the build, and the Go compiler also
+stops tuning its own garbage collector when either of them is set.
+{{</callout>}}
+
 ## Internal Tracing
 
 Orchestrion itself is built using the Datadog Tracing library for Go. This means

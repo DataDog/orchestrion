@@ -10,7 +10,7 @@ package proxy
 import "flag"
 
 func (f *compileFlagSet) parse(args []string) ([]string, error) {
-	flagSet := flag.NewFlagSet("compile version go1.26", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("compile version go1.27", flag.ContinueOnError)
 	flagSet.Bool("%", false, "debug non-static initializers")
 	flagSet.Bool("+", false, "compiling runtime")
 	flagSet.Bool("B", false, "disable bounds checking")
@@ -79,10 +79,10 @@ func (f *compileFlagSet) parse(args []string) ([]string, error) {
 	flagSet.Bool("t", false, "enable tracing for debugging the compiler")
 	flagSet.String("traceprofile", "", "write an execution trace to file")
 	flagSet.String("trimpath", "", "remove prefix from recorded source file paths")
+	flagSet.Bool("u", false, "emit unsorted warnings/errors")
 	flagSet.Bool("v", false, "increase debug verbosity")
 	flagSet.Bool("w", false, "debug type checking")
 	flagSet.Bool("wb", false, "enable write barrier")
 
-	err := flagSet.Parse(args)
-	return flagSet.Args(), err
+	return parseToolFlags(flagSet, args)
 }

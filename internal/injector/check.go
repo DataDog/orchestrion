@@ -14,14 +14,25 @@ import (
 	"go/types"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	"github.com/DataDog/orchestrion/internal/injector/parse"
 )
 
+// typeCheckResult carries the output of [Injector.typeCheck]: the type information for the
+// package's files, and the importer that was used to resolve package types. The importer is safe
+// for concurrent use, and should be used by advice & join points to resolve types consistently
+// with what the type checker (and, transitively, the compiler) sees.
+type typeCheckResult struct {
+	types.Info
+	Importer types.Importer
+}
+
 // typeCheck runs the Go type checker on the provided files, and returns the
-// Uses type information map that is built in the process.
-func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File) (_ types.Info, err error) {
+// Uses type information map that is built in the process, along with the
+// importer that was used to resolve package types.
+func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []parse.File) (_ typeCheckResult, err error) {
 	span, _ := tracer.StartSpanFromContext(ctx, "Injector.typeCheck")
 	defer func() { span.Finish(tracer.WithError(err)) }()
 
@@ -32,9 +43,10 @@ func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []p
 		Scopes: make(map[ast.Node]*types.Scope),
 	}
 
+	imp := &lockedImporter{imp: importer.ForCompiler(fset, runtime.Compiler, i.Lookup)}
 	checkerCfg := types.Config{
 		GoVersion: i.GoVersion,
-		Importer:  importer.ForCompiler(fset, runtime.Compiler, i.Lookup),
+		Importer:  imp,
 	}
 	checker := types.NewChecker(&checkerCfg, fset, pkg, &typeInfo)
 
@@ -48,13 +60,31 @@ func (i *Injector) typeCheck(ctx context.Context, fset *token.FileSet, files []p
 		// TODO: Ask better error typing from the Go team for the go/types package
 		if strings.Contains(err.Error(), "package requires newer Go version") {
 			// Not returning a type-checking error here, as this error we want to surface directly to the user ourselves.
-			return types.Info{}, fmt.Errorf("orchestrion was built with Go version %s but package %q requires a newer go version, please reinstall and pin orchestrion with a newer Go version: type-checking files: %w", runtime.Version(), i.ImportPath, err)
+			return typeCheckResult{}, fmt.Errorf("orchestrion was built with Go version %s but package %q requires a newer go version, please reinstall and pin orchestrion with a newer Go version: type-checking files: %w", runtime.Version(), i.ImportPath, err)
 		}
 
-		return types.Info{}, typeCheckingError{cause: err}
+		return typeCheckResult{}, typeCheckingError{cause: err}
 	}
 
-	return typeInfo, nil
+	return typeCheckResult{Info: typeInfo, Importer: imp}, nil
+}
+
+// lockedImporter serializes access to a [types.Importer], as the implementations provided by
+// [go/importer] are not safe for concurrent use (they mutate a shared package cache), while the
+// weaving process evaluates files concurrently.
+type lockedImporter struct {
+	mu  sync.Mutex
+	imp types.Importer
+}
+
+var (
+	_ types.Importer = (*lockedImporter)(nil)
+)
+
+func (i *lockedImporter) Import(path string) (*types.Package, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	return i.imp.Import(path)
 }
 
 type typeCheckingError struct {

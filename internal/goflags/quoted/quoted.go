@@ -14,6 +14,7 @@ package quoted
 
 import (
 	"fmt"
+	"strings"
 )
 
 func isSpaceByte(c byte) bool {
@@ -60,4 +61,37 @@ func Split(s string) ([]string, error) {
 		s = s[i:]
 	}
 	return f, nil
+}
+
+// Join joins a list of fields into a single string that can be parsed with [Split]. Fields that
+// contain spaces or quotes are wrapped in single quotes (or double quotes if the field contains a
+// single quote, mirroring [Split]'s acceptance rules; there is no escaping, as [Split] performs no
+// unescaping). It returns an error if a field contains both kinds of quotes, in which case no
+// valid quoting exists.
+func Join(fields []string) (string, error) {
+	var buf []byte
+	for i, field := range fields {
+		if i > 0 {
+			buf = append(buf, ' ')
+		}
+
+		if strings.ContainsAny(field, " \t\n\r'\"") {
+			var quote byte
+			switch {
+			case !strings.ContainsRune(field, '\''):
+				quote = '\''
+			case !strings.ContainsRune(field, '"'):
+				quote = '"'
+			default:
+				return "", fmt.Errorf("field %q contains both single and double quotes and cannot be quoted", field)
+			}
+			buf = append(buf, quote)
+			buf = append(buf, field...)
+			buf = append(buf, quote)
+			continue
+		}
+
+		buf = append(buf, field...)
+	}
+	return string(buf), nil
 }

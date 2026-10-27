@@ -39,6 +39,11 @@ func (mockAdviceContext) ParseSource(src []byte) (*dst.File, error) {
 
 // The rest is not used by the tests as of now...
 
+func (m mockAdviceContext) Importer() types.Importer {
+	assert.FailNow(m.t, "unexpected method call")
+	return nil
+}
+
 func (m mockAdviceContext) ResolveType(dst.Expr) types.Type {
 	assert.FailNow(m.t, "unexpected method call")
 	return nil

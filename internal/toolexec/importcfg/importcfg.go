@@ -32,7 +32,9 @@ type ImportConfig struct {
 	Extras []string
 }
 
-// ParseFile parses the contents of the provided `importcfg` (or `importcfg.link`) file.
+// ParseFile parses the contents of the provided `importcfg` (or `importcfg.link`) file. The maps of
+// the returned [ImportConfig] are never nil, even if the file has no corresponding entries (as is
+// the case for packages that import nothing), so entries can be added to them.
 func ParseFile(ctx context.Context, filename string) (ImportConfig, error) {
 	span, _ := tracer.StartSpanFromContext(ctx, "importcfg.ParseFile",
 		tracer.ResourceName(filename),
@@ -50,6 +52,9 @@ func ParseFile(ctx context.Context, filename string) (ImportConfig, error) {
 
 // ParseFile parses the `importcfg` (or `importcfg.link`) data from the provided reader.
 func parse(r io.Reader) (reg ImportConfig, err error) {
+	reg.PackageFile = make(map[string]string)
+	reg.ImportMap = make(map[string]string)
+
 	scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanLines)
 
@@ -77,9 +82,6 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 				continue
 			}
 
-			if reg.PackageFile == nil {
-				reg.PackageFile = make(map[string]string)
-			}
 			reg.PackageFile[importPath] = archive
 
 		case "importmap":
@@ -89,9 +91,6 @@ func parse(r io.Reader) (reg ImportConfig, err error) {
 				continue
 			}
 
-			if reg.ImportMap == nil {
-				reg.ImportMap = make(map[string]string)
-			}
 			reg.ImportMap[importPath] = mappedTo
 
 		default:

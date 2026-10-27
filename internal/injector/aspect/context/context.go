@@ -53,6 +53,12 @@ type AspectContext interface {
 
 	// ResolveType resolves a dst.Expr to its corresponding types.Type.
 	ResolveType(dst.Expr) types.Type
+
+	// Importer returns the type importer that was used to type-check the files
+	// this node belongs to. It resolves packages exactly as the compiler sees
+	// them (backed by the compilation's importcfg), so it should be preferred
+	// over creating new importers. It may return nil if no importer is available.
+	Importer() types.Importer
 }
 
 type AdviceContext interface {
@@ -96,6 +102,7 @@ type (
 		testMain     bool
 		typeInfo     types.Info
 		nodeMap      map[dst.Node]ast.Node
+		importer     types.Importer
 	}
 
 	SourceParser interface {
@@ -127,6 +134,10 @@ type ContextArgs struct {
 	TypeInfo types.Info
 	// NodeMap maps dst.Node to ast.Node.
 	NodeMap map[dst.Node]ast.Node
+	// Importer is used to resolve the types of packages referenced by qualified
+	// name (e.g. when resolving interfaces used by join points and advice).
+	// If nil, no importer is available to advice and join points.
+	Importer types.Importer
 }
 
 // Context returns a new [*context] instance that represents the node at the
@@ -149,6 +160,7 @@ func (n *NodeChain) Context(ctx gocontext.Context, args ContextArgs) *context {
 		testMain:     args.TestMain,
 		typeInfo:     args.TypeInfo,
 		nodeMap:      args.NodeMap,
+		importer:     args.Importer,
 	}
 
 	return c
@@ -187,6 +199,7 @@ func (c *context) Child(node dst.Node, property string, index int) AdviceContext
 		testMain:     c.testMain,
 		typeInfo:     c.typeInfo,
 		nodeMap:      c.nodeMap,
+		importer:     c.importer,
 	}
 
 	return r
@@ -217,6 +230,7 @@ func (c *context) Parent() AspectContext {
 		importPath: c.importPath,
 		typeInfo:   c.typeInfo,
 		nodeMap:    c.nodeMap,
+		importer:   c.importer,
 	}
 
 	return p
@@ -244,6 +258,13 @@ func (c *context) Package() string {
 
 func (c *context) TestMain() bool {
 	return c.testMain
+}
+
+// Importer returns the importer used to type-check the files this node belongs
+// to, so that types can be resolved consistently with what the compiler sees.
+// It may be nil when no type-checking importer is available.
+func (c *context) Importer() types.Importer {
+	return c.importer
 }
 
 func (c *context) ParseSource(bytes []byte) (*dst.File, error) {

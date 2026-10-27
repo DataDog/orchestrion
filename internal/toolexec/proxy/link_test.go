@@ -35,6 +35,17 @@ func TestParseLink(t *testing.T) {
 			},
 			inputs: []string{"/buildDir/b001/_pkg_.a"},
 		},
+		"unknown_flag": {
+			// Unknown flags (e.g. `-exportfd` in Go 1.28) must be tolerated and
+			// forwarded verbatim; known flags are still parsed.
+			input: []string{"/path/link", "-o", "/buildDir/b001/exe/a.out", "-exportfd=4", "-importcfg", "/buildDir/b001/importcfg.link", "-buildmode=exe", "/buildDir/b001/_pkg_.a"},
+			flags: linkFlagSet{
+				ImportCfg: "/buildDir/b001/importcfg.link",
+				Output:    "/buildDir/b001/exe/a.out",
+				BuildMode: "exe",
+			},
+			inputs: []string{"/buildDir/b001/_pkg_.a"},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			cmd, err := parseLinkCommand(context.Background(), tc.input)
@@ -43,6 +54,8 @@ func TestParseLink(t *testing.T) {
 			c := cmd.(*LinkCommand)
 			require.True(t, reflect.DeepEqual(tc.flags, c.Flags))
 			require.Equal(t, tc.inputs, c.Inputs)
+			// Unknown flags must be forwarded verbatim to the proxied tool.
+			require.Equal(t, tc.input, cmd.Args())
 		})
 	}
 }
