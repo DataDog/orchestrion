@@ -89,3 +89,9 @@ Building applications with `orchestrion` allows you to maximize coverage for
 automatic protection against SQL Injection attacks.
 
 [asm-for-go]: https://docs.datadoghq.com/security/application_security/threats/setup/threat_detection/go/
+
+## Using the OpenTelemetry API
+
+Set `DD_TRACE_OTEL_ENABLED` to `true` to make the OpenTelemetry API use the spans
+that `orchestrion` creates. See the
+[OpenTelemetry API section of the Trace Customization page](../custom-trace/#opentelemetry-api).
