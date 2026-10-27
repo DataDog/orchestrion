@@ -1,0 +1,190 @@
+meta:
+  name: github.com/DataDog/orchestrion/runtime/context
+  description: Propagates values pushed on one goroutine to goroutines it spawns, without threading them through every intervening function signature.
+
+aspects:
+  - id: context.gls
+    tracer-internal: true
+    join-point:
+      struct-definition: runtime.g
+    advice:
+      - add-struct-field:
+          name: __dd_orchestrion_ctx
+          type: any
+      - add-struct-field:
+          name: __dd_orchestrion_ctx_pending
+          type: any
+      - add-struct-field:
+          name: __dd_orchestrion_ctx_pending_set
+          type: bool
+      - add-blank-import: unsafe
+      - inject-declarations:
+          imports:
+            orchestrionatomic: internal/runtime/atomic
+            orchestrionunsafe: unsafe
+          template: |-
+            // The callback is published by runtime/context after its first
+            // registration. Keeping it in an atomic pointer makes concurrent
+            // init-time goroutine creation race-free while preserving a nil
+            // fast path when nobody registered propagation hooks.
+            var __dd_orchestrion_ctx_go orchestrionatomic.Pointer[byte]
+
+            //go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get
+            var __dd_orchestrion_ctx_get = func() any {
+              return getg().m.curg.__dd_orchestrion_ctx
+            }
+
+            //go:linkname __dd_orchestrion_ctx_set __dd_orchestrion_ctx_set
+            var __dd_orchestrion_ctx_set = func(val any) {
+              getg().m.curg.__dd_orchestrion_ctx = val
+            }
+
+            //go:linkname __dd_orchestrion_ctx_set_go __dd_orchestrion_ctx_set_go
+            var __dd_orchestrion_ctx_set_go = func(hook orchestrionunsafe.Pointer) {
+              __dd_orchestrion_ctx_go.Store((*byte)(hook))
+            }
+
+            // __dd_orchestrion_ctx_prepare_go runs on the parent user g, before
+            // newproc switches to g0. Arbitrary hook code must never run from
+            // systemstack or while runtime locks are held (e.g. gcBgMarkStartWorkers
+            // spawns GC workers with an m lock deliberately held: a hook that
+            // blocks, contends a lock, or parks there would hit
+            // throw("schedule: holding locks")). Skipping propagation into
+            // runtime-internal goroutines is intended behavior, and mallocing
+            // is covered by locks in practice but checked explicitly anyway.
+            func __dd_orchestrion_ctx_prepare_go(gp *g) bool {
+              if gp != gp.m.curg || gp.m.locks != 0 || gp.m.mallocing != 0 {
+                return false
+              }
+              hookPtr := __dd_orchestrion_ctx_go.Load()
+              if hookPtr == nil {
+                return false
+              }
+              hook := (*func(any) any)(orchestrionunsafe.Pointer(hookPtr))
+              gp.__dd_orchestrion_ctx_pending = (*hook)(gp.__dd_orchestrion_ctx)
+              gp.__dd_orchestrion_ctx_pending_set = true
+              return true
+            }
+
+            func __dd_orchestrion_ctx_clear_go(gp *g) {
+              gp.__dd_orchestrion_ctx_pending = nil
+              gp.__dd_orchestrion_ctx_pending_set = false
+            }
+
+            // __dd_orchestrion_ctx_attach_go runs immediately after newproc1,
+            // still on g0, and only moves the already-computed blob onto the
+            // child. It deliberately does not invoke user code.
+            func __dd_orchestrion_ctx_attach_go(newg *g) *g {
+              // newproc1 runs on g0; m.curg is the suspended parent user g.
+              parent := getg().m.curg
+              // Goroutines the runtime creates for itself (runtime.AddCleanup's
+              // cleanup worker, the finalizer goroutine, ensureSigM, ...) never
+              // inherit context even when they are created on a user goroutine
+              // with no locks held: misattributed context would follow them and
+              // anything they spawn for the life of the process.
+              // isSystemGoroutine classifies coroutine gs (corostart) as user
+              // goroutines, so iter.Pull propagation is unaffected.
+              if parent != nil && parent.__dd_orchestrion_ctx_pending_set && !isSystemGoroutine(newg, false) {
+                newg.__dd_orchestrion_ctx = parent.__dd_orchestrion_ctx_pending
+              }
+              return newg
+            }
+
+  - id: context.gls.scrub
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: goexit1
+    advice:
+      - prepend-statements:
+          template: |-
+            getg().__dd_orchestrion_ctx = nil
+            getg().__dd_orchestrion_ctx_pending = nil
+            getg().__dd_orchestrion_ctx_pending_set = false
+
+  # Coroutines (iter.Pull/iter.Pull2) are created by a direct newproc1 call in
+  # runtime.newcoro, bypassing newproc's prepare hook. newcoro runs on the
+  # creating user g, where the same prepare/clear dance is safe, and the
+  # context.goroutine.attach aspect below wraps newcoro's own newproc1 call,
+  # so the coroutine g receives the parent's context.
+  - id: context.coroutine.prepare
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: newcoro
+    advice:
+      - prepend-statements:
+          template: |-
+            if gp := getg(); __dd_orchestrion_ctx_prepare_go(gp) {
+              defer __dd_orchestrion_ctx_clear_go(gp)
+            }
+
+  # Unlike plain goroutines, a finished coroutine's g dies through
+  # runtime.gdestroy (from coroswitch_m) instead of goexit1, so the scrub
+  # above does not run for it. Clear the storage there too so a recycled g
+  # can never observe a stale coroutine context.
+  - id: context.gls.scrub.destroy
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: gdestroy
+    advice:
+      - prepend-statements:
+          template: |-
+            gp.__dd_orchestrion_ctx = nil
+            gp.__dd_orchestrion_ctx_pending = nil
+            gp.__dd_orchestrion_ctx_pending_set = false
+
+  - id: context.goroutine.prepare
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-body:
+            function:
+              - name: newproc
+    advice:
+      - prepend-statements:
+          template: |-
+            if gp := getg(); __dd_orchestrion_ctx_prepare_go(gp) {
+              defer __dd_orchestrion_ctx_clear_go(gp)
+            }
+
+  # context.goroutine.attach wraps every direct newproc1 call in the runtime
+  # (newproc, newcoro, and the unwoven synctest/debugcall paths): with no
+  # pending context it is a no-op, so those latter paths simply get no
+  # propagation instead of stale data.
+
+  - id: context.goroutine.attach
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: runtime
+        - function-call: newproc1
+    advice:
+      - wrap-expression:
+          template: __dd_orchestrion_ctx_attach_go({{ . }})
+
+  - id: context.main
+    tracer-internal: true
+    join-point:
+      all-of:
+        - import-path: main
+        - function-body:
+            function:
+              - name: main
+              - receiver: false
+    advice:
+      - prepend-statements:
+          template: orchestrionctx.Bootstrap()
+          imports:
+            orchestrionctx: github.com/DataDog/orchestrion/runtime/context

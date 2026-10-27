@@ -28,6 +28,180 @@ import (
 	"golang.org/x/tools/cover"
 )
 
+func TestRuntimeContextPropagation(t *testing.T) {
+	run := runner{dir: t.TempDir()}
+	writeFile := func(name, contents string) {
+		t.Helper()
+		path := filepath.Join(run.dir, filepath.FromSlash(name))
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	writeFile("go.mod", `module example.com/runtimecontext
+
+go 1.25
+
+require github.com/DataDog/orchestrion v0.0.0
+
+replace github.com/DataDog/orchestrion => `+rootDir+"\n")
+	writeFile("orchestrion.tool.go", `//go:build tools
+
+package tools
+
+import (
+	_ "github.com/DataDog/orchestrion"
+	_ "github.com/DataDog/orchestrion/runtime/context"
+)
+`)
+	writeFile("main.go", `package main
+
+import (
+	"iter"
+	"runtime"
+	"time"
+)
+
+import orchestrionctx "github.com/DataDog/orchestrion/runtime/context"
+
+type hooks struct{}
+func (hooks) Main() *orchestrionctx.Stack[string] { return new(orchestrionctx.Stack[string]) }
+func (hooks) Go(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] {
+	if expectEvaluated && !argumentEvaluated { panic("Hooks.Go ran before argument evaluation") }
+	if panicInHook { panic(hookPanic{}) }
+	if blockInHook { time.Sleep(50 * time.Millisecond) }
+	if parent == nil { return new(orchestrionctx.Stack[string]) }
+	child := append(orchestrionctx.Stack[string](nil), (*parent)...)
+	return &child
+}
+func (hooks) ChanSend(parent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] {
+	if parent == nil { return new(orchestrionctx.Stack[string]) }
+	child := append(orchestrionctx.Stack[string](nil), (*parent)...)
+	return &child
+}
+func (hooks) ChanRecv(_ *orchestrionctx.Stack[string], sent *orchestrionctx.Stack[string]) *orchestrionctx.Stack[string] { return sent }
+
+var controller = orchestrionctx.Register[string](hooks{})
+var expectEvaluated, argumentEvaluated, panicInHook, blockInHook bool
+
+type argumentPanic struct{}
+type hookPanic struct{}
+
+func evaluatedArgument(ch chan struct{}) chan struct{} { argumentEvaluated = true; return ch }
+func panicArgument() int { panic(argumentPanic{}) }
+func shouldNotRun(int) { panic("goroutine started despite argument panic") }
+
+func main() {
+	controller.Push("parent")
+	done := make(chan string, 1)
+	go func(ch chan<- string) {
+		value, ok := controller.Peek()
+		if !ok { panic("child context missing") }
+		ch <- value
+	}(done)
+	controller.Pop()
+	if value := <-done; value != "parent" { panic("wrong child context: " + value) }
+
+	// runtime.newproc must dispatch Hooks.Go after native argument evaluation.
+	evaluatedDone := make(chan struct{})
+	expectEvaluated = true
+	go func(ch chan struct{}) { close(ch) }(evaluatedArgument(evaluatedDone))
+	expectEvaluated = false
+	<-evaluatedDone
+
+	// A native argument panic occurs on the parent before runtime.newproc.
+	recovered := func() (recovered any) {
+		defer func() { recovered = recover() }()
+		go shouldNotRun(panicArgument())
+		return nil
+	}()
+	if _, ok := recovered.(argumentPanic); !ok { panic("argument panic did not occur on parent") }
+
+	// Hooks.Go also runs on the parent and retains its original panic value.
+	panicInHook = true
+	recovered = func() (recovered any) {
+		defer func() { recovered = recover() }()
+		go func() { panic("goroutine started despite Hooks.Go panic") }()
+		return nil
+	}()
+	panicInHook = false
+	if _, ok := recovered.(hookPanic); !ok { panic("Hooks.Go panic did not occur on parent") }
+
+	// The runtime spawns background GC workers with internal locks held
+	// (runtime.gcBgMarkStartWorkers); Hooks.Go must never be dispatched there.
+	// blockInHook makes the hook park, which would fatal-throw via
+	// "schedule: holding locks" if the prepare guard were missing. Raising
+	// GOMAXPROCS first forces *new* mark workers to be spawned on the next
+	// cycles (an already-run GC would otherwise just reuse the existing ones).
+	blockInHook = true
+	oldProcs := runtime.GOMAXPROCS(64)
+	for range 6 {
+		runtime.GC()
+	}
+	runtime.GOMAXPROCS(oldProcs)
+	blockInHook = false
+
+	// Goroutines the runtime creates for itself on a user goroutine with no
+	// locks held (runtime.AddCleanup's cleanup worker is the reproducible one)
+	// must not inherit the creating goroutine's context either.
+	controller.Push("request-span")
+	target := new(int)
+	cleanupSawContext := make(chan bool, 1)
+	runtime.AddCleanup(target, func(ctl *orchestrionctx.Controller[string]) {
+		_, ok := ctl.Peek()
+		cleanupSawContext <- ok
+	}, controller)
+	target = nil
+	for range 3 {
+		runtime.GC()
+	}
+	select {
+	case sawContext := <-cleanupSawContext:
+		if sawContext { panic("runtime cleanup goroutine inherited user context") }
+	case <-time.After(10 * time.Second):
+		panic("cleanup never ran; cannot verify runtime goroutines get no context")
+	}
+	controller.Pop()
+
+	// The goroutine backing an iter.Pull coroutine (runtime.newcoro) also
+	// propagates context, and must be scrubbed when the coroutine's g is
+	// destroyed (runtime.gdestroy) rather than leaking into a recycled g.
+	controller.Push("coro")
+	next, stop := iter.Pull(func(yield func(string) bool) {
+		value, ok := controller.Peek()
+		if ok {
+			yield(value)
+		}
+	})
+	if value, ok := next(); !ok || value != "coro" { panic("wrong or missing coroutine context") }
+	stop()
+	controller.Pop()
+
+	// Exercise reused goroutines after the parent stack has been emptied. Every
+	// child must receive the new empty blob, never storage retained by a prior g.
+	for range 1000 {
+		clean := make(chan bool, 1)
+		go func() { _, ok := controller.Peek(); clean <- !ok }()
+		if !<-clean { panic("stale context observed") }
+	}
+}
+`)
+	writeFile("noreg/main.go", `package main
+
+import _ "github.com/DataDog/orchestrion/runtime/context"
+
+func main() {
+	done := make(chan struct{})
+	go func() { close(done) }()
+	<-done
+}
+`)
+
+	run.exec(t, "go", "mod", "tidy")
+	orchestrion := buildOrchestrion(t)
+	run.exec(t, orchestrion, "go", "run", ".")
+	run.exec(t, orchestrion, "go", "run", "./noreg")
+}
+
 func TestSyntheticLinkDependencyUsesTestVariant(t *testing.T) {
 	run := runner{dir: t.TempDir()}
 	writeFile := func(name, contents string) {
