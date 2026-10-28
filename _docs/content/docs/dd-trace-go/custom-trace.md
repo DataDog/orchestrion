@@ -236,7 +236,10 @@ Code that uses the OpenTelemetry API works in an application built with
   from the `context.Context` that you give to `Start`.
 
 In both cases, pass the context that contains the span, for example
-`r.Context()`. Code that passes `context.Background()` starts a new trace.
+`r.Context()`. Without `SetTracerProvider`, a span started with
+`context.Background()` can take the active Datadog span of the goroutine
+as parent, as Datadog spans do. With the OpenTelemetry SDK, it starts a
+new trace.
 
 ```go
 package demo
