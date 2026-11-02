@@ -191,7 +191,7 @@ jobs:
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@48e36f54d8da326b83ab061aee2cc5e01b5ca46f # v1.80.6
+        uses: reviewdog/action-actionlint@619a81ec64ff8c0211cd6146eb2b21e8f1d7f440 # v1.81.1
         with:
           reporter: github-check
           level: error
