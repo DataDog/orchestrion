@@ -84,14 +84,14 @@ func cutPositionSuffix(buf []byte) ([]byte, int, bool) {
 	// First, consume the integer at the end of the buffer.
 	pos := 0
 	pow := 1
-	for buf[cutOff] >= '0' && buf[cutOff] <= '9' {
+	for cutOff >= 0 && buf[cutOff] >= '0' && buf[cutOff] <= '9' {
 		pos += pow * int(buf[cutOff]-'0')
 		pow *= 10
 		cutOff--
 	}
 
 	// If there's no ":" before the integer, or there was no digit at all, it was not a position...
-	if buf[cutOff] != ':' || pow == 1 {
+	if cutOff < 0 || buf[cutOff] != ':' || pow == 1 {
 		return buf, 0, false
 	}
 
