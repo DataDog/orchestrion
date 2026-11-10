@@ -1,0 +1,25 @@
+%YAML 1.1
+---
+# Build-tag comments must stay where the toolchain requires them, and the line
+# information of the code below them must be preserved.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: woven
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  //go:build !nonexistenttag
+
+  package test
+
+  func f() { probe() }
+
+  func woven() { after() }
+
+  func probe() int  { return 0 }
+  func after() int  { return 0 }

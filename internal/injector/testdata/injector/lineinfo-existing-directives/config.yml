@@ -1,0 +1,25 @@
+%YAML 1.1
+---
+# A file that already starts with a line directive must keep referring to the
+# directive's virtual file, and the directives added by the injector must start
+# in column one.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: woven
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  //line virtual.go:200
+  package test
+
+  func f() { probe() }
+
+  func woven() { after() }
+
+  func probe() int  { return 0 }
+  func after() int  { return 0 }

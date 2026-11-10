@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+func woven() {
+//line <generated>:1
+  {
+    print("woven")
+  }
+//line input.go:3
+  after()
+}
+
+func F[T any](x T) T {
+//line input.go:5
+  before()
+//line input.go:5
+  return x
+}
+
+func before() int { return 0 }
+func after() int  { return 0 }

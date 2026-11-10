@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# Type parameters must not bypass the line information treatment of one-line
+# function bodies.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: woven
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  package test
+
+  func woven() { after() }
+
+  func F[T any](x T) T { before(); return x }
+
+  func before() int { return 0 }
+  func after() int  { return 0 }

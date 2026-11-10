@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+func woven() {
+//line <generated>:1
+  {
+    print("woven")
+  }
+//line input.go:3
+  after()
+}
+
+func f() int {
+  return /*xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/ target(1)
+}
+
+func following() { before() }
+
+func probe() int          { return 0 }
+func before() int         { return 0 }
+func after() int          { return 0 }
+func target(v ...int) int { return 0 }
