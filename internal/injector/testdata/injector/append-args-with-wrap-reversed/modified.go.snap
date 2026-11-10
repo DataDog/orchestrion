@@ -1,7 +1,12 @@
 //line input.go:1:1
 package test
 
-import "example.com/optlib"
+import (
+  "example.com/optlib"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
 
 //line input.go:5
 func printAll(args []optlib.Option) {
@@ -11,9 +16,9 @@ func printAll(args []optlib.Option) {
 //line input.go:6
       optlib.Sink(
 //line <generated>:1
-        func(opts ...optlib.Option) []optlib.Option {
-          return append(append([]optlib.Option{}, opts...), optlib.Named("woven"))
-        }(
+        __orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
 //line input.go:6
-          args...)...))
+          args),
+//line <generated>:1
+          []optlib.Option{optlib.Named("woven")})...))
 }

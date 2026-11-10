@@ -1,6 +1,10 @@
 //line input.go:1:1
 package test
 
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
 type Flag int
 
 func sink(vals ...Flag) {}
@@ -10,7 +14,9 @@ func flag() Flag { return 1 }
 func printAll(args []Flag) {
   sink(
 //line <generated>:1
-    func(opts ...Flag) []Flag { return append(append([]Flag{}, opts...), flag()) }(
+    __orchestrion_slices.Concat[[]Flag](__orchestrion_slices.Clone[[]Flag](
 //line input.go:10
-      args...)...)
+      args),
+//line <generated>:1
+      []Flag{flag()})...)
 }

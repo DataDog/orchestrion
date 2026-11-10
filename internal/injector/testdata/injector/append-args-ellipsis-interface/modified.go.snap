@@ -1,6 +1,10 @@
 //line input.go:1:1
 package test
 
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
 type P *int
 
 func sink(vals ...any) {}
@@ -10,7 +14,9 @@ func typedNil() any { return (*P)(nil) }
 func printAll(args []any) {
   sink(
 //line <generated>:1
-    func(opts ...any) []any { return append(append([]any{}, opts...), typedNil()) }(
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
 //line input.go:10
-      args...)...)
+      args),
+//line <generated>:1
+      []any{typedNil()})...)
 }

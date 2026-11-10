@@ -6,6 +6,7 @@ import (
 
 //line <generated>:1
   __orchestrion_os "os"
+  __orchestrion_slices "slices"
 )
 
 //line input.go:5
@@ -14,9 +15,9 @@ func tee(ws []io.Writer) io.Writer {
   _ = append
   return io.MultiWriter(
 //line <generated>:1
-    func(opts ...io.Writer) []io.Writer {
-      return append(append([]io.Writer{}, opts...), __orchestrion_os.Stderr)
-    }(
+    __orchestrion_slices.Concat[[]io.Writer](__orchestrion_slices.Clone[[]io.Writer](
 //line input.go:8
-      ws...)...)
+      ws),
+//line <generated>:1
+      []io.Writer{__orchestrion_os.Stderr})...)
 }

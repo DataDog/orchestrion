@@ -1,12 +1,18 @@
 //line input.go:1:1
 package test
 
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
 func sink[T any](vals ...T) {}
 
 func generic[T any](vals []T, extra T) {
   sink(
 //line <generated>:1
-    func(opts ...T) []T { return append(append([]T{}, opts...), extra) }(
+    __orchestrion_slices.Concat[[]T](__orchestrion_slices.Clone[[]T](
 //line input.go:6
-      vals...)...)
+      vals),
+//line <generated>:1
+      []T{extra})...)
 }

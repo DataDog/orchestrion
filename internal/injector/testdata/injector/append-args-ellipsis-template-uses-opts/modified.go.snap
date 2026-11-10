@@ -1,13 +1,20 @@
 //line input.go:1:1
 package test
 
-import "fmt"
+import (
+  "fmt"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
 
 //line input.go:5
 func printAll(opts string, args []any) {
   fmt.Println(
 //line <generated>:1
-    func(opts ...any) []any { return append(append([]any{}, opts...), opts) }(
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
 //line input.go:6
-      args...)...)
+      args),
+//line <generated>:1
+      []any{opts})...)
 }

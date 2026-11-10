@@ -3,17 +3,19 @@ package test
 
 import (
   "fmt"
-  stdslices "slices"
+  __orchestrion_slices "slices"
 )
 
-var contains = stdslices.Contains[[]int, int]
+var contains = __orchestrion_slices.Contains[[]int, int]
 
 func printAll(args []any) {
   stdslices := "shadowed"
   _ = stdslices
   fmt.Println(
 //line <generated>:1
-    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
 //line input.go:13
-      args...)...)
+      args),
+//line <generated>:1
+      []any{"woven"})...)
 }

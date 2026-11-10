@@ -2,18 +2,21 @@
 package test
 
 import (
-  __orchestrion_opts "example.com/opts"
+  opts "example.com/opts"
   "os"
+//line <generated>:1
+  __orchestrion_slices "slices"
 )
 
+//line input.go:8
 var _ = os.Getenv
 
-func printAll(args ...__orchestrion_opts.Option) {
-  __orchestrion_opts.Print(
+func printAll(args ...opts.Option) {
+  opts.Print(
 //line <generated>:1
-    func(opts ...__orchestrion_opts.Option) []__orchestrion_opts.Option {
-      return append(append([]__orchestrion_opts.Option{}, opts...), __orchestrion_opts.Option{Name: "traced"})
-    }(
+    __orchestrion_slices.Concat[[]opts.Option](__orchestrion_slices.Clone[[]opts.Option](
 //line input.go:11
-      args...)...)
+      args),
+//line <generated>:1
+      []opts.Option{opts.Option{Name: "traced"}})...)
 }

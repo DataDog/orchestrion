@@ -1,27 +1,31 @@
 //line input.go:1:1
 package test
 
-import "example.com/optlib"
+import (
+  "example.com/optlib"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
 
 //line input.go:5
 func anySpelled(args []any) {
   optlib.SinkAny(
 //line <generated>:1
-    func(opts ...optlib.AnyAlias) []optlib.AnyAlias {
-      return append(append([]optlib.AnyAlias{}, opts...), "two")
-    }(func(opts ...any) []any { return append(append([]any{}, opts...), 1) }(
+    __orchestrion_slices.Concat[[]optlib.AnyAlias](__orchestrion_slices.Clone[[]optlib.AnyAlias](__orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
 //line input.go:6
-      args...)...)...)
+      args),
+//line <generated>:1
+      []any{1})), []optlib.AnyAlias{"two"})...)
 }
 
+//line input.go:9
 func optSpelled(args []optlib.Option) {
   optlib.SinkOpt(
 //line <generated>:1
-    func(opts ...optlib.OptionAlias) []optlib.OptionAlias {
-      return append(append([]optlib.OptionAlias{}, opts...), optlib.Named("two"))
-    }(func(opts ...optlib.Option) []optlib.Option {
-      return append(append([]optlib.Option{}, opts...), optlib.Named("one"))
-    }(
+    __orchestrion_slices.Concat[[]optlib.OptionAlias](__orchestrion_slices.Clone[[]optlib.OptionAlias](__orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
 //line input.go:10
-      args...)...)...)
+      args),
+//line <generated>:1
+      []optlib.Option{optlib.Named("one")})), []optlib.OptionAlias{optlib.Named("two")})...)
 }

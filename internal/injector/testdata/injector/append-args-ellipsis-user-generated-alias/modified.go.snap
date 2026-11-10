@@ -3,19 +3,21 @@ package test
 
 import (
   "fmt"
-  __orchestrion_user "slices"
+  __orchestrion_slices1 "slices"
   __orchestrion_slices "strings"
 )
 
 var upper = __orchestrion_slices.ToUpper
-var has = __orchestrion_user.Contains[[]int, int]
+var has = __orchestrion_slices1.Contains[[]int, int]
 
 func printAll(args []any) {
   __orchestrion_user := "shadowed"
   _ = __orchestrion_user
   fmt.Println(
 //line <generated>:1
-    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+    __orchestrion_slices1.Concat[[]any](__orchestrion_slices1.Clone[[]any](
 //line input.go:15
-      args...)...)
+      args),
+//line <generated>:1
+      []any{"woven"})...)
 }

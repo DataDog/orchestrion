@@ -14,7 +14,9 @@ func sink(vals ...any) {}
 func printAll(args []any) {
   sink(
 //line <generated>:1
-    func(opts ...any) []any { return append(append([]any{}, opts...), strings.ToUpper("woven")) }(
+    slices.Concat[[]any](slices.Clone[[]any](
 //line input.go:14
-      args...)...)
+      args),
+//line <generated>:1
+      []any{strings.ToUpper("woven")})...)
 }

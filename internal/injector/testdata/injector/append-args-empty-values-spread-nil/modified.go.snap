@@ -1,1 +1,21 @@
-<no changes>
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
+func sink(vals ...any) {}
+
+func sinkControl(vals ...any) {}
+
+func printAll() {
+  sink(nil...)
+  sinkControl(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:9
+      nil),
+//line <generated>:1
+      []any{"woven"})...)
+}
