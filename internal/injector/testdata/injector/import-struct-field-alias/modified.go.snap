@@ -1,0 +1,30 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  tm "time"
+)
+
+type server struct {
+  existing string
+//line <generated>:1
+  traced tm.Duration
+}
+
+//line input.go:12
+func helper() { _ = tm.Now() }
+
+func home() string {
+  tm := "shadowed"
+  _ = tm
+  type server struct {
+    existing string
+//line <generated>:1
+    traced tm.Duration
+  }
+//line input.go:20
+  var s server
+  _ = s
+  return os.Getenv("HOME")
+}

@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  "strings"
+)
+
+func helper(strings *strings.Replacer) {}
+
+func home() string {
+  return strings. //line <generated>:1
+      ToUpper(
+//line input.go:11
+      os.Getenv("HOME"))
+}

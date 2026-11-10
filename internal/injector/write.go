@@ -39,6 +39,11 @@ func (i *Injector) writeModifiedFile(ctx context.Context, decorator *decorator.D
 		return filename, fmt.Errorf("restoring %q: %w", filename, err)
 	}
 
+	// Test instrumentation only: the hook is nil unless a test attached it (see WithRestoreCapture).
+	if hook, ok := ctx.Value(restoreCaptureContextKey{}).(RestoreCaptureFunc); ok {
+		hook(filename, file, decorator.Ast.Nodes, restorer.Ast.Nodes, astFile, decorator.Fset)
+	}
+
 	var buf bytes.Buffer
 	if err := format.Node(&buf, restorer.Fset, astFile); err != nil {
 		return filename, fmt.Errorf("formatting %q: %w", filename, err)

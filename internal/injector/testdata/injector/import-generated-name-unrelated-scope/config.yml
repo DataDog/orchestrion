@@ -1,0 +1,36 @@
+%YAML 1.1
+---
+# C05: a local of the base name in a scope with no reference to the path must
+# not reject the base candidate.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func unrelated() int {
+    __orchestrion_strings := 1
+    return __orchestrion_strings
+  }
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

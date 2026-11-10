@@ -1,0 +1,23 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+  stdslices "slices"
+)
+
+var contains = stdslices.Contains[[]int, int]
+
+func home(format string, args ...any) string {
+  stdslices := "shadowed"
+  _ = stdslices
+  return fmt. //line <generated>:1
+//line input.go:13
+    Sprintf(format,
+//line <generated>:1
+      stdslices.Concat[[]any](
+//line input.go:13
+        args,
+//line <generated>:1
+        []any{"traced"})...)
+}

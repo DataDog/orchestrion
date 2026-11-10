@@ -1,0 +1,23 @@
+//line input.go:1:1
+package test
+
+import (
+//line input.go:6
+  ta "example.com/a/trace"
+  tb "example.com/b/trace"
+)
+
+func helperA(s string) string { return ta.B(s) }
+func helperB(s string) string { return tb.D(s) }
+
+func homeA() string {
+  ta := "shadowed"
+  _ = ta
+  return ta.B("HOME")
+}
+
+func homeB() string {
+  tb := "shadowed"
+  _ = tb
+  return tb.D("%s", "HOME")
+}

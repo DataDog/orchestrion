@@ -1,0 +1,20 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+//line <generated>:1
+  __orchestrion_wire "example.com/wire-format"
+)
+
+//line input.go:8
+func helper(s string) string { return __orchestrion_wire.Wrap(s) }
+
+func home() string {
+  wire := "shadowed"
+  _ = wire
+  return __orchestrion_wire. //line <generated>:1
+          Wrap(
+//line input.go:13
+      os.Getenv("HOME"))
+}

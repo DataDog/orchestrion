@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  str "strings"
+)
+
+type wrong struct{}
+
+func (wrong) ToUpper(s string) string { return s }
+
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  str := wrong{}
+  _ = str
+  return str. //line <generated>:1
+      ToUpper(
+//line input.go:17
+      os.Getenv("HOME"))
+}

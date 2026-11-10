@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+import (
+  opts "example.com/opts"
+  "os"
+)
+
+var _ = os.Getenv
+
+func printAll(args ...opts.Option) {
+  opts.Print(
+//line <generated>:1
+    func(opts ...opts.Option) []opts.Option {
+      return append(append([]opts.Option{}, opts...), opts.Option{Name: "traced"})
+    }(
+//line input.go:11
+      args...)...)
+}

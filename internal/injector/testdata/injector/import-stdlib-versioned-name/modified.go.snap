@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+import (
+//line input.go:5
+  "os"
+//line <generated>:1
+  __orchestrion_rnd "math/rand/v2"
+)
+
+//line input.go:8
+func helper() int { return __orchestrion_rnd.IntN(3) }
+
+func home() {
+//line <generated>:1
+  __orchestrion_rnd.IntN(len(
+//line input.go:11
+    os.Getenv("HOME")))
+}

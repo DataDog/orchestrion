@@ -1,0 +1,38 @@
+%YAML 1.1
+---
+# F05: inject-declarations adds a package-level declaration named like the
+# generated base name: the base is taken, a suffix is used.
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - name: home
+    advice:
+      - inject-declarations:
+          template: var __orchestrion_strings = "package-level"
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

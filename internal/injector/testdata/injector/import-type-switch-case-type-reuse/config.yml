@@ -1,0 +1,31 @@
+%YAML 1.1
+---
+# P2: a type-switch guard variable scopes each clause body only, so a
+# reference in a case type keeps the file's own alias even when the
+# advice requests the import.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            str: strings
+          template: str.ToUpper({{ . }})
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    switch str := any("x").(type) {
+    case *str.Builder:
+      _ = str
+    }
+    return os.Getenv("HOME")
+  }

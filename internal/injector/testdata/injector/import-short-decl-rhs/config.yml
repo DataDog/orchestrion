@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# B15: the injection happens in the initializer of a short declaration that
+# rebinds the alias name: the new variable is not in scope on its own
+# right-hand side, so the file's alias is reused.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := os.Getenv("HOME")
+    return str
+  }

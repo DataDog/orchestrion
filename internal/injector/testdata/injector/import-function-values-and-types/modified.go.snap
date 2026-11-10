@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "net/http"
+  "os"
+  str "strings"
+)
+
+var f = str.ToLower
+var c *http.Client
+
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  str := "shadowed"
+  _ = str
+  return str. //line <generated>:1
+      ToUpper(
+//line input.go:17
+      os.Getenv("HOME"))
+}

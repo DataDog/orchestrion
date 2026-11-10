@@ -1,0 +1,35 @@
+%YAML 1.1
+---
+# A05: an aliased slices import shadowed at a spread call; the generated
+# generic slices.Concat call and every original reference must use one safe
+# alias.
+aspects:
+  - join-point:
+      function-call: fmt.Sprintf
+    advice:
+      - wrap-expression:
+          imports:
+            slices: slices
+          template: |-
+            {{ .AST.Fun }}(
+              {{ index .AST.Args 0 }},
+              slices.Concat[[]any]({{ index .AST.Args 1 }}, []any{"traced"})...)
+
+syntheticReferences:
+  slices: true
+
+code: |-
+  package test
+
+  import (
+    "fmt"
+    stdslices "slices"
+  )
+
+  var contains = stdslices.Contains[[]int, int]
+
+  func home(format string, args ...any) string {
+    stdslices := "shadowed"
+    _ = stdslices
+    return fmt.Sprintf(format, args...)
+  }

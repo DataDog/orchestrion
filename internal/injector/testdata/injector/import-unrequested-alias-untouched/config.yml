@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# P2: an import the advice never requests is not planned: it stays
+# untouched in a modified file, including the file's own parameter
+# shadowing of it.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+code: |-
+  package test
+
+  import (
+    "net/url"
+    "os"
+    "strings"
+  )
+
+  func helper(url *url.URL) string {
+    return url.String() + strings.ToLower("x")
+  }
+
+  func home() string {
+    return os.Getenv("HOME")
+  }

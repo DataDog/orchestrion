@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  str "strings"
+)
+
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  str := "outer"
+  _ = str
+  f := func(str string) string {
+    return str +
+//line <generated>:1
+      str.ToUpper(
+//line input.go:14
+        os.Getenv("HOME"))
+  }
+  return f("x")
+}

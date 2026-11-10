@@ -1,0 +1,42 @@
+%YAML 1.1
+---
+# F03: add-struct-field requests an import for the field type; a local struct
+# definition inside a scope that shadows the alias must still bind to the
+# package.
+import-path: dummy/test/module
+
+aspects:
+  - join-point:
+      struct-definition: dummy/test/module.server
+    advice:
+      - add-struct-field:
+          name: traced
+          type: time.Duration
+
+syntheticReferences:
+  time: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    tm "time"
+  )
+
+  type server struct {
+    existing string
+  }
+
+  func helper() { _ = tm.Now() }
+
+  func home() string {
+    tm := "shadowed"
+    _ = tm
+    type server struct {
+      existing string
+    }
+    var s server
+    _ = s
+    return os.Getenv("HOME")
+  }

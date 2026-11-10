@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# A15: the same two import specs in reverse order, with one name shadowed at the
+# join point: the final alias must be binding-safe regardless of spec order.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+    "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+  func helper2(s string) string { return strings.ToUpper(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

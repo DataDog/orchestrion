@@ -1,0 +1,14 @@
+//line input.go:1:1
+package test
+
+import "time"
+
+//line input.go:5
+type server[time any] struct {
+  existing string
+//line <generated>:1
+  deadline time.Duration
+}
+
+//line input.go:9
+func helper() { _ = time.Now() }

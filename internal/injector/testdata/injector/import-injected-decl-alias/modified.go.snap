@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  str "strings"
+)
+
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  return str. //line <generated>:1
+      ToUpper(
+//line input.go:11
+      os.Getenv("HOME"))
+}
+
+//line <generated>:1
+var str = "package-level"

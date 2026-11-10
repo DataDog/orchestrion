@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  str "strings"
+//line <generated>:1
+  _ "math/cmplx"
+)
+
+//line input.go:8
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  return os.Getenv("HOME")
+}

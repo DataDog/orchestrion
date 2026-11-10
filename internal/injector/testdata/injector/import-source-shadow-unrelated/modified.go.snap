@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  str "strings"
+)
+
+func unrelated() string {
+  str := "shadowed"
+  _ = str
+  return "unrelated"
+}
+
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  return str. //line <generated>:1
+      ToUpper(
+//line input.go:17
+      os.Getenv("HOME"))
+}
