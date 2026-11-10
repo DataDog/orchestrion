@@ -1,0 +1,17 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+func printAll(args []optlib.Option) {
+  optlib.Sink(
+//line <generated>:1
+    func(opts ...optlib.Option) []optlib.Option {
+      return append(append([]optlib.Option{}, opts...), optlib.Named("second"))
+    }(func(opts ...optlib.Option) []optlib.Option {
+      return append(append([]optlib.Option{}, opts...), optlib.Named("first"))
+    }(
+//line input.go:6
+      args...)...)...)
+}

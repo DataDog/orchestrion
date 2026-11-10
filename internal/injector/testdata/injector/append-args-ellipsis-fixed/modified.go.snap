@@ -1,0 +1,14 @@
+//line input.go:1:1
+package test
+
+func sink(tag string, vals ...any) {}
+
+func tag() string { return "fixed" }
+
+func printAll(args []any) {
+  sink(tag(),
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:8
+      args...)...)
+}

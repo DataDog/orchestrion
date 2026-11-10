@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+func sink(vals ...any) {}
+
+func printAll() {
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:6
+      nil...)...)
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:7
+      []any{}...)...)
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:8
+      []any{1, 2}...)...)
+}

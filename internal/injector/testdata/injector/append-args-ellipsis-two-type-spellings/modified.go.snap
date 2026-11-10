@@ -1,0 +1,27 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+func anySpelled(args []any) {
+  optlib.SinkAny(
+//line <generated>:1
+    func(opts ...optlib.AnyAlias) []optlib.AnyAlias {
+      return append(append([]optlib.AnyAlias{}, opts...), "two")
+    }(func(opts ...any) []any { return append(append([]any{}, opts...), 1) }(
+//line input.go:6
+      args...)...)...)
+}
+
+func optSpelled(args []optlib.Option) {
+  optlib.SinkOpt(
+//line <generated>:1
+    func(opts ...optlib.OptionAlias) []optlib.OptionAlias {
+      return append(append([]optlib.OptionAlias{}, opts...), optlib.Named("two"))
+    }(func(opts ...optlib.Option) []optlib.Option {
+      return append(append([]optlib.Option{}, opts...), optlib.Named("one"))
+    }(
+//line input.go:10
+      args...)...)...)
+}

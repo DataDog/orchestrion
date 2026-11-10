@@ -1,0 +1,59 @@
+%YAML 1.1
+---
+# C14 (reversed order): the same replace-function and append-args combination,
+# with append-args applied first. Each value appears once and the file imports
+# slices exactly once.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("woven")
+      - replace-function: example.com/optlib.Redirected
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option, rest ...Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  func sink(vals ...optlib.Option) {}
+
+  func printAll(args []optlib.Option) {
+    sink(args...)
+  }

@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+  stdslices "slices"
+)
+
+var contains = stdslices.Contains[[]int, int]
+
+func printAll(args []any) {
+  stdslices := "shadowed"
+  _ = stdslices
+  fmt.Println(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:13
+      args...)...)
+}

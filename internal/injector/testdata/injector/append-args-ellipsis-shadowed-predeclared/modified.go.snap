@@ -1,0 +1,64 @@
+//line input.go:1:1
+package test
+
+func sink(vals ...any) {}
+
+func withLen(args []any) {
+  len := 1
+  _ = len
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:8
+      args...)...)
+}
+
+func withCap(args []any) {
+  cap := 1
+  _ = cap
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:14
+      args...)...)
+}
+
+func withMake(args []any) {
+  make := 1
+  _ = make
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:20
+      args...)...)
+}
+
+func withCopy(args []any) {
+  copy := 1
+  _ = copy
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:26
+      args...)...)
+}
+
+func withNil(args []any) {
+  nil := 1
+  _ = nil
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:32
+      args...)...)
+}
+
+func withTrue(args []any) {
+  true := false
+  _ = true
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:38
+      args...)...)
+}

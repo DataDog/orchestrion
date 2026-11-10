@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+  __orchestrion_user "slices"
+  __orchestrion_slices "strings"
+)
+
+var upper = __orchestrion_slices.ToUpper
+var has = __orchestrion_user.Contains[[]int, int]
+
+func printAll(args []any) {
+  __orchestrion_user := "shadowed"
+  _ = __orchestrion_user
+  fmt.Println(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:15
+      args...)...)
+}

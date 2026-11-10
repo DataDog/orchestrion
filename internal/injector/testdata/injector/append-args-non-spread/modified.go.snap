@@ -1,0 +1,33 @@
+//line input.go:1:1
+package test
+
+func sink(vals ...any) {}
+
+func id(v any) any { return v }
+
+func zero() {
+  sink(
+//line <generated>:1
+    id(1), id(2))
+}
+
+//line input.go:11
+func one(x any) {
+  sink(x,
+//line <generated>:1
+    id(1), id(2))
+}
+
+//line input.go:15
+func oneCall(x any) {
+  sink(id(x),
+//line <generated>:1
+    id(1), id(2))
+}
+
+//line input.go:19
+func many(x, y, z any) {
+  sink(x, y, z,
+//line <generated>:1
+    id(1), id(2))
+}

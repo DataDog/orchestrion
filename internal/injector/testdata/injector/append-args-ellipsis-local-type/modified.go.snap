@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+type Flag int
+
+func sink(vals ...Flag) {}
+
+func flag() Flag { return 1 }
+
+func printAll(args []Flag) {
+  sink(
+//line <generated>:1
+    func(opts ...Flag) []Flag { return append(append([]Flag{}, opts...), flag()) }(
+//line input.go:10
+      args...)...)
+}

@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# T01: the spread argument is a defined slice type and, separately, a slice
+# alias; the explicit []T helper instantiation must accept both.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  type Options []any
+  type OptAlias = []any
+
+  func sink(vals ...any) {}
+
+  func withDefined(opts Options) {
+    sink(opts...)
+  }
+
+  func withAlias(opts OptAlias) {
+    sink(opts...)
+  }

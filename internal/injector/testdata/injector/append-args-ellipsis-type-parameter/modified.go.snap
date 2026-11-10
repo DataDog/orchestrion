@@ -1,0 +1,12 @@
+//line input.go:1:1
+package test
+
+func sink[T any](vals ...T) {}
+
+func generic[T any](vals []T, extra T) {
+  sink(
+//line <generated>:1
+    func(opts ...T) []T { return append(append([]T{}, opts...), extra) }(
+//line input.go:6
+      vals...)...)
+}

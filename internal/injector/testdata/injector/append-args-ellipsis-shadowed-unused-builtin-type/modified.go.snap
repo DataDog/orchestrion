@@ -1,0 +1,18 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+func printAll(ws []optlib.Option) {
+  any := 1
+  bool := 2
+  _, _ = any, bool
+  optlib.Sink(
+//line <generated>:1
+    func(opts ...optlib.Option) []optlib.Option {
+      return append(append([]optlib.Option{}, opts...), optlib.Named("woven"))
+    }(
+//line input.go:9
+      ws...)...)
+}

@@ -1,0 +1,307 @@
+%YAML 1.1
+---
+# Aspects for the append-args end-to-end fixtures (issue #949). Each sink has
+# its own aspect so every package exercises exactly the shape it asserts on.
+meta:
+  name: append-args
+  description: |-
+    Exercises hygienic append-args weaving on spread and non-spread calls.
+
+aspects:
+  - id: append-args/lib.Sink
+    join-point:
+      function-call: example.com/appendargs/lib.Sink
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.Sink3
+    join-point:
+      function-call: example.com/appendargs/lib.Sink3
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.One()
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Two()
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Three()
+
+  - id: append-args/lib.SinkFixed
+    join-point:
+      function-call: example.com/appendargs/lib.SinkFixed
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.MutSink
+    join-point:
+      function-call: example.com/appendargs/lib.MutSink
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.MutateThenTrace({{ .Function.Argument 0 }})
+
+  - id: append-args/lib.NoopSink
+    join-point:
+      function-call: example.com/appendargs/lib.NoopSink
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values: []
+
+  - id: append-args/lib.SinkCaptureParam
+    join-point:
+      function-call: example.com/appendargs/lib.SinkCaptureParam
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: 'lib.Named({{ .Function.ArgumentOfType "string" }})'
+
+  - id: append-args/lib.SinkCaptureLocal
+    join-point:
+      function-call: example.com/appendargs/lib.SinkCaptureLocal
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named(opts)
+
+  - id: append-args/lib.SinkCalleeWrites
+    join-point:
+      function-call: example.com/appendargs/lib.SinkCalleeWrites
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.Composed
+    join-point:
+      function-call: example.com/appendargs/lib.Composed
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.MutateThenTrace({{ .Function.Argument 0 }})
+  - id: append-args/lib.Composed-second
+    join-point:
+      function-call: example.com/appendargs/lib.Composed
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("second")
+
+  - id: append-args/lib.ComposedEmpty
+    join-point:
+      function-call: example.com/appendargs/lib.ComposedEmpty
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values: []
+  - id: append-args/lib.ComposedEmpty-second
+    join-point:
+      function-call: example.com/appendargs/lib.ComposedEmpty
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.Redirect
+    join-point:
+      function-call: example.com/appendargs/lib.Redirect
+    advice:
+      - replace-function: example.com/appendargs/lib.Redirected
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.RedirectRev
+    join-point:
+      function-call: example.com/appendargs/lib.RedirectRev
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+      - replace-function: example.com/appendargs/lib.Redirected
+
+  - id: append-args/lib.WrapSink
+    join-point:
+      function-call: example.com/appendargs/lib.WrapSink
+    advice:
+      - wrap-expression:
+          imports:
+            lib: example.com/appendargs/lib
+          template: lib.Wrapped({{ . }})
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.WrapSinkRev
+    join-point:
+      function-call: example.com/appendargs/lib.WrapSinkRev
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+      - wrap-expression:
+          imports:
+            lib: example.com/appendargs/lib
+          template: lib.Wrapped({{ . }})
+
+  - id: append-args/lib.PtrSink
+    join-point:
+      function-call: example.com/appendargs/lib.PtrSink
+    advice:
+      - append-args:
+          type: '*example.com/appendargs/lib.Box'
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.NewBox("traced")
+
+  - id: append-args/lib.AnySink
+    join-point:
+      function-call: example.com/appendargs/lib.AnySink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.AnyVal()
+
+  - id: append-args/lib.PanicSink
+    join-point:
+      function-call: example.com/appendargs/lib.PanicSink
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.One()
+
+  - id: append-args/lib.PanicInjSink
+    join-point:
+      function-call: example.com/appendargs/lib.PanicInjSink
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.One()
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.PanicVal()
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Three()
+
+  - id: append-args/lib.GenericSink
+    join-point:
+      function-call: example.com/appendargs/lib.GenericSink
+    advice:
+      - append-args:
+          type: T
+          values:
+            - template: '{{ .Function.Argument 1 }}'
+
+  - id: append-args/lib.GenericSinkE
+    join-point:
+      function-call: example.com/appendargs/lib.GenericSinkE
+    advice:
+      - append-args:
+          type: E
+          values:
+            - template: '{{ .Function.Argument 1 }}'
+
+  - id: append-args/lib.Server.Serve
+    join-point:
+      method-call:
+        receiver: example.com/appendargs/lib.Server
+        name: Serve
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.TupleSink
+    join-point:
+      function-call: example.com/appendargs/lib.TupleSink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.AnyVal()
+
+  - id: append-args/fn-value
+    join-point:
+      function-call: sinkFn
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named("traced")
+
+  - id: append-args/lib.PkgInitSink
+    join-point:
+      function-call: example.com/appendargs/lib.PkgInitSink
+    advice:
+      - append-args:
+          type: example.com/appendargs/lib.Option
+          values:
+            - imports:
+                lib: example.com/appendargs/lib
+              template: lib.Named(lib.Woven)

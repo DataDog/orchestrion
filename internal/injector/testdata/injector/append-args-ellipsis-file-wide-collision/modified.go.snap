@@ -1,0 +1,29 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+  "slices"
+)
+
+func helper2(xs []int) bool {
+  __orchestrion_slices := 1
+  _ = __orchestrion_slices
+  return slices.Contains(xs, 1)
+}
+
+func helper3(xs []int) bool {
+  __orchestrion_slices1 := 1
+  _ = __orchestrion_slices1
+  return slices.Contains(xs, 2)
+}
+
+func printAll(args []any) {
+  slices := "shadowed"
+  _ = slices
+  fmt.Println(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), "woven") }(
+//line input.go:23
+      args...)...)
+}

@@ -1,0 +1,12 @@
+//line input.go:1:1
+package test
+
+func sink[E any](vals ...E) {}
+
+func c[S ~[]E, E any](xs S, extra E) {
+  sink(
+//line <generated>:1
+    func(opts ...E) []E { return append(append([]E{}, opts...), extra) }(
+//line input.go:6
+      xs...)...)
+}

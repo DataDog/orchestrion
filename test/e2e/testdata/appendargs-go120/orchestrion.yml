@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+# Aspects for the go1.20 language fixture: the module stays at go 1.20 and the
+# generated code compiles against the standard library of the toolchain.
+meta:
+  name: append-args-go120
+  description: |-
+    Exercises hygienic append-args weaving on a go 1.20 module.
+
+aspects:
+  - id: append-args/local.Sink
+    join-point:
+      function-call: example.com/appendargs-go120/local.Sink
+    advice:
+      - append-args:
+          type: example.com/appendargs-go120/local.Opt
+          values:
+            - imports:
+                local: example.com/appendargs-go120/local
+              template: local.Named("traced")

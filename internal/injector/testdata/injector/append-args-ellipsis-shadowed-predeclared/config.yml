@@ -1,0 +1,59 @@
+%YAML 1.1
+---
+# H16-H21: caller shadows of len, cap, make, copy, nil and true are in scope at
+# their spread calls. The rewrite needs none of these identifiers, so every
+# subcase must compile and append the value.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink(vals ...any) {}
+
+  func withLen(args []any) {
+    len := 1
+    _ = len
+    sink(args...)
+  }
+
+  func withCap(args []any) {
+    cap := 1
+    _ = cap
+    sink(args...)
+  }
+
+  func withMake(args []any) {
+    make := 1
+    _ = make
+    sink(args...)
+  }
+
+  func withCopy(args []any) {
+    copy := 1
+    _ = copy
+    sink(args...)
+  }
+
+  func withNil(args []any) {
+    nil := 1
+    _ = nil
+    sink(args...)
+  }
+
+  func withTrue(args []any) {
+    true := false
+    _ = true
+    sink(args...)
+  }

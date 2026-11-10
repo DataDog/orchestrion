@@ -1,0 +1,55 @@
+%YAML 1.1
+---
+# T07: the configured type is a pointer type and the injected value is nil; the
+# copy keeps nil elements and the pointer identity of the others.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: '*example.com/optlib.Thing'
+          values:
+            - template: nil
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  func sink(vals ...*optlib.Thing) {}
+
+  func printAll(args []*optlib.Thing) {
+    sink(args...)
+  }

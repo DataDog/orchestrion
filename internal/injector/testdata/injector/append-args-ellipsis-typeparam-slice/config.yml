@@ -1,0 +1,26 @@
+%YAML 1.1
+---
+# T08: the spread argument is a type-parameter slice S (~[]E) and the configured
+# type is E; the slice converts to []E for the explicitly instantiated helpers.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: E
+          values:
+            - template: '{{ .Function.Argument 1 }}'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink[E any](vals ...E) {}
+
+  func c[S ~[]E, E any](xs S, extra E) {
+    sink(xs...)
+  }

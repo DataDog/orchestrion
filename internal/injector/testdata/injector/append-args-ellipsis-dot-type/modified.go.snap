@@ -1,0 +1,13 @@
+//line input.go:1:1
+package test
+
+import . "example.com/optlib"
+
+//line input.go:5
+func printAll(ws []Option) {
+  Sink(
+//line <generated>:1
+    func(opts ...Option) []Option { return append(append([]Option{}, opts...), Named("woven")) }(
+//line input.go:6
+      ws...)...)
+}

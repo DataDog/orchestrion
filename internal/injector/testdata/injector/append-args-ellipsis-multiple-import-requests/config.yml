@@ -1,0 +1,70 @@
+%YAML 1.1
+---
+# H14: two matched calls request the same type/template import path under
+# different spellings, and both request slices; one safe alias per path serves
+# both calls. Owned by the #950 alias planner; kept as a stack-integration
+# guard.
+aspects:
+  - join-point:
+      function-call: example.com/optlib.Sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                a: example.com/optlib
+              template: a.Named("one")
+  - join-point:
+      function-call: example.com/optlib.Sink2
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                b: example.com/optlib
+              template: b.Named("two")
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  func printA(args []optlib.Option) {
+    optlib.Sink(args...)
+  }
+
+  func printB(args []optlib.Option) {
+    optlib.Sink2(args...)
+  }

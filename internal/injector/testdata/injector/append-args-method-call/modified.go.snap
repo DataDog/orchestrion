@@ -1,0 +1,31 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+var srv optlib.Server
+
+func valueCaller(opts []optlib.Option) {
+  append := 1
+  _ = append
+  srv.Serve(
+//line <generated>:1
+    func(opts ...optlib.Option) []optlib.Option {
+      return append(append([]optlib.Option{}, opts...), optlib.Named("woven"))
+    }(
+//line input.go:10
+      opts...)...)
+}
+
+func pointerCaller(p *optlib.Server, opts []optlib.Option) {
+  append := 1
+  _ = append
+  p.Serve(
+//line <generated>:1
+    func(opts ...optlib.Option) []optlib.Option {
+      return append(append([]optlib.Option{}, opts...), optlib.Named("woven"))
+    }(
+//line input.go:16
+      opts...)...)
+}

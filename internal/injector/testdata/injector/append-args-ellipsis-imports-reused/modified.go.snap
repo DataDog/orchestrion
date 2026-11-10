@@ -1,0 +1,20 @@
+//line input.go:1:1
+package test
+
+import (
+  "slices"
+  "strings"
+)
+
+var has = slices.Contains[[]int, int]
+var shout = strings.ToUpper
+
+func sink(vals ...any) {}
+
+func printAll(args []any) {
+  sink(
+//line <generated>:1
+    func(opts ...any) []any { return append(append([]any{}, opts...), strings.ToUpper("woven")) }(
+//line input.go:14
+      args...)...)
+}

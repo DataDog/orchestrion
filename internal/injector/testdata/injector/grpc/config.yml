@@ -29,6 +29,9 @@ aspects:
 
 syntheticReferences:
   gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc: true
+  slices: true
+
+required-lang: go1.18
 
 code: |-
   package test

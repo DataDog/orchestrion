@@ -1,0 +1,39 @@
+%YAML 1.1
+---
+# Z01: zero value templates on a spread call over a nil slice. Advice is a true
+# no-op: the call is not rewritten, no imports are added, and a nil spread
+# stays nil. The positive control proves the file weaves: the same advice with
+# one template is live on the control callee, and only the control call
+# changes.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values: []
+
+  - join-point:
+      function-call: sinkControl
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink(vals ...any) {}
+
+  func sinkControl(vals ...any) {}
+
+  func printAll() {
+    sink(nil...)
+    sinkControl(nil...)
+  }

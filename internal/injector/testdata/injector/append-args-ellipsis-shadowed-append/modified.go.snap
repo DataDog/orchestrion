@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "io"
+
+//line <generated>:1
+  __orchestrion_os "os"
+)
+
+//line input.go:5
+func tee(ws []io.Writer) io.Writer {
+  append := 0
+  _ = append
+  return io.MultiWriter(
+//line <generated>:1
+    func(opts ...io.Writer) []io.Writer {
+      return append(append([]io.Writer{}, opts...), __orchestrion_os.Stderr)
+    }(
+//line input.go:8
+      ws...)...)
+}

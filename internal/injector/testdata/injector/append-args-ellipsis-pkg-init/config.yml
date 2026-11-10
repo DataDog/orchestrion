@@ -1,0 +1,57 @@
+%YAML 1.1
+---
+# E08: a package-level initializer holds the spread call and the injected value
+# reads a package-level variable of another package. The woven code must
+# compile and the initialization order must stay correct.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Woven
+
+syntheticReferences:
+  example.com/optlib: true
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  var args = []any{1, 2}
+
+  var v = sink(args...)
+
+  func sink(vals ...any) []any { return vals }

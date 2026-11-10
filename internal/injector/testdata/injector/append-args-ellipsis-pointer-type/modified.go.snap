@@ -1,0 +1,15 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+func sink(vals ...*optlib.Thing) {}
+
+func printAll(args []*optlib.Thing) {
+  sink(
+//line <generated>:1
+    func(opts ...*optlib.Thing) []*optlib.Thing { return append(append([]*optlib.Thing{}, opts...), nil) }(
+//line input.go:8
+      args...)...)
+}

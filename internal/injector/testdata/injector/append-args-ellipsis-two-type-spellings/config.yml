@@ -1,0 +1,82 @@
+%YAML 1.1
+---
+# C15: two append-args aspects with the same type spelled any against an any
+# alias, and a type against its alias target. The values follow the C10 order.
+aspects:
+  - join-point:
+      function-call: example.com/optlib.SinkAny
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '1'
+  - join-point:
+      function-call: example.com/optlib.SinkAny
+    advice:
+      - append-args:
+          type: example.com/optlib.AnyAlias
+          values:
+            - template: '"two"'
+  - join-point:
+      function-call: example.com/optlib.SinkOpt
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("one")
+  - join-point:
+      function-call: example.com/optlib.SinkOpt
+    advice:
+      - append-args:
+          type: example.com/optlib.OptionAlias
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("two")
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  func anySpelled(args []any) {
+    optlib.SinkAny(args...)
+  }
+
+  func optSpelled(args []optlib.Option) {
+    optlib.SinkOpt(args...)
+  }

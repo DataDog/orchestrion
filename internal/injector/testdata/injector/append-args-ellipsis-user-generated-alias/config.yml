@@ -1,0 +1,37 @@
+%YAML 1.1
+---
+# H12: the user imports strings under the alias __orchestrion_slices and slices
+# under the alias __orchestrion_user, which a local shadows at the join point.
+# A user alias is never treated as generated provenance: the slices import gets
+# its own safe name and the strings import keeps working.
+aspects:
+  - join-point:
+      function-call: fmt.Println
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import (
+    "fmt"
+    __orchestrion_slices "strings"
+    __orchestrion_user "slices"
+  )
+
+  var upper = __orchestrion_slices.ToUpper
+  var has = __orchestrion_user.Contains[[]int, int]
+
+  func printAll(args []any) {
+    __orchestrion_user := "shadowed"
+    _ = __orchestrion_user
+    fmt.Println(args...)
+  }
