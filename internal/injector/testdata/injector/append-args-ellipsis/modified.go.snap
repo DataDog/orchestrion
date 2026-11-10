@@ -3,7 +3,6 @@ package test
 
 import "fmt"
 
-//line input.go:5
 func printAll(args []any) {
   fmt.Println(
 //line <generated>:1

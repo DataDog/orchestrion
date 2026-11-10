@@ -15,5 +15,5 @@ func TestFunction() {
   }
   {
     _ = "4) Authentication: namespace authentication, order 5 (applied 1)"
-  }
+  } /*line input.go:4*/
 }

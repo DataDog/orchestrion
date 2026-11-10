@@ -13,6 +13,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+//line samples/client/gorm.go:15
 	_ "github.com/mattn/go-sqlite3"
 //line <generated>:1
 	__orchestrion_v2 "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"

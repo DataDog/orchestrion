@@ -11,8 +11,9 @@ func woven() {
     print("woven")
   }
 //line input.go:7
-  after()
+  after() /*line input.go:6*/
 }
 
+//line input.go:9
 func probe() int { return 0 }
 func after() int { return 0 }

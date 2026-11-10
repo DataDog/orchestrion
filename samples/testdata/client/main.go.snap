@@ -9,7 +9,9 @@ package main
 import (
 	"context"
 	"fmt"
+//line samples/client/main.go:11
 	"io"
+//line samples/client/main.go:12
 	"net/http"
 	"os"
 	"strings"
@@ -18,10 +20,12 @@ import (
 	__orchestrion_tracer "github.com/DataDog/dd-trace-go/v2/ddtrace/tracer"
 	__orchestrion_env "github.com/DataDog/dd-trace-go/v2/instrumentation/env"
 	__orchestrion_profiler "github.com/DataDog/dd-trace-go/v2/profiler"
+//line <generated>:1
 	__orchestrion_log "log"
 )
 
 //dd:span
+
 //line samples/client/main.go:19
 func main() {
 //line <generated>:1

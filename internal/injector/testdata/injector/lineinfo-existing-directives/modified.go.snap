@@ -1,6 +1,5 @@
 //line input.go:1:1
 //line virtual.go:200
-//line /var/folders/l5/jgf5_gg91fs29vrxnzv0hp780000gp/T/Testlineinfo-existing-directives312267701/001/virtual.go:200
 package test
 
 func f() { probe() }
@@ -10,9 +9,10 @@ func woven() {
   {
     print("woven")
   }
-//line /var/folders/l5/jgf5_gg91fs29vrxnzv0hp780000gp/T/Testlineinfo-existing-directives312267701/001/virtual.go:204
-  after()
+//line virtual.go:204
+  after() /*line virtual.go:203*/
 }
 
+//line virtual.go:206
 func probe() int { return 0 }
 func after() int { return 0 }

@@ -8,7 +8,6 @@ package main
 
 import "github.com/sirupsen/logrus"
 
-//line samples/client/logrus.go:10
 func SampleLogrus() {
 	logger :=
 //line <generated>:1

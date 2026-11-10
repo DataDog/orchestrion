@@ -18,5 +18,5 @@ func TestFunction() {
   }
   {
     _ = "5) Explicit: namespace explicit, order 10 (applied 1)"
-  }
+  } /*line input.go:4*/
 }

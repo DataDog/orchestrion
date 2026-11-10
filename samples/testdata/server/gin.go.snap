@@ -9,6 +9,7 @@ package main
 import (
 	"net/http"
 
+//line samples/server/gin.go:11
 	"github.com/gin-gonic/gin"
 //line <generated>:1
 	__orchestrion_gintrace "github.com/DataDog/dd-trace-go/contrib/gin-gonic/gin/v2"

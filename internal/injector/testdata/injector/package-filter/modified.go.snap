@@ -2,6 +2,7 @@
 package mypackage
 
 import (
+//line input.go:3
   "fmt"
 
 //line <generated>:1

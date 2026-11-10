@@ -7,6 +7,7 @@
 package main
 
 import (
+//line samples/client/ibm_sarama.go:8
 	"github.com/IBM/sarama"
 
 //line <generated>:1

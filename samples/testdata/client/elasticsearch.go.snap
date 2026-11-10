@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 
+//line samples/client/elasticsearch.go:12
 	esv6 "github.com/elastic/go-elasticsearch/v6"
 	esv7 "github.com/elastic/go-elasticsearch/v7"
 	esv8 "github.com/elastic/go-elasticsearch/v8"

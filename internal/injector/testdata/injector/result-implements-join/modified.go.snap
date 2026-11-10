@@ -10,7 +10,7 @@ import (
 )
 
 // Concrete type implementing CustomReader
-//
+
 //line input.go:13
 type myCustomReaderImpl struct {
   data string
@@ -271,6 +271,7 @@ func (gb GenericBuffer[T]) Read(p []byte) (int, error) {
 
   }
   // Simplified implementation
+
 //line input.go:128
   dataStr := fmt.Sprintf("%v", gb.data)
   n := copy(p, []byte(dataStr))

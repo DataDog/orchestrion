@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+//line samples/client/redis.go:13
 	redisv0 "github.com/go-redis/redis"
 	redisv7 "github.com/go-redis/redis/v7"
 	redisv8 "github.com/go-redis/redis/v8"

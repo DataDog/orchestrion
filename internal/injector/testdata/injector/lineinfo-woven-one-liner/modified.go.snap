@@ -11,9 +11,10 @@ func f() {
 //line input.go:3
   target()
 //line input.go:3
-  after()
+  after() /*line input.go:2*/
 }
 
+//line input.go:5
 func before() int         { return 0 }
 func after() int          { return 0 }
 func target(v ...int) int { return 0 }

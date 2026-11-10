@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 
+//line samples/server/grpc.go:12
 	"google.golang.org/grpc"
 //line <generated>:1
 	__orchestrion_grpctrace "github.com/DataDog/dd-trace-go/contrib/google.golang.org/grpc/v2"
