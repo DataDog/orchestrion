@@ -3,11 +3,9 @@ package test
 
 import (
   "os"
-//line <generated>:1
   __orchestrion_strings "strings"
 )
 
-//line input.go:8
 func home() string {
   return __orchestrion_strings. //line <generated>:1
           ToUpper(

@@ -3,20 +3,20 @@ package test
 
 import (
   "os"
-  str "strings"
+  __orchestrion_strings "strings"
 )
 
 type wrong struct{}
 
 func (wrong) ToUpper(s string) string { return s }
 
-func helper(s string) string { return str.ToLower(s) }
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
 
 func home() string {
   str := wrong{}
   _ = str
-  return str. //line <generated>:1
-      ToUpper(
+  return __orchestrion_strings. //line <generated>:1
+          ToUpper(
 //line input.go:17
       os.Getenv("HOME"))
 }

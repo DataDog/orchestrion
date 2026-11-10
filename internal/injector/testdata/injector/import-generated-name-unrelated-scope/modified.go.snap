@@ -3,7 +3,7 @@ package test
 
 import (
   "os"
-  str "strings"
+  __orchestrion_strings "strings"
 )
 
 func unrelated() int {
@@ -11,13 +11,13 @@ func unrelated() int {
   return __orchestrion_strings
 }
 
-func helper(s string) string { return str.ToLower(s) }
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
 
 func home() string {
   str := "shadowed"
   _ = str
-  return str. //line <generated>:1
-      ToUpper(
+  return __orchestrion_strings. //line <generated>:1
+          ToUpper(
 //line input.go:18
       os.Getenv("HOME"))
 }

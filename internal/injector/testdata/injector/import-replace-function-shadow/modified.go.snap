@@ -3,13 +3,13 @@ package test
 
 import
 //line input.go:5
-str "strings"
+__orchestrion_strings "strings"
 
 //line input.go:8
-func helper(s string) string { return str.ToLower(s) }
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
 
 func home() string {
   str := "shadowed"
   _ = str
-  return str.ToLower("HOME")
+  return __orchestrion_strings.ToLower("HOME")
 }

@@ -4,19 +4,19 @@ package test
 import (
   "net/http"
   "os"
-  str "strings"
+  __orchestrion_strings "strings"
 )
 
-var f = str.ToLower
+var f = __orchestrion_strings.ToLower
 var c *http.Client
 
-func helper(s string) string { return str.ToLower(s) }
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
 
 func home() string {
   str := "shadowed"
   _ = str
-  return str. //line <generated>:1
-      ToUpper(
+  return __orchestrion_strings. //line <generated>:1
+          ToUpper(
 //line input.go:17
       os.Getenv("HOME"))
 }

@@ -3,10 +3,10 @@ package test
 
 import (
   "os"
-  str "strings"
+  __orchestrion_strings1 "strings"
 )
 
-func helper(s string) string { return str.ToLower(s) }
+func helper(s string) string { return __orchestrion_strings1.ToLower(s) }
 
 func home() string {
   str := "shadowed"
@@ -15,7 +15,7 @@ func home() string {
   () string {
     __orchestrion_strings := ""
     _ = __orchestrion_strings
-    return str.ToUpper(
+    return __orchestrion_strings1.ToUpper(
 //line input.go:13
       os.Getenv("HOME"))
   }()

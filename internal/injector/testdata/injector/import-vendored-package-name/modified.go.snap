@@ -2,17 +2,15 @@
 package test
 
 import (
+  "example.com/dep/vendoredpkg"
   "os"
-//line <generated>:1
-  __orchestrion_dep "example.com/dep/vendoredpkg"
 )
 
-//line input.go:8
-func helper(s string) string { return __orchestrion_dep.V(s) }
+func helper(s string) string { return vv.V(s) }
 
 func home() string {
-  return __orchestrion_dep. //line <generated>:1
-          V(
+  return vv. //line <generated>:1
+      V(
 //line input.go:11
       os.Getenv("HOME"))
 }

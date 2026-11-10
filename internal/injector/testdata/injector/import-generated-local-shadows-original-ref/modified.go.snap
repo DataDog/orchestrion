@@ -3,18 +3,18 @@ package test
 
 import (
   "os"
-  str "strings"
+  __orchestrion_str "strings"
 )
 
-func helper(s string) string { return str.ToUpper(s) }
+func helper(s string) string { return __orchestrion_str.ToUpper(s) }
 
 func home() string {
   _ = os.Getenv("HOME")
   return func //line <generated>:1
   (str string) string {
-    return str.Trim(
+    return __orchestrion_str.Trim(
 //line input.go:12
-      str.ToLower("x"),
+      __orchestrion_str.ToLower("x"),
 //line <generated>:1
       "x")
   }("shadowed")

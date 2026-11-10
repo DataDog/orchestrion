@@ -4,17 +4,17 @@ package test
 import (
   __orchestrion_strings "math"
   "os"
-  str "strings"
+  __orchestrion_strings1 "strings"
 )
 
-func helper(s string) string { return str.ToLower(s) }
+func helper(s string) string { return __orchestrion_strings1.ToLower(s) }
 func helperMath() float64    { return __orchestrion_strings.Floor(1.5) }
 
 func home() string {
   str := "shadowed"
   _ = str
-  return str. //line <generated>:1
-      ToUpper(
+  return __orchestrion_strings1. //line <generated>:1
+          ToUpper(
 //line input.go:15
       os.Getenv("HOME"))
 }
