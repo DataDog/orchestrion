@@ -1,1 +1,9 @@
-<no changes>
+//line input.go:1:1
+package test
+
+//line input.go:5
+func Clipped[S ~[]E, E any](s S) S { return s }
+
+func Use() []int {
+  return Clipped[[]int](nil)
+}

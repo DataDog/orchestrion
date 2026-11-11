@@ -1,1 +1,15 @@
-<no changes>
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import _ "time"
+
+//line input.go:3
+func F[A any](a A) A { return a }
+
+func Use() (int, string) {
+  var _ any
+  _ = F[int](1)
+  _ = F[string]("x")
+  return 0, ""
+}

@@ -11,7 +11,11 @@ func Use() string {
     Note()
   }
 //line input.go:8
-  if F[bool](true) {
+  if
+//line <generated>:1
+  Mark(
+//line input.go:8
+    F[bool](true)) {
     return "yes"
   }
   return "no"

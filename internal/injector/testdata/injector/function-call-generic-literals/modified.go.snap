@@ -1,1 +1,22 @@
-<no changes>
+//line input.go:1:1
+package test
+
+type Holder[T any] struct{ Fn func(T) T }
+type Pair[A, B any] func(A) B
+type AliasPair[T any] = Pair[T, T]
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+
+var literal = Holder[int]{Fn: F[int]}
+var direct =
+//line <generated>:1
+Mark(
+//line input.go:11
+  F[int](1))
+var nested = Holder[int]{Fn: func(int) int { return 0 }}.Fn(
+//line <generated>:1
+  Mark(
+//line input.go:12
+    F[int](1)))
+var conversion = AliasPair[int](func(int) int { return 0 })

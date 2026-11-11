@@ -1,1 +1,11 @@
-<no changes>
+//line input.go:1:1
+package test
+
+func One[A any](url string, opts ...int) int { return len(opts) }
+func Two[A any](url string, opts ...int) int { return len(opts) }
+
+func Use() int {
+  return Two[int]("u", 1,
+//line <generated>:1
+    7)
+}

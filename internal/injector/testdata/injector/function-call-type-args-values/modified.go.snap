@@ -1,1 +1,16 @@
-<no changes>
+//line input.go:1:1
+package test
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+func Ctl[T any](v T) T  { return v }
+
+func Use() int {
+  f := F[int]
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:9
+      Ctl[int](0))
+  return f(1)
+}

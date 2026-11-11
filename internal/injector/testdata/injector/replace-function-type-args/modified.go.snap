@@ -1,1 +1,13 @@
-<no changes>
+//line input.go:1:1
+package test
+
+import "slices"
+
+//line input.go:5
+func OneTypeArgument() []int {
+  return slices.Clip[[]int](nil)
+}
+
+func TwoTypeArguments() []int {
+  return slices.Clip[[]int, int](nil)
+}

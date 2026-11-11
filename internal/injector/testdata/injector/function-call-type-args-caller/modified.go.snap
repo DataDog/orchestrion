@@ -1,1 +1,12 @@
-<no changes>
+//line input.go:1:1
+package test
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+
+func Caller[T any](v T) T {
+  return Mark(//line <generated>:1
+
+//line input.go:7
+    F[T](v))
+}

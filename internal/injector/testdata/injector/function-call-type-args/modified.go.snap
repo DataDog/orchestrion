@@ -12,9 +12,15 @@ func Inferred(xs []int) []int {
 }
 
 func OneTypeArgument(xs []int) []int {
-  return slices.Clone[[]int](xs)
+  return slices.//line <generated>:1
+  Clip(
+//line input.go:10
+    slices.Clone[[]int](xs))
 }
 
 func TwoTypeArguments(xs []int) []int {
-  return slices.Clone[[]int, int](xs)
+  return slices.//line <generated>:1
+  Clip(
+//line input.go:14
+    slices.Clone[[]int, int](xs))
 }

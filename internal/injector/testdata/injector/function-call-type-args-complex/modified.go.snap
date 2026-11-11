@@ -1,1 +1,41 @@
-<no changes>
+//line input.go:1:1
+package test
+
+type Box[T any] struct{ Value T }
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+
+func Use() {
+  var _ any
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:10
+      F[[]int](nil))
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:11
+      F[map[string]int](nil))
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:12
+      F[[2]int]([2]int{}))
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:13
+      F[*int](nil))
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:14
+      F[func(int) int](nil))
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:15
+      F[Box[int]](Box[int]{}))
+}

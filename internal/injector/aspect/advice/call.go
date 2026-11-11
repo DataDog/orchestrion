@@ -143,12 +143,30 @@ func (r *redirectCall) Apply(ctx context.AdviceContext) (bool, error) {
 		return false, fmt.Errorf("expected a *dst.CallExpr, received %T", ctx.Node())
 	}
 
-	if id, ok := node.Fun.(*dst.Ident); ok {
+	// For a confirmed generic instantiation, the callee is an index expression
+	// whose operand is the generic function. Replace only the operand so the
+	// explicit type arguments stay in place: dropping them can produce a call
+	// whose type arguments cannot be inferred. For every other indexed callee
+	// (ordinary value indexes, or callees without type information), keep the
+	// historical whole-callee replacement.
+	callee := &node.Fun
+	switch indexed := node.Fun.(type) {
+	case *dst.IndexExpr:
+		if context.IsGenericFunction(ctx, indexed.X) {
+			callee = &indexed.X
+		}
+	case *dst.IndexListExpr:
+		if context.IsGenericFunction(ctx, indexed.X) {
+			callee = &indexed.X
+		}
+	}
+
+	if id, ok := (*callee).(*dst.Ident); ok {
 		id.Path = r.ImportPath
 		id.Name = r.Name
 		id.Obj = nil // Just in case
 	} else {
-		node.Fun = &dst.Ident{Path: r.ImportPath, Name: r.Name}
+		*callee = &dst.Ident{Path: r.ImportPath, Name: r.Name}
 	}
 
 	if r.ImportPath != "" {

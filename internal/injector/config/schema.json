@@ -609,7 +609,7 @@
         "properties": {
           "function-call": {
             "title": "Target function calls",
-            "markdownDescription": "The `function-call` join point matches function call nodes that represent a call to the specified function. It only matches `Call` nodes.",
+            "markdownDescription": "The `function-call` join point matches call nodes whose callee is the specified symbol. It only matches `Call` nodes. It matches generic calls with inferred type arguments and direct calls with explicit type arguments, such as `F[T](...)` and `pkg.F[T1, T2](...)`. Explicit calls match when the type checker confirms that the operand is a generic function. When that type information is unavailable, an indexed callee does not match. Ordinary indexing of function values and generic type conversions do not match this explicit-call path. Parenthesized callees, indirect calls through stored function values, and methods of generic types do not match. Advice receives the complete call, including its explicit type arguments.",
             "$ref": "#/$defs/go/qualified-identifier"
           }
         },
@@ -1025,7 +1025,7 @@
         "properties": {
           "replace-function": {
             "title": "Drop-in replace a called function",
-            "markdownDescription": "The `replace-function` advice replaces the callee of a `Call` node (typically matched by `function-call`) with the designated function. The current & replacement functions must have compatible signatures.",
+            "markdownDescription": "The `replace-function` advice replaces the callee of a `Call` node, typically matched by `function-call`, with the designated function. The original and replacement functions must have compatible signatures. For an explicit instantiation that the type checker confirms is a generic function call, the advice replaces only the function operand. It preserves the explicit type arguments in their original order. The replacement must accept those arguments and satisfy its type constraints. Any remaining type parameters must be inferable from the call arguments. A non-generic replacement cannot accept retained type arguments, even if its value signature matches the instantiated function. Incompatible replacements produce invalid Go code that the compiler rejects. For other callees, including ordinary value indexes and indexed callees without type information, the advice replaces the whole callee. The advice does not infer, remove, or reorder explicit type arguments.",
             "$ref": "#/$defs/go/qualified-identifier"
           }
         },

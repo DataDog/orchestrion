@@ -15,7 +15,11 @@ func Use(b Box[int], p *Box[int]) int {
     Mark(
 //line input.go:12
       b.Get(1))
-  _ = Ctl[int](0)
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:13
+      Ctl[int](0))
   _ = Box[int].Get(b, 1)
   _ = (*Box[int]).Get(p, 1)
   return 0

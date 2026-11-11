@@ -1,1 +1,21 @@
-<no changes>
+//line input.go:1:1
+package test
+
+type Req struct{}
+type Res struct{}
+
+func NewClient[ReqT, ResT any](
+  hc int,
+  url string,
+  opts ...string,
+) string {
+  return ""
+}
+
+func Use(opts ...string) string {
+  return NewClient[Req, Res](1, "u",
+//line <generated>:1
+    func(opts ...string) []string { return append(append([]string{}, opts...), "traced") }(
+//line input.go:13
+      opts...)...)
+}

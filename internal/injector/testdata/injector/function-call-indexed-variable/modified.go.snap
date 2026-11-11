@@ -1,1 +1,29 @@
-<no changes>
+//line input.go:1:1
+package test
+
+func Mark[T any](v T) T { return v }
+func Ctl[T any](v T) T  { return v }
+
+var Handlers = []func() int{func() int { return 0 }}
+var handlersArray = [2]func() int{func() int { return 0 }}
+var Table = map[string]func() string{"x": func() string { return "y" }}
+var TableInt = map[int]func() int{0: func() int { return 0 }}
+
+func key() int { return 0 }
+
+func Use() (int, int, int, int, string) {
+  int := 0
+  _ = int
+  p := &handlersArray
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:17
+      Ctl[bool](false))
+  a := Handlers[0]()
+  b := p[1]()
+  c := Handlers[key()]()
+  d := Handlers[int]()
+  e := Table["x"]()
+  return a, b, c, d, e
+}

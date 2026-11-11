@@ -1,1 +1,13 @@
-<no changes>
+//line input.go:1:1
+package test
+
+func One[A any](url string, opts ...string) int { return len(opts) }
+
+func Use() int {
+  base := []string{"a", "b", "c", "d"}
+  return One[int]("u",
+//line <generated>:1
+    func(opts ...string) []string { return append(append([]string{}, opts...), "z") }(
+//line input.go:7
+      base[:2]...)...)
+}

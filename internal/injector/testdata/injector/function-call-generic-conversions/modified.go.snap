@@ -1,1 +1,19 @@
-<no changes>
+//line input.go:1:1
+package test
+
+type Wrap[T any] []T
+type Callback[T any] func(T) T
+
+func Mark[T any](v T) T { return v }
+func Ctl[T any](v T) T  { return v }
+
+func Use(
+  f func(int) int,
+) (Wrap[int], Callback[int], int) {
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:12
+      Ctl[int](0))
+  return Wrap[int]([]int{}), Callback[int](f), 0
+}
