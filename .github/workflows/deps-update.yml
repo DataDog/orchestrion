@@ -35,7 +35,13 @@ jobs:
         run: |-
           find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
-            go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "github.com/DataDog/dd-trace-go/v2@${{ steps.dd-trace-go.outputs.version }}" ./...
+            constraints=()
+            # v1.38.1 is the last release using the Shopify module path. Keep the legacy
+            # integration coverage: newer releases declare github.com/IBM/sarama instead.
+            if go -C="${dir}" mod edit -json | jq -e 'any(.Require[]?; .Path == "github.com/Shopify/sarama")' > /dev/null; then
+              constraints+=(github.com/Shopify/sarama@v1.38.1)
+            fi
+            go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "github.com/DataDog/dd-trace-go/v2@${{ steps.dd-trace-go.outputs.version }}" "${constraints[@]}" ./...
           done
       - name: Run go mod tidy
         run: |-
