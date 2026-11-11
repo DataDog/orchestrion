@@ -1,0 +1,20 @@
+//line input.go:1:1
+package test
+
+import "slices"
+
+//line input.go:5
+func Inferred(xs []int) []int {
+  return slices.//line <generated>:1
+  Clip(
+//line input.go:6
+    slices.Clone(xs))
+}
+
+func OneTypeArgument(xs []int) []int {
+  return slices.Clone[[]int](xs)
+}
+
+func TwoTypeArguments(xs []int) []int {
+  return slices.Clone[[]int, int](xs)
+}

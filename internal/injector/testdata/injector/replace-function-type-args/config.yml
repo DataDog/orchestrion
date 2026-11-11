@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# replace-function keeps the explicit type arguments of the call it rewrites:
+# here they cannot be
+# inferred from the nil argument, so dropping them would not compile.
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - replace-function: slices.Clip
+
+code: |-
+  package test
+
+  import "slices"
+
+  func OneTypeArgument() []int {
+    return slices.Clone[[]int](nil)
+  }
+
+  func TwoTypeArguments() []int {
+    return slices.Clone[[]int, int](nil)
+  }

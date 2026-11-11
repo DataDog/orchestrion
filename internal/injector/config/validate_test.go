@@ -22,6 +22,27 @@ func TestSchemaValidity(t *testing.T) {
 	require.Greater(t, count, 30)
 }
 
+// TestFunctionCallAndReplaceFunctionStringValues checks that the plain string
+// values for `function-call` and `replace-function` keep validating against the
+// schema. The explicit generic-call support changes matching behavior only; it
+// must not change the configuration format (matrix D04).
+func TestFunctionCallAndReplaceFunctionStringValues(t *testing.T) {
+	document := map[string]any{
+		"meta": map[string]any{
+			"name":        "schema-test",
+			"description": "validates the string values of function-call and replace-function",
+		},
+		"aspects": []any{
+			map[string]any{
+				"id":         "schema-test",
+				"join-point": map[string]any{"function-call": "slices.Clone"},
+				"advice":     []any{map[string]any{"replace-function": "slices.Clip"}},
+			},
+		},
+	}
+	require.NoError(t, getSchema().Validate(document))
+}
+
 func validateExamples(t *testing.T, schema *jsonschema.Schema, path string, visited map[*jsonschema.Schema]struct{}) int {
 	if schema == nil {
 		return 0

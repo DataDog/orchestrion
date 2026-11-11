@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+type Box[T any] struct{ Value T }
+
+func (Box[T]) Get(v T) T { return v }
+func Mark[T any](v T) T  { return v }
+func Mark2[T any](v T) T { return v }
+func Ctl[T any](v T) T   { return v }
+
+func Use(b Box[int], p *Box[int]) int {
+  var _ int
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:12
+      b.Get(1))
+  _ = Ctl[int](0)
+  _ = Box[int].Get(b, 1)
+  _ = (*Box[int]).Get(p, 1)
+  return 0
+}

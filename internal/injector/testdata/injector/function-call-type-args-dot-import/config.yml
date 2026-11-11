@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# A dot-imported generic function matches its canonical path when explicitly
+# instantiated
+# (matrix C04). No same-package function may share the dot-imported name in
+# valid Go.
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  import . "slices"
+
+  func Mark[T any](v T) T { return v }
+
+  func Use(xs []int) []int {
+    return Clone[[]int](xs)
+  }

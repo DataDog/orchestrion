@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# append-args and replace-function both act on the same explicit call: the
+# appended values and the type arguments survive together (matrix A26).
+aspects:
+  - join-point:
+      function-call: One
+    advice:
+      - append-args:
+          type: int
+          values:
+            - template: '7'
+      - replace-function: Two
+
+code: |-
+  package test
+
+  func One[A any](url string, opts ...int) int { return len(opts) }
+  func Two[A any](url string, opts ...int) int { return len(opts) }
+
+  func Use() int {
+    return One[int]("u", 1)
+  }

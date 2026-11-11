@@ -1,0 +1,34 @@
+%YAML 1.1
+---
+# A function-body aspect and a function-call aspect coexist: the body advice
+# prepends a statement, and the explicit call inside the body still receives
+# the call advice (matrix J06).
+aspects:
+  - id: mark-entry
+    join-point:
+      function-body:
+        function:
+          - name: Use
+    advice:
+      - prepend-statements:
+          template: Note()
+  - id: mark-call
+    join-point:
+      function-call: F
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+  func Note() {}
+
+  func Use() string {
+    if F[bool](true) {
+      return "yes"
+    }
+    return "no"
+  }

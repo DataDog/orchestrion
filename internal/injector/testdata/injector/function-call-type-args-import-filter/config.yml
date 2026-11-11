@@ -1,0 +1,38 @@
+%YAML 1.1
+---
+# An import-path filter can exclude or admit explicit generic calls: the F
+# aspect excludes this module, the G aspect excludes a different path
+# (matrix J03).
+aspects:
+  - id: exclude-self
+    join-point:
+      all-of:
+        - function-call: F
+        - not:
+            import-path: dummy/test/module
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+  - id: admit-self
+    join-point:
+      all-of:
+        - function-call: G
+        - not:
+            import-path: example.com/other
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+  func G[A, B any](a A, b B) B { var z B; return z }
+
+  func Use() (int, string) {
+    var _ any
+    _ = F[int](1)
+    _ = G[int, string](1, "x")
+    return 0, ""
+  }
