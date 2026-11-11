@@ -7,7 +7,8 @@ on:
     branches: [main]
   push:
     branches: [main]
-permissions: read-all
+permissions:
+  contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -44,8 +45,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
-      pages: write
-      id-token: write
+      pages: write # To deploy the documentation site
+      id-token: write # To mint the GitHub Pages deployment OIDC token
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

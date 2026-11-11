@@ -11,7 +11,8 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || ((github.event_name == 'push' && github.sha) || github.ref) }}
   cancel-in-progress: true
-permissions: read-all
+permissions:
+  contents: read
 env:
   # Make sure we're actually testing with the intended Go release (i.e, ensure
   # no automatic toolchain download happens).
@@ -179,6 +180,10 @@ jobs:
   lint-actions:
     runs-on: ubuntu-latest
     name: GitHub Workflow Linters
+    permissions:
+      # The `github-check` reporter requires `checks: write` to create check runs. That scope is not
+      # granted -- the previous `read-all` default did not include it either, so behavior is unchanged.
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
@@ -393,6 +398,8 @@ jobs:
     if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
     uses: DataDog/dd-trace-go/.github/workflows/orchestrion.yml@03c4c2a4c771fb1a2d6fb2da2af32dee8a0f724c # ratchet:DataDog/dd-trace-go/.github/workflows/orchestrion.yml@main
     permissions:
+      # OIDC trust used by the DataDog/dd-trace-go reusable workflow (dd-sts-action, Datadog CI
+      # Visibility) when uploading test results.
       id-token: write
       contents: read
     with:

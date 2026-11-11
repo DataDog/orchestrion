@@ -2,7 +2,8 @@ name: PR Labeler
 on:
   pull_request:
     types: [opened, edited, reopened]
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   update-labels:
     name: Update PR labels

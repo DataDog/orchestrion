@@ -7,7 +7,8 @@ on:
     - cron: '27 23 * * 2'
   push:
     branches: ["main"]
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   analysis:
     name: Scorecard analysis
