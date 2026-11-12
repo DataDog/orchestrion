@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import "fmt"
+
+//line input.go:5
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+
+var value =
+//line <generated>:1
+Mark(
+//line input.go:8
+  F[int](1))
+
+var _ = fmt.Sprint(value)

@@ -1,0 +1,35 @@
+%YAML 1.1
+---
+# Parenthesized callees stay outside the function-call join point, with
+# or without explicit type arguments, and so do calls through a
+# parenthesized slice of functions (matrix B03, B04, B05). Ctl is the
+# positive control that proves the aspect is live, so the missing wraps
+# are meaningful non-matches.
+aspects:
+  - join-point:
+      one-of:
+        - function-call: Plain
+        - function-call: F
+        - function-call: Handlers
+        - function-call: Ctl
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Plain(a int) int { return a }
+  func F[A any](a A) A { return a }
+  func Mark[T any](v T) T { return v }
+  func Ctl[T any](v T) T { return v }
+
+  var Handlers = []func() int{func() int { return 0 }}
+
+  func Use() int {
+    var _ any
+    _ = (Plain)(1)
+    _ = (F[int])(1)
+    _ = Ctl[int](0)
+    return (Handlers)[0]()
+  }

@@ -1,0 +1,49 @@
+%YAML 1.1
+---
+# Methods of instantiated generic types are not free functions. The method
+# expressions Box[int].Get(b, 1) and (*Box[int]).Get(p, 1) must not match
+# this join point (matrix B06, B07).
+#
+# The plain method call b.Get(1) DOES match the unqualified `Get` target,
+# on e4096f5 as well: the SelectorExpr branch compares only ident.Path (""
+# for the local receiver b) with the target import path ("" for `Get`),
+# which is the pre-existing TODO in join/expression.go ("Must actually
+# look at whether ident.Name is the import of the relevant package path").
+# This fixture records that behavior unchanged and does not fix it here.
+# The qualified example.com/other.Get target never matches, so the b.Get(1)
+# match is proven to come through that unqualified TODO path only.
+#
+# Ctl is the positive control: it proves the aspects are live, so the
+# missing wraps on the method expressions are meaningful non-matches.
+aspects:
+  - join-point:
+      one-of:
+        - function-call: Get
+        - function-call: Ctl
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+  - join-point:
+      function-call: example.com/other.Get
+    advice:
+      - wrap-expression:
+          template: Mark2({{ . }})
+
+code: |-
+  package test
+
+  type Box[T any] struct{ Value T }
+
+  func (Box[T]) Get(v T) T { return v }
+  func Mark[T any](v T) T  { return v }
+  func Mark2[T any](v T) T { return v }
+  func Ctl[T any](v T) T  { return v }
+
+  func Use(b Box[int], p *Box[int]) int {
+    var _ int
+    _ = b.Get(1)
+    _ = Ctl[int](0)
+    _ = Box[int].Get(b, 1)
+    _ = (*Box[int]).Get(p, 1)
+    return 0
+  }

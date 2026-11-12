@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+# When the replacement no longer references the source package, the unused
+# import must not survive in the output (matrix A29).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - replace-function: Clipped
+
+code: |-
+  package test
+
+  import "slices"
+
+  func Clipped[S ~[]E, E any](s S) S { return s }
+
+  func Use() []int {
+    return slices.Clone[[]int](nil)
+  }

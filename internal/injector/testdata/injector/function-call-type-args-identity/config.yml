@@ -1,0 +1,25 @@
+%YAML 1.1
+---
+# A same-package function that shares the target name never matches a target
+# configured with an
+# import path; the imported call does (matrix C12).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  import "slices"
+
+  func Mark[T any](v T) T { return v }
+  func Clone[T any](v T) T { return v }
+
+  func Use(xs []int) []int {
+    var _ func(int) int
+    _ = Clone[int]
+    return slices.Clone[[]int](xs)
+  }

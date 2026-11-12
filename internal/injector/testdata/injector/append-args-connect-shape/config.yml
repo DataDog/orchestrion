@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# The Connect-shaped call: a two-type-argument instantiation whose type
+# arguments cannot be inferred from the values, with a spread options slice
+# (matrix A27; issue #951's motivating shape).
+aspects:
+  - join-point:
+      function-call: NewClient
+    advice:
+      - append-args:
+          type: string
+          values:
+            - template: '"traced"'
+
+code: |-
+  package test
+
+  type Req struct{}
+  type Res struct{}
+
+  func NewClient[ReqT, ResT any](
+    hc int,
+    url string,
+    opts ...string,
+  ) string { return "" }
+
+  func Use(opts ...string) string {
+    return NewClient[Req, Res](1, "u", opts...)
+  }

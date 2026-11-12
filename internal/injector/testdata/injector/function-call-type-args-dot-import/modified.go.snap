@@ -1,0 +1,14 @@
+//line input.go:1:1
+package test
+
+import . "slices"
+
+//line input.go:5
+func Mark[T any](v T) T { return v }
+
+func Use(xs []int) []int {
+  return Mark(//line <generated>:1
+
+//line input.go:8
+    Clone[[]int](xs))
+}

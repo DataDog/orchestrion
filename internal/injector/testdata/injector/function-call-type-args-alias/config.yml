@@ -1,0 +1,22 @@
+%YAML 1.1
+---
+# An aliased import resolves to the canonical import path, so an explicit
+# instantiation through the
+# alias matches a target configured with the canonical path (matrix C03).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  import s "slices"
+
+  func Mark[T any](v T) T { return v }
+
+  func Use(xs []int) []int {
+    return s.Clone[[]int](xs)
+  }

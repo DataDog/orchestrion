@@ -1,0 +1,11 @@
+//line input.go:1:1
+package test
+
+import i "iter"
+
+//line input.go:8
+func Clipped[S ~[]E, E any](s S) S { return s }
+
+func Use() []i.Seq[int] {
+  return Clipped[[]i.Seq[int]](nil)
+}

@@ -1,0 +1,27 @@
+%YAML 1.1
+---
+# Reconstructing a call through {{ .AST.Fun }} retains the explicit type
+# arguments. Here they cannot be inferred from the nil argument, so the
+# reconstruction only compiles with the type arguments in place (matrix A07).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - wrap-expression:
+          imports:
+            slices: slices
+          template: >-
+            slices.Clip({{ .AST.Fun }}({{ index .AST.Args 0 }}))
+
+code: |-
+  package test
+
+  import "slices"
+
+  func OneTypeArgument() []int {
+    return slices.Clone[[]int](nil)
+  }
+
+  func TwoTypeArguments() []int {
+    return slices.Clone[[]int, int](nil)
+  }

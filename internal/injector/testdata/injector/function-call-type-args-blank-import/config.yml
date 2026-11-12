@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+# add-blank-import activates at explicit call sites and adds the import once
+# per file, even when two calls match (matrix A23).
+aspects:
+  - join-point:
+      function-call: F
+    advice:
+      - add-blank-import: "time"
+
+syntheticReferences:
+  time: true
+
+code: |-
+  package test
+
+  func F[A any](a A) A { return a }
+
+  func Use() (int, string) {
+    var _ any
+    _ = F[int](1)
+    _ = F[string]("x")
+    return 0, ""
+  }

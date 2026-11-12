@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+# Partial instantiation (some type arguments explicit, the rest inferred from
+# the value arguments)
+# matches like a fully explicit call (matrix C08, C09).
+aspects:
+  - join-point:
+      one-of:
+        - function-call: G
+        - function-call: H
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func G[A, B any](a A, b B) B { var z B; return z }
+  func H[A, B, C, D any](a A, b B, c C, d D) D { var z D; return z }
+
+  func Use() (string, float64) {
+    return G[int](1, "x"), H[int, string](1, "x", true, 2.0)
+  }

@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# Explicit instantiations of same-package generic functions match their
+# unqualified target name
+# (matrix C01, C05, C06, C07). The advice context stays on the complete call.
+aspects:
+  - join-point:
+      one-of:
+        - function-call: F
+        - function-call: G
+        - function-call: H
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+  func G[A, B any](a A, b B) B { var z B; return z }
+  func H[A, B, C, D any](a A, b B, c C, d D) D { var z D; return z }
+
+  func Use() (int, string, float64) {
+    f := F[int](1)
+    g := G[int, string](1, "x")
+    h := H[int, string, bool, float64](1, "x", true, 2.0)
+    return f, g, h
+  }

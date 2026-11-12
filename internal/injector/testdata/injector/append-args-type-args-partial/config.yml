@@ -1,0 +1,22 @@
+%YAML 1.1
+---
+# append-args on a partially instantiated call with spread arguments
+# keeps the explicit prefix and the spread semantics (matrix A03).
+aspects:
+  - join-point:
+      function-call: Two
+    advice:
+      - append-args:
+          type: string
+          values:
+            - template: '"z"'
+
+code: |-
+  package test
+
+  func Two[A, B any](url string, opts ...B) int { return len(opts) }
+
+  func Use() int {
+    xs := []string{"a"}
+    return Two[int]("u", xs...)
+  }

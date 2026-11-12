@@ -1,0 +1,17 @@
+//line input.go:1:1
+package test
+
+func One[A any](url string, opts ...int) int    { return len(opts) }
+func Two[A, B any](url string, opts ...int) int { return len(opts) }
+
+func Use() int {
+  total := One[int]("u",
+//line <generated>:1
+    1, 2)
+//line input.go:8
+  total += Two[int, string]("u",
+//line <generated>:1
+    1, 2)
+//line input.go:9
+  return total
+}

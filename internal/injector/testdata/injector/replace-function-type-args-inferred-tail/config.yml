@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+# A replacement with more type parameters than were supplied explicitly compiles
+# when the value
+# arguments infer the remainder (matrix A13).
+aspects:
+  - join-point:
+      function-call: V3
+    advice:
+      - replace-function: V3R
+
+code: |-
+  package test
+
+  func V3[A, B, C any](a A, b B, c C) C { var z C; return z }
+  func V3R[A, B, C any](a A, b B, c C) C { var z C; return z }
+
+  func Use() bool {
+    return V3[int, string](1, "x", true)
+  }

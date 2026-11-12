@@ -1,0 +1,13 @@
+//line input.go:1:1
+package test
+
+func Two[A, B any](url string, opts ...B) int { return len(opts) }
+
+func Use() int {
+  xs := []string{"a"}
+  return Two[int]("u",
+//line <generated>:1
+    func(opts ...string) []string { return append(append([]string{}, opts...), "z") }(
+//line input.go:7
+      xs...)...)
+}

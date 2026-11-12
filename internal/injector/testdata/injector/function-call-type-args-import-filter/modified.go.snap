@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+func G[A, B any](a A, b B) B {
+//line input.go:5
+  var z B
+//line input.go:5
+  return z
+}
+
+func Use() (int, string) {
+  var _ any
+  _ = F[int](1)
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:10
+      G[int, string](1, "x"))
+  return 0, ""
+}

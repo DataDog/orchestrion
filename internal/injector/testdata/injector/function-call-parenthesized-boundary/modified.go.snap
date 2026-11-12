@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+func Plain(a int) int   { return a }
+func F[A any](a A) A    { return a }
+func Mark[T any](v T) T { return v }
+func Ctl[T any](v T) T  { return v }
+
+var Handlers = []func() int{func() int { return 0 }}
+
+func Use() int {
+  var _ any
+  _ = (Plain)(1)
+  _ = (F[int])(1)
+  _ =
+//line <generated>:1
+    Mark(
+//line input.go:14
+      Ctl[int](0))
+  return (Handlers)[0]()
+}
