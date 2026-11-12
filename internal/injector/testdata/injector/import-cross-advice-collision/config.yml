@@ -1,0 +1,40 @@
+%YAML 1.1
+---
+# C12: a second advice prepends a local of the base name around the reference
+# produced by the first advice; the final combined file decides the alias.
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - name: home
+    advice:
+      - prepend-statements:
+          template: |-
+            __orchestrion_strings := ""
+            _ = __orchestrion_strings
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

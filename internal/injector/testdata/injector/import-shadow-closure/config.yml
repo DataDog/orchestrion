@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# B13: a closure parameter and a captured outer variable both shadow the alias.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "outer"
+    _ = str
+    f := func(str string) string {
+      return str + os.Getenv("HOME")
+    }
+    return f("x")
+  }

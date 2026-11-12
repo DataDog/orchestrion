@@ -1,0 +1,52 @@
+%YAML 1.1
+---
+# D08: alias state is per file; a conflict in one file must not leak into the
+# other.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+files:
+  extra.go:
+    syntheticReferences:
+      strings: true
+    code: |-
+      package test
+
+      import (
+        "os"
+        str "strings"
+      )
+
+      func helper2(s string) string { return str.ToLower(s) }
+
+      func home2() string {
+        str := "shadowed"
+        __orchestrion_strings := 1
+        _, _ = str, __orchestrion_strings
+        return os.Getenv("HOME")
+      }
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

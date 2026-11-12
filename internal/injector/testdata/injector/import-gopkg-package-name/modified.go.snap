@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import (
+  "gopkg.in/x.v1"
+  "os"
+)
+
+func helper(s string) string { return x.X(s) }
+
+func home() string {
+  return x. //line <generated>:1
+      X(
+//line input.go:11
+      os.Getenv("HOME"))
+}

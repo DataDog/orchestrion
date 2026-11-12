@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# F01: replace-function advice also requests imports (name inferred from the
+# path); the source alias shadowed at the join point must get a safe alias.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - replace-function: strings.ToLower
+
+syntheticReferences:
+  strings: true
+
+repeat: 20
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

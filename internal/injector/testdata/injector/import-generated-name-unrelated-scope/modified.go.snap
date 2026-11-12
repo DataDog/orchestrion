@@ -1,0 +1,23 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  __orchestrion_strings "strings"
+)
+
+func unrelated() int {
+  __orchestrion_strings := 1
+  return __orchestrion_strings
+}
+
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
+
+func home() string {
+  str := "shadowed"
+  _ = str
+  return __orchestrion_strings. //line <generated>:1
+          ToUpper(
+//line input.go:18
+      os.Getenv("HOME"))
+}

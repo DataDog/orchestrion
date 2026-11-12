@@ -1,0 +1,43 @@
+%YAML 1.1
+---
+# C07: consecutive candidate names are taken at different references; the
+# first free deterministic suffix wins. Repeated runs must be stable.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+repeat: 20
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper2(s string) string {
+    __orchestrion_strings := 1
+    _ = __orchestrion_strings
+    return str.ToLower(s)
+  }
+
+  func helper3(s string) string {
+    __orchestrion_strings1 := 1
+    _ = __orchestrion_strings1
+    return str.ToLower(s)
+  }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

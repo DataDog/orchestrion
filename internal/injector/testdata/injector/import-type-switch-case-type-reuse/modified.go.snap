@@ -1,0 +1,20 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  str "strings"
+)
+
+func helper(s string) string { return str.ToLower(s) }
+
+func home() string {
+  switch str := any("x").(type) {
+  case *str.Builder:
+    _ = str
+  }
+  return str. //line <generated>:1
+      ToUpper(
+//line input.go:15
+      os.Getenv("HOME"))
+}

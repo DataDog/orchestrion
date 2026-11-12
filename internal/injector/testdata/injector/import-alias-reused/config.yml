@@ -1,0 +1,27 @@
+%YAML 1.1
+---
+# A03: the file imports strings under an alias that is in scope at the join
+# point: the generated reference uses that alias, and no synthetic import is
+# registered.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    return os.Getenv("HOME")
+  }

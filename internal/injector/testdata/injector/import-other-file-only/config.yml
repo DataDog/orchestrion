@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# D04: the import exists only in another file of the package: the target file
+# gets its own import; the other file's import is not in scope.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+files:
+  extra.go:
+    code: |-
+      package test
+
+      import "strings"
+
+      var _ = strings.ToLower
+
+code: |-
+  package test
+
+  import "os"
+
+  func home() string {
+    return os.Getenv("HOME")
+  }

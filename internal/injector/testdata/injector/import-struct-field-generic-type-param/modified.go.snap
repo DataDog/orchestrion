@@ -1,0 +1,14 @@
+//line input.go:1:1
+package test
+
+import __orchestrion_time "time"
+
+//line input.go:5
+type server[time any] struct {
+  existing string
+//line <generated>:1
+  deadline __orchestrion_time.Duration
+}
+
+//line input.go:9
+func helper() { _ = __orchestrion_time.Now() }

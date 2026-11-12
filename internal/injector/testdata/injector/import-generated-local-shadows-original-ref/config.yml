@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+# F04: generated code declares a scope (here, the parameter of a generated
+# closure the original expression is moved into) that shadows the file's
+# import alias at an original reference: reuse is not safe for the file.
+# The advice requests the import, so the path is planned.
+aspects:
+  - join-point:
+      function-call: strings.ToLower
+    advice:
+      - wrap-expression:
+          imports:
+            str: strings
+          template: func(str string) string { return str.Trim({{ . }}, "x") }("shadowed")
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToUpper(s) }
+
+  func home() string {
+    _ = os.Getenv("HOME")
+    return str.ToLower("x")
+  }

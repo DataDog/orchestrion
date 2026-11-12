@@ -1,0 +1,36 @@
+%YAML 1.1
+---
+# C09: the shadowing local has a method with the member's name, so the emitted
+# selector would compile but silently bind to the local receiver. The binding
+# invariant must catch it; safe aliasing restores the intended binding.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  type wrong struct{}
+
+  func (wrong) ToUpper(s string) string { return s }
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := wrong{}
+    _ = str
+    return os.Getenv("HOME")
+  }

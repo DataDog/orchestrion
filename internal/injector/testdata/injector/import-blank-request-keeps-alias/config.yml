@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# A10: a blank-only import request on a file that already imports the path
+# under a useful alias: the alias is kept and no synthetic reference is
+# registered for it. The first advice is a positive control on the same
+# aspect: the path the file does not import gets the blank import, which
+# proves the aspect and advice are live; only the control changes.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - add-blank-import: math/cmplx
+      - add-blank-import: strings
+
+syntheticReferences:
+  math/cmplx: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    return os.Getenv("HOME")
+  }
