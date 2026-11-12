@@ -12,6 +12,7 @@ func main() {
     Addr: ":8085",
     Handler:
     //dd:startwrap
+
 //line input.go:12
     http.HandlerFunc(handle),
     //dd:endwrap

@@ -8,6 +8,7 @@ import (
 )
 
 //dd:span foo:bar baz:qux
+
 //line input.go:8
 func outer(ctx context.Context) {
 //line <generated>:1
@@ -22,6 +23,7 @@ func outer(ctx context.Context) {
     defer span.Finish()
   }
   //dd:span
+
 //line input.go:10
   inner := func(c context.Context) {
 //line <generated>:1

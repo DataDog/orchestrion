@@ -9,6 +9,7 @@ package main
 import (
 	"log"
 
+//line samples/client/grpc.go:11
 	"google.golang.org/grpc"
 //line <generated>:1
 	__orchestrion_grpctrace "github.com/DataDog/dd-trace-go/contrib/google.golang.org/grpc/v2"

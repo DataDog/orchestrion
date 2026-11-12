@@ -28,6 +28,7 @@ func getError(ctx context.Context) (__result__0 error) {
     }()
   }
   // Function that returns an error
+
 //line input.go:9
   return nil
 }

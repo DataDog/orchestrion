@@ -1,0 +1,57 @@
+//line input.go:1:1
+package test
+
+//line input.go:3
+var handler = func() {
+//line <generated>:1
+  {
+    print("literal")
+  }
+//line input.go:3
+  probe() /*line input.go:2*/
+}
+
+//line input.go:5
+func f() {
+//line input.go:5
+  func() {
+//line <generated>:1
+    {
+      print("literal")
+    }
+//line input.go:5
+    func() {
+//line <generated>:1
+      {
+        print("literal")
+      }
+//line input.go:5
+      probe() /*line input.go:4*/
+    } /*line input.go:5*/ () /*line input.go:4*/
+  } /*line input.go:5*/ () /*line input.go:4*/
+}
+
+//line input.go:7
+func g() {
+//line input.go:8
+  defer func() {
+//line <generated>:1
+    {
+      print("literal")
+    }
+//line input.go:8
+    probe() /*line input.go:7*/
+  } /*line input.go:8*/ ()
+//line input.go:9
+  go func() {
+//line <generated>:1
+    {
+      print("literal")
+    }
+//line input.go:9
+    probe() /*line input.go:8*/
+  } /*line input.go:9*/ () /*line input.go:9*/
+}
+
+//line input.go:12
+func probe() int { return 0 }

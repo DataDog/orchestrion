@@ -4,13 +4,19 @@
 // This product includes software developed at Datadog (https://www.datadoghq.com/).
 // Copyright 2023-present Datadog, Inc.
 
+//line samples/client/aws_v2.go:6
 package main
 
+//line samples/client/aws_v2.go:8
 import (
+//line samples/client/aws_v2.go:9
 	"context"
+//line samples/client/aws_v2.go:10
 	"log"
 
+//line samples/client/aws_v2.go:12
 	"github.com/aws/aws-sdk-go-v2/aws"
+//line samples/client/aws_v2.go:13
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 //line <generated>:1
 	__orchestrion_awstrace "github.com/DataDog/dd-trace-go/contrib/aws/aws-sdk-go-v2/v2/aws"
@@ -18,19 +24,28 @@ import (
 
 //line samples/client/aws_v2.go:16
 func AWSClientV2() {
+//line samples/client/aws_v2.go:17
 	cfg := newCfg1()
 
+//line samples/client/aws_v2.go:19
 	s3api := s3.NewFromConfig(cfg)
+//line samples/client/aws_v2.go:20
 	res, err := s3api.CreateBucket(context.Background(), &s3.CreateBucketInput{
+//line samples/client/aws_v2.go:21
 		Bucket: aws.String("shiny-bucket"),
 	})
+//line samples/client/aws_v2.go:23
 	if err != nil {
+//line samples/client/aws_v2.go:24
 		log.Fatal(err)
 	}
-	log.Printf("got response: %v\n", res)
+//line samples/client/aws_v2.go:26
+	log.Printf("got response: %v\n", res) /*line samples/client/aws_v2.go:26*/
 }
 
+//line samples/client/aws_v2.go:29
 func newCfg1() aws.Config {
+//line samples/client/aws_v2.go:30
 	cfg :=
 //line <generated>:1
 		func(cfg *aws.Config) *aws.Config {
@@ -39,10 +54,13 @@ func newCfg1() aws.Config {
 		}(
 //line samples/client/aws_v2.go:30
 			aws.NewConfig())
-	return *cfg
+//line samples/client/aws_v2.go:31
+	return *cfg /*line samples/client/aws_v2.go:31*/
 }
 
+//line samples/client/aws_v2.go:34
 func newCfg2() aws.Config {
+//line samples/client/aws_v2.go:35
 	cfg :=
 //line <generated>:1
 		func(cfg *aws.Config) *aws.Config {
@@ -51,14 +69,20 @@ func newCfg2() aws.Config {
 		}(
 //line samples/client/aws_v2.go:35
 			&aws.Config{
-				Region:       "test-region-1337",
-				Credentials:  aws.AnonymousCredentials{},
+//line samples/client/aws_v2.go:36
+				Region: "test-region-1337",
+//line samples/client/aws_v2.go:37
+				Credentials: aws.AnonymousCredentials{},
+//line samples/client/aws_v2.go:38
 				BaseEndpoint: aws.String("http://localhost:4566"),
 			})
-	return *cfg
+//line samples/client/aws_v2.go:40
+	return *cfg /*line samples/client/aws_v2.go:40*/
 }
 
+//line samples/client/aws_v2.go:43
 func newCfg3() aws.Config {
+//line samples/client/aws_v2.go:44
 	return func //line <generated>:1
 	(cfg aws.Config) aws.Config {
 		__orchestrion_awstrace.AppendMiddleware(&cfg)
@@ -66,8 +90,11 @@ func newCfg3() aws.Config {
 	}(
 //line samples/client/aws_v2.go:44
 		aws.Config{
-			Region:       "test-region-1337",
-			Credentials:  aws.AnonymousCredentials{},
+//line samples/client/aws_v2.go:45
+			Region: "test-region-1337",
+//line samples/client/aws_v2.go:46
+			Credentials: aws.AnonymousCredentials{},
+//line samples/client/aws_v2.go:47
 			BaseEndpoint: aws.String("http://localhost:4566"),
-		})
+		}) /*line samples/client/aws_v2.go:48*/
 }

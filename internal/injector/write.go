@@ -6,10 +6,8 @@
 package injector
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"go/format"
 	"os"
 	"path/filepath"
 
@@ -29,32 +27,34 @@ func (i *Injector) writeModifiedFile(ctx context.Context, decorator *decorator.D
 	log.Trace().Str("path", filename).Msg("Writing modified file")
 	canonicalizeImports(ctx, file)
 
-	if err := lineinfo.AnnotateMovedNodes(decorator, file, i.newRestorer); err != nil {
-		return filename, fmt.Errorf("annotating moved nodes in %q: %w", filename, err)
-	}
-
-	restorer := i.newRestorer(filename)
-	astFile, err := restorer.RestoreFile(file)
-	if err != nil {
-		return filename, fmt.Errorf("restoring %q: %w", filename, err)
-	}
-
-	var buf bytes.Buffer
-	if err := format.Node(&buf, restorer.Fset, astFile); err != nil {
-		return filename, fmt.Errorf("formatting %q: %w", filename, err)
-	}
-
+	writtenAs := filename
 	if i.ModifiedFile != nil {
-		filename = i.ModifiedFile(filename)
-		dir := filepath.Dir(filename)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return filename, fmt.Errorf("mkdir %q: %w", dir, err)
+		writtenAs = i.ModifiedFile(filename)
+		if dir := filepath.Dir(writtenAs); dir != "." {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				return writtenAs, fmt.Errorf("mkdir %q: %w", dir, err)
+			}
 		}
 	}
 
-	if err := os.WriteFile(filename, postProcess(buf.Bytes()), 0o644); err != nil {
-		return filename, fmt.Errorf("writing %q: %w", filename, err)
+	// The line directives are computed from the layout that is actually printed, and verified
+	// under the path the file is written to, so that the printer cannot change the layout after
+	// the positions were measured.
+	out, err := lineinfo.FormatFile(lineinfo.Options{
+		Decorator:   decorator,
+		File:        file,
+		NewRestorer: i.newRestorer,
+		WrittenAs:   writtenAs,
+		PostProcess: postProcess,
+		Log:         log,
+	})
+	if err != nil {
+		return writtenAs, fmt.Errorf("annotating moved nodes in %q: %w", writtenAs, err)
 	}
 
-	return filename, nil
+	if err := os.WriteFile(writtenAs, out, 0o644); err != nil {
+		return writtenAs, fmt.Errorf("writing %q: %w", writtenAs, err)
+	}
+
+	return writtenAs, nil
 }

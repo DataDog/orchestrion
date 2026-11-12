@@ -1,8 +1,11 @@
 //line input.go:1:1
 package example
 
+//line input.go:3
 import (
+//line input.go:4
   "context"
+//line input.go:5
   "net/http"
 //line <generated>:1
   __orchestrion_client "github.com/DataDog/dd-trace-go/contrib/net/http/v2/client"
@@ -10,9 +13,10 @@ import (
 
 //line input.go:8
 func DoRequest(ctx context.Context) (*http.Response, error) {
+//line input.go:9
   return __orchestrion_client. //line <generated>:1
           Get(
       ctx,
 //line input.go:9
-      "http://example.com")
+      "http://example.com") /*line input.go:9*/
 }

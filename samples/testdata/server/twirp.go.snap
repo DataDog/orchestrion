@@ -9,6 +9,7 @@ package main
 import (
 	"fmt"
 
+//line samples/server/twirp.go:11
 	"github.com/twitchtv/twirp"
 //line <generated>:1
 	__orchestrion_twirptrace "github.com/DataDog/dd-trace-go/contrib/twitchtv/twirp/v2"
@@ -18,18 +19,12 @@ import (
 func twirpServerSample() {
 	var serverOpts *twirp.ServerOptions
 
-	serverOpts = &
-//line <generated>:1
-//line samples/server/twirp.go:17
-	twirp.ServerOptions{
+	serverOpts = &twirp.ServerOptions{
 //line <generated>:1
 		Hooks: __orchestrion_twirptrace.NewServerHooks(),
 	}
 //line samples/server/twirp.go:18
-	serverOpts = &
-//line <generated>:1
-//line samples/server/twirp.go:18
-	twirp.ServerOptions{
+	serverOpts = &twirp.ServerOptions{
 //line <generated>:1
 		Hooks: twirp.ChainHooks(__orchestrion_twirptrace.NewServerHooks(),
 //line samples/server/twirp.go:19

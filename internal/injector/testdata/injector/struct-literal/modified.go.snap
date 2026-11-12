@@ -2,6 +2,7 @@
 package test
 
 import (
+//line input.go:3
   "github.com/aws/aws-sdk-go-v2/aws"
 
 //line <generated>:1

@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+# Line information for a one-line function body in a modified file must keep
+# referring to the original source line, even though an advised function earlier
+# in the file shifts the layout.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: woven
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  package test
+
+  func woven() { after() }
+
+  func f() { probe() }
+
+  func probe() int          { return 0 }
+  func after() int         { return 0 }

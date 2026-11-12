@@ -3,6 +3,7 @@ package test
 
 import (
   "errors"
+//line input.go:5
   "io"
   "strings"
 //line <generated>:1
@@ -10,7 +11,7 @@ import (
 )
 
 // Returns a simple error
-//
+
 //line input.go:10
 func returnsError() (__result__0 error) {
 //line <generated>:1
@@ -105,6 +106,7 @@ func returnsNoMatch() (string, int) {
 // Returns a concrete type that implements io.Reader via value receiver
 type myValueReader struct{ data string }
 
+//line input.go:36
 func (r myValueReader) Read(p []byte) (n int, err error) {
   if len(r.data) == 0 {
     return 0, io.EOF
@@ -127,6 +129,7 @@ func returnsConcreteValueReader() (__result__0 myValueReader) {
 // Returns a concrete type whose pointer implements io.Reader
 type myPointerReader struct{ data string }
 
+//line input.go:49
 func (r *myPointerReader) Read(p []byte) (n int, err error) {
   if len(r.data) == 0 {
     return 0, io.EOF
@@ -163,6 +166,7 @@ func returnsNamedError() (err error) {
 // Returns a type embedding io.Reader (io.ReadCloser)
 type myReadCloser struct{ *strings.Reader }
 
+//line input.go:68
 func (rc myReadCloser) Close() error { return nil }
 func returnsReadCloser() (__result__0 io.ReadCloser) {
 //line <generated>:1
@@ -179,6 +183,7 @@ func returnsReadCloser() (__result__0 io.ReadCloser) {
 // Returns a type alias for an implementing type
 type MyStringReader strings.Reader
 
+//line input.go:75
 func returnsMyStringReaderAlias() *MyStringReader {
 //line <generated>:1
   {
@@ -188,6 +193,7 @@ func returnsMyStringReaderAlias() *MyStringReader {
 
   }
   // Need to cast the result of strings.NewReader
+
 //line input.go:77
   r := strings.NewReader("alias")
   return (*MyStringReader)(r)
@@ -196,6 +202,7 @@ func returnsMyStringReaderAlias() *MyStringReader {
 // Returns a type alias for the interface
 type MyReader io.Reader
 
+//line input.go:83
 func returnsMyReaderAlias() (__result__0 MyReader) {
 //line <generated>:1
   {

@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+//line samples/client/http.go:10
 	"log"
 	"net/http"
 	"net/url"
