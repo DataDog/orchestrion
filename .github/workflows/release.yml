@@ -13,7 +13,8 @@ on:
         description: 'Published release tag to repair (for example, v1.13.1)'
         required: true
         type: string
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   validate:
     if: github.event_name == 'pull_request' || github.event_name == 'push'

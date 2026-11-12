@@ -3,7 +3,8 @@ on:
   schedule:
     - cron: '42 5 * * 1' # Mondays at 5:42 AM
   workflow_dispatch: {} # Manual runs
-permissions: read-all
+permissions:
+  contents: read
 jobs:
   update-go:
     name: Update Go Dependencies
@@ -78,8 +79,8 @@ jobs:
     needs: [update-go]
     if: needs.update-go.outputs.changes-needed == 'true'
     permissions:
-      id-token: write
-      contents: write
+      id-token: write # To mint the dd-octo-sts token (policy: self.github.deps-update.schedule)
+      contents: write # To push the automation/dependency-updates branch that carries the patch
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4

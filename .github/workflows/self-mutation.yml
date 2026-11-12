@@ -29,7 +29,8 @@ on:
     branches-ignore:
       - main
       - "gh-readonly-queue/**"
-permissions: read-all
+permissions:
+  contents: read
 concurrency:
   # NOTE: `github.event.number` (used by validate.yml's concurrency group) does not exist for
   # `workflow_run` events. `head_repository` disambiguates identically-named branches across forks.
