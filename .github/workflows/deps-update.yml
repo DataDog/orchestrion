@@ -34,7 +34,7 @@ jobs:
       # we'd need to run these in dependency order to ensure stable output).
       - name: Update dependencies
         run: |-
-          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
+          find . -iname go.mod -not -path './_docs/themes/**' -not -path './internal/pin/testdata/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             constraints=()
             # v1.38.1 is the last release using the Shopify module path. Keep the legacy
@@ -46,7 +46,7 @@ jobs:
           done
       - name: Run go mod tidy
         run: |-
-          find . -iname go.mod -not -path './_docs/themes/**' -print0 | while IFS= read -r -d '' gomod; do
+          find . -iname go.mod -not -path './_docs/themes/**' -not -path './internal/pin/testdata/**' -print0 | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
             go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
             go -C="${dir}" mod edit -toolchain=none
