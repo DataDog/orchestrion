@@ -150,7 +150,7 @@ jobs:
       - name: Verify license headers
         run: go run ./_tools/headercheck/header_check.go
       - name: Check documentation for misspellings
-        uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
+        uses: crate-ci/typos@276087d9a4f06398b3e04825487805e2d7375888 # v1.52.2
   lint-go:
     needs: generate
     name: GolangCI Lint (${{ matrix.runs-on }} | ${{ matrix.working-directory || 'main' }})
@@ -196,7 +196,7 @@ jobs:
         with:
           files: ".github/workflows/*.yml .github/actions/**/action.yml"
       - name: Run actionlint
-        uses: reviewdog/action-actionlint@48e36f54d8da326b83ab061aee2cc5e01b5ca46f # v1.80.6
+        uses: reviewdog/action-actionlint@ae857e78c1b42b3d0a49637181b09d3d56d402b4 # v1.84.1
         with:
           reporter: github-check
           level: error
@@ -297,7 +297,7 @@ jobs:
         # pins a datadog-ci release and verifies its checksum. Dependabot updates the action.
         if: ${{ !cancelled() && !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
         continue-on-error: true
-        uses: DataDog/junit-upload-github-action@a8b8ef95fb1c5d5faa639953f37cbeb45c1e9a97 # v4.0.0
+        uses: DataDog/junit-upload-github-action@cdbf0b0acda1005e45c4a11d445bf3dde78e796f # v4.1.0
         with:
           api_key: ${{ secrets.DD_CI_API_KEY }}
           service: orchestrion
