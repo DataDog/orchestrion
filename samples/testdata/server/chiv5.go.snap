@@ -9,6 +9,7 @@ package main
 import (
 	"net/http"
 
+//line samples/server/chiv5.go:11
 	"github.com/go-chi/chi/v5"
 //line <generated>:1
 	__orchestrion_chitrace "github.com/DataDog/dd-trace-go/contrib/go-chi/chi.v5/v2"

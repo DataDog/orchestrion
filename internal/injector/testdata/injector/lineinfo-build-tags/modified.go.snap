@@ -1,0 +1,19 @@
+//line input.go:1:1
+//go:build !nonexistenttag
+
+package test
+
+func f() { probe() }
+
+func woven() {
+//line <generated>:1
+  {
+    print("woven")
+  }
+//line input.go:7
+  after() /*line input.go:6*/
+}
+
+//line input.go:9
+func probe() int { return 0 }
+func after() int { return 0 }

@@ -1,0 +1,26 @@
+//line input.go:1:1
+package test
+
+func woven() {
+//line <generated>:1
+  {
+    print("woven")
+  }
+//line input.go:3
+  after() /*line input.go:2*/
+}
+
+//line input.go:5
+func f() int {
+//line input.go:5
+  return wide("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") /*line input.go:4*/
+}
+
+//line input.go:7
+func following() { before() }
+
+func probe() int          { return 0 }
+func before() int         { return 0 }
+func after() int          { return 0 }
+func target(v ...int) int { return 0 }
+func wide(s string) int   { return 0 }

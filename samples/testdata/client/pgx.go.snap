@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 
+//line samples/client/pgx.go:11
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 //line <generated>:1

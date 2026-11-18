@@ -15,5 +15,5 @@ func TestFunction() {
   }
   {
     _ = "4) First defined (index 0) - applied 1"
-  }
+  } /*line input.go:4*/
 }

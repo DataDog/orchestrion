@@ -1,6 +1,7 @@
 //line input.go:1:1
 package test
 
+//line input.go:3
 import (
 //line input.go:5
   "database/sql/driver"
@@ -11,21 +12,28 @@ import (
 //line input.go:8
 var conn driver.Connector
 
+//line input.go:10
 func main() {
+//line input.go:11
   db1, err :=
 //line <generated>:1
     __orchestrion_sqltrace.Open(
 //line input.go:11
       "foo", "bar")
+//line input.go:12
   if err != nil {
+//line input.go:13
     panic(err)
   }
+//line input.go:15
   defer db1.Close()
 
+//line input.go:17
   db2 :=
 //line <generated>:1
     __orchestrion_sqltrace.OpenDB(
 //line input.go:17
       conn)
-  defer db2.Close()
+//line input.go:18
+  defer db2.Close() /*line input.go:18*/
 }

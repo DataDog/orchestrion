@@ -93,6 +93,9 @@ func Test(t *testing.T) {
 			original := strings.TrimSpace(config.Code) + "\n"
 			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
 			runGo(t, tmp, "mod", "tidy")
+			// A fixture whose input does not type-check passes vacuously: InjectFiles silently
+			// skips it and the golden snapshot stays `<no changes>`.
+			runGo(t, tmp, "vet", "./...")
 
 			if config.ImportPath == "" {
 				config.ImportPath = testModuleName
@@ -120,6 +123,12 @@ func Test(t *testing.T) {
 
 			resFile, modified := res[inputFile]
 			if !modified {
+				injector.AssertFileLineInvariant(t, inj, injector.FileLineCheck{
+					Input:     inputFile,
+					Aspects:   config.Aspects,
+					Written:   []byte(original),
+					WrittenAs: inputFile,
+				})
 				golden.Assert(t, "<no changes>", filepath.Join(dirName, testName, "modified.go.snap"))
 				return
 			}
@@ -130,6 +139,12 @@ func Test(t *testing.T) {
 
 			modifiedData, err := os.ReadFile(resFile.Filename)
 			require.NoError(t, err, "failed to read modified file")
+			injector.AssertFileLineInvariant(t, inj, injector.FileLineCheck{
+				Input:     inputFile,
+				Aspects:   config.Aspects,
+				Written:   modifiedData,
+				WrittenAs: resFile.Filename,
+			})
 			normalized := normalize(modifiedData, inputFile)
 
 			golden.Assert(t, normalized, filepath.Join(dirName, testName, "modified.go.snap"))
@@ -158,5 +173,6 @@ func runGo(t *testing.T, dir string, args ...string) {
 func normalize(in []byte, filename string) string {
 	res := strings.ReplaceAll(string(in), "\t", "  ")
 	res = strings.ReplaceAll(res, fmt.Sprintf("//line %s:", filename), "//line input.go:")
+	res = strings.ReplaceAll(res, fmt.Sprintf("/*line %s:", filename), "/*line input.go:")
 	return res
 }

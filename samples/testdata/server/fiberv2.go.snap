@@ -7,6 +7,7 @@
 package main
 
 import (
+//line samples/server/fiberv2.go:9
 	"github.com/gofiber/fiber/v2"
 //line <generated>:1
 	__orchestrion_fibertrace "github.com/DataDog/dd-trace-go/contrib/gofiber/fiber.v2/v2"

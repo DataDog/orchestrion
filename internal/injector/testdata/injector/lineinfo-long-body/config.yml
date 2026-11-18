@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# A one-line body that is long enough for the printer to expand must not shift
+# the effective source lines of the calls inside it or of the declarations that
+# follow it.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: woven
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  package test
+
+  func woven() { after() }
+
+  func f() int { return wide("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") }
+
+  func following() { before() }
+
+  func probe() int          { return 0 }
+  func before() int         { return 0 }
+  func after() int          { return 0 }
+  func target(v ...int) int { return 0 }
+  func wide(s string) int   { return 0 }

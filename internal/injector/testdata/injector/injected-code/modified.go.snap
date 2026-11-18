@@ -4,6 +4,7 @@ package main
 func main() {}
 
 //dd:mark
+
 //line <generated>:1
 func injected() {
   {

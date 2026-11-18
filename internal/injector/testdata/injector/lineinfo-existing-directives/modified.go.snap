@@ -1,0 +1,18 @@
+//line input.go:1:1
+//line virtual.go:200
+package test
+
+func f() { probe() }
+
+func woven() {
+//line <generated>:1
+  {
+    print("woven")
+  }
+//line virtual.go:204
+  after() /*line virtual.go:203*/
+}
+
+//line virtual.go:206
+func probe() int { return 0 }
+func after() int { return 0 }

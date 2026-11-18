@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# Function literals with one-line bodies receive the same line information
+# treatment as function declarations, including nested literals and literals in
+# defer and go statements.
+aspects:
+  - id: function-literals
+    join-point:
+      function-body:
+        function:
+          - name: ''
+    advice:
+      - prepend-statements:
+          template: print("literal")
+
+code: |-
+  package test
+
+  var handler = func() { probe() }
+
+  func f() { func() { func() { probe() }() }() }
+
+  func g() {
+    defer func() { probe() }()
+    go func() { probe() }()
+  }
+
+  func probe() int  { return 0 }

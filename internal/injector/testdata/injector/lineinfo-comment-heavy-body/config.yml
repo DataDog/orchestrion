@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# A comment inside a one-line body can make the printer expand the body to
+# multiple lines; the effective source lines of the body and of the following
+# declarations must be preserved.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: woven
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  package test
+
+  func woven() { after() }
+
+  func f() int { return /*xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/ target(1) }
+
+  func following() { before() }
+
+  func probe() int          { return 0 }
+  func before() int         { return 0 }
+  func after() int          { return 0 }
+  func target(v ...int) int { return 0 }
