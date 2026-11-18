@@ -3,8 +3,8 @@ package test
 
 import (
   "database/sql"
-//line <generated>:1
   __orchestrion_driver "database/sql/driver"
+//line <generated>:1
   __orchestrion_sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 )
 

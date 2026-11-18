@@ -13,6 +13,7 @@ import (
 
 	"github.com/DataDog/orchestrion/internal/injector/aspect"
 	"github.com/DataDog/orchestrion/internal/injector/aspect/may"
+	"github.com/DataDog/orchestrion/internal/injector/typed"
 	"github.com/dave/dst"
 	"github.com/dave/dst/dstutil"
 	"github.com/rs/zerolog"
@@ -74,27 +75,9 @@ func filterExtraneousImports(byPath map[string][]*dst.ImportSpec) map[*dst.Impor
 	result := make(map[*dst.ImportSpec]struct{}, len(byPath))
 
 	for _, specs := range byPath {
-		retain := specs[0]
-		for _, spec := range specs[1:] {
-			// Preference order is: spec.Name == nil < spec.Name.Name == "_" < spec.Name.Name != "_"
-			if spec.Name == nil {
-				continue
-			}
-
-			if retain.Name == nil && spec.Name != nil {
-				retain = spec
-				continue
-			}
-
-			if retain.Name.Name == "_" && spec.Name.Name != "_" {
-				retain = spec
-				continue
-			}
-
-			// We found a non-empty alias, no need to look further.
-			break
-		}
-		result[retain] = struct{}{}
+		// The alias planner renames the retained spec in place, so all remaining specs for the
+		// path (source duplicates, promoted blanks) collapse onto it here.
+		result[typed.RetainedImportSpec(specs)] = struct{}{}
 	}
 
 	return result

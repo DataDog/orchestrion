@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# B01: a local variable shadows the alias before the join point.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

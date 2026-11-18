@@ -1,0 +1,56 @@
+%YAML 1.1
+---
+# D01: two distinct paths that both declare package trace and both infer the
+# same base name: each path gets its own alias.
+modules:
+  example.com/a/trace:
+    trace.go: |-
+      package trace
+
+      func B(s string) string { return "a:" + s }
+  example.com/b/trace:
+    trace.go: |-
+      package trace
+
+      func D(s string, rest ...string) string { return "b:" + s }
+
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - replace-function: example.com/a/trace.B
+  - join-point:
+      function-call: fmt.Sprintf
+    advice:
+      - replace-function: example.com/b/trace.D
+
+syntheticReferences:
+  example.com/a/trace: true
+  example.com/b/trace: true
+
+repeat: 20
+
+code: |-
+  package test
+
+  import (
+    "fmt"
+    "os"
+    ta "example.com/a/trace"
+    tb "example.com/b/trace"
+  )
+
+  func helperA(s string) string { return ta.B(s) }
+  func helperB(s string) string { return tb.D(s) }
+
+  func homeA() string {
+    ta := "shadowed"
+    _ = ta
+    return os.Getenv("HOME")
+  }
+
+  func homeB() string {
+    tb := "shadowed"
+    _ = tb
+    return fmt.Sprintf("%s", "HOME")
+  }

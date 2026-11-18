@@ -1,0 +1,38 @@
+%YAML 1.1
+---
+# C03: the base generated name is shadowed at a different join point: one
+# suffixed alias is used at both join points.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func homeA() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }
+
+  func homeB() string {
+    str := "shadowed"
+    __orchestrion_strings := 1
+    _, _ = str, __orchestrion_strings
+    return os.Getenv("HOME")
+  }

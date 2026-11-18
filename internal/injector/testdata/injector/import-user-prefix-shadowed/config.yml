@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+# A11: a user alias that merely starts with __orchestrion_ is source-owned.
+# It is shadowed at the join point, so a distinct generated alias must be
+# selected.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    __orchestrion_user "strings"
+  )
+
+  func helper(s string) string { return __orchestrion_user.ToLower(s) }
+
+  func home() string {
+    __orchestrion_user := "shadowed"
+    _ = __orchestrion_user
+    return os.Getenv("HOME")
+  }

@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# B04: a method receiver named like the alias shadows it at the join point.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  type holder struct{}
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func (str holder) home() string {
+    return os.Getenv("HOME")
+  }

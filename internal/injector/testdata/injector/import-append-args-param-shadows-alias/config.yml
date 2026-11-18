@@ -1,0 +1,40 @@
+%YAML 1.1
+---
+# F02: append-arguments generates a FuncLit whose parameter shares the file's
+# alias spelling; the generated body references must use a safe alias.
+modules:
+  example.com/opts:
+    opts.go: |-
+      package opts
+
+      type Option struct{ Name string }
+
+      func Print(opts ...Option) {}
+
+aspects:
+  - join-point:
+      function-call: example.com/opts.Print
+    advice:
+      - append-args:
+          type: example.com/opts.Option
+          values:
+            - template: 'opts.Option{Name: "traced"}'
+              imports:
+                opts: example.com/opts
+
+syntheticReferences:
+  example.com/opts: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    opts "example.com/opts"
+  )
+
+  var _ = os.Getenv
+
+  func printAll(args ...opts.Option) {
+    opts.Print(args...)
+  }

@@ -1,0 +1,26 @@
+%YAML 1.1
+---
+# D13: the standard library package math/rand/v2 is named rand: the real name
+# comes from package metadata, not from the path or the template spelling.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            rnd: math/rand/v2
+          template: rnd.IntN(len({{ . }}))
+
+code: |-
+  package test
+
+  import (
+    "math/rand/v2"
+    "os"
+  )
+
+  func helper() int { return rand.IntN(3) }
+
+  func home() {
+    os.Getenv("HOME")
+  }

@@ -1,0 +1,46 @@
+%YAML 1.1
+---
+# F08: the shape the injector really receives for cgo files: //line directives
+# and cgo-generated package-level names, in plain Go.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+files:
+  extra.go:
+    code: |-
+      package test
+
+      // Package-level names shaped like those cgo generates in *.cgo1.go files.
+      var _Cfunc_x int
+      type _Ctype_int int
+
+      func cgo() {
+        var i _Ctype_int
+        _, _ = _Cfunc_x, i
+      }
+
+code: |-
+  //line input.go:1:1
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

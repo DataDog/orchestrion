@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# B08: the join point sits in the range expression, before the range variable
+# enters scope: the file's alias is reused there.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    for _, str := range []string{os.Getenv("HOME")} {
+      _ = str
+    }
+    return "done"
+  }

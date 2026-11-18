@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import (
+  "math/rand/v2"
+  "os"
+)
+
+func helper() int { return rand.IntN(3) }
+
+func home() {
+//line <generated>:1
+  rand.IntN(len(
+//line input.go:11
+    os.Getenv("HOME")))
+}
