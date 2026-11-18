@@ -76,11 +76,17 @@ func TestConsumeLineDirectiveEdgeCases(t *testing.T) {
 	// all. These are accepted by the Go toolchain, so the parser must handle
 	// them without panicking. It previously indexed past the start of the
 	// buffer and crashed.
-	for _, directive := range []string{"//line :1", "//line ", "//line 1", "//line :1:2"} {
+	for directive, want := range map[string]string{
+		"//line :1":   "",
+		"//line ":     "",
+		"//line 1":    "1",
+		"//line :1:2": "",
+	} {
 		t.Run(directive, func(t *testing.T) {
 			reader := bytes.NewReader([]byte(directive + "\npackage main\n"))
-			_, err := ConsumeLineDirective(reader)
+			got, err := ConsumeLineDirective(reader)
 			require.NoError(t, err)
+			require.Equal(t, want, got)
 		})
 	}
 }
