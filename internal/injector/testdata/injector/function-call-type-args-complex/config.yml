@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# Type arguments may be arbitrary type expressions; they must survive the wrap
+# intact
+# (matrix C10).
+aspects:
+  - join-point:
+      function-call: F
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  type Box[T any] struct{ Value T }
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+
+  func Use() {
+    var _ any
+    _ = F[[]int](nil)
+    _ = F[map[string]int](nil)
+    _ = F[[2]int]([2]int{})
+    _ = F[*int](nil)
+    _ = F[func(int) int](nil)
+    _ = F[Box[int]](Box[int]{})
+  }

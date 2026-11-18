@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# Composite literals of generic types, stored instantiations, field calls on
+# literal results, and
+# generic type alias conversions never match the free-function target; only the
+# direct explicit F
+# call does (matrix B11, B12, B21, B23).
+aspects:
+  - join-point:
+      function-call: F
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  type Holder[T any] struct{ Fn func(T) T }
+  type Pair[A, B any] func(A) B
+  type AliasPair[T any] = Pair[T, T]
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+
+  var literal = Holder[int]{Fn: F[int]}
+  var direct = F[int](1)
+  var nested = Holder[int]{Fn: func(int) int { return 0 }}.Fn(F[int](1))
+  var conversion = AliasPair[int](func(int) int { return 0 })

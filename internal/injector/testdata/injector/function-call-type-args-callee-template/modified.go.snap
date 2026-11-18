@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+import "slices"
+
+//line input.go:5
+func OneTypeArgument() []int {
+  return slices.//line <generated>:1
+  Clip(
+//line input.go:6
+    slices.Clone[[]int](nil))
+}
+
+func TwoTypeArguments() []int {
+  return slices.//line <generated>:1
+  Clip(
+//line input.go:10
+    slices.Clone[[]int, int](nil))
+}

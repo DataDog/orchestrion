@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# An aliased import used only inside the retained type argument must survive
+# the rewrite (matrix A30).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - replace-function: Clipped
+
+code: |-
+  package test
+
+  import (
+    i "iter"
+    "slices"
+  )
+
+  func Clipped[S ~[]E, E any](s S) S { return s }
+
+  func Use() []i.Seq[int] {
+    return slices.Clone[[]i.Seq[int]](nil)
+  }

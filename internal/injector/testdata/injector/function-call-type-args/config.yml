@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+# A function-call join point also matches calls with explicit type arguments:
+# pkg.F[T](...) has a
+# *dst.IndexExpr callee, and pkg.F[T1, T2](...) a *dst.IndexListExpr one. {{
+# .AST.Fun }} re-emits
+# the callee with its type arguments.
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - wrap-expression:
+          imports:
+            slices: slices
+          template: slices.Clip({{ .AST.Fun }}({{ index .AST.Args 0 }}))
+
+code: |-
+  package test
+
+  import "slices"
+
+  func Inferred(xs []int) []int {
+    return slices.Clone(xs)
+  }
+
+  func OneTypeArgument(xs []int) []int {
+    return slices.Clone[[]int](xs)
+  }
+
+  func TwoTypeArguments(xs []int) []int {
+    return slices.Clone[[]int, int](xs)
+  }

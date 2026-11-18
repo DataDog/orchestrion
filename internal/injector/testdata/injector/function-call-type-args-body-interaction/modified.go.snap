@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+func Note()             {}
+
+func Use() string {
+//line <generated>:1
+  {
+    Note()
+  }
+//line input.go:8
+  if
+//line <generated>:1
+  Mark(
+//line input.go:8
+    F[bool](true)) {
+    return "yes"
+  }
+  return "no"
+}

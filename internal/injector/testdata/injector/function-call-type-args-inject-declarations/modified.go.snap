@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+func F[A any](a A) A { return a }
+func G[A, B any](a A, b B) B {
+//line input.go:4
+  var z B
+//line input.go:4
+  return z
+}
+
+func Use() (int, string) {
+  var _ any
+  _ = F[int](1)
+  _ = G[int, string](1, "x")
+  return 0, ""
+}
+
+//line <generated>:1
+var injectedForF int
+var injectedForG int

@@ -1,0 +1,27 @@
+%YAML 1.1
+---
+# append-args works on calls with one and two explicit type arguments
+# (matrix A01, A02).
+aspects:
+  - join-point:
+      one-of:
+        - function-call: One
+        - function-call: Two
+    advice:
+      - append-args:
+          type: int
+          values:
+            - template: '1'
+            - template: '2'
+
+code: |-
+  package test
+
+  func One[A any](url string, opts ...int) int { return len(opts) }
+  func Two[A, B any](url string, opts ...int) int { return len(opts) }
+
+  func Use() int {
+    total := One[int]("u")
+    total += Two[int, string]("u")
+    return total
+  }

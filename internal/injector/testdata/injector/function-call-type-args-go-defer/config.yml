@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# Explicit calls in go and defer statements keep their placement while
+# receiving call advice (matrix P05; wrap-expression is excluded here on
+# purpose, see the test matrix notes).
+aspects:
+  - id: wait-appended
+    join-point:
+      function-call: Wait
+    advice:
+      - append-args:
+          type: bool
+          values:
+            - template: 'true'
+  - id: handled-replaced
+    join-point:
+      function-call: Handled
+    advice:
+      - replace-function: Handled2
+
+code: |-
+  package test
+
+  func Wait[A any](a A, done ...bool) {}
+  func Handled[A any](a A) A { return a }
+  func Handled2[A any](a A) A { return a }
+
+  func Use() {
+    go Wait[int](1)
+    defer Wait[string]("x")
+    var _ any
+    _ = Handled[int](1)
+  }

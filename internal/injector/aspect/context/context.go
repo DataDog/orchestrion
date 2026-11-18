@@ -368,3 +368,14 @@ func (c *context) ResolveType(expr dst.Expr) types.Type {
 
 	return nil
 }
+
+// IsGenericFunction reports whether expr resolves, through ctx's type
+// information, to a generic function: a *types.Signature that declares its own
+// type parameters. The function-call join point and the replace-function
+// advice both use this guard, so they agree on what counts as an explicit
+// instantiation. Named function types are rejected on purpose, so generic type
+// conversions never pass this check.
+func IsGenericFunction(ctx AspectContext, expr dst.Expr) bool {
+	signature, ok := ctx.ResolveType(expr).(*types.Signature)
+	return ok && signature.TypeParams().Len() > 0
+}

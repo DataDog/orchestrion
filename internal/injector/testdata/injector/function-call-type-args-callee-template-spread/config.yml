@@ -1,0 +1,31 @@
+%YAML 1.1
+---
+# Reconstructing a spread call must keep the ellipsis through
+# {{ .AST.Ellipsis }}: dropping it would change a spread call into a
+# single-argument call (matrix A08).
+aspects:
+  - join-point:
+      function-call: slices.Concat
+    advice:
+      - wrap-expression:
+          imports:
+            slices: slices
+          template: |-
+            {{- if .AST.Ellipsis -}}
+              slices.Clip({{ .AST.Fun }}({{ index .AST.Args 0 }}...))
+            {{- else -}}
+              slices.Clip({{ .AST.Fun }}({{ index .AST.Args 0 }}))
+            {{- end -}}
+
+code: |-
+  package test
+
+  import "slices"
+
+  func Spread(xs [][]int) []int {
+    return slices.Concat[[]int, int](xs...)
+  }
+
+  func Plain(xs []int) []int {
+    return slices.Concat[[]int, int](xs)
+  }

@@ -1,0 +1,21 @@
+%YAML 1.1
+---
+# A type argument that is the caller's own type parameter is a type argument,
+# not a value index
+# (matrix C11).
+aspects:
+  - join-point:
+      function-call: F
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+
+  func Caller[T any](v T) T {
+    return F[T](v)
+  }

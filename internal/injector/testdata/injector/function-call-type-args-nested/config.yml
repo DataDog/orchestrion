@@ -1,0 +1,25 @@
+%YAML 1.1
+---
+# The inner explicit instantiation matches; the outer call whose callee
+# is itself a call result stays unmatched (matrix P01, P02).
+aspects:
+  - join-point:
+      one-of:
+        - function-call: FR
+        - function-call: F
+        - function-call: G
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func FR[A any]() func(A) A { return func(v A) A { return v } }
+  func F[A any](a A) A { return a }
+  func G[A, B any](a A, b B) B { var z B; return z }
+
+  func Use() (int, string) {
+    return FR[int]()(1), F[string](G[int](1, "x"))
+  }

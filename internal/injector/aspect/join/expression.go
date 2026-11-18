@@ -45,7 +45,25 @@ func (i *functionCall) Matches(ctx context.AspectContext) bool {
 		return false
 	}
 
-	switch fun := call.Fun.(type) {
+	callee := call.Fun
+	switch indexed := callee.(type) {
+	case *dst.IndexExpr:
+		// An indexed callee is an explicit instantiation only when the type
+		// checker confirms the operand is a generic function. Ordinary value
+		// indexing, such as functions stored in a slice or a map, must not match,
+		// and without type information the match fails closed.
+		if !context.IsGenericFunction(ctx, indexed.X) {
+			return false
+		}
+		callee = indexed.X
+	case *dst.IndexListExpr:
+		if !context.IsGenericFunction(ctx, indexed.X) {
+			return false
+		}
+		callee = indexed.X
+	}
+
+	switch fun := callee.(type) {
 	case *dst.Ident:
 		return fun.Path == i.ImportPath && fun.Name == i.Name
 	case *dst.SelectorExpr:

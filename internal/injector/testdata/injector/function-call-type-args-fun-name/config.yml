@@ -1,0 +1,27 @@
+%YAML 1.1
+---
+# {{ .AST.Fun.Name }} resolves to the generic function's name when a
+# function-call join point matches a call with explicit type arguments
+# (see also selector-expr-fun-name).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - wrap-expression:
+          imports:
+            slices: slices
+          template: >-
+            slices.Clip(slices.{{ .AST.Fun.Name }}({{ index .AST.Args 0 }}))
+
+code: |-
+  package test
+
+  import "slices"
+
+  func OneTypeArgument(xs []int) []int {
+    return slices.Clone[[]int](xs)
+  }
+
+  func TwoTypeArguments(xs []int) []int {
+    return slices.Clone[[]int, int](xs)
+  }
