@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# C04: a spread call with a fixed argument before the spread; only the last,
+# spread argument is transformed and the fixed argument is preserved.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink(tag string, vals ...any) {}
+
+  func tag() string { return "fixed" }
+
+  func printAll(args []any) {
+    sink(tag(), args...)
+  }

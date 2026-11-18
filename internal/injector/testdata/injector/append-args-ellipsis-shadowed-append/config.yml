@@ -1,0 +1,31 @@
+%YAML 1.1
+---
+# H06: a local variable named append is in scope at the spread call; the
+# generated code must not call the caller's append.
+aspects:
+  - join-point:
+      function-call: io.MultiWriter
+    advice:
+      - append-args:
+          type: io.Writer
+          values:
+            - imports:
+                os: os
+              template: os.Stderr
+
+syntheticReferences:
+  os: true
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import "io"
+
+  func tee(ws []io.Writer) io.Writer {
+    append := 0
+    _ = append
+    return io.MultiWriter(ws...)
+  }

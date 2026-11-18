@@ -1,0 +1,18 @@
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
+func sink[E any](vals ...E) {}
+
+func c[S ~[]E, E any](xs S, extra E) {
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]E](__orchestrion_slices.Clone[[]E](
+//line input.go:6
+      xs),
+//line <generated>:1
+      []E{extra})...)
+}

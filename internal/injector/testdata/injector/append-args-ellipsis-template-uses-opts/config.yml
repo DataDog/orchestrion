@@ -1,0 +1,26 @@
+%YAML 1.1
+---
+# H04: the injected value names a parameter of the enclosing function called
+# opts: it must keep referring to that parameter, not to a generated binding.
+aspects:
+  - join-point:
+      function-call: fmt.Println
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '{{ .Function.ArgumentOfType "string" }}'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import "fmt"
+
+  func printAll(opts string, args []any) {
+    fmt.Println(args...)
+  }

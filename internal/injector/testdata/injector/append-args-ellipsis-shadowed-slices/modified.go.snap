@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
+
+//line input.go:5
+func printAll(args []any) {
+  slices := 1
+  _ = slices
+  fmt.Println(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:8
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}

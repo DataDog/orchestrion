@@ -9,6 +9,11 @@ aspects:
           values:
             - template: '"woven"'
 
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
 code: |-
   package test
 

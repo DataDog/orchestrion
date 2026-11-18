@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# T03: the element type is any and the input holds mixed concrete values and a
+# typed-nil pointer; the copy must keep dynamic types and typed nil.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: typedNil()
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  type P *int
+
+  func sink(vals ...any) {}
+
+  func typedNil() any { return (*P)(nil) }
+
+  func printAll(args []any) {
+    sink(args...)
+  }

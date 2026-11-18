@@ -1,0 +1,34 @@
+%YAML 1.1
+---
+# H09: the file imports slices under the alias stdslices and uses it elsewhere;
+# the alias is shadowed at the join point, so a safe alias must be selected for
+# the whole file.
+aspects:
+  - join-point:
+      function-call: fmt.Println
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import (
+    "fmt"
+    stdslices "slices"
+  )
+
+  var contains = stdslices.Contains[[]int, int]
+
+  func printAll(args []any) {
+    stdslices := "shadowed"
+    _ = stdslices
+    fmt.Println(args...)
+  }

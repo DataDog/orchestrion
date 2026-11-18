@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# H22: the file already imports slices and strings unaliased and neither name is
+# shadowed; the planner must reuse both imports instead of adding duplicates.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - imports:
+                strings: strings
+              template: strings.ToUpper("woven")
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import (
+    "slices"
+    "strings"
+  )
+
+  var has = slices.Contains[[]int, int]
+  var shout = strings.ToUpper
+
+  func sink(vals ...any) {}
+
+  func printAll(args []any) {
+    sink(args...)
+  }

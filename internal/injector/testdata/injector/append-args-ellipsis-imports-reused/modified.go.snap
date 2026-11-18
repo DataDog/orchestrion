@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "slices"
+  "strings"
+)
+
+var has = slices.Contains[[]int, int]
+var shout = strings.ToUpper
+
+func sink(vals ...any) {}
+
+func printAll(args []any) {
+  sink(
+//line <generated>:1
+    slices.Concat[[]any](slices.Clone[[]any](
+//line input.go:14
+      args),
+//line <generated>:1
+      []any{strings.ToUpper("woven")})...)
+}

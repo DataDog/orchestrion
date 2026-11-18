@@ -1,7 +1,9 @@
 %YAML 1.1
 ---
-# F02: append-arguments generates a FuncLit whose parameter shares the file's
-# alias spelling; the generated body references must use a safe alias.
+# F02: append-arguments on a spread call. The pre-fix rewrite generated a
+# FuncLit whose parameter shared the file's alias spelling and forced an alias.
+# The hygienic rewrite introduces no binding, so the file's own opts alias is
+# reused everywhere and only slices is a synthetic import.
 modules:
   example.com/opts:
     opts.go: |-
@@ -23,7 +25,9 @@ aspects:
                 opts: example.com/opts
 
 syntheticReferences:
-  example.com/opts: true
+  slices: true
+
+required-lang: go1.18
 
 code: |-
   package test

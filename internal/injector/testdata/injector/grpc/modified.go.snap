@@ -8,6 +8,7 @@ import (
   "google.golang.org/grpc"
 //line <generated>:1
   __orchestrion_grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
+  __orchestrion_slices "slices"
 )
 
 //line input.go:10
@@ -15,11 +16,12 @@ func grpcClient() {
   dialOpts := []grpc.DialOption{grpc.WithInsecure()}
   conn, err := grpc.Dial("localhost:50051",
 //line <generated>:1
-    func(opts ...grpc.DialOption) []grpc.DialOption {
-      return append(append([]grpc.DialOption{}, opts...), grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor()))
-    }(
+    __orchestrion_slices.Concat[[]grpc.DialOption](__orchestrion_slices.Clone[[]grpc.DialOption](
 //line input.go:12
-      dialOpts...)...)
+      dialOpts),
+//line <generated>:1
+      []grpc.DialOption{grpc.WithStreamInterceptor(__orchestrion_grpctrace.StreamClientInterceptor()), grpc.WithUnaryInterceptor(__orchestrion_grpctrace.UnaryClientInterceptor())})...)
+//line input.go:13
   if err != nil {
     log.Fatal(err)
   }

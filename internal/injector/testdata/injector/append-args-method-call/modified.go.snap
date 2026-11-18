@@ -1,0 +1,37 @@
+//line input.go:1:1
+package test
+
+import (
+  "example.com/optlib"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
+
+//line input.go:5
+var srv optlib.Server
+
+func valueCaller(opts []optlib.Option) {
+  append := 1
+  _ = append
+  srv.Serve(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
+//line input.go:10
+      opts),
+//line <generated>:1
+      []optlib.Option{optlib.Named("woven")})...)
+}
+
+//line input.go:13
+func pointerCaller(p *optlib.Server, opts []optlib.Option) {
+  append := 1
+  _ = append
+  p.Serve(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
+//line input.go:16
+      opts),
+//line <generated>:1
+      []optlib.Option{optlib.Named("woven")})...)
+}

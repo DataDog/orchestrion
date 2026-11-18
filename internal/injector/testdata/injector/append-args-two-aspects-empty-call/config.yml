@@ -1,0 +1,62 @@
+%YAML 1.1
+---
+# C13: two non-empty aspects on an empty call. The first injects a
+# call-expression value, and the second aspect must still append: the tuple
+# check resolves the type from type information, and a synthesized argument
+# has none, so the check fails open. Documented in call_test.go
+# (A(TupleCheckSyntheticArg)).
+aspects:
+  - join-point:
+      function-call: example.com/optlib.Sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("first")
+  - join-point:
+      function-call: example.com/optlib.Sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("second")
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  func printAll() {
+    optlib.Sink()
+  }

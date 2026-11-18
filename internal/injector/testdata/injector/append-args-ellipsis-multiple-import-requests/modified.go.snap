@@ -1,0 +1,31 @@
+//line input.go:1:1
+package test
+
+import (
+  "example.com/optlib"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
+
+//line input.go:5
+func printA(args []optlib.Option) {
+  optlib.Sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
+//line input.go:6
+      args),
+//line <generated>:1
+      []optlib.Option{optlib.Named("one")})...)
+}
+
+//line input.go:9
+func printB(args []optlib.Option) {
+  optlib.Sink2(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
+//line input.go:10
+      args),
+//line <generated>:1
+      []optlib.Option{optlib.Named("two")})...)
+}

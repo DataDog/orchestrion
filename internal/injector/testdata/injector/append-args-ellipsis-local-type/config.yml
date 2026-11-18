@@ -1,0 +1,31 @@
+%YAML 1.1
+---
+# T04: the configured type is a named type from the same package, with no import
+# path; the emitted []T is a valid unqualified local reference and no
+# self-import is requested.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: Flag
+          values:
+            - template: flag()
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  type Flag int
+
+  func sink(vals ...Flag) {}
+
+  func flag() Flag { return 1 }
+
+  func printAll(args []Flag) {
+    sink(args...)
+  }

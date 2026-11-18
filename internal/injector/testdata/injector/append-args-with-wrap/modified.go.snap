@@ -1,0 +1,15 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+func printAll(args []optlib.Option) {
+  _ =
+//line <generated>:1
+    optlib.Wrapped(
+//line input.go:6
+      optlib.Sink(args...),
+//line <generated>:1
+      optlib.Named("woven"))
+}

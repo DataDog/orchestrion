@@ -1,0 +1,85 @@
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
+func sink(vals ...any) {}
+
+func withLen(args []any) {
+  len := 1
+  _ = len
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:8
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}
+
+//line input.go:11
+func withCap(args []any) {
+  cap := 1
+  _ = cap
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:14
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}
+
+//line input.go:17
+func withMake(args []any) {
+  make := 1
+  _ = make
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:20
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}
+
+//line input.go:23
+func withCopy(args []any) {
+  copy := 1
+  _ = copy
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:26
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}
+
+//line input.go:29
+func withNil(args []any) {
+  nil := 1
+  _ = nil
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:32
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}
+
+//line input.go:35
+func withTrue(args []any) {
+  true := false
+  _ = true
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:38
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}

@@ -1,0 +1,68 @@
+%YAML 1.1
+---
+# C08: variadic method calls on value and pointer receivers, with caller opts
+# and append names in scope. The receiver executes once and the same
+# copy/capture guarantees as function calls hold.
+aspects:
+  - join-point:
+      method-call:
+        receiver: example.com/optlib.Server
+        name: Serve
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("woven")
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  var srv optlib.Server
+
+  func valueCaller(opts []optlib.Option) {
+    append := 1
+    _ = append
+    srv.Serve(opts...)
+  }
+
+  func pointerCaller(p *optlib.Server, opts []optlib.Option) {
+    append := 1
+    _ = append
+    p.Serve(opts...)
+  }
