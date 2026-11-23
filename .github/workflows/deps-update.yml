@@ -33,23 +33,46 @@ jobs:
       # `go mod tidy`, so that the later accounts for the complete updated module graph (otherwise
       # we'd need to run these in dependency order to ensure stable output).
       - name: Update dependencies
+        env:
+          DD_TRACE_GO_VERSION: ${{ steps.dd-trace-go.outputs.version }}
         run: |-
-          find . -iname go.mod -not -path './_docs/themes/**' -not -path './internal/pin/testdata/**' -print0 | while IFS= read -r -d '' gomod; do
+          set -euo pipefail
+          find . -iname go.mod -not -path './_docs/themes/**' -not -path './internal/pin/testdata/**' -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
-            constraints=()
+            modjson="$(go -C="${dir}" mod edit -json)"
+            args=("go@$(jq -r .Go <<<"${modjson}")")
+            # Only name dd-trace-go/v2 in modules that already require it: "go get" would otherwise
+            # add it to modules that do not use it (such as _tools), and fail if their go release
+            # is older than the one that dd-trace-go/v2 requires.
+            if jq -e 'any(.Require[]?; .Path == "github.com/DataDog/dd-trace-go/v2")' >/dev/null <<<"${modjson}"; then
+              args+=("github.com/DataDog/dd-trace-go/v2@${DD_TRACE_GO_VERSION}")
+            fi
             # v1.38.1 is the last release using the Shopify module path. Keep the legacy
             # integration coverage: newer releases declare github.com/IBM/sarama instead.
-            if go -C="${dir}" mod edit -json | jq -e 'any(.Require[]?; .Path == "github.com/Shopify/sarama")' > /dev/null; then
-              constraints+=(github.com/Shopify/sarama@v1.38.1)
+            if jq -e 'any(.Require[]?; .Path == "github.com/Shopify/sarama")' >/dev/null <<<"${modjson}"; then
+              args+=(github.com/Shopify/sarama@v1.38.1)
             fi
-            go -C="${dir}" get -t -u "go@$(go -C="${dir}" mod edit -json | jq -r .Go)" "github.com/DataDog/dd-trace-go/v2@${{ steps.dd-trace-go.outputs.version }}" "${constraints[@]}" ./...
+            echo "::group::go get in ${dir}: ${args[*]}"
+            if ! go -C="${dir}" get -t -u "${args[@]}" ./...; then
+              echo "::endgroup::"
+              echo "::error title=go get failed::${dir}: go get -t -u ${args[*]} ./..."
+              exit 1
+            fi
+            echo "::endgroup::"
           done
       - name: Run go mod tidy
         run: |-
-          find . -iname go.mod -not -path './_docs/themes/**' -not -path './internal/pin/testdata/**' -print0 | while IFS= read -r -d '' gomod; do
+          set -euo pipefail
+          find . -iname go.mod -not -path './_docs/themes/**' -not -path './internal/pin/testdata/**' -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' gomod; do
             dir="$(dirname "${gomod}")"
-            go -C="${dir}" mod tidy -go="$(go -C="${dir}" mod edit -json | jq -r .Go)"
-            go -C="${dir}" mod edit -toolchain=none
+            go_version="$(go -C="${dir}" mod edit -json | jq -r .Go)"
+            echo "::group::go mod tidy in ${dir}"
+            if ! go -C="${dir}" mod tidy -go="${go_version}" || ! go -C="${dir}" mod edit -toolchain=none; then
+              echo "::endgroup::"
+              echo "::error title=go mod tidy failed::${dir}"
+              exit 1
+            fi
+            echo "::endgroup::"
           done
       - id: is-tree-dirty
         name: Check for updates
