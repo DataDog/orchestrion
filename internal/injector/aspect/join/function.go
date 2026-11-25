@@ -307,7 +307,10 @@ func (fo *receiver) evaluate(info functionInformation) bool {
 }
 
 func (fo *receiver) impliesImported() []string {
-	return []string{fo.TypeName.ImportPath}
+	if path := fo.TypeName.ImportPath; path != "" {
+		return []string{path}
+	}
+	return nil
 }
 
 func (fo *receiver) Hash(h *fingerprint.Hasher) error {
