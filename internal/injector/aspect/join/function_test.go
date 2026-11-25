@@ -185,6 +185,124 @@ func TestSignatureContains(t *testing.T) {
 	}
 }
 
+func TestSignatureEvaluate(t *testing.T) {
+	str := &dst.Ident{Name: "string"}
+	num := &dst.Ident{Name: "int"}
+	named := func(typ dst.Expr, names ...string) *dst.Field {
+		field := &dst.Field{Type: typ}
+		for _, name := range names {
+			field.Names = append(field.Names, dst.NewIdent(name))
+		}
+		return field
+	}
+
+	tests := []struct {
+		name   string
+		args   []typed.TypeName
+		ret    []typed.TypeName
+		params []*dst.Field
+		result []*dst.Field
+		want   bool
+	}{
+		{
+			name:   "grouped parameters match one type per name",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}},
+			params: []*dst.Field{named(str, "a", "b")},
+			want:   true,
+		},
+		{
+			name:   "grouped parameters do not match a single type",
+			args:   []typed.TypeName{{Name: "string"}},
+			params: []*dst.Field{named(str, "a", "b")},
+			want:   false,
+		},
+		{
+			name:   "grouped and separate parameters",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}, {Name: "int"}},
+			params: []*dst.Field{named(str, "a", "b"), named(num, "c")},
+			want:   true,
+		},
+		{
+			name:   "grouped parameters in the wrong order",
+			args:   []typed.TypeName{{Name: "int"}, {Name: "string"}, {Name: "string"}},
+			params: []*dst.Field{named(str, "a", "b"), named(num, "c")},
+			want:   false,
+		},
+		{
+			name:   "grouped named results match one type per name",
+			ret:    []typed.TypeName{{Name: "int"}, {Name: "int"}},
+			result: []*dst.Field{named(num, "x", "y")},
+			want:   true,
+		},
+		{
+			name:   "grouped named results do not match a single type",
+			ret:    []typed.TypeName{{Name: "int"}},
+			result: []*dst.Field{named(num, "x", "y")},
+			want:   false,
+		},
+		{
+			name:   "unnamed parameters",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "int"}},
+			params: []*dst.Field{named(str), named(num)},
+			want:   true,
+		},
+		{
+			name: "no parameters and no results",
+			want: true,
+		},
+		{
+			name:   "expected types missing from the declaration",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}},
+			params: []*dst.Field{named(str, "a")},
+			want:   false,
+		},
+		{
+			name:   "combined args and results match",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}},
+			ret:    []typed.TypeName{{Name: "int"}},
+			params: []*dst.Field{named(str, "a", "b")},
+			result: []*dst.Field{named(num)},
+			want:   true,
+		},
+		{
+			name:   "combined args match but results mismatch",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}},
+			ret:    []typed.TypeName{{Name: "error"}},
+			params: []*dst.Field{named(str, "a", "b")},
+			result: []*dst.Field{named(num)},
+			want:   false,
+		},
+		{
+			name:   "empty expected args rejects non-empty parameters",
+			params: []*dst.Field{named(str, "a")},
+			want:   false,
+		},
+		{
+			name: "expected result missing from declaration",
+			ret:  []typed.TypeName{{Name: "int"}},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Void functions have a nil Results list, so keep nil slices nil.
+			var params, results *dst.FieldList
+			if tt.params != nil {
+				params = &dst.FieldList{List: tt.params}
+			}
+			if tt.result != nil {
+				results = &dst.FieldList{List: tt.result}
+			}
+			info := functionInformation{Type: &dst.FuncType{
+				Params:  params,
+				Results: results,
+			}}
+			assert.Equal(t, tt.want, Signature(tt.args, tt.ret).evaluate(info))
+		})
+	}
+}
+
 func TestSignatureContainsHash(t *testing.T) {
 	args := []typed.TypeName{{Name: "string"}, {Name: "int"}}
 	ret := []typed.TypeName{{Name: "error"}}
