@@ -256,13 +256,47 @@ func TestSignatureEvaluate(t *testing.T) {
 			params: []*dst.Field{named(str, "a")},
 			want:   false,
 		},
+		{
+			name:   "combined args and results match",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}},
+			ret:    []typed.TypeName{{Name: "int"}},
+			params: []*dst.Field{named(str, "a", "b")},
+			result: []*dst.Field{named(num)},
+			want:   true,
+		},
+		{
+			name:   "combined args match but results mismatch",
+			args:   []typed.TypeName{{Name: "string"}, {Name: "string"}},
+			ret:    []typed.TypeName{{Name: "error"}},
+			params: []*dst.Field{named(str, "a", "b")},
+			result: []*dst.Field{named(num)},
+			want:   false,
+		},
+		{
+			name:   "empty expected args rejects non-empty parameters",
+			params: []*dst.Field{named(str, "a")},
+			want:   false,
+		},
+		{
+			name: "expected result missing from declaration",
+			ret:  []typed.TypeName{{Name: "int"}},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Void functions have a nil Results list, so keep nil slices nil.
+			var params, results *dst.FieldList
+			if tt.params != nil {
+				params = &dst.FieldList{List: tt.params}
+			}
+			if tt.result != nil {
+				results = &dst.FieldList{List: tt.result}
+			}
 			info := functionInformation{Type: &dst.FuncType{
-				Params:  &dst.FieldList{List: tt.params},
-				Results: &dst.FieldList{List: tt.result},
+				Params:  params,
+				Results: results,
 			}}
 			assert.Equal(t, tt.want, Signature(tt.args, tt.ret).evaluate(info))
 		})
