@@ -200,35 +200,27 @@ func (fo *signature) impliesImported() (list []string) {
 }
 
 func (fo *signature) evaluate(info functionInformation) bool {
-	if info.Type.Results == nil || len(info.Type.Results.List) == 0 {
-		if len(fo.Results) != 0 {
-			return false
-		}
-	} else if len(info.Type.Results.List) != len(fo.Results) {
-		return false
-	} else {
-		for i := 0; i < len(fo.Results); i++ {
-			if !fo.Results[i].Matches(info.Type.Results.List[i].Type) {
-				return false
-			}
-		}
+	return typesMatch(fo.Results, info.Type.Results) && typesMatch(fo.Arguments, info.Type.Params)
+}
+
+// typesMatch determines whether the expected types match the types declared by
+// the field list, one by one and in order. A field that declares several names
+// (such as the "a, b string" in "func(a, b string)") counts once per name.
+func typesMatch(expected []typed.TypeName, fields *dst.FieldList) bool {
+	if fields == nil {
+		return len(expected) == 0
 	}
 
-	if info.Type.Params == nil || len(info.Type.Params.List) == 0 {
-		if len(fo.Arguments) != 0 {
-			return false
-		}
-	} else if len(info.Type.Params.List) != len(fo.Arguments) {
-		return false
-	} else {
-		for i := 0; i < len(fo.Arguments); i++ {
-			if !fo.Arguments[i].Matches(info.Type.Params.List[i].Type) {
+	i := 0
+	for _, field := range fields.List {
+		for range max(len(field.Names), 1) {
+			if i >= len(expected) || !expected[i].Matches(field.Type) {
 				return false
 			}
+			i++
 		}
 	}
-
-	return true
+	return i == len(expected)
 }
 
 func (fo *signature) Hash(h *fingerprint.Hasher) error {
