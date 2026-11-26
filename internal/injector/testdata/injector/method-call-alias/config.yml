@@ -1,0 +1,36 @@
+%YAML 1.1
+---
+# Verifies that method-call matches calls whose receiver type is declared
+# through a type alias, since an alias denotes the same type.
+aspects:
+  - id: http-client-do
+    join-point:
+      method-call:
+        receiver: "net/http.Client"
+        name: Do
+    advice:
+      - wrap-expression:
+          template: |-
+            http.DefaultClient.Do(
+              {{ index .AST.Args 0 }},
+            )
+
+code: |-
+  package test
+
+  import (
+    "net/http"
+  )
+
+  type Client = http.Client
+
+  type ClientPtr = *http.Client
+
+  func doRequest(direct *http.Client, aliased *Client, aliasedPtr ClientPtr, req *http.Request) {
+    // Should be rewritten: receiver is *http.Client
+    _, _ = direct.Do(req)
+    // Should be rewritten: receiver is a pointer to an alias of http.Client
+    _, _ = aliased.Do(req)
+    // Should be rewritten: receiver is an alias of *http.Client
+    _, _ = aliasedPtr.Do(req)
+  }

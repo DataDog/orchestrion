@@ -1,0 +1,31 @@
+//line input.go:1:1
+package test
+
+import (
+  "net/http"
+)
+
+type Client = http.Client
+
+type ClientPtr = *http.Client
+
+func doRequest(direct *http.Client, aliased *Client, aliasedPtr ClientPtr, req *http.Request) {
+  // Should be rewritten: receiver is *http.Client
+  _, _ =
+//line <generated>:1
+    http.DefaultClient.Do(
+//line input.go:13
+      req)
+  // Should be rewritten: receiver is a pointer to an alias of http.Client
+  _, _ =
+//line <generated>:1
+    http.DefaultClient.Do(
+//line input.go:15
+      req)
+  // Should be rewritten: receiver is an alias of *http.Client
+  _, _ =
+//line <generated>:1
+    http.DefaultClient.Do(
+//line input.go:17
+      req)
+}

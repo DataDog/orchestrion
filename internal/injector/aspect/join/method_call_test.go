@@ -30,6 +30,12 @@ func TestMethodCallMatchesType(t *testing.T) {
 	zapLoggerPtr := types.NewPointer(zapLogger)
 	otherLogger := newNamedType("example.com/other", "other", "Logger")
 	otherLoggerPtr := types.NewPointer(otherLogger)
+	appPkg := types.NewPackage("example.com/app", "app")
+	// type Logger = zap.Logger
+	zapLoggerAlias := types.NewAlias(types.NewTypeName(0, appPkg, "Logger", nil), zapLogger)
+	zapLoggerAliasPtr := types.NewPointer(zapLoggerAlias)
+	// type LoggerPtr = *zap.Logger
+	zapLoggerPtrAlias := types.NewAlias(types.NewTypeName(0, appPkg, "LoggerPtr", nil), zapLoggerPtr)
 
 	tn, err := typed.NewTypeName("go.uber.org/zap.Logger")
 	require.NoError(t, err)
@@ -48,6 +54,12 @@ func TestMethodCallMatchesType(t *testing.T) {
 		{name: "value-only: rejects pointer", match: MethodCallMatchValueOnly, typ: zapLoggerPtr, want: false},
 		{name: "any: rejects different package", match: MethodCallMatchAny, typ: otherLoggerPtr, want: false},
 		{name: "any: rejects nil", match: MethodCallMatchAny, typ: nil, want: false},
+		{name: "any: matches pointer to alias", match: MethodCallMatchAny, typ: zapLoggerAliasPtr, want: true},
+		{name: "any: matches alias of pointer", match: MethodCallMatchAny, typ: zapLoggerPtrAlias, want: true},
+		{name: "pointer-only: matches pointer to alias", match: MethodCallMatchPointerOnly, typ: zapLoggerAliasPtr, want: true},
+		{name: "pointer-only: matches alias of pointer", match: MethodCallMatchPointerOnly, typ: zapLoggerPtrAlias, want: true},
+		{name: "value-only: matches alias", match: MethodCallMatchValueOnly, typ: zapLoggerAlias, want: true},
+		{name: "value-only: rejects alias of pointer", match: MethodCallMatchValueOnly, typ: zapLoggerPtrAlias, want: false},
 	}
 
 	for _, tt := range tests {

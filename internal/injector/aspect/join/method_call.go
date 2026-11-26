@@ -77,6 +77,7 @@ func (m *methodCall) matchesType(t types.Type) bool {
 	if t == nil {
 		return false
 	}
+	t = types.Unalias(t)
 
 	switch m.Match {
 	case MethodCallMatchPointerOnly:
@@ -96,7 +97,7 @@ func (m *methodCall) matchesType(t types.Type) bool {
 }
 
 func (m *methodCall) matchesNamed(t types.Type) bool {
-	named, ok := t.(*types.Named)
+	named, ok := types.Unalias(t).(*types.Named)
 	if !ok {
 		return false
 	}
