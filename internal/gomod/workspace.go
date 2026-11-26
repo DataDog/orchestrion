@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	goversion "go/version"
+
+	"github.com/DataDog/orchestrion/internal/goenv"
 )
 
 // AlignWorkGoVersion makes sure the `go` directive of the go.work file enclosing
@@ -61,6 +63,49 @@ func AlignWorkGoVersion(ctx context.Context, moduleDir string, modfile string) e
 	}
 
 	return nil
+}
+
+// vendorWorkspace runs `go work vendor` if the module of the designated go.mod
+// file belongs to a workspace that was vendored with `go work vendor`, and
+// reports whether it did so.
+//
+// Such a workspace must be re-vendored as a whole: `go mod vendor` (which runs
+// with GOWORK=off, see [commandEnv]) would replace the workspace's vendor
+// directory with one for this module alone when go.work is next to go.mod, and
+// would not update it at all when go.work is in a parent directory.
+func vendorWorkspace(ctx context.Context, modfile string) (bool, error) {
+	moduleDir := filepath.Dir(modfile)
+	workfile, err := goenv.GOWORK(moduleDir)
+	if err != nil {
+		return false, err
+	}
+	if workfile == "" || workfile == "off" {
+		// Not in workspace mode (`go env GOWORK` prints "off" for GOWORK=off), nothing to do.
+		return false, nil
+	}
+
+	workDir := filepath.Dir(workfile)
+	// `go work vendor` starts vendor/modules.txt with this line; `go mod vendor` does not.
+	if content, _ := os.ReadFile(filepath.Join(workDir, "vendor", "modules.txt")); !strings.HasPrefix(string(content), "## workspace") {
+		return false, nil
+	}
+
+	// `go work vendor` fails if `go mod tidy` raised the module's `go` directive
+	// above the one in go.work.
+	if err := AlignWorkGoVersion(ctx, moduleDir, modfile); err != nil {
+		return false, err
+	}
+
+	cmd := exec.CommandContext(ctx, "go", "work", "vendor")
+	cmd.Dir = workDir
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOWORK="+workfile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return false, fmt.Errorf("running `go work vendor`: %w", err)
+	}
+
+	return true, nil
 }
 
 // findWorkFile looks for a go.work file in moduleDir or any of its parent

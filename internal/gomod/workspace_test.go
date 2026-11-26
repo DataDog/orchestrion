@@ -8,7 +8,9 @@ package gomod
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +84,62 @@ func TestAlignWorkGoVersion(t *testing.T) {
 
 		assert.NoError(t, AlignWorkGoVersion(ctx, moduleDir, modfile))
 	})
+}
+
+func TestRunEditWorkspaceVendor(t *testing.T) {
+	// Regression test for https://github.com/DataDog/orchestrion/issues/572: when
+	// the module belongs to a workspace vendored with `go work vendor`, RunEdit
+	// must re-vendor the workspace, instead of replacing its vendor directory
+	// with one for the module alone (go.work next to go.mod), or leaving it out
+	// of date (go.work in a parent directory).
+	ctx := context.Background()
+
+	goCmd := func(t *testing.T, dir string, args ...string) {
+		t.Helper()
+		cmd := exec.CommandContext(ctx, "go", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
+
+	for name, tc := range map[string]struct {
+		moduleRel string
+		goworkOff bool
+	}{
+		"go.work next to go.mod":        {moduleRel: "."},
+		"go.work in a parent directory": {moduleRel: "./app"},
+		// Workspace mode is disabled: the module is vendored on its own, as before.
+		"GOWORK=off": {moduleRel: ".", goworkOff: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// A local dependency, so that no network access is needed.
+			depDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(depDir, "go.mod"), []byte("module example.com/dep\n\ngo 1.26.0\n"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(depDir, "dep.go"), []byte("package dep\n"), 0o644))
+
+			workDir := t.TempDir()
+			moduleDir := filepath.Join(workDir, tc.moduleRel)
+			require.NoError(t, os.MkdirAll(moduleDir, 0o755))
+			modfile := filepath.Join(moduleDir, "go.mod")
+			require.NoError(t, os.WriteFile(modfile, []byte("module example.com/app\n\ngo 1.26.0\n"), 0o644))
+			require.NoError(t, os.WriteFile(filepath.Join(workDir, "go.work"), []byte("go 1.26.0\n\nuse "+tc.moduleRel+"\n"), 0o644))
+			goCmd(t, workDir, "work", "vendor")
+
+			// The module starts using a new dependency, as `orchestrion pin` does.
+			require.NoError(t, os.WriteFile(filepath.Join(moduleDir, "main.go"), []byte("package main\n\nimport _ \"example.com/dep\"\n\nfunc main() {}\n"), 0o644))
+			t.Chdir(moduleDir)
+			if tc.goworkOff {
+				t.Setenv("GOWORK", "off")
+			}
+			require.NoError(t, RunEdit(ctx, modfile,
+				Require{Path: "example.com/dep", Version: "v0.0.0"},
+				Replace{OldPath: "example.com/dep", NewPath: depDir},
+			))
+
+			modulesTxt, err := os.ReadFile(filepath.Join(workDir, "vendor", "modules.txt"))
+			require.NoError(t, err)
+			assert.Equal(t, !tc.goworkOff, strings.HasPrefix(string(modulesTxt), "## workspace\n"), "vendor/modules.txt:\n%s", modulesTxt)
+			goCmd(t, moduleDir, "list", "-mod=vendor", "./...")
+		})
+	}
 }

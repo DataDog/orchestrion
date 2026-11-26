@@ -126,7 +126,8 @@ func Run(ctx context.Context, command string, modfile string, stdout io.Writer, 
 }
 
 // RunEdit makes the specified changes to the `go.mod` file, then runs `go mod tidy` if needed.
-// If there is a `vendor` directory, it also runs `go mod vendor` before returning.
+// If there is a `vendor` directory, it also runs `go mod vendor` before returning; or
+// `go work vendor` if the module belongs to a workspace vendored with `go work vendor`.
 func RunEdit(ctx context.Context, modfile string, edits ...Edit) error {
 	if len(edits) == 0 {
 		// Nothing to do.
@@ -143,6 +144,10 @@ func RunEdit(ctx context.Context, modfile string, edits ...Edit) error {
 
 	if err := Run(ctx, "tidy", modfile, os.Stdout); err != nil {
 		return fmt.Errorf("running `go mod tidy`: %w", err)
+	}
+
+	if vendored, err := vendorWorkspace(ctx, modfile); err != nil || vendored {
+		return err
 	}
 
 	vendorDir := filepath.Join(modfile, "..", "vendor")
