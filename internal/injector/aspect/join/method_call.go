@@ -50,8 +50,9 @@ func (m *methodCall) ImpliesImported() []string {
 	return nil
 }
 
-func (m *methodCall) PackageMayMatch(ctx *may.PackageContext) may.MatchType {
-	return ctx.PackageImports(m.Receiver.ImportPath)
+func (*methodCall) PackageMayMatch(_ *may.PackageContext) may.MatchType {
+	// Type aliases can hide the receiver package from direct imports.
+	return may.Unknown
 }
 
 func (m *methodCall) FileMayMatch(ctx *may.FileContext) may.MatchType {
@@ -77,6 +78,9 @@ func (m *methodCall) matchesType(t types.Type) bool {
 	if t == nil {
 		return false
 	}
+	// Unalias the outermost type. When the receiver is a pointer, its
+	// element can also be an alias, so matchesNamed unaliases a second time.
+	t = types.Unalias(t)
 
 	switch m.Match {
 	case MethodCallMatchPointerOnly:
@@ -96,7 +100,7 @@ func (m *methodCall) matchesType(t types.Type) bool {
 }
 
 func (m *methodCall) matchesNamed(t types.Type) bool {
-	named, ok := t.(*types.Named)
+	named, ok := types.Unalias(t).(*types.Named)
 	if !ok {
 		return false
 	}
