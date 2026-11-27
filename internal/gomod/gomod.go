@@ -146,7 +146,7 @@ func RunEdit(ctx context.Context, modfile string, edits ...Edit) error {
 		return fmt.Errorf("running `go mod tidy`: %w", err)
 	}
 
-	if vendored, err := vendorWorkspace(ctx, modfile); err != nil || vendored {
+	if vendored, err := VendorWorkspace(ctx, modfile); err != nil || vendored {
 		return err
 	}
 

@@ -6,6 +6,7 @@
 package gomod
 
 import (
+	"cmp"
 	"context"
 	"os"
 	"os/exec"
@@ -103,27 +104,77 @@ func TestRunEditWorkspaceVendor(t *testing.T) {
 	}
 
 	for name, tc := range map[string]struct {
+		// The directories of go.mod and go.work, relative to the fixture's root.
 		moduleRel string
-		goworkOff bool
+		workRel   string
+		// The `go` directive of go.mod and go.work, if below the dependency's.
+		goVersion string
+		// GOWORK is "off", or names the go.work file, while RunEdit runs.
+		goworkOff      bool
+		explicitGOWORK bool
+		// The fixture is vendored with `GOWORK=off go mod vendor`, or not at all,
+		// instead of with `go work vendor`.
+		modVendor  bool
+		unvendored bool
+		// The workspace has a sibling module, with a dependency of its own.
+		sibling bool
 	}{
-		"go.work next to go.mod":        {moduleRel: "."},
-		"go.work in a parent directory": {moduleRel: "./app"},
+		"go.work next to go.mod":        {moduleRel: ".", sibling: true},
+		"go.work in a parent directory": {moduleRel: "app"},
 		// Workspace mode is disabled: the module is vendored on its own, as before.
 		"GOWORK=off": {moduleRel: ".", goworkOff: true},
+		// The vendor directory is the module's own: it is vendored on its own, as before.
+		"module vendored with go mod vendor next to go.work": {moduleRel: ".", modVendor: true},
+		// There is no vendor directory to update.
+		"unvendored workspace": {moduleRel: ".", unvendored: true},
+		// `go mod tidy` raises the module's `go` directive, so go.work's must follow.
+		"dependency requiring a newer go version": {moduleRel: "app", goVersion: "1.25.0"},
+		// The go.work file named by GOWORK is not found by walking up from go.mod.
+		"GOWORK naming a go.work outside the module's parent directories": {moduleRel: "app", workRel: "ws", goVersion: "1.25.0", explicitGOWORK: true},
 	} {
 		t.Run(name, func(t *testing.T) {
+			goVersion := cmp.Or(tc.goVersion, "1.26.0")
+
 			// A local dependency, so that no network access is needed.
 			depDir := t.TempDir()
 			require.NoError(t, os.WriteFile(filepath.Join(depDir, "go.mod"), []byte("module example.com/dep\n\ngo 1.26.0\n"), 0o644))
 			require.NoError(t, os.WriteFile(filepath.Join(depDir, "dep.go"), []byte("package dep\n"), 0o644))
 
-			workDir := t.TempDir()
-			moduleDir := filepath.Join(workDir, tc.moduleRel)
+			root := t.TempDir()
+			workDir := filepath.Join(root, tc.workRel)
+			moduleDir := filepath.Join(root, tc.moduleRel)
+			require.NoError(t, os.MkdirAll(workDir, 0o755))
 			require.NoError(t, os.MkdirAll(moduleDir, 0o755))
 			modfile := filepath.Join(moduleDir, "go.mod")
-			require.NoError(t, os.WriteFile(modfile, []byte("module example.com/app\n\ngo 1.26.0\n"), 0o644))
-			require.NoError(t, os.WriteFile(filepath.Join(workDir, "go.work"), []byte("go 1.26.0\n\nuse "+tc.moduleRel+"\n"), 0o644))
-			goCmd(t, workDir, "work", "vendor")
+			require.NoError(t, os.WriteFile(modfile, []byte("module example.com/app\n\ngo "+goVersion+"\n"), 0o644))
+
+			use, err := filepath.Rel(workDir, moduleDir)
+			require.NoError(t, err)
+			uses := []string{filepath.ToSlash(use)}
+			siblingDir := filepath.Join(root, "sibling")
+			if tc.sibling {
+				siblingDep := t.TempDir()
+				require.NoError(t, os.WriteFile(filepath.Join(siblingDep, "go.mod"), []byte("module example.com/siblingdep\n\ngo 1.26.0\n"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(siblingDep, "dep.go"), []byte("package siblingdep\n"), 0o644))
+				require.NoError(t, os.MkdirAll(siblingDir, 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(siblingDir, "go.mod"), []byte("module example.com/sibling\n\ngo 1.26.0\n\nrequire example.com/siblingdep v0.0.0\n\nreplace example.com/siblingdep => "+siblingDep+"\n"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(siblingDir, "sibling.go"), []byte("package sibling\n\nimport _ \"example.com/siblingdep\"\n"), 0o644))
+				uses = append(uses, "./sibling")
+			}
+			workfile := filepath.Join(workDir, "go.work")
+			require.NoError(t, os.WriteFile(workfile, []byte("go "+goVersion+"\n\nuse (\n\t"+strings.Join(uses, "\n\t")+"\n)\n"), 0o644))
+
+			t.Setenv("GOWORK", "auto")
+			switch {
+			case tc.modVendor:
+				// `go mod vendor` creates no vendor directory for a module without requirements.
+				t.Setenv("GOWORK", "off")
+				goCmd(t, moduleDir, "mod", "edit", "-require=example.com/dep@v0.0.0", "-replace=example.com/dep="+depDir)
+				goCmd(t, moduleDir, "mod", "vendor")
+				t.Setenv("GOWORK", "auto")
+			case !tc.unvendored:
+				goCmd(t, workDir, "work", "vendor")
+			}
 
 			// The module starts using a new dependency, as `orchestrion pin` does.
 			require.NoError(t, os.WriteFile(filepath.Join(moduleDir, "main.go"), []byte("package main\n\nimport _ \"example.com/dep\"\n\nfunc main() {}\n"), 0o644))
@@ -131,15 +182,48 @@ func TestRunEditWorkspaceVendor(t *testing.T) {
 			if tc.goworkOff {
 				t.Setenv("GOWORK", "off")
 			}
+			if tc.explicitGOWORK {
+				t.Setenv("GOWORK", workfile)
+			}
 			require.NoError(t, RunEdit(ctx, modfile,
 				Require{Path: "example.com/dep", Version: "v0.0.0"},
 				Replace{OldPath: "example.com/dep", NewPath: depDir},
 			))
 
+			if tc.unvendored {
+				assert.NoDirExists(t, filepath.Join(workDir, "vendor"))
+				return
+			}
+			workspaceVendor := !tc.goworkOff && !tc.modVendor
 			modulesTxt, err := os.ReadFile(filepath.Join(workDir, "vendor", "modules.txt"))
 			require.NoError(t, err)
-			assert.Equal(t, !tc.goworkOff, strings.HasPrefix(string(modulesTxt), "## workspace\n"), "vendor/modules.txt:\n%s", modulesTxt)
+			assert.Equal(t, workspaceVendor, strings.HasPrefix(string(modulesTxt), "## workspace\n"), "vendor/modules.txt:\n%s", modulesTxt)
+			if workspaceVendor {
+				// `go mod tidy` raised the module's `go` directive to the dependency's.
+				work, err := os.ReadFile(workfile)
+				require.NoError(t, err)
+				assert.Contains(t, string(work), "go 1.26.0\n")
+			} else {
+				// Only builds outside of workspace mode use the module's own vendor directory.
+				t.Setenv("GOWORK", "off")
+			}
 			goCmd(t, moduleDir, "list", "-mod=vendor", "./...")
+			if tc.sibling {
+				goCmd(t, siblingDir, "list", "-mod=vendor", "./...")
+			}
 		})
 	}
+
+	t.Run("unreadable vendor/modules.txt", func(t *testing.T) {
+		workDir := t.TempDir()
+		modfile := filepath.Join(workDir, "go.mod")
+		require.NoError(t, os.WriteFile(modfile, []byte("module example.com/app\n\ngo 1.26.0\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(workDir, "go.work"), []byte("go 1.26.0\n\nuse .\n"), 0o644))
+		// Reading a directory fails with an error other than fs.ErrNotExist.
+		require.NoError(t, os.MkdirAll(filepath.Join(workDir, "vendor", "modules.txt"), 0o755))
+		t.Setenv("GOWORK", "auto")
+
+		_, err := VendorWorkspace(ctx, modfile)
+		assert.ErrorContains(t, err, "modules.txt")
+	})
 }

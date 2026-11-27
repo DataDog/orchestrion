@@ -57,7 +57,8 @@ func GOMOD(dir string) (string, error) {
 
 // GOWORK returns the current GOWORK environment variable (from running `go env
 // GOWORK`) for the designated working directory. It is empty when the
-// directory is not governed by a `go.work` file (i.e. not in workspace mode).
+// directory is not governed by a `go.work` file, or when workspace mode is
+// disabled with GOWORK=off (i.e. not in workspace mode).
 func GOWORK(dir string) (string, error) {
 	cmd := exec.Command("go", "env", "GOWORK")
 	cmd.Dir = dir
@@ -66,7 +67,12 @@ func GOWORK(dir string) (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("running %q: %w", cmd.Args, err)
 	}
-	return strings.TrimSpace(stdout.String()), nil
+	goWork := strings.TrimSpace(stdout.String())
+	if goWork == "off" {
+		// `go env GOWORK` prints "off" when workspace mode is disabled with GOWORK=off.
+		return "", nil
+	}
+	return goWork, nil
 }
 
 // modulePath returns the module path of the current module using go/packages API.
