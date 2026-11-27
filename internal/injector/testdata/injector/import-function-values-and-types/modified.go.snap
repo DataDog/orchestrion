@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+import (
+  "net/http"
+  "os"
+  __orchestrion_strings "strings"
+)
+
+var f = __orchestrion_strings.ToLower
+var c *http.Client
+
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
+
+func home() string {
+  str := "shadowed"
+  _ = str
+  return __orchestrion_strings. //line <generated>:1
+          ToUpper(
+//line input.go:17
+      os.Getenv("HOME"))
+}

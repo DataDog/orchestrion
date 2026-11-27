@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# P1: a generic struct declaration binds a type parameter whose name
+# shadows the import inside the struct definition. A generated field type
+# referencing the import must use the generated alias.
+import-path: dummy/test/module
+
+aspects:
+  - join-point:
+      struct-definition: dummy/test/module.server
+    advice:
+      - add-struct-field:
+          name: deadline
+          type: time.Duration
+
+syntheticReferences:
+  time: true
+
+code: |-
+  package test
+
+  import "time"
+
+  type server[time any] struct {
+    existing string
+  }
+
+  func helper() { _ = time.Now() }

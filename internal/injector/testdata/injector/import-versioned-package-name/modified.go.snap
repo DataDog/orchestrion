@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import (
+  "example.com/trace/v2"
+  "os"
+)
+
+func helper(s string) string { return trace.Trace(s) }
+
+func home() string {
+  return trace. //line <generated>:1
+      Trace(
+//line input.go:11
+      os.Getenv("HOME"))
+}

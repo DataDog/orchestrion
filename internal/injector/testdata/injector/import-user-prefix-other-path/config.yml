@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# A13: a source alias spelled like the generated base belongs to a different
+# path (math): it is source-owned. The generated alias for strings is suffixed.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    __orchestrion_strings "math"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+  func helperMath() float64 { return __orchestrion_strings.Floor(1.5) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

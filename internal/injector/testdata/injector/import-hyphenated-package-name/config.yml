@@ -1,0 +1,38 @@
+%YAML 1.1
+---
+# D11: a hyphenated final path element; the alias must be a valid identifier
+# and never derived from the raw path base.
+modules:
+  example.com/wire-format:
+    wire.go: |-
+      package wire
+
+      func Wrap(s string) string { return "wrapped:" + s }
+
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            wire: example.com/wire-format
+          template: wire.Wrap({{ . }})
+
+syntheticReferences:
+  example.com/wire-format: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    "example.com/wire-format"
+  )
+
+  func helper(s string) string { return wire.Wrap(s) }
+
+  func home() string {
+    wire := "shadowed"
+    _ = wire
+    return os.Getenv("HOME")
+  }

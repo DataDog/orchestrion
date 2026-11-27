@@ -1,0 +1,30 @@
+//line input.go:1:1
+package test
+
+import (
+  "os"
+  __orchestrion_time "time"
+)
+
+type server struct {
+  existing string
+//line <generated>:1
+  traced __orchestrion_time.Duration
+}
+
+//line input.go:12
+func helper() { _ = __orchestrion_time.Now() }
+
+func home() string {
+  tm := "shadowed"
+  _ = tm
+  type server struct {
+    existing string
+//line <generated>:1
+    traced __orchestrion_time.Duration
+  }
+//line input.go:20
+  var s server
+  _ = s
+  return os.Getenv("HOME")
+}

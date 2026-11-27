@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+# D10: a gopkg.in-style path whose declared package name differs from the path
+# base: the real name is reused when it is safe.
+modules:
+  gopkg.in/x.v1:
+    x.go: |-
+      package x
+
+      func X(s string) string { return "x:" + s }
+
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            xs: gopkg.in/x.v1
+          template: xs.X({{ . }})
+
+code: |-
+  package test
+
+  import (
+    "os"
+    "gopkg.in/x.v1"
+  )
+
+  func helper(s string) string { return x.X(s) }
+
+  func home() string {
+    return os.Getenv("HOME")
+  }

@@ -1,0 +1,15 @@
+//line input.go:1:1
+package test
+
+import
+//line input.go:5
+__orchestrion_strings "strings"
+
+//line input.go:8
+func helper(s string) string { return __orchestrion_strings.ToLower(s) }
+
+func home() string {
+  str := "shadowed"
+  _ = str
+  return __orchestrion_strings.ToLower("HOME")
+}

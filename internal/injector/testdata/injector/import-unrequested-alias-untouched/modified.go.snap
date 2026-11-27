@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+import (
+  "net/url"
+  "os"
+  "strings"
+)
+
+func helper(url *url.URL) string {
+  return url.String() + strings.ToLower("x")
+}
+
+func home() string {
+  return strings. //line <generated>:1
+      ToUpper(
+//line input.go:14
+      os.Getenv("HOME"))
+}

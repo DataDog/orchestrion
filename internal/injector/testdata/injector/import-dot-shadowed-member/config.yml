@@ -1,0 +1,35 @@
+%YAML 1.1
+---
+# A08: a dot import plus a local that shadows one dot-imported symbol at
+# the join point. The inserted package use must still resolve to the
+# package; the original dot-imported references (in several scopes) keep
+# their bindings.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    . "strings"
+  )
+
+  func helper(s string) string { return ToLower(s) }
+
+  func other() string { return ToUpper("x") }
+
+  func home() string {
+    ToUpper := "shadowed"
+    _ = ToUpper
+    return os.Getenv("HOME")
+  }

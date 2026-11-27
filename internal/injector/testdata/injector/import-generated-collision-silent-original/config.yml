@@ -1,0 +1,39 @@
+%YAML 1.1
+---
+# C10: the base candidate would compile through a local method at a rewritten
+# original reference; it must still be rejected to preserve the path binding.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  type local struct{}
+
+  func (local) ToUpper(s string) string { return s }
+
+  func helper(s string) string {
+    __orchestrion_strings := local{}
+    _ = __orchestrion_strings
+    return str.ToUpper(s)
+  }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

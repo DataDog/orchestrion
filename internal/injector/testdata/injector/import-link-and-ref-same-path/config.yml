@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+# F06: a link-time dependency on the same path as a qualified reference, plus
+# a link-only path: the referenced path becomes an import statement; the
+# link-only path gets no import spec and no alias.
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - name: home
+    advice:
+      - inject-declarations:
+          imports:
+            strings: strings
+          template: var _ = strings.ToUpper
+          links:
+            - strings
+            - math/cmplx
+
+syntheticReferences:
+  strings: true
+  math/cmplx: false
+  unsafe: true
+
+code: |-
+  package test
+
+  import "os"
+
+  func home() string {
+    return os.Getenv("HOME")
+  }

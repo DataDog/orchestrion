@@ -1,0 +1,35 @@
+%YAML 1.1
+---
+# D02: one path requested under two template spellings: one final alias and
+# import, every use bound to the same path.
+aspects:
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+      - wrap-expression:
+          imports:
+            strs: strings
+          template: strs.ToLower({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    str := "shadowed"
+    _ = str
+    return os.Getenv("HOME")
+  }

@@ -1,0 +1,36 @@
+%YAML 1.1
+---
+# F05: inject-declarations adds a package-level declaration named like the
+# file's import alias: the alias must be regenerated for the whole file.
+aspects:
+  - join-point:
+      function-body:
+        function:
+          - name: home
+    advice:
+      - inject-declarations:
+          template: var str = "package-level"
+  - join-point:
+      function-call: os.Getenv
+    advice:
+      - wrap-expression:
+          imports:
+            strings: strings
+          template: strings.ToUpper({{ . }})
+
+syntheticReferences:
+  strings: true
+
+code: |-
+  package test
+
+  import (
+    "os"
+    str "strings"
+  )
+
+  func helper(s string) string { return str.ToLower(s) }
+
+  func home() string {
+    return os.Getenv("HOME")
+  }

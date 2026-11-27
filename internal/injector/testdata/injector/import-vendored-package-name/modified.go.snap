@@ -1,0 +1,16 @@
+//line input.go:1:1
+package test
+
+import (
+  "example.com/dep/vendoredpkg"
+  "os"
+)
+
+func helper(s string) string { return vv.V(s) }
+
+func home() string {
+  return vv. //line <generated>:1
+      V(
+//line input.go:11
+      os.Getenv("HOME"))
+}
