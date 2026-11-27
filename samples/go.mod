@@ -10,7 +10,7 @@ replace (
 require (
 	github.com/99designs/gqlgen v0.17.98
 	github.com/DataDog/dd-trace-go/v2 v2.12.0
-	github.com/DataDog/orchestrion v1.15.0
+	github.com/DataDog/orchestrion v1.16.0-rc.1
 	github.com/DataDog/orchestrion/instrument v1.15.0
 	github.com/IBM/sarama v1.62.0
 	github.com/Shopify/sarama v1.38.1
