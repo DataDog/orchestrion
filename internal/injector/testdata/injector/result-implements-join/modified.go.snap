@@ -243,6 +243,7 @@ func returnsErrorThenString() (__result__0 error, _ string) {
     fmt.Println("Success: result-implements finds error in non-final position")
 
     fmt.Println("Success: final-result-implements correctly ignores non-final error")
+
   }
   {
     fmt.Println("Success: instrumented returnsError implementer")

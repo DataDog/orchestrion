@@ -43,6 +43,7 @@ func WithMixedParams(w io.Writer, req *http.Request, ctx context.Context, data [
     fmt.Println("Testing ArgumentThatImplements in WithMixedParams")
 
     fmt.Printf("Success: Found io.Reader argument: %q\n", "r")
+
     fmt.Printf("Success: Found context.Context argument: %q\n", "ctx")
 
   }

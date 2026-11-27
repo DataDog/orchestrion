@@ -43,7 +43,9 @@ func returnsMultipleErrors() (__result__0 error, _ string, __result__2 error) {
     __orchestrion_fmt.Println("Testing LastResultThatImplements for error")
 
     __orchestrion_fmt.Printf("Success: Found first error at: %q\n", "__result__0")
+
     __orchestrion_fmt.Printf("Success: Found last error at: %q\n", "__result__2")
+
     __orchestrion_fmt.Println("Success: First and last errors are different")
 
   }
@@ -218,6 +220,7 @@ func returnsErrorButNotLast() (__result__0 error, _ string) {
 //line <generated>:1
   {
     __orchestrion_fmt.Println("Testing distinction case: error in non-final position")
+
     __orchestrion_fmt.Printf("LastResultThatImplements 'error': %q\n", "__result__0")
 
     __orchestrion_fmt.Println("FinalResultImplements 'error': false (CORRECT!)")
