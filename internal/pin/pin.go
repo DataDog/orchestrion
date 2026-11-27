@@ -153,6 +153,11 @@ func PinOrchestrion(ctx context.Context, opts Options) error {
 		if err := gomod.Run(ctx, "tidy", goMod, nil); err != nil {
 			return fmt.Errorf("running `go mod tidy`: %w", err)
 		}
+		// ensure.RequiredIntegrations may have changed go.mod with `go get`, and
+		// pruneImports loads packages from a workspace's vendor directory.
+		if _, err := gomod.VendorWorkspace(ctx, goMod); err != nil {
+			return fmt.Errorf("vendoring the workspace of %q: %w", goMod, err)
+		}
 	}
 
 	// The `go mod tidy` runs above can raise the module's `go` directive when a
@@ -346,8 +351,10 @@ func pruneImports(ctx context.Context, moduleDir string, importSet *importSet, o
 		//
 		// `-mod` may only be `readonly` or `vendor` while in workspace mode
 		// (and workspace builds don't consult a member module's own `vendor/`
-		// directory the way a plain module does, so the "inconsistent
-		// vendoring" failure this routes around cannot occur there anyway),
+		// directory the way a plain module does, while a workspace vendored with
+		// `go work vendor` is re-vendored by [PinOrchestrion] before this runs, so
+		// the "inconsistent vendoring" failure this routes around cannot occur
+		// there anyway),
 		// so this is skipped entirely under workspace mode: forcing it would
 		// also require disabling workspace resolution, which would make this
 		// call resolve replaced/`use`d modules from their published copy

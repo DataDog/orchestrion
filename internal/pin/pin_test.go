@@ -345,6 +345,52 @@ func main() { fmt.Println(uuid.NewString()) }
 		require.NoError(t, err, string(out))
 	})
 
+	t.Run("workspace-vendor-inconsistent-after-integration-install", func(t *testing.T) {
+		// Same as vendor-inconsistent-after-integration-install, in a workspace
+		// vendored with `go work vendor` (https://github.com/DataDog/orchestrion/issues/572):
+		// pruneImports loads packages from the workspace's vendor directory, so
+		// `orchestrion pin` must re-vendor the workspace after installing the
+		// dd-trace-go integration, and leave it vendored as a workspace.
+		tmp := scaffold(t, map[string]string{"github.com/google/uuid": "v1.6.0"})
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "main.go"), []byte(`package main
+
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
+
+func main() { fmt.Println(uuid.NewString()) }
+`), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmp, "go.work"), []byte("go "+runtime.Version()[2:6]+".0\n\nuse .\n"), 0o644))
+		chdir(t, tmp)
+		t.Setenv("GOWORK", "auto")
+
+		modfile := filepath.Join(tmp, "go.mod")
+		require.NoError(t, gomod.Run(ctx, "tidy", modfile, io.Discard))
+		cmd := exec.CommandContext(ctx, "go", "work", "vendor")
+		cmd.Dir = tmp
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+
+		// Simulate `github.com/DataDog/orchestrion` already being required (e.g.
+		// by a prior `go get`) without `vendor/` having been re-synced yet.
+		rawTag, _ := version.TagInfo()
+		require.NoError(t, gomod.Run(ctx, "edit", modfile, io.Discard, "-require=github.com/DataDog/orchestrion@"+rawTag))
+
+		// WHEN
+		require.NoError(t, PinOrchestrion(ctx, Options{Writer: io.Discard, ErrWriter: io.Discard}))
+
+		// THEN
+		modulesTxt, err := os.ReadFile(filepath.Join(tmp, "vendor", "modules.txt"))
+		require.NoError(t, err)
+		assert.True(t, strings.HasPrefix(string(modulesTxt), "## workspace\n"), "vendor/modules.txt:\n%s", modulesTxt)
+		cmd = exec.CommandContext(ctx, "go", "list", "-mod=vendor", "./...")
+		cmd.Dir = tmp
+		out, err = cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	})
+
 	t.Run("prune-persists-to-tool-file", func(t *testing.T) {
 		// Regression test: pruneImports only mutated the in-memory AST; nothing
 		// ever wrote it back to `orchestrion.tool.go`, so a manually-added import

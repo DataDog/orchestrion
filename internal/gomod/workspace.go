@@ -8,6 +8,8 @@ package gomod
 import (
 	"bufio"
 	"context"
+	"crypto/sha512"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +17,10 @@ import (
 	"strings"
 
 	goversion "go/version"
+
+	"github.com/DataDog/orchestrion/internal/filelock"
+	"github.com/DataDog/orchestrion/internal/goenv"
+	"github.com/rs/zerolog"
 )
 
 // AlignWorkGoVersion makes sure the `go` directive of the go.work file enclosing
@@ -38,6 +44,11 @@ func AlignWorkGoVersion(ctx context.Context, moduleDir string, modfile string) e
 		return nil
 	}
 
+	return alignWorkGoVersion(ctx, workfile, modfile)
+}
+
+// alignWorkGoVersion is [AlignWorkGoVersion] for the designated go.work file.
+func alignWorkGoVersion(ctx context.Context, workfile string, modfile string) error {
 	mod, err := Parse(ctx, modfile)
 	if err != nil {
 		return err
@@ -53,7 +64,7 @@ func AlignWorkGoVersion(ctx context.Context, moduleDir string, modfile string) e
 	// call is meant to repair. The explicit file name keeps it independent from
 	// any inherited GOWORK value.
 	cmd := exec.CommandContext(ctx, "go", "work", "edit", "-go="+string(mod.Go), workfile)
-	cmd.Dir = moduleDir
+	cmd.Dir = filepath.Dir(modfile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -61,6 +72,74 @@ func AlignWorkGoVersion(ctx context.Context, moduleDir string, modfile string) e
 	}
 
 	return nil
+}
+
+// VendorWorkspace runs `go work vendor` if the module of the designated go.mod
+// file belongs to a workspace that was vendored with `go work vendor`, and
+// reports whether it did so.
+//
+// Such a workspace must be re-vendored as a whole: `go mod vendor` (which runs
+// with GOWORK=off, see [commandEnv]) would replace the workspace's vendor
+// directory with one for this module alone when go.work is next to go.mod, and
+// would not update it at all when go.work is in a parent directory.
+//
+// This rebuilds the vendor directory for every module of the workspace, not
+// only this one: it then reflects the current go.mod file of each of them, so
+// it also picks up any changes made to sibling modules since the workspace was
+// last vendored.
+func VendorWorkspace(ctx context.Context, modfile string) (bool, error) {
+	moduleDir := filepath.Dir(modfile)
+	workfile, err := goenv.GOWORK(moduleDir)
+	if err != nil {
+		return false, err
+	}
+	if workfile == "" {
+		// Not in workspace mode, nothing to do.
+		return false, nil
+	}
+
+	// Pins of different modules of the workspace hold different go.mod locks, but
+	// share this vendor directory, which `go work vendor` deletes and rewrites.
+	sha := sha512.Sum512([]byte(workfile))
+	flockname := filepath.Join(os.TempDir(), "orchestrion-pin_"+base64.URLEncoding.EncodeToString(sha[:])+"_go.work.lock")
+	flock := filelock.MutexAt(flockname)
+	if err := flock.Lock(ctx); err != nil {
+		return false, fmt.Errorf("failed to acquire lock on %q: %w", workfile, err)
+	}
+	defer func() {
+		if err := flock.Unlock(ctx); err != nil {
+			zerolog.Ctx(ctx).Error().Err(err).Str("lock-file", workfile).Msg("Failed to release file lock")
+		}
+	}()
+
+	workDir := filepath.Dir(workfile)
+	modulesTxt := filepath.Join(workDir, "vendor", "modules.txt")
+	content, err := os.ReadFile(modulesTxt)
+	if err != nil && !os.IsNotExist(err) {
+		return false, fmt.Errorf("reading %s: %w", modulesTxt, err)
+	}
+	// `go work vendor` starts vendor/modules.txt with this line; `go mod vendor` does not.
+	if err != nil || !strings.HasPrefix(string(content), "## workspace") {
+		return false, nil
+	}
+
+	// `go mod tidy` may have raised the module's `go` directive above the one in
+	// go.work, which builds of the workspace then reject.
+	if err := alignWorkGoVersion(ctx, workfile, modfile); err != nil {
+		return false, err
+	}
+
+	cmd := exec.CommandContext(ctx, "go", "work", "vendor")
+	cmd.Dir = workDir
+	// GOTOOLCHAIN is inherited: the workspace may need a newer toolchain than this module does.
+	cmd.Env = append(os.Environ(), "GOWORK="+workfile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return false, fmt.Errorf("running `go work vendor`: %w", err)
+	}
+
+	return true, nil
 }
 
 // findWorkFile looks for a go.work file in moduleDir or any of its parent
