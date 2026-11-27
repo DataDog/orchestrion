@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+func V3[A, B, C any](a A, b B, c C) C {
+//line input.go:3
+  var z C
+//line input.go:3
+  return z
+}
+func V3R[A, B, C any](a A, b B, c C) C {
+//line input.go:4
+  var z C
+//line input.go:4
+  return z
+}
+
+func Use() bool {
+  return V3R[int, string](1, "x", true)
+}

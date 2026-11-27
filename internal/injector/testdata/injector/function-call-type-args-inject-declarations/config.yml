@@ -1,0 +1,27 @@
+%YAML 1.1
+---
+# inject-declarations activates at explicit call sites. The template derives
+# unique declaration names from the callee so that two matches compile
+# (matrix A24).
+aspects:
+  - join-point:
+      one-of:
+        - function-call: F
+        - function-call: G
+    advice:
+      - inject-declarations:
+          template: |-
+            var injectedFor{{ .AST.Fun.Name }} int
+
+code: |-
+  package test
+
+  func F[A any](a A) A { return a }
+  func G[A, B any](a A, b B) B { var z B; return z }
+
+  func Use() (int, string) {
+    var _ any
+    _ = F[int](1)
+    _ = G[int, string](1, "x")
+    return 0, ""
+  }

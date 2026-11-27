@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+# A retained type argument that names a package keeps that import alive: iter
+# stays because []iter.Seq[int] uses it, while slices is no longer referenced
+# (matrix A28).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - replace-function: Clipped
+
+code: |-
+  package test
+
+  import (
+    "iter"
+    "slices"
+  )
+
+  func Clipped[S ~[]E, E any](s S) S { return s }
+
+  func Use() []iter.Seq[int] {
+    return slices.Clone[[]iter.Seq[int]](nil)
+  }

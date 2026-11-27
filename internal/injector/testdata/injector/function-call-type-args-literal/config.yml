@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+# Explicit calls inside function literals match without needing a
+# function declaration ancestor (matrix P03).
+aspects:
+  - join-point:
+      function-call: F
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+
+  func Use() int {
+    return func() int { return F[int](1) }()
+  }

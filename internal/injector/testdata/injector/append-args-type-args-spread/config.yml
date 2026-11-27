@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# append-args on a spread call with spare caller capacity: the golden
+# asserts the generated code shape; the runtime backing-array and
+# single-evaluation checks live in TestInjectorTypeArgsRuntime (A04).
+aspects:
+  - join-point:
+      function-call: One
+    advice:
+      - append-args:
+          type: string
+          values:
+            - template: '"z"'
+
+code: |-
+  package test
+
+  func One[A any](url string, opts ...string) int { return len(opts) }
+
+  func Use() int {
+    base := []string{"a", "b", "c", "d"}
+    return One[int]("u", base[:2]...)
+  }

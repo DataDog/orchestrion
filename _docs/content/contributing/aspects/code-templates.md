@@ -127,6 +127,31 @@ The complete type hierarchy for these views corresponds to the
 underlying AST model. Node properties can be accessed using their usual name
 from {{<godoc import-path="github.com/dave/dst">}}.
 
+#### Function callee names and type arguments
+
+For a function call, `.AST.Fun` represents the complete callee. For an
+explicit generic call, the callee includes its type arguments.
+
+For an indexed callee, `.AST.Fun.Name` returns the operand identifier
+name, or empty when the operand is not an identifier or selector. For
+`slices.Clone[[]int, int](xs)`, it returns `Clone`. The name does not include
+the package or the type arguments. Parenthesized and call-expression callees,
+such as `(f)()` or `mk()()`, still fail at template evaluation.
+
+Use `.AST.Fun` when a template must retain explicit type arguments:
+
+```go-template
+{{ .AST.Fun }}({{ index .AST.Args 0 }})
+```
+
+This example reconstructs a call with one value argument. For a variadic call,
+a template must also preserve the argument list and the spread syntax.
+
+Do not reconstruct an explicit generic call from `.Name` alone unless the new
+call can infer every omitted type argument. For example,
+`slices.Clone[[]int](nil)` is valid, but `slices.Clone(nil)` cannot infer the
+slice type.
+
 #### The `.DirectiveArgs` method
 
 A *directive* is a specially formatted single-line comment, without white space

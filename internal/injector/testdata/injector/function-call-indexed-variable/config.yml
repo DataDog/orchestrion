@@ -1,0 +1,43 @@
+%YAML 1.1
+---
+# Indexing a slice, array, pointer-to-array, or map of function values
+# is value indexing, not a generic instantiation: these calls never
+# match, whatever the index expression is (matrix B14-B20). Ctl is the
+# positive control that proves the aspect is live, so the missing wraps
+# are meaningful non-matches.
+aspects:
+  - join-point:
+      one-of:
+        - function-call: Handlers
+        - function-call: Table
+        - function-call: TableInt
+        - function-call: Ctl
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func Ctl[T any](v T) T { return v }
+
+  var Handlers = []func() int{func() int { return 0 }}
+  var handlersArray = [2]func() int{func() int { return 0 }}
+  var Table = map[string]func() string{"x": func() string { return "y" }}
+  var TableInt = map[int]func() int{0: func() int { return 0 }}
+
+  func key() int { return 0 }
+
+  func Use() (int, int, int, int, string) {
+    int := 0
+    _ = int
+    p := &handlersArray
+    _ = Ctl[bool](false)
+    a := Handlers[0]()
+    b := p[1]()
+    c := Handlers[key()]()
+    d := Handlers[int]()
+    e := Table["x"]()
+    return a, b, c, d, e
+  }

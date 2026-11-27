@@ -1,0 +1,19 @@
+//line input.go:1:1
+package test
+
+func Wait[A any](a A, done ...bool) {}
+func Handled[A any](a A) A          { return a }
+func Handled2[A any](a A) A         { return a }
+
+func Use() {
+  go Wait[int](1,
+//line <generated>:1
+    true)
+//line input.go:9
+  defer Wait[string]("x",
+//line <generated>:1
+    true)
+//line input.go:10
+  var _ any
+  _ = Handled2[int](1)
+}

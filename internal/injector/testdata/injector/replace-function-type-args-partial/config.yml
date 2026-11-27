@@ -1,0 +1,19 @@
+%YAML 1.1
+---
+# A partially explicit call keeps exactly the supplied prefix; the replacement
+# infers the rest
+# (matrix A12).
+aspects:
+  - join-point:
+      function-call: slices.Clone
+    advice:
+      - replace-function: slices.Clip
+
+code: |-
+  package test
+
+  import "slices"
+
+  func Use(xs []int) []int {
+    return slices.Clone[[]int](xs)
+  }

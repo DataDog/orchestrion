@@ -94,6 +94,13 @@ func Test(t *testing.T) {
 			require.NoError(t, os.WriteFile(inputFile, []byte(original), 0o644), "failed to create main.go")
 			runGo(t, tmp, "mod", "tidy")
 
+			// The fixture's input must be valid Go. The injector silently skips
+			// injection when the input does not type-check (it lets the go compiler
+			// report the error later), so an invalid fixture would produce a
+			// "<no changes>" snapshot and pass vacuously. Building the original
+			// input up front makes an invalid fixture fail the test itself.
+			runGo(t, tmp, "build", inputFile)
+
 			if config.ImportPath == "" {
 				config.ImportPath = testModuleName
 			}

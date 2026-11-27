@@ -1,0 +1,36 @@
+//line input.go:1:1
+package test
+
+func Mark[T any](v T) T { return v }
+func F[A any](a A) A    { return a }
+func G[A, B any](a A, b B) B {
+//line input.go:5
+  var z B
+//line input.go:5
+  return z
+}
+func H[A, B, C, D any](a A, b B, c C, d D) D {
+//line input.go:6
+  var z D
+//line input.go:6
+  return z
+}
+
+func Use() (int, string, float64) {
+  f :=
+//line <generated>:1
+    Mark(
+//line input.go:9
+      F[int](1))
+  g :=
+//line <generated>:1
+    Mark(
+//line input.go:10
+      G[int, string](1, "x"))
+  h :=
+//line <generated>:1
+    Mark(
+//line input.go:11
+      H[int, string, bool, float64](1, "x", true, 2.0))
+  return f, g, h
+}

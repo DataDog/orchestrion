@@ -1,0 +1,34 @@
+%YAML 1.1
+---
+# one-of matches each of its explicit targets once, and all-of combines a
+# function call with the caller's import path (matrix J01, J02).
+aspects:
+  - join-point:
+      one-of:
+        - function-call: F
+        - function-call: G
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+  - join-point:
+      all-of:
+        - function-call: H
+        - import-path: dummy/test/module
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+  func G[A, B any](a A, b B) B { var z B; return z }
+  func H[A, B, C, D any](a A, b B, c C, d D) D { var z D; return z }
+
+  func Use() (int, string, float64) {
+    f := F[int](1)
+    g := G[int, string](1, "x")
+    h := H[int, string, bool, float64](1, "x", true, 2.0)
+    return f, g, h
+  }

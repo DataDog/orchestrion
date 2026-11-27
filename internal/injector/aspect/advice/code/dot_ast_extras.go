@@ -5,6 +5,8 @@
 
 package code
 
+import "github.com/dave/dst"
+
 // Name returns the name of the selector's identifier (Sel.Name).
 //
 // This allows templates to use {{ .AST.Fun.Name }} on both *dst.Ident
@@ -20,4 +22,30 @@ package code
 // types should be added here to keep them separate from generated code.
 func (p *proxySelectorExpr) Name() string {
 	return p.SelectorExpr.Sel.Name
+}
+
+// Name returns the operand identifier name of an indexed callee. For an
+// explicit generic instantiation, such as slices.Clone[[]int](xs), this is the
+// function name ("Clone"). For ordinary value indexes, such as Handlers[0](),
+// this is the variable name ("Handlers"). It returns an empty string when the
+// operand is not an identifier or selector, because there is no meaningful
+// name to expose. The name never includes a package qualification or the
+// index (type) arguments.
+func (p *proxyIndexExpr) Name() string {
+	return indexedName(p.IndexExpr.X)
+}
+
+func (p *proxyIndexListExpr) Name() string {
+	return indexedName(p.IndexListExpr.X)
+}
+
+func indexedName(expr dst.Expr) string {
+	switch expr := expr.(type) {
+	case *dst.Ident:
+		return expr.Name
+	case *dst.SelectorExpr:
+		return expr.Sel.Name
+	default:
+		return ""
+	}
 }

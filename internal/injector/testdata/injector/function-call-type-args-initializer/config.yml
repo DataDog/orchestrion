@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+# Explicit calls in package-level initializers match, including through
+# an import-path filter on the containing package (matrix P04, J08).
+aspects:
+  - join-point:
+      all-of:
+        - function-call: F
+        - import-path: dummy/test/module
+    advice:
+      - wrap-expression:
+          template: Mark({{ . }})
+
+code: |-
+  package test
+
+  import "fmt"
+
+  func Mark[T any](v T) T { return v }
+  func F[A any](a A) A { return a }
+
+  var value = F[int](1)
+
+  var _ = fmt.Sprint(value)

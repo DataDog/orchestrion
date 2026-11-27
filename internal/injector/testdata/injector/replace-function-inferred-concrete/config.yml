@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+# An inferred generic call to a non-generic replacement keeps the existing
+# whole-callee replacement
+# (matrix A18).
+aspects:
+  - join-point:
+      function-call: F
+    advice:
+      - replace-function: Plain
+
+code: |-
+  package test
+
+  func F[A any](a A) A { return a }
+  func Plain(a int) int { return a }
+
+  func Use() int {
+    return F(1)
+  }
