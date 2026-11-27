@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+# Advice that inserts a statement into a one-line function body forces the body
+# to expand; the original statements of that body must keep their effective
+# source lines.
+aspects:
+  - id: weave
+    join-point:
+      function-body:
+        function:
+          - name: f
+    advice:
+      - prepend-statements:
+          template: print("woven")
+
+code: |-
+  package test
+
+  func f() { before(); target(); after() }
+
+  func before() int         { return 0 }
+  func after() int          { return 0 }
+  func target(v ...int) int { return 0 }

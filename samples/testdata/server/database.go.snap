@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+//line samples/server/database.go:13
 	"log"
 //line <generated>:1
 	__orchestrion_v2 "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"

@@ -8,7 +8,7 @@ import (
 )
 
 // Matches both: has context in args and error in returns
-//
+
 //line input.go:8
 func withContextAndError(ctx context.Context, data []byte) (_ string, __result__1 error) {
 //line <generated>:1

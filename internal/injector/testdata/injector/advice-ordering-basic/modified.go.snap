@@ -12,5 +12,5 @@ func TestFunction() {
   }
   {
     _ = "3) Application order: 1"
-  }
+  } /*line input.go:4*/
 }

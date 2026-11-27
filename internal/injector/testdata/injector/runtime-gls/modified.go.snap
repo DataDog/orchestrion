@@ -7,6 +7,7 @@ import __orchestrion_orchestrionunsafe "unsafe"
 //line input.go:3
 type atomicPointer[T any] struct{ value *T }
 
+//line input.go:4
 func (p *atomicPointer[T]) Load() *T   { return p.value }
 func (p *atomicPointer[T]) Store(v *T) { p.value = v }
 
@@ -78,7 +79,7 @@ func goexit1() {
     getg().__dd_orchestrion_ctx = nil
     getg().__dd_orchestrion_ctx_pending = nil
     getg().__dd_orchestrion_ctx_pending_set = false
-  }
+  } /*line input.go:42*/
 }
 
 //line input.go:45
@@ -88,9 +89,10 @@ func gdestroy(gp *g) {
     gp.__dd_orchestrion_ctx = nil
     gp.__dd_orchestrion_ctx_pending = nil
     gp.__dd_orchestrion_ctx_pending_set = false
-  }
+  } /*line input.go:45*/
 }
 
+//line <generated>:1
 var __dd_orchestrion_ctx_go atomicPointer[byte]
 
 //go:linkname __dd_orchestrion_ctx_get __dd_orchestrion_ctx_get

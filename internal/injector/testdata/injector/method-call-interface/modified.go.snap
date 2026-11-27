@@ -1,13 +1,19 @@
 //line input.go:1:1
 package test
 
+//line input.go:3
 import (
+//line input.go:4
   "io"
+//line input.go:5
   "strings"
 )
 
+//line input.go:8
 func doRead(r io.Reader, sr *strings.Reader, buf []byte) {
   // Should be rewritten: receiver is typed as io.Reader (interface)
+
+//line input.go:10
   _, _ =
 //line <generated>:1
     io.MultiReader(
@@ -18,5 +24,7 @@ func doRead(r io.Reader, sr *strings.Reader, buf []byte) {
 //line input.go:10
         buf)
   // Should NOT be rewritten: receiver is *strings.Reader (concrete type that implements io.Reader)
-  _, _ = sr.Read(buf)
+
+//line input.go:12
+  _, _ = sr.Read(buf) /*line input.go:12*/
 }

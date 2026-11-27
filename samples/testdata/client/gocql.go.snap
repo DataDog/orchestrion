@@ -9,6 +9,7 @@ package main
 import (
 	"log"
 
+//line samples/client/gocql.go:11
 	"github.com/gocql/gocql"
 //line <generated>:1
 	__orchestrion_gocqltrace "github.com/DataDog/dd-trace-go/contrib/gocql/gocql/v2"

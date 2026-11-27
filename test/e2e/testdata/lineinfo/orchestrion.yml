@@ -1,0 +1,10 @@
+# Wraps every call to lib.Target, so any file that calls it is rewritten.
+aspects:
+  - id: Wrap
+    join-point:
+      function-call: example.com/lineinfo/lib.Target
+    advice:
+      - wrap-expression:
+          imports:
+            lib: example.com/lineinfo/lib
+          template: lib.Wrap({{ . }})

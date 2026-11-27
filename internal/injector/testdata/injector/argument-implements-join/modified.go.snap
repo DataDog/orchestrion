@@ -33,6 +33,7 @@ func hasIoReader(r io.Reader) {
 // Concrete type implementing via pointer receiver
 type pointerImplementer struct{}
 
+//line input.go:22
 func (p *pointerImplementer) Read(b []byte) (int, error) { return 0, io.EOF }
 func hasPointerImplementer(p *pointerImplementer) {
 //line <generated>:1
@@ -47,6 +48,7 @@ func hasPointerImplementer(p *pointerImplementer) {
 // Concrete type implementing via value receiver
 type valueImplementer struct{}
 
+//line input.go:29
 func (v valueImplementer) Read(b []byte) (int, error) { return 0, io.EOF }
 func hasValueImplementer(v valueImplementer) {
 //line <generated>:1
@@ -61,6 +63,7 @@ func hasValueImplementer(v valueImplementer) {
 // Type alias for interface
 type MyReader io.Reader
 
+//line input.go:36
 func hasInterfaceAlias(mr MyReader) {
 //line <generated>:1
   {
@@ -74,6 +77,7 @@ func hasInterfaceAlias(mr MyReader) {
 // Type alias for concrete type
 type MyConcreteReader strings.Reader
 
+//line input.go:42
 func hasConcreteAlias(cr *MyConcreteReader) {
   fmt.Println("Executing hasConcreteAlias")
 }
