@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# H03: the same opts import supplies both the argument type and the injected
+# constructor; both must resolve to the io package.
+aspects:
+  - join-point:
+      function-call: io.MultiWriter
+    advice:
+      - append-args:
+          type: io.Writer
+          values:
+            - imports:
+                io: io
+              template: io.Discard
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import opts "io"
+
+  func tee(ws []opts.Writer) opts.Writer {
+    return opts.MultiWriter(ws...)
+  }

@@ -1,0 +1,32 @@
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import __orchestrion_slices "slices"
+
+//line input.go:3
+type Options []any
+type OptAlias = []any
+
+func sink(vals ...any) {}
+
+func withDefined(opts Options) {
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:9
+      opts),
+//line <generated>:1
+      []any{"woven"})...)
+}
+
+//line input.go:12
+func withAlias(opts OptAlias) {
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:13
+      opts),
+//line <generated>:1
+      []any{"woven"})...)
+}

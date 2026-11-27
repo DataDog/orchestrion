@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# H02: the argument type's package is imported under the name opts, which was
+# also the name of the parameter of the closure append-args used to generate.
+aspects:
+  - join-point:
+      function-call: io.MultiWriter
+    advice:
+      - append-args:
+          type: io.Writer
+          values:
+            - imports:
+                os: os
+              template: os.Stderr
+
+syntheticReferences:
+  os: true
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import opts "io"
+
+  func tee(ws []opts.Writer) opts.Writer {
+    return opts.MultiWriter(ws...)
+  }

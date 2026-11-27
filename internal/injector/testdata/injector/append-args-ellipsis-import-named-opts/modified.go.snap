@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+import (
+  opts "io"
+
+//line <generated>:1
+  __orchestrion_os "os"
+  __orchestrion_slices "slices"
+)
+
+//line input.go:5
+func tee(ws []opts.Writer) opts.Writer {
+  return opts.MultiWriter(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]opts.Writer](__orchestrion_slices.Clone[[]opts.Writer](
+//line input.go:6
+      ws),
+//line <generated>:1
+      []opts.Writer{__orchestrion_os.Stderr})...)
+}

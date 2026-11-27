@@ -1,0 +1,64 @@
+%YAML 1.1
+---
+# H10: the type package is imported under the alias optpkg, which a local
+# shadows at the join point. The emitted []T must name the actual type package
+# through a safe alias, and the original references must follow it. The
+# original parameter type was declared before the shadow.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("woven")
+
+syntheticReferences:
+  example.com/optlib: true
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import optpkg "example.com/optlib"
+
+  var _ = optpkg.Named
+
+  func sink(vals ...optpkg.Option) {}
+
+  func printAll(ws []optpkg.Option) {
+    optpkg := 1
+    _ = optpkg
+    sink(ws...)
+  }

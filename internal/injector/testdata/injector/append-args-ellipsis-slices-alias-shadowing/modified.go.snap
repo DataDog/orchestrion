@@ -1,0 +1,21 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+  __orchestrion_slices "slices"
+)
+
+var contains = __orchestrion_slices.Contains[[]int, int]
+
+func printAll(args []any) {
+  stdslices := "shadowed"
+  _ = stdslices
+  fmt.Println(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:13
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}

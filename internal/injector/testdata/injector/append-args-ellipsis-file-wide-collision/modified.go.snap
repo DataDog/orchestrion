@@ -1,0 +1,31 @@
+//line input.go:1:1
+package test
+
+import (
+  "fmt"
+  __orchestrion_slices2 "slices"
+)
+
+func helper2(xs []int) bool {
+  __orchestrion_slices := 1
+  _ = __orchestrion_slices
+  return __orchestrion_slices2.Contains(xs, 1)
+}
+
+func helper3(xs []int) bool {
+  __orchestrion_slices1 := 1
+  _ = __orchestrion_slices1
+  return __orchestrion_slices2.Contains(xs, 2)
+}
+
+func printAll(args []any) {
+  slices := "shadowed"
+  _ = slices
+  fmt.Println(
+//line <generated>:1
+    __orchestrion_slices2.Concat[[]any](__orchestrion_slices2.Clone[[]any](
+//line input.go:23
+      args),
+//line <generated>:1
+      []any{"woven"})...)
+}

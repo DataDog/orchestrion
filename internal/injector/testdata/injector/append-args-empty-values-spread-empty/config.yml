@@ -1,0 +1,39 @@
+%YAML 1.1
+---
+# Z02: zero value templates on a spread call over a non-nil empty slice. Advice
+# is a true no-op: the call keeps the original slice header and backing array.
+# The positive control proves the file weaves: the same advice with one template
+# is live on the control callee, and only the control call changes.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values: []
+
+  - join-point:
+      function-call: sinkControl
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink(vals ...any) {}
+
+  func sinkControl(vals ...any) {}
+
+  func printAll() {
+    xs := make([]any, 0)
+    sink(xs...)
+    sinkControl(xs...)
+  }

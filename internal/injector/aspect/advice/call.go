@@ -8,6 +8,7 @@ package advice
 import (
 	gocontext "context"
 	"fmt"
+	"go/types"
 	"regexp"
 	"strings"
 
@@ -37,6 +38,12 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 		return false, fmt.Errorf("append-arguments: expected a *dst.CallExpr, received %T", ctx.Node())
 	}
 
+	if len(a.Templates) == 0 {
+		// A zero-template advice changes nothing: the call, its imports, and its
+		// language requirement are left untouched, whatever the call form is.
+		return false, nil
+	}
+
 	newArgs := make([]dst.Expr, len(a.Templates))
 	var err error
 	for i, t := range a.Templates {
@@ -48,61 +55,69 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	}
 
 	if !call.Ellipsis {
+		// f(g()) where g returns several values is valid Go, but f(g(), x) is
+		// not, so the sole multi-value argument must be rejected instead of
+		// rewriting the call into invalid code. The detection resolves the
+		// argument's type, so one-result expressions in any shape (a plain
+		// call, a conversion, a parenthesized call) stay allowed. When no type
+		// information is available, the check fails open to the historical
+		// behavior: synthesized arguments (e.g. a value injected by an earlier
+		// aspect) map to no source node, so they reach this branch with no type.
+		if len(call.Args) == 1 {
+			if tuple, ok := ctx.ResolveType(call.Args[0]).(*types.Tuple); ok && tuple.Len() > 1 {
+				return false, fmt.Errorf(
+					"append-arguments: cannot append arguments to the call to %s: its sole argument is an expression with %d values",
+					callName(call.Fun), tuple.Len(),
+				)
+			}
+		}
 		call.Args = append(call.Args, newArgs...)
 		return true, nil
 	}
 
-	// The function call has an ellipsis, so we need to append our new arguments to the last argument,
-	// which is a slice. To do so, we need to provision a new slice of the right type and size, append
-	// all the relevant data in there, and then replace the last argument with the new slice.
-	//
-	// The copy starts from an empty slice so the append can never write into the spare capacity of
-	// the slice the caller spread into the call: appending to the caller's backing array would
-	// silently mutate the caller's slice, or race with concurrent calls that share it (see
-	// DataDog/dd-trace-go#5486). It also avoids referencing any predeclared identifier other than
-	// append (which this advice already relies on), so a caller-scope shadow of e.g. len cannot
-	// break the generated code.
+	// The call spreads a slice into the variadic parameter, f(a, xs...). Replace
+	// the spread argument with one qualified expression:
+	//   slices.Concat[[]T](slices.Clone[[]T](xs), []T{injected...})
+	//   - Concat always returns a new slice, so the injected arguments are never
+	//     written into the spare capacity of the caller's backing array
+	//     (DataDog/dd-trace-go#5486);
+	//   - the clone completes before any injected call or receive runs: the Go
+	//     specification orders calls and receives left to right, but not plain
+	//     variable reads, so injected calls cannot change the elements the
+	//     callee receives. A plain variable read in a template is unordered
+	//     against a side-effecting call in xs, exactly as it is in the non-spread
+	//     path;
+	//   - xs is evaluated exactly once;
+	//   - the generated code declares no identifier and calls no predeclared
+	//     function, so it can neither capture a name the templates use nor be
+	//     broken by a caller-scope shadow. Its only references are the slices
+	//     package and the configured type, and import management chooses their
+	//     names.
 	lastIdx := len(call.Args) - 1
-	copiedOpts := &dst.CallExpr{
-		Fun:      dst.NewIdent("append"),
-		Args:     []dst.Expr{&dst.CompositeLit{Type: &dst.ArrayType{Elt: a.TypeName.AsNode()}}, dst.NewIdent("opts")},
-		Ellipsis: true,
-	}
+	arrayType := func() *dst.ArrayType { return &dst.ArrayType{Elt: a.TypeName.AsNode()} }
+	qualified := func(name string) *dst.Ident { return &dst.Ident{Name: name, Path: "slices"} }
 	call.Args[lastIdx] = &dst.CallExpr{
-		Fun: &dst.FuncLit{
-			Type: &dst.FuncType{
-				Params: &dst.FieldList{
-					List: []*dst.Field{{
-						Names: []*dst.Ident{dst.NewIdent("opts")},
-						Type:  &dst.Ellipsis{Elt: a.TypeName.AsNode()},
-					}},
-				},
-				Results: &dst.FieldList{
-					List: []*dst.Field{{
-						Type: &dst.ArrayType{Elt: a.TypeName.AsNode()},
-					}},
-				},
-			},
-			Body: &dst.BlockStmt{
-				List: []dst.Stmt{
-					&dst.ReturnStmt{Results: []dst.Expr{
-						&dst.CallExpr{
-							Fun: dst.NewIdent("append"),
-							Args: append(
-								append(
-									make([]dst.Expr, 0, len(newArgs)+1),
-									copiedOpts,
-								),
-								newArgs...,
-							),
-						},
-					}},
-				},
-			},
+		Fun: &dst.IndexExpr{
+			X:     qualified("Concat"),
+			Index: arrayType(),
 		},
-		Args:     []dst.Expr{call.Args[lastIdx]},
-		Ellipsis: true,
+		Args: []dst.Expr{
+			&dst.CallExpr{
+				Fun: &dst.IndexExpr{
+					X:     qualified("Clone"),
+					Index: arrayType(),
+				},
+				Args: []dst.Expr{call.Args[lastIdx]},
+			},
+			&dst.CompositeLit{Type: arrayType(), Elts: newArgs},
+		},
 	}
+	// Explicit instantiation needs the go1.18 language and nothing newer:
+	// requesting go1.22 would silently switch go1.21 modules to per-iteration
+	// loop variables. The slices package itself only needs the toolchain's
+	// standard library, not the module's language version.
+	ctx.EnsureMinGoLang(context.MustParseGoLangVersion("go1.18"))
+	ctx.AddImport("slices", "slices")
 
 	if importPath := a.TypeName.ImportPath; importPath != "" {
 		ctx.AddImport(importPath, inferPkgName(importPath))
@@ -111,8 +126,34 @@ func (a *appendArgs) Apply(ctx context.AdviceContext) (bool, error) {
 	return true, nil
 }
 
+// callName renders the callee of a call so advice errors can identify the
+// call. dst nodes carry no source position, so the callee expression is the
+// identification available to advice errors (see #948 for the line mapping).
+func callName(expr dst.Expr) string {
+	switch expr := expr.(type) {
+	case *dst.Ident:
+		if expr.Path != "" {
+			return fmt.Sprintf("%s.%s", inferPkgName(expr.Path), expr.Name)
+		}
+		return expr.Name
+	case *dst.SelectorExpr:
+		return fmt.Sprintf("%s.%s", callName(expr.X), expr.Sel.Name)
+	default:
+		return "<call>"
+	}
+}
+
 func (a *appendArgs) AddedImports() []string {
-	imports := make([]string, 0, len(a.Templates)+1)
+	if len(a.Templates) == 0 {
+		// A zero-template advice changes nothing, so it reports no imports at all,
+		// even when the configured type comes from another package.
+		return nil
+	}
+	imports := make([]string, 0, len(a.Templates)+2)
+	// slices is used when the call spreads a slice into the variadic parameter.
+	// The metadata cannot know the call form, so it is reported for any
+	// non-empty advice.
+	imports = append(imports, "slices")
 	if argTypeImportPath := a.TypeName.ImportPath; argTypeImportPath != "" {
 		imports = append(imports, argTypeImportPath)
 	}

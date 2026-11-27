@@ -1,0 +1,66 @@
+%YAML 1.1
+---
+# C10: two append-args aspects apply to the same spread call, each adding a
+# labeled value. The original source is snapshotted once by the first aspect,
+# then the second snapshot includes the first value, and both values appear
+# exactly once in the existing advice application order.
+aspects:
+  - join-point:
+      function-call: example.com/optlib.Sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("first")
+  - join-point:
+      function-call: example.com/optlib.Sink
+    advice:
+      - append-args:
+          type: example.com/optlib.Option
+          values:
+            - imports:
+                optlib: example.com/optlib
+              template: optlib.Named("second")
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+modules:
+  example.com/optlib:
+    optlib.go: |-
+      package optlib
+
+      type Option struct{ Name string }
+
+      type OptionAlias = Option
+      type AnyAlias = any
+      type Thing struct{ Name string }
+
+      var Woven any = "woven"
+
+      func Named(name string) Option { return Option{Name: name} }
+
+      func Sink(opts ...Option) []Option { return opts }
+      func Sink2(opts ...Option) []Option { return opts }
+      func SinkAny(vals ...any) []any { return vals }
+      func SinkOpt(opts ...Option) []Option { return opts }
+      func Redirect(opts ...Option) []Option { return opts }
+      func Redirected(opts ...Option) []Option { return opts }
+      func Wrapped(o []Option) []Option { return o }
+
+      type Server struct{}
+
+      func (s Server) Serve(opts ...Option) {}
+
+code: |-
+  package test
+
+  import "example.com/optlib"
+
+  func printAll(args []optlib.Option) {
+    optlib.Sink(args...)
+  }

@@ -1,0 +1,28 @@
+%YAML 1.1
+---
+# H08: a local named slices is in scope at the spread call; the generated
+# qualifier must name the slices package, not the local.
+aspects:
+  - join-point:
+      function-call: fmt.Println
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  import "fmt"
+
+  func printAll(args []any) {
+    slices := 1
+    _ = slices
+    fmt.Println(args...)
+  }

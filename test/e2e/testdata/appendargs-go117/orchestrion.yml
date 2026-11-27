@@ -1,0 +1,29 @@
+%YAML 1.1
+---
+# Aspects for the go1.17 language fixture. The module keeps its go directive at
+# 1.17; the spread rewrite propagates the minimum go1.18 language through the
+# compiler flag instead of editing the module.
+meta:
+  name: append-args-go117
+  description: |-
+    Exercises hygienic append-args weaving on a go 1.17 module.
+
+aspects:
+  - id: append-args/local.Sink
+    join-point:
+      function-call: example.com/appendargs-go117/local.Sink
+    advice:
+      - append-args:
+          type: example.com/appendargs-go117/local.Opt
+          values:
+            - imports:
+                local: example.com/appendargs-go117/local
+              template: local.Named("traced")
+
+  - id: append-args/local.SinkZero
+    join-point:
+      function-call: example.com/appendargs-go117/local.SinkZero
+    advice:
+      - append-args:
+          type: example.com/appendargs-go117/local.Opt
+          values: []

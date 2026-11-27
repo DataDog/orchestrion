@@ -1,0 +1,40 @@
+%YAML 1.1
+---
+# Z04: zero value templates on a call whose sole argument is a multi-value call.
+# Advice is a true no-op, and the tuple call stays accepted by the compiler. The
+# positive control proves the file weaves: the same advice with one template is
+# live on the control callee, and only the control call changes.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values: []
+
+  - join-point:
+      function-call: sinkControl
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink(vals ...any) {}
+
+  func sinkControl(vals ...any) {}
+
+  func two() (any, any) { return 1, 2 }
+
+  func printAll(xs []any) {
+    sink(two())
+    sinkControl(xs...)
+  }

@@ -1,0 +1,30 @@
+%YAML 1.1
+---
+# S10: the spread argument is an untyped nil, an empty literal, or a populated
+# literal. Inference fails on the untyped nil, so this guards the explicit
+# [[]T] type argument; each callee must receive a non-nil result of the exact
+# length.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: '"woven"'
+
+syntheticReferences:
+  slices: true
+
+required-lang: go1.18
+
+code: |-
+  package test
+
+  func sink(vals ...any) {}
+
+  func printAll() {
+    sink(nil...)
+    sink([]any{}...)
+    sink([]any{1, 2}...)
+  }

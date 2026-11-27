@@ -1,0 +1,26 @@
+//line input.go:1:1
+package test
+
+import (
+  __orchestrion_optlib "example.com/optlib"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
+
+//line input.go:5
+var _ = __orchestrion_optlib.Named
+
+func sink(vals ...__orchestrion_optlib.Option) {}
+
+func printAll(ws []__orchestrion_optlib.Option) {
+  optpkg := 1
+  _ = optpkg
+  sink(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]__orchestrion_optlib.Option](__orchestrion_slices.Clone[[]__orchestrion_optlib.Option](
+//line input.go:12
+      ws),
+//line <generated>:1
+      []__orchestrion_optlib.Option{__orchestrion_optlib.Named("woven")})...)
+}

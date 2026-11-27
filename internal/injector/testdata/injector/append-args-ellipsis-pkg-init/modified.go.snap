@@ -1,0 +1,22 @@
+//line input.go:1:1
+package test
+
+//line <generated>:1
+import (
+  __orchestrion_optlib "example.com/optlib"
+  __orchestrion_slices "slices"
+)
+
+//line input.go:3
+var args = []any{1, 2}
+
+var v = sink(
+//line <generated>:1
+  __orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:5
+    args),
+//line <generated>:1
+    []any{__orchestrion_optlib.Woven})...)
+
+//line input.go:7
+func sink(vals ...any) []any { return vals }

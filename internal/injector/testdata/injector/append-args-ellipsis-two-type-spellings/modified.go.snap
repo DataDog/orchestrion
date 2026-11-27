@@ -1,0 +1,31 @@
+//line input.go:1:1
+package test
+
+import (
+  "example.com/optlib"
+
+//line <generated>:1
+  __orchestrion_slices "slices"
+)
+
+//line input.go:5
+func anySpelled(args []any) {
+  optlib.SinkAny(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]optlib.AnyAlias](__orchestrion_slices.Clone[[]optlib.AnyAlias](__orchestrion_slices.Concat[[]any](__orchestrion_slices.Clone[[]any](
+//line input.go:6
+      args),
+//line <generated>:1
+      []any{1})), []optlib.AnyAlias{"two"})...)
+}
+
+//line input.go:9
+func optSpelled(args []optlib.Option) {
+  optlib.SinkOpt(
+//line <generated>:1
+    __orchestrion_slices.Concat[[]optlib.OptionAlias](__orchestrion_slices.Clone[[]optlib.OptionAlias](__orchestrion_slices.Concat[[]optlib.Option](__orchestrion_slices.Clone[[]optlib.Option](
+//line input.go:10
+      args),
+//line <generated>:1
+      []optlib.Option{optlib.Named("one")})), []optlib.OptionAlias{optlib.Named("two")})...)
+}

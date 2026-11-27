@@ -1,0 +1,11 @@
+//line input.go:1:1
+package test
+
+import "example.com/optlib"
+
+//line input.go:5
+func printAll() {
+  optlib.Sink(
+//line <generated>:1
+    optlib.Named("first"), optlib.Named("second"))
+}

@@ -1,0 +1,37 @@
+%YAML 1.1
+---
+# C01-C03: non-spread calls with zero, one (including a one-result call), and
+# many original arguments. The templates are appended directly, in order, and no
+# Clone/Concat expression or slices import is introduced.
+aspects:
+  - join-point:
+      function-call: sink
+    advice:
+      - append-args:
+          type: any
+          values:
+            - template: id(1)
+            - template: id(2)
+
+code: |-
+  package test
+
+  func sink(vals ...any) {}
+
+  func id(v any) any { return v }
+
+  func zero() {
+    sink()
+  }
+
+  func one(x any) {
+    sink(x)
+  }
+
+  func oneCall(x any) {
+    sink(id(x))
+  }
+
+  func many(x, y, z any) {
+    sink(x, y, z)
+  }

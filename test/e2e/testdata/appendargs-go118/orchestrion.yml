@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+# Aspects for the go1.18 language fixture: the generic helper expression needs
+# exactly the go1.18 language this module already declares.
+meta:
+  name: append-args-go118
+  description: |-
+    Exercises hygienic append-args weaving on a go 1.18 module.
+
+aspects:
+  - id: append-args/local.Sink
+    join-point:
+      function-call: example.com/appendargs-go118/local.Sink
+    advice:
+      - append-args:
+          type: example.com/appendargs-go118/local.Opt
+          values:
+            - imports:
+                local: example.com/appendargs-go118/local
+              template: local.Named("traced")

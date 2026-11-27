@@ -1,0 +1,21 @@
+%YAML 1.1
+---
+# Aspects for the go1.21 language fixture: the module stays at go 1.21, and the
+# spread rewrite must never request go1.22, which would change the per-iteration
+# loop variable semantics of the go1.21 module.
+meta:
+  name: append-args-go121
+  description: |-
+    Exercises hygienic append-args weaving on a go 1.21 module.
+
+aspects:
+  - id: append-args/local.Sink
+    join-point:
+      function-call: example.com/appendargs-go121/local.Sink
+    advice:
+      - append-args:
+          type: example.com/appendargs-go121/local.Opt
+          values:
+            - imports:
+                local: example.com/appendargs-go121/local
+              template: local.Named("traced")
