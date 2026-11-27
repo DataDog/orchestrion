@@ -98,7 +98,8 @@ func vendorWorkspace(ctx context.Context, modfile string) (bool, error) {
 
 	cmd := exec.CommandContext(ctx, "go", "work", "vendor")
 	cmd.Dir = workDir
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOWORK="+workfile)
+	// GOTOOLCHAIN is inherited: the workspace may need a newer toolchain than this module does.
+	cmd.Env = append(os.Environ(), "GOWORK="+workfile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
