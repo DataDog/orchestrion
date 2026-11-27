@@ -84,7 +84,9 @@ func (g *Generator) updateToolsFile(cfg config.Config) error {
 	implied := make(map[string]struct{})
 	for _, aspect := range cfg.Aspects() {
 		for _, path := range aspect.JoinPoint.ImpliesImported() {
-			implied[path] = struct{}{}
+			if path != "" {
+				implied[path] = struct{}{}
+			}
 		}
 	}
 

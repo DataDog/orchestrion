@@ -34,7 +34,7 @@ func newCfg1() aws.Config {
 	cfg :=
 //line <generated>:1
 		func(cfg *aws.Config) *aws.Config {
-			__orchestrion_awstrace.AppendMiddleware(cfg)
+			cfg.APIOptions = __orchestrion_awstrace.APIOptionsWithTracing(cfg.APIOptions)
 			return cfg
 		}(
 //line samples/client/aws_v2.go:30
@@ -46,7 +46,7 @@ func newCfg2() aws.Config {
 	cfg :=
 //line <generated>:1
 		func(cfg *aws.Config) *aws.Config {
-			__orchestrion_awstrace.AppendMiddleware(cfg)
+			cfg.APIOptions = __orchestrion_awstrace.APIOptionsWithTracing(cfg.APIOptions)
 			return cfg
 		}(
 //line samples/client/aws_v2.go:35
@@ -61,7 +61,7 @@ func newCfg2() aws.Config {
 func newCfg3() aws.Config {
 	return func //line <generated>:1
 	(cfg aws.Config) aws.Config {
-		__orchestrion_awstrace.AppendMiddleware(&cfg)
+		cfg.APIOptions = __orchestrion_awstrace.APIOptionsWithTracing(cfg.APIOptions)
 		return cfg
 	}(
 //line samples/client/aws_v2.go:44
