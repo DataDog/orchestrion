@@ -17,6 +17,7 @@ orchestrion,github.com/DataDog/go-tuf,BSD-3-Clause,"Copyright (c) 2014-2020 Prim
 orchestrion,github.com/DataDog/orchestrion,Apache-2.0,"Copyright 2023 Datadog, Inc. | Copyright [2023-Present] Datadog, Inc."
 orchestrion,github.com/Microsoft/go-winio,MIT,Copyright (c) 2015 Microsoft
 orchestrion,github.com/antithesishq/antithesis-sdk-go,MIT,Copyright (c) 2024 Antithesis
+orchestrion,github.com/antithesishq/antithesis-sdk-go/internal/json,BSD-3-Clause,Copyright 2009 The Go Authors.
 orchestrion,github.com/aymanbagabas/go-osc52/v2,MIT,Copyright (c) 2022 Ayman Bagabas
 orchestrion,github.com/blakesmith/ar,MIT,Copyright (c) 2013 Blake Smith <blakesmith0@gmail.com>
 orchestrion,github.com/cenkalti/backoff/v5,MIT,Copyright (c) 2014 Cenk Altı
@@ -57,7 +58,6 @@ orchestrion,github.com/modern-go/reflect2,Apache-2.0,unknown
 orchestrion,github.com/muesli/termenv,MIT,Copyright (c) 2019 Christian Muehlhaeuser
 orchestrion,github.com/nats-io/jwt/v2,Apache-2.0,unknown
 orchestrion,github.com/nats-io/nats-server/v2,Apache-2.0,unknown
-orchestrion,github.com/nats-io/nats-server/v2/internal/fastrand,BSD-3-Clause,Copyright (c) 2011 The LevelDB-Go Authors. All rights reserved.
 orchestrion,github.com/nats-io/nats.go,Apache-2.0,unknown
 orchestrion,github.com/nats-io/nkeys,Apache-2.0,unknown
 orchestrion,github.com/nats-io/nuid,Apache-2.0,unknown
