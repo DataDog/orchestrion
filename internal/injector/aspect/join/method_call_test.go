@@ -36,6 +36,8 @@ func TestMethodCallMatchesType(t *testing.T) {
 	zapLoggerAliasPtr := types.NewPointer(zapLoggerAlias)
 	// type LoggerPtr = *zap.Logger
 	zapLoggerPtrAlias := types.NewAlias(types.NewTypeName(0, appPkg, "LoggerPtr", nil), zapLoggerPtr)
+	// type LoggerChain = Logger (alias of alias)
+	zapLoggerChain := types.NewAlias(types.NewTypeName(0, appPkg, "LoggerChain", nil), zapLoggerAlias)
 
 	tn, err := typed.NewTypeName("go.uber.org/zap.Logger")
 	require.NoError(t, err)
@@ -60,6 +62,8 @@ func TestMethodCallMatchesType(t *testing.T) {
 		{name: "pointer-only: matches alias of pointer", match: MethodCallMatchPointerOnly, typ: zapLoggerPtrAlias, want: true},
 		{name: "value-only: matches alias", match: MethodCallMatchValueOnly, typ: zapLoggerAlias, want: true},
 		{name: "value-only: rejects alias of pointer", match: MethodCallMatchValueOnly, typ: zapLoggerPtrAlias, want: false},
+		{name: "pointer-only: rejects value alias", match: MethodCallMatchPointerOnly, typ: zapLoggerAlias, want: false},
+		{name: "any: matches alias chain", match: MethodCallMatchAny, typ: zapLoggerChain, want: true},
 	}
 
 	for _, tt := range tests {
@@ -78,8 +82,10 @@ func TestMethodCallPackageMayMatch(t *testing.T) {
 	importing := &may.PackageContext{ImportMap: map[string]string{"go.uber.org/zap": "zap.a"}}
 	notImporting := &may.PackageContext{ImportMap: map[string]string{"example.com/other": "other.a"}}
 
-	assert.Equal(t, may.Match, m.PackageMayMatch(importing))
-	assert.Equal(t, may.NeverMatch, m.PackageMayMatch(notImporting))
+	// A type alias can hide the receiver package from the direct imports, so
+	// the imports cannot rule a package out.
+	assert.Equal(t, may.Unknown, m.PackageMayMatch(importing))
+	assert.Equal(t, may.Unknown, m.PackageMayMatch(notImporting))
 }
 
 func TestMethodCallFileMayMatch(t *testing.T) {
