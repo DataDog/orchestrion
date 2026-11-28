@@ -36,13 +36,22 @@ func (i *declarationOf) Matches(ctx context.AspectContext) bool {
 
 	switch node := ctx.Node().(type) {
 	case *dst.FuncDecl:
-		return node.Name != nil && node.Name.Name == i.Name
+		// Methods share their name space with the type they belong to, not with the package.
+		return node.Recv == nil && node.Name != nil && node.Name.Name == i.Name
 	case *dst.ValueSpec:
-		if parent := ctx.Chain().Parent(); parent == nil {
+		parent := ctx.Chain().Parent()
+		if parent == nil {
 			// No parent, this is almost certainly a syntax error...
 			return false
 		} else if _, isGenDecl := parent.Node().(*dst.GenDecl); !isGenDecl {
 			// Parent isn't a GenDecl, so this is not a top-level declaration.
+			return false
+		}
+		// A GenDecl is also what wraps declarations made inside of a function body (through a
+		// DeclStmt), so make sure that this one sits directly in the file.
+		if grandparent := parent.Parent(); grandparent == nil {
+			return false
+		} else if _, isFile := grandparent.Node().(*dst.File); !isFile {
 			return false
 		}
 		for _, name := range node.Names {
